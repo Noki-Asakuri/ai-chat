@@ -4,7 +4,6 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { waitUntil } from "@vercel/functions";
-import throttle from "lodash.throttle";
 import { after, type NextRequest } from "next/server";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { Redis } from "ioredis";
@@ -35,16 +34,6 @@ const streamContext = createResumableStreamContext({
   publisher: publisher,
   subscriber: subscriber,
 });
-
-const updateMessage = throttle(
-  async (data: { assistantMessageId: Id<"messages">; content?: string; reasoning?: string }) => {
-    return serverConvexClient.mutation(api.messages.updateMessageById, {
-      messageId: data.assistantMessageId,
-      updates: { content: data.content, reasoning: data.reasoning },
-    });
-  },
-  350,
-);
 
 const inputSchema = z.object({
   messages: z.array(
@@ -111,12 +100,10 @@ export async function POST(req: Request) {
 
           case "reasoning":
             reasoning += stream.textDelta;
-            void updateMessage({ assistantMessageId, reasoning });
             break;
 
           case "text-delta":
             content += stream.textDelta;
-            void updateMessage({ assistantMessageId, content });
             break;
 
           case "step-finish":

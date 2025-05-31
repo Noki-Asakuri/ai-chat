@@ -13,7 +13,7 @@
     "lint:fix": "next lint --fix",
     "preview": "next build && next start",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "@ai-sdk/deepseek": "^0.2.14",
@@ -60,6 +60,7 @@
     "@types/node": "^22.15.29",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
+    "@typescript/native-preview": "^7.0.0-dev.20250531.1",
     "babel-plugin-react-compiler": "^19.1.0-rc.2",
     "eslint": "^9.28.0",
     "eslint-config-next": "^15.3.3",

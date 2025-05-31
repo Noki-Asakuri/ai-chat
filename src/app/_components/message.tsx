@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Loader2Icon, RefreshCcwIcon } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
@@ -17,10 +18,34 @@ const convexClient = getConvexClient();
 
 export function ChatMessages({ className }: { className?: string }) {
   const messages = useChatStore((state) => state.messages);
-  const status = useChatStore((state) => state.status);
+  const assistant = useChatStore((state) => state.assistantMessage);
+
+  const parentRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScroll = useRef<boolean>(false);
+
+  useEffect(() => {
+    console.log("[Scroll] Scrolling to bottom");
+    if (shouldAutoScroll.current) {
+      parentRef.current?.scrollTo({ top: parentRef.current.scrollHeight, behavior: "smooth" });
+    }
+  }, [assistant]);
 
   return (
-    <div className={cn("flex flex-col gap-2 overflow-y-auto px-2 pb-33", className)}>
+    <div
+      className={cn("flex flex-col gap-2 overflow-y-auto px-2 pb-33", className)}
+      ref={parentRef}
+      onScroll={(event) => {
+        event.preventDefault();
+
+        // Auto scroll if the user scroll back to bottom
+        // Else we disable auto scroll
+        if (event.currentTarget.scrollHeight - event.currentTarget.scrollTop === event.currentTarget.clientHeight) {
+          shouldAutoScroll.current = true;
+        } else {
+          shouldAutoScroll.current = false;
+        }
+      }}
+    >
       {messages.map((message, index) => (
         <Message key={message.messageId} message={message} index={index} isLast={index === messages.length - 1} />
       ))}
@@ -91,7 +116,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
 
       <div className={cn("flex flex-col gap-2", { hidden: message.status === "pending" })}>
         <div
-          className={cn("prose dark:prose-invert space-y-2", {
+          className={cn("prose dark:prose-invert max-w-none space-y-2", {
             "bg-muted rounded-md px-4 py-2": message.role === "user",
             "bg-destructive/60 border-destructive rounded-md px-4 py-2 backdrop-blur-md": message.status === "error",
           })}
