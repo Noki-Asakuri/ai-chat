@@ -46,9 +46,7 @@ export const addMessagesToThread = mutation({
         ...message,
       });
 
-      if (message.role === "assistant") {
-        assistantMessageId = data;
-      }
+      if (message.role === "assistant") assistantMessageId = data;
     }
 
     return assistantMessageId;
@@ -75,6 +73,7 @@ export const updateMessageById = mutation({
       content: v.optional(v.string()),
       reasoning: v.optional(v.string()),
       model: v.optional(v.string()),
+      resumableStreamId: v.optional(v.union(v.string(), v.null())),
       metadata: v.optional(
         v.object({
           duration: v.number(),

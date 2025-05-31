@@ -20,6 +20,7 @@ export type ChatMessage = {
   role: "assistant" | "user" | "system";
   status: "pending" | "complete" | "streaming" | "error";
   model: string;
+  resumableStreamId?: string | null;
   createdAt: number;
   updatedAt: number;
 

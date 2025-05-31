@@ -7,7 +7,7 @@ import { use, useState } from "react";
 import { ChatMessages } from "@/components/message";
 
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
-import { chatStore, useChatStore } from "@/lib/chat/store";
+import { chatStore } from "@/lib/chat/store";
 import { getConvexReactClient } from "@/lib/convex/client";
 import type { ChatRequest } from "@/lib/types";
 

@@ -30,6 +30,15 @@ export function getModelData(modelId: string) {
         displayName: "Gemini 2.5 Pro",
       };
 
+    case modelId.startsWith("deepseek-reasoner"):
+      return {
+        displayName: "DeepSeek R1",
+      };
+    case modelId.startsWith("deepseek-chat"):
+      return {
+        displayName: "DeepSeek V3",
+      };
+
     default:
       return {
         displayName: modelId,

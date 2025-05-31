@@ -1,15 +1,18 @@
 import { create } from "zustand";
 import type { ChatMessage } from "../types";
 
-interface ChatState {
+export interface ChatState {
   messages: ChatMessage[];
   status: "pending" | "complete" | "streaming" | "error" | undefined;
   threadId: string;
   localStreaming: boolean;
+  isResuming: boolean;
 
   assistantMessage?: { id: string; content: string; reasoning: string };
 
   setAssistantMessage: (message: { id: string; content: string; reasoning: string }) => void;
+  setLocalStreaming: (localStreaming: boolean) => void;
+  setIsResuming: (isResuming: boolean) => void;
 
   setDataFromConvex: (
     messages: ChatMessage[],
@@ -27,8 +30,11 @@ export const useChatStore = create<ChatState>((set) => ({
   assistantMessage: undefined,
   threadId: "",
   localStreaming: false,
+  isResuming: false,
 
   setAssistantMessage: (message) => set({ assistantMessage: message }),
+  setLocalStreaming: (localStreaming) => set({ localStreaming }),
+  setIsResuming: (isResuming) => set({ isResuming }),
 
   setDataFromConvex: (messages, status, threadId) => set({ messages, status, threadId }),
   setThreadId: (threadId) => set({ threadId }),

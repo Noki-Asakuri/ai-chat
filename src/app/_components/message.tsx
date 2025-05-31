@@ -100,8 +100,8 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
         </div>
 
         <div
-          className={cn("flex gap-2 opacity-0 transition-opacity", {
-            "group-hover:opacity-100": message.status === "error" || message.status === "complete",
+          className={cn("pointer-events-none flex gap-2 opacity-0 transition-opacity", {
+            "pointer-events-auto group-hover:opacity-100": message.status === "error" || message.status === "complete",
           })}
         >
           <div>

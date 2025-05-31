@@ -20,6 +20,8 @@ export default defineSchema({
     status: v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming"), v.literal("error")),
     role: v.union(v.literal("assistant"), v.literal("user"), v.literal("system")),
 
+    resumableStreamId: v.optional(v.union(v.string(), v.null())),
+
     modelParams: v.optional(
       v.object({
         temperature: v.optional(v.number()),

@@ -3,29 +3,41 @@ import { env } from "@/env";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import throttle from "lodash.throttle";
 import { waitUntil } from "@vercel/functions";
+import throttle from "lodash.throttle";
+import { after, type NextRequest } from "next/server";
+import { createResumableStreamContext } from "resumable-stream/ioredis";
+import { Redis } from "ioredis";
 import { z } from "zod/v4";
 
 import { createGoogleGenerativeAI, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
-import { createDataStreamResponse, createProviderRegistry, streamText, type AISDKError } from "ai";
+import { createDeepSeek } from "@ai-sdk/deepseek";
+import { createDataStream, createProviderRegistry, generateId, streamText, type AISDKError } from "ai";
 
 import { serverConvexClient } from "@/lib/convex/server";
 
 const openai = createOpenAI({ baseURL: env.PROXY_URL, apiKey: env.PROXY_KEY });
+const deepseek = createDeepSeek({ baseURL: env.PROXY_URL + "/deepseek", apiKey: env.PROXY_KEY });
 const google = createGoogleGenerativeAI({
   apiKey: env.PROXY_KEY,
   baseURL: env.PROXY_URL + "/v1beta/",
   headers: { Authorization: `Bearer ${env.PROXY_KEY}` },
 });
 
-const registry = createProviderRegistry({ google, openai }, { separator: "/" });
+const registry = createProviderRegistry({ google, openai, deepseek }, { separator: "/" });
+
+const publisher = new Redis(env.REDIS_URL);
+const subscriber = new Redis(env.REDIS_URL);
+
+const streamContext = createResumableStreamContext({
+  waitUntil: after,
+  publisher: publisher,
+  subscriber: subscriber,
+});
 
 const updateMessage = throttle(
   async (data: { assistantMessageId: Id<"messages">; content?: string; reasoning?: string }) => {
-    console.log("Run", Date.now());
-
     return serverConvexClient.mutation(api.messages.updateMessageById, {
       messageId: data.assistantMessageId,
       updates: { content: data.content, reasoning: data.reasoning },
@@ -55,10 +67,11 @@ export async function POST(req: Request) {
 
   const { messages, assistantMessageId: _assistantMessageId } = data;
   const assistantMessageId = _assistantMessageId as Id<"messages">;
+  const streamId = generateId();
 
   const startTime = Date.now();
   const result = streamText({
-    model: registry.languageModel("google/gemini-2.5-flash-preview-04-17"),
+    model: registry.languageModel("deepseek/deepseek-reasoner"),
     system: "You are a helpful assistant.",
     messages,
     providerOptions: {
@@ -75,15 +88,14 @@ export async function POST(req: Request) {
   });
 
   waitUntil(result.consumeStream());
-  return createDataStreamResponse({
-    status: 200,
-    statusText: "OK",
+  const stream = createDataStream({
     async execute(dataStream) {
       let content = "";
       let reasoning = "";
+
       result.mergeIntoDataStream(dataStream, {
         sendUsage: false,
-        sendReasoning: true,
+        sendReasoning: false,
         experimental_sendStart: false,
         experimental_sendFinish: false,
       });
@@ -93,7 +105,7 @@ export async function POST(req: Request) {
           case "step-start":
             await serverConvexClient.mutation(api.messages.updateMessageById, {
               messageId: assistantMessageId,
-              updates: { status: "streaming" },
+              updates: { status: "streaming", resumableStreamId: streamId },
             });
             break;
 
@@ -133,6 +145,7 @@ export async function POST(req: Request) {
                 status: "complete",
                 content,
                 reasoning,
+                resumableStreamId: null,
                 metadata: {
                   duration,
                   finishReason: stream.finishReason,
@@ -145,5 +158,25 @@ export async function POST(req: Request) {
         }
       }
     },
+  });
+
+  return new Response(await streamContext.resumableStream(streamId, () => stream), {
+    headers: { "Content-Type": "text/event-stream" },
+  });
+}
+
+export async function GET(req: NextRequest) {
+  const streamId = req.nextUrl.searchParams.get("streamId");
+
+  if (!streamId) {
+    return Response.json({ error: { message: "Missing streamId" } }, { status: 400 });
+  }
+
+  const emptyDataStream = createDataStream({
+    execute: () => {},
+  });
+
+  return new Response(await streamContext.resumableStream(streamId, () => emptyDataStream), {
+    headers: { "Content-Type": "text/event-stream" },
   });
 }
