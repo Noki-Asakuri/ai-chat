@@ -25,17 +25,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       const state = chatStore.getState();
       state.setDataFromConvex(data, lastMessage?.status, threadId);
 
-      if (
-        lastMessage?.status === "streaming" &&
-        lastMessage?.resumableStreamId &&
-        !state.localStreaming &&
-        !state.isResuming &&
-        !resumeRef.current
-      ) {
+      if (lastMessage?.resumableStreamId && !state.localStreaming && !state.isResuming && !resumeRef.current) {
         resumeRef.current = true;
-
-        console.log("[Convex] Resuming streaming");
+        console.log("[Convex] Resuming streaming from Convex");
         void resumeStreaming(state, lastMessage.resumableStreamId, lastMessage._id);
+        resumeRef.current = false;
       }
     });
 

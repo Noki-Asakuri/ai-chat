@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
   const startTime = Date.now();
   const result = streamText({
-    model: registry.languageModel("deepseek/deepseek-reasoner"),
+    model: registry.languageModel("deepseek/deepseek-chat"),
     system: "You are a helpful assistant.",
     messages,
     providerOptions: {
@@ -76,11 +76,17 @@ export async function POST(req: Request) {
     },
   });
 
+  await serverConvexClient.mutation(api.messages.updateMessageById, {
+    messageId: assistantMessageId,
+    updates: { resumableStreamId: streamId },
+  });
+
   waitUntil(result.consumeStream());
   const stream = createDataStream({
     async execute(dataStream) {
       let content = "";
       let reasoning = "";
+      let model = "";
 
       result.mergeIntoDataStream(dataStream, {
         sendUsage: false,
@@ -94,7 +100,7 @@ export async function POST(req: Request) {
           case "step-start":
             await serverConvexClient.mutation(api.messages.updateMessageById, {
               messageId: assistantMessageId,
-              updates: { status: "streaming", resumableStreamId: streamId },
+              updates: { status: "streaming" },
             });
             break;
 
@@ -107,10 +113,7 @@ export async function POST(req: Request) {
             break;
 
           case "step-finish":
-            void serverConvexClient.mutation(api.messages.updateMessageById, {
-              messageId: assistantMessageId,
-              updates: { model: stream.response.modelId },
-            });
+            model = stream.response.modelId;
             break;
 
           case "finish":
@@ -132,6 +135,7 @@ export async function POST(req: Request) {
                 status: "complete",
                 content,
                 reasoning,
+                model,
                 resumableStreamId: null,
                 metadata: {
                   duration,
@@ -154,16 +158,14 @@ export async function POST(req: Request) {
 
 export async function GET(req: NextRequest) {
   const streamId = req.nextUrl.searchParams.get("streamId");
+  const resumeAt = req.nextUrl.searchParams.get("resumeAt");
 
   if (!streamId) {
     return Response.json({ error: { message: "Missing streamId" } }, { status: 400 });
   }
 
-  const emptyDataStream = createDataStream({
-    execute: () => {},
-  });
-
-  return new Response(await streamContext.resumableStream(streamId, () => emptyDataStream), {
+  const stream = await streamContext.resumeExistingStream(streamId, resumeAt ? parseInt(resumeAt) : undefined);
+  return new Response(stream, {
     headers: { "Content-Type": "text/event-stream" },
   });
 }
