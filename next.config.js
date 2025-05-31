@@ -10,8 +10,7 @@ const config = {
   eslint: { ignoreDuringBuilds: true },
   logging: { fetches: { fullUrl: true } },
   experimental: {
-    useCache: true,
-    authInterrupts: true,
+    reactCompiler: true,
   },
 };
 

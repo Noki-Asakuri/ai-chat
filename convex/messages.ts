@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 
 export const getAllMessagesFromThread = query({
@@ -37,21 +38,43 @@ export const addMessagesToThread = mutation({
       await ctx.db.insert("threads", { threadId: args.threadId, title: "New Chat" });
     }
 
+    let assistantMessageId: Id<"messages"> | undefined;
+
     for (const message of args.messages) {
-      await ctx.db.insert("messages", {
+      const data = await ctx.db.insert("messages", {
         threadId: args.threadId,
         ...message,
       });
+
+      if (message.role === "assistant") {
+        assistantMessageId = data;
+      }
     }
+
+    return assistantMessageId;
+  },
+});
+
+export const getMessageByMessageId = query({
+  args: { messageId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_messageId", (q) => q.eq("messageId", args.messageId))
+      .unique();
   },
 });
 
 export const updateMessageById = mutation({
   args: {
-    messageId: v.string(),
+    messageId: v.id("messages"),
     updates: v.object({
-      status: v.optional(v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming"))),
+      status: v.optional(
+        v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming"), v.literal("error")),
+      ),
       content: v.optional(v.string()),
+      reasoning: v.optional(v.string()),
+      model: v.optional(v.string()),
       metadata: v.optional(
         v.object({
           duration: v.number(),
@@ -63,12 +86,30 @@ export const updateMessageById = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    const message = await ctx.db
-      .query("messages")
-      .withIndex("by_messageId", (q) => q.eq("messageId", args.messageId))
-      .unique();
+    await ctx.db.patch(args.messageId, args.updates);
+  },
+});
 
-    if (!message) throw new Error("Message not found");
-    await ctx.db.patch(message._id, args.updates);
+export const retryChatMessage = mutation({
+  args: {
+    messageIds: v.array(v.id("messages")),
+    threadId: v.string(),
+    message: v.object({
+      messageId: v.string(),
+      role: v.union(v.literal("assistant"), v.literal("system")),
+      content: v.string(),
+      status: v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
+      model: v.string(),
+
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    }),
+  },
+  handler: async (ctx, args) => {
+    for (const messageId of args.messageIds) {
+      await ctx.db.delete(messageId);
+    }
+
+    return await ctx.db.insert("messages", { threadId: args.threadId, ...args.message });
   },
 });
