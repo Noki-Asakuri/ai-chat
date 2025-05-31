@@ -11,7 +11,7 @@ export const getAllMessagesFromThread = query({
   },
 });
 
-export const addMessages = mutation({
+export const addMessagesToThread = mutation({
   args: {
     threadId: v.string(),
     messages: v.array(
@@ -19,7 +19,7 @@ export const addMessages = mutation({
         messageId: v.string(),
         role: v.union(v.literal("assistant"), v.literal("user"), v.literal("system")),
         content: v.string(),
-        status: v.union(v.literal("pending"), v.literal("complete")),
+        status: v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
         model: v.string(),
 
         createdAt: v.number(),
@@ -46,11 +46,11 @@ export const addMessages = mutation({
   },
 });
 
-export const updateMessage = mutation({
+export const updateMessageById = mutation({
   args: {
     messageId: v.string(),
     updates: v.object({
-      status: v.optional(v.union(v.literal("pending"), v.literal("complete"))),
+      status: v.optional(v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming"))),
       content: v.optional(v.string()),
       metadata: v.optional(
         v.object({
