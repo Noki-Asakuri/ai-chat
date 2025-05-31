@@ -1,0 +1,49 @@
+import { authTables } from "@convex-dev/auth/server";
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+export default defineSchema({
+  ...authTables,
+
+  threads: defineTable({
+    threadId: v.string(),
+    title: v.string(),
+  }).index("by_threadId", ["threadId"]),
+
+  messages: defineTable({
+    threadId: v.string(),
+
+    messageId: v.string(),
+    content: v.string(),
+    model: v.string(),
+    status: v.union(v.literal("pending"), v.literal("complete")),
+    role: v.union(v.literal("assistant"), v.literal("user"), v.literal("system")),
+
+    modelParams: v.optional(
+      v.object({
+        temperature: v.optional(v.number()),
+        top_p: v.optional(v.number()),
+        top_k: v.optional(v.number()),
+        frequency_penalty: v.optional(v.number()),
+        presence_penalty: v.optional(v.number()),
+
+        thinkingBudget: v.optional(v.number()),
+        reasoningEffort: v.optional(v.number()),
+      }),
+    ),
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+
+    metadata: v.optional(
+      v.object({
+        duration: v.number(),
+        finishReason: v.string(),
+        totalTokens: v.number(),
+        thinkingTokens: v.number(),
+      }),
+    ),
+  })
+    .index("by_threadId", ["threadId"])
+    .index("by_messageId", ["messageId"]),
+});
