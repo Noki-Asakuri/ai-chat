@@ -30,7 +30,7 @@ export async function sendChatRequest(body: ChatRequest) {
         break;
 
       case "finish":
-        chatStore.getState().setStatus("complete");
+        state.setStatus("complete");
         break;
     }
 

@@ -2,9 +2,11 @@
 import { api } from "@/convex/_generated/api";
 
 import { useParams } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useLayoutEffect } from "react";
 
-import { chatStore, type ChatState } from "@/lib/chat/store";
+import { v4 as uuidv4 } from "uuid";
+
+import { chatStore, useChatStore, type ChatState } from "@/lib/chat/store";
 import { getConvexClient } from "@/lib/convex/client";
 import { processChatStream } from "@/lib/chat/process-stream";
 
@@ -12,14 +14,25 @@ const convexClient = getConvexClient();
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const params = useParams<{ threadId?: string }>();
-  const threadId = params.threadId ?? crypto.randomUUID();
+  const threadId = useChatStore((state) => state.threadId);
 
   const unsubRef = useRef<ReturnType<typeof convexClient.onUpdate>>(null);
   const resumeRef = useRef<boolean>(false);
 
+  useLayoutEffect(() => {
+    if (!threadId) {
+      console.log("[Thread] Setting thread id");
+
+      const threadId = params.threadId ?? uuidv4();
+      chatStore.getState().setThreadId(threadId);
+    }
+  }, []);
+
   useEffect(() => {
+    console.log("Ran?");
+
     unsubRef.current ??= convexClient.onUpdate(api.messages.getAllMessagesFromThread, { threadId }, (data) => {
-      console.debug("[Convex] Syncing messages from Convex");
+      console.debug("[Convex] Syncing messages from Convex", { threadId, data });
       const lastMessage = data.at(-1);
 
       const state = chatStore.getState();
@@ -34,7 +47,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
-      if (unsubRef.current) unsubRef.current.unsubscribe();
+      if (unsubRef.current) {
+        console.log("[Convex] Unsubscribing from Convex");
+        unsubRef.current.unsubscribe();
+        unsubRef.current = null;
+      }
     };
   }, [threadId]);
 

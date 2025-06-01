@@ -1,18 +1,20 @@
 import { api } from "@/convex/_generated/api";
 
+import { useParams } from "next/navigation";
+
 import { SendHorizontalIcon } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
 
 import { Button } from "./ui/button";
 
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
-import { chatStore } from "@/lib/chat/store";
 import { getConvexClient } from "@/lib/convex/client";
 import type { ChatRequest } from "@/lib/types";
 import { useChatStore } from "@/lib/chat/store";
 
 const convexClient = getConvexClient();
 
-async function submitChatMessage(event: { preventDefault: () => void }) {
+async function submitChatMessage(event: { preventDefault: () => void }, currentThreadId?: string) {
   event.preventDefault();
 
   const state = useChatStore.getState();
@@ -20,8 +22,15 @@ async function submitChatMessage(event: { preventDefault: () => void }) {
 
   state.setChatInput("");
 
+  if (typeof currentThreadId === "undefined") {
+    const thread = { threadId: state.threadId, title: "New Chat" };
+    await convexClient.mutation(api.threads.createThread, thread);
+
+    history.pushState({}, "", `/chat/${state.threadId}`);
+  }
+
   const userMessage = {
-    messageId: crypto.randomUUID(),
+    messageId: uuidv4(),
     content: chatInput,
     role: "user" as const,
     status: "complete" as const,
@@ -31,7 +40,7 @@ async function submitChatMessage(event: { preventDefault: () => void }) {
   };
 
   const assistantMessage = {
-    messageId: crypto.randomUUID(),
+    messageId: uuidv4(),
     content: "",
     role: "assistant" as const,
     status: "pending" as const,
@@ -45,7 +54,7 @@ async function submitChatMessage(event: { preventDefault: () => void }) {
     messages: [userMessage, assistantMessage],
   });
 
-  const allMessages = chatStore.getState().messages.map((message) => ({
+  const allMessages = state.messages.map((message) => ({
     id: message.messageId,
     role: message.role as "assistant" | "user",
     content: message.content,
@@ -69,6 +78,8 @@ async function submitChatMessage(event: { preventDefault: () => void }) {
 }
 
 export function ChatTextarea() {
+  const params = useParams<{ threadId?: string }>();
+
   const input = useChatStore((state) => state.chatInput);
   const setChatInput = useChatStore((state) => state.setChatInput);
 
@@ -84,7 +95,7 @@ export function ChatTextarea() {
             className="w-full resize-none text-sm outline-none"
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
-                void submitChatMessage(event);
+                void submitChatMessage(event, params.threadId);
               }
             }}
           />

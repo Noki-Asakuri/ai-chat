@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Loader2Icon, RefreshCcwIcon, SparkleIcon } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
 
 import { api } from "@/convex/_generated/api";
 
@@ -50,7 +51,7 @@ export function ChatMessages({ className }: { className?: string }) {
       ref={parentRef}
       onScroll={handleOnScroll}
       id="messages-scrollarea"
-      className={cn("flex h-svh flex-col gap-2", className)}
+      className={cn("flex h-full flex-col gap-2", className)}
       viewportClassName="*:pb-34"
     >
       {messages.map((message, index) => (
@@ -72,7 +73,7 @@ async function tryMessage(index: number) {
   }));
 
   const assistantMessage = {
-    messageId: crypto.randomUUID(),
+    messageId: uuidv4(),
     content: "",
     role: "assistant" as const,
     status: "pending" as const,
@@ -127,7 +128,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
           "mx-0 ml-auto w-max gap-1": message.role === "user",
         })}
       >
-        <ReasoningToggle messageId={message.messageId} reasoning={renderMesssage.reasoning} />
+        <ThinkingToggle messageId={message.messageId} reasoning={renderMesssage.reasoning} />
 
         <div
           className={cn(
@@ -173,21 +174,22 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
   );
 }
 
-function ReasoningToggle({ messageId, reasoning }: { messageId: string; reasoning?: string }) {
+function ThinkingToggle({ messageId, reasoning }: { messageId: string; reasoning?: string }) {
   if (!reasoning) return null;
 
   return (
     <Accordion type="single" collapsible className="my-4 w-full space-y-2">
-      <AccordionItem value="reasoning" className="bg-secondary rounded-md border-none px-4">
-        <AccordionTrigger className="w-max">
+      <AccordionItem value={messageId + "-thinking"} className="bg-secondary rounded-md border-none">
+        <AccordionTrigger className="w-max cursor-pointer px-4 outline-none">
           <div className="flex items-center gap-3">
-            <SparkleIcon className="size-5" /> Reasoning
+            <SparkleIcon className="size-5" /> Thinking
           </div>
         </AccordionTrigger>
 
         <AccordionContent>
-          <div className="prose dark:prose-invert max-w-none space-y-2">
-            <MemoizedMarkdown id={messageId + "-reasoning"} content={reasoning} />
+          <hr />
+          <div className="prose dark:prose-invert max-w-none space-y-2 px-4 pt-4">
+            <MemoizedMarkdown id={messageId + "-thinking"} content={reasoning} />
           </div>
         </AccordionContent>
       </AccordionItem>
