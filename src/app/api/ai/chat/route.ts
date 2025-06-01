@@ -3,7 +3,6 @@ import { env } from "@/env";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { waitUntil } from "@vercel/functions";
 import { after, type NextRequest } from "next/server";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { Redis } from "ioredis";
@@ -60,7 +59,7 @@ export async function POST(req: Request) {
 
   const startTime = Date.now();
   const result = streamText({
-    model: registry.languageModel("deepseek/deepseek-reasoner"),
+    model: registry.languageModel("google/gemini-2.5-flash-preview-05-20"),
     system: "You are a helpful assistant.",
     messages,
     providerOptions: {
@@ -78,15 +77,20 @@ export async function POST(req: Request) {
 
   await serverConvexClient.mutation(api.messages.updateMessageById, {
     messageId: assistantMessageId,
-    updates: { resumableStreamId: streamId },
+    updates: { resumableStreamId: streamId, status: "streaming" },
   });
 
-  waitUntil(result.consumeStream());
   const stream = createDataStream({
     async execute(dataStream) {
       let content = "";
       let reasoning = "";
       let model = "";
+      let metadata = {
+        duration: 0,
+        finishReason: "",
+        totalTokens: 0,
+        thinkingTokens: 0,
+      };
 
       result.mergeIntoDataStream(dataStream, {
         sendUsage: false,
@@ -98,10 +102,6 @@ export async function POST(req: Request) {
       for await (const stream of result.fullStream) {
         switch (stream.type) {
           case "step-start":
-            await serverConvexClient.mutation(api.messages.updateMessageById, {
-              messageId: assistantMessageId,
-              updates: { status: "streaming" },
-            });
             break;
 
           case "reasoning":
@@ -117,33 +117,18 @@ export async function POST(req: Request) {
             break;
 
           case "finish":
-            const duration = Date.now() - startTime;
+            metadata = {
+              duration: Date.now() - startTime,
+              finishReason: stream.finishReason,
+              totalTokens: stream.usage.completionTokens,
+              thinkingTokens: 0,
+            };
 
-            dataStream.writeData({
-              type: "metadata",
-              metadata: {
-                duration,
-                finishReason: stream.finishReason,
-                totalTokens: stream.usage.completionTokens,
-                thinkingTokens: 0,
-              },
-            });
+            dataStream.writeData({ type: "metadata", metadata });
 
-            await serverConvexClient.mutation(api.messages.updateMessageById, {
+            void serverConvexClient.mutation(api.messages.updateMessageById, {
               messageId: assistantMessageId,
-              updates: {
-                status: "complete",
-                content,
-                reasoning,
-                model,
-                resumableStreamId: null,
-                metadata: {
-                  duration,
-                  finishReason: stream.finishReason,
-                  totalTokens: stream.usage.completionTokens,
-                  thinkingTokens: 0,
-                },
-              },
+              updates: { status: "complete", content, reasoning, model, resumableStreamId: null, metadata },
             });
             break;
         }
