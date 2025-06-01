@@ -18,11 +18,11 @@ export async function sendChatRequest(body: ChatRequest) {
   await processChatStream(res.body!, async (stream) => {
     switch (stream.type) {
       case "text-delta":
-        content += stream.data.replaceAll("\\n", "\n");
+        content += stream.data;
         break;
 
       case "reasoning":
-        reasoning += stream.data.replaceAll("\\n", "\n");
+        reasoning += stream.data;
         break;
 
       case "custom-json":

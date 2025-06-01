@@ -87,11 +87,11 @@ export async function processChatStream(
 
           switch (prefixStr) {
             case "0":
-              message = { type: "text-delta", data: payloadStr.substring(1, payloadStr.length - 1) };
+              message = { type: "text-delta", data: unescapeString(payloadStr) };
               break;
 
             case "g":
-              message = { type: "reasoning", data: payloadStr.substring(1, payloadStr.length - 1) };
+              message = { type: "reasoning", data: unescapeString(payloadStr) };
               break;
 
             case "2":
@@ -129,4 +129,11 @@ export async function processChatStream(
       }
     }
   }
+}
+
+function unescapeString(str: string) {
+  return str
+    .substring(1, str.length - 1)
+    .replaceAll("\\n", "\n")
+    .replaceAll('\\"', '"');
 }

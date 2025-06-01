@@ -29,9 +29,7 @@ function parseMarkdownIntoBlocks(markdown: string): string[] {
   return tokens.map((token) => token.raw);
 }
 
-type Props = React.ClassAttributes<HTMLElement> & React.HTMLAttributes<HTMLElement> & ExtraProps;
-
-function CodeBlock({ node: _node, className, children, ...props }: Props & { children: string }) {
+function CodeBlock({ className, children, ...props }: React.ComponentProps<"code">) {
   const match = /language-(\w+)/.exec(className ?? "");
 
   if (!match) {
@@ -42,11 +40,7 @@ function CodeBlock({ node: _node, className, children, ...props }: Props & { chi
     );
   }
 
-  return (
-    <ShikiCodeBlock language={match[1]} {...props}>
-      {String(children).replace(/\n$/, "")}
-    </ShikiCodeBlock>
-  );
+  return <ShikiCodeBlock language={match[1]}>{String(children as string)}</ShikiCodeBlock>;
 }
 
 const MemoizedMarkdownBlock = memo(
@@ -67,7 +61,6 @@ const MemoizedMarkdownBlock = memo(
         tr: TypographyTableTR,
         td: TypographyTableTD,
         table: TypographyTable,
-        // @ts-expect-error Incorrect type but working
         code: CodeBlock,
       }}
     >
