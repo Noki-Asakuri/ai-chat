@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
   const startTime = Date.now();
   const result = streamText({
-    model: registry.languageModel("deepseek/deepseek-chat"),
+    model: registry.languageModel("deepseek/deepseek-reasoner"),
     system: "You are a helpful assistant.",
     messages,
     providerOptions: {
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
 
       result.mergeIntoDataStream(dataStream, {
         sendUsage: false,
-        sendReasoning: false,
+        sendReasoning: true,
         experimental_sendStart: false,
         experimental_sendFinish: false,
       });

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Loader2Icon, RefreshCcwIcon } from "lucide-react";
+import { Loader2Icon, RefreshCcwIcon, SparkleIcon } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 
@@ -7,6 +7,7 @@ import { MemoizedMarkdown } from "./markdown";
 
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 
 import { getModelData } from "@/lib/chat/model-data";
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
@@ -101,8 +102,8 @@ async function tryMessage(index: number) {
 
 export function Message({ message, index, isLast }: { message: ChatMessage; index: number; isLast: boolean }) {
   const assistantMessage = useChatStore((state) => state.assistantMessage);
-  const content =
-    message.role === "assistant" && assistantMessage?.id === message._id ? assistantMessage.content : message.content;
+  const renderMesssage =
+    message.role === "assistant" && assistantMessage?.id === message._id ? assistantMessage : message;
 
   return (
     <div
@@ -126,6 +127,8 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
           "mx-0 ml-auto w-max gap-1": message.role === "user",
         })}
       >
+        <ReasoningToggle messageId={message.messageId} reasoning={renderMesssage.reasoning} />
+
         <div
           className={cn(
             "prose dark:prose-invert max-w-none space-y-2",
@@ -136,7 +139,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
             },
           )}
         >
-          <MemoizedMarkdown id={message.messageId} content={content} />
+          <MemoizedMarkdown id={message.messageId} content={renderMesssage.content} />
         </div>
 
         <div
@@ -167,5 +170,27 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
         <div className="bg-muted flex size-11 items-center justify-center rounded-md">You</div>
       )}
     </div>
+  );
+}
+
+function ReasoningToggle({ messageId, reasoning }: { messageId: string; reasoning?: string }) {
+  if (!reasoning) return null;
+
+  return (
+    <Accordion type="single" collapsible className="my-4 w-full space-y-2">
+      <AccordionItem value="reasoning" className="bg-secondary rounded-md border-none px-4">
+        <AccordionTrigger className="w-max">
+          <div className="flex items-center gap-3">
+            <SparkleIcon className="size-5" /> Reasoning
+          </div>
+        </AccordionTrigger>
+
+        <AccordionContent>
+          <div className="prose dark:prose-invert max-w-none space-y-2">
+            <MemoizedMarkdown id={messageId + "-reasoning"} content={reasoning} />
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }

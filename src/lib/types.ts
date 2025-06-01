@@ -17,6 +17,7 @@ export type ChatMessage = {
   threadId: string;
   messageId: string;
   content: string;
+  reasoning?: string;
   role: "assistant" | "user" | "system";
   status: "pending" | "complete" | "streaming" | "error";
   model: string;
