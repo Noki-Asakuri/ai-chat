@@ -1,6 +1,7 @@
+import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import { SendHorizontalIcon } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
@@ -14,7 +15,11 @@ import { useChatStore } from "@/lib/chat/store";
 
 const convexClient = getConvexClient();
 
-async function submitChatMessage(event: { preventDefault: () => void }, currentThreadId?: string) {
+async function submitChatMessage(
+  event: { preventDefault: () => void },
+  router: ReturnType<typeof useRouter>,
+  currentThreadId?: string,
+) {
   event.preventDefault();
 
   const state = useChatStore.getState();
@@ -22,11 +27,14 @@ async function submitChatMessage(event: { preventDefault: () => void }, currentT
 
   state.setChatInput("");
 
+  let _threadId: Id<"threads"> | undefined = undefined;
+
   if (typeof currentThreadId === "undefined") {
     const thread = { threadId: state.threadId, title: "New Chat" };
-    await convexClient.mutation(api.threads.createThread, thread);
+    _threadId = await convexClient.mutation(api.threads.createThread, thread);
+    state.rotateNewThreadId();
 
-    history.pushState({}, "", `/chat/${state.threadId}`);
+    router.push(`/chat/${thread.threadId}`);
   }
 
   const userMessage = {
@@ -68,17 +76,17 @@ async function submitChatMessage(event: { preventDefault: () => void }, currentT
 
   const body: ChatRequest = {
     threadId: state.threadId,
+    _threadId,
     assistantMessageId: assistantMessageId!,
     messages: allMessages,
   };
 
-  await sendChatRequest(body).then(() => {
-    useChatStore.getState().setChatInput("");
-  });
+  await sendChatRequest(body);
 }
 
 export function ChatTextarea() {
   const params = useParams<{ threadId?: string }>();
+  const router = useRouter();
 
   const input = useChatStore((state) => state.chatInput);
   const setChatInput = useChatStore((state) => state.setChatInput);
@@ -95,7 +103,7 @@ export function ChatTextarea() {
             className="w-full resize-none text-sm outline-none"
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
-                void submitChatMessage(event, params.threadId);
+                void submitChatMessage(event, router, params.threadId);
               }
             }}
           />
@@ -103,7 +111,12 @@ export function ChatTextarea() {
           <div className="flex items-center justify-between">
             <div></div>
 
-            <Button type="submit" onClick={submitChatMessage} variant="outline" className="size-9 cursor-pointer">
+            <Button
+              type="submit"
+              onMouseDown={(event) => submitChatMessage(event, router, params.threadId)}
+              variant="outline"
+              className="size-9 cursor-pointer"
+            >
               <SendHorizontalIcon className="size-4 -rotate-90" />
             </Button>
           </div>

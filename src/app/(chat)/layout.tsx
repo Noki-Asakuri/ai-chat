@@ -2,35 +2,30 @@
 import { api } from "@/convex/_generated/api";
 
 import { useParams } from "next/navigation";
-import { useEffect, useRef, useLayoutEffect } from "react";
+import { useEffect, useRef } from "react";
 
-import { v4 as uuidv4 } from "uuid";
-
+import { processChatStream } from "@/lib/chat/process-stream";
 import { chatStore, useChatStore, type ChatState } from "@/lib/chat/store";
 import { getConvexClient } from "@/lib/convex/client";
-import { processChatStream } from "@/lib/chat/process-stream";
 
 const convexClient = getConvexClient();
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const params = useParams<{ threadId?: string }>();
   const threadId = useChatStore((state) => state.threadId);
+  const newThreadId = useChatStore((state) => state.newThreadId);
 
   const unsubRef = useRef<ReturnType<typeof convexClient.onUpdate>>(null);
   const resumeRef = useRef<boolean>(false);
 
-  useLayoutEffect(() => {
-    if (!threadId) {
+  useEffect(() => {
+    if (!threadId || threadId !== params.threadId) {
       console.log("[Thread] Setting thread id");
-
-      const threadId = params.threadId ?? uuidv4();
-      chatStore.getState().setThreadId(threadId);
+      chatStore.getState().setThreadId(params.threadId ?? newThreadId);
     }
-  }, []);
+  }, [params.threadId, newThreadId]);
 
   useEffect(() => {
-    console.log("Ran?");
-
     unsubRef.current ??= convexClient.onUpdate(api.messages.getAllMessagesFromThread, { threadId }, (data) => {
       console.debug("[Convex] Syncing messages from Convex", { threadId, data });
       const lastMessage = data.at(-1);
@@ -40,7 +35,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       if (lastMessage?.resumableStreamId && !state.localStreaming && !state.isResuming && !resumeRef.current) {
         resumeRef.current = true;
-        console.log("[Convex] Resuming streaming from Convex");
+        console.debug("[Convex] Resuming streaming from Convex");
         void resumeStreaming(state, lastMessage.resumableStreamId, lastMessage._id);
         resumeRef.current = false;
       }
@@ -48,12 +43,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
     return () => {
       if (unsubRef.current) {
-        console.log("[Convex] Unsubscribing from Convex");
+        console.debug("[Convex] Unsubscribing messages from Convex");
         unsubRef.current.unsubscribe();
+        chatStore.getState().setMessages([]);
         unsubRef.current = null;
       }
     };
-  }, [threadId]);
+  }, [params.threadId, threadId]);
 
   return children;
 }

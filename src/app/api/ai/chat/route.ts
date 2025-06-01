@@ -3,15 +3,16 @@ import { env } from "@/env";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
+import { waitUntil } from "@vercel/functions";
+import { Redis } from "ioredis";
 import { after, type NextRequest } from "next/server";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
-import { Redis } from "ioredis";
 import { z } from "zod/v4";
 
+import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createGoogleGenerativeAI, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
-import { createDeepSeek } from "@ai-sdk/deepseek";
-import { createDataStream, createProviderRegistry, generateId, streamText, type AISDKError } from "ai";
+import { createDataStream, createProviderRegistry, generateId, generateText, streamText, type AISDKError } from "ai";
 
 import { serverConvexClient } from "@/lib/convex/server";
 
@@ -44,7 +45,35 @@ const inputSchema = z.object({
   ),
   assistantMessageId: z.string(),
   threadId: z.string(),
+  _threadId: z.string().optional(),
 });
+
+async function updateTitle(messages: { role: string; content: string }[], threadId?: Id<"threads">) {
+  if (messages.length > 1 || !messages[0] || !threadId) return;
+  console.debug("[Server] Updating thread title", threadId);
+
+  const { text } = await generateText({
+    model: registry.languageModel("google/gemini-2.5-flash-preview-05-20"),
+    providerOptions: {
+      google: { thinkingConfig: { thinkingBudget: 0 } } satisfies GoogleGenerativeAIProviderOptions,
+    },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a conversational assistant and you need to summarize the user's text into a title of 10 words or less.",
+      },
+      {
+        role: "user",
+        content: `User: ${messages[0].content}
+
+Please summarize the above conversation into a title of 10 words or less, without punctuation.`,
+      },
+    ],
+  });
+
+  await serverConvexClient.mutation(api.threads.updateThreadTitle, { threadId, title: text });
+}
 
 export async function POST(req: Request) {
   const { success, data, error } = inputSchema.safeParse(await req.json());
@@ -53,7 +82,7 @@ export async function POST(req: Request) {
     return Response.json({ error: { message: z.prettifyError(error) } }, { status: 400 });
   }
 
-  const { messages, assistantMessageId: _assistantMessageId } = data;
+  const { messages, assistantMessageId: _assistantMessageId, _threadId } = data;
   const assistantMessageId = _assistantMessageId as Id<"messages">;
   const streamId = generateId();
 
@@ -79,6 +108,8 @@ export async function POST(req: Request) {
     messageId: assistantMessageId,
     updates: { resumableStreamId: streamId, status: "streaming" },
   });
+
+  waitUntil(updateTitle(messages, _threadId as Id<"threads">));
 
   const stream = createDataStream({
     async execute(dataStream) {

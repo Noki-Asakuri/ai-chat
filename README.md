@@ -32,7 +32,7 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 
 - [x] Add support for streaming
 - [x] Add support for resuming streaming
-- [ ] Add thread support
+- [x] Add thread support
 - [ ] Add authentication
 - [x] Better markdown support
 - [ ] Support edit and delete messages

@@ -2,6 +2,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 export type ChatRequest = {
   threadId: string;
+  _threadId?: Id<"threads">;
   assistantMessageId: string;
   messages: Omit<InputMessage, "messageId">[];
 };

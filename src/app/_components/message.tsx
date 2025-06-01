@@ -1,22 +1,22 @@
-import { useEffect, useRef } from "react";
-import { Loader2Icon, RefreshCcwIcon, SparkleIcon } from "lucide-react";
+import { CopyCheckIcon, CopyIcon, Loader2Icon, RefreshCcwIcon, SparkleIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { api } from "@/convex/_generated/api";
 
 import { MemoizedMarkdown } from "./markdown";
 
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 
 import { getModelData } from "@/lib/chat/model-data";
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { getConvexClient } from "@/lib/convex/client";
 
+import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage, ChatRequest } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useChatStore } from "@/lib/chat/store";
 
 const convexClient = getConvexClient();
 
@@ -106,6 +106,15 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
   const renderMesssage =
     message.role === "assistant" && assistantMessage?.id === message._id ? assistantMessage : message;
 
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  async function copeMessageContent(content: string) {
+    await navigator.clipboard.writeText(content.trim());
+    setCopySuccess(true);
+
+    setTimeout(() => setCopySuccess(false), 1000);
+  }
+
   return (
     <div
       className="group mx-auto flex max-w-4xl items-start gap-2"
@@ -149,9 +158,17 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
             hidden: message.status === "pending" || message.status === "streaming",
           })}
         >
-          <div>
+          <div className="flex items-center gap-2">
             <Button variant="ghost" className="size-8 cursor-pointer p-2" onMouseDown={() => tryMessage(index)}>
               <RefreshCcwIcon className="size-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="size-8 cursor-pointer p-2"
+              onMouseDown={() => copeMessageContent(message.content)}
+            >
+              {copySuccess ? <CopyCheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
             </Button>
           </div>
 

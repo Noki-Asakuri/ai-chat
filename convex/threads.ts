@@ -1,5 +1,4 @@
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 
 export const createThread = mutation({
@@ -12,7 +11,7 @@ export const createThread = mutation({
 export const getAllThreads = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("threads").collect();
+    return await ctx.db.query("threads").order("desc").collect();
   },
 });
 
