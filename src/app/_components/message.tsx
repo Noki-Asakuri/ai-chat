@@ -4,7 +4,9 @@ import { Loader2Icon, RefreshCcwIcon } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 
 import { MemoizedMarkdown } from "./markdown";
+
 import { Button } from "./ui/button";
+import { ScrollArea } from "./ui/scroll-area";
 
 import { getModelData } from "@/lib/chat/model-data";
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
@@ -24,32 +26,36 @@ export function ChatMessages({ className }: { className?: string }) {
   const shouldAutoScroll = useRef<boolean>(false);
 
   useEffect(() => {
-    console.log("[Scroll] Scrolling to bottom");
+    console.debug("[Scroll] Scrolling to bottom");
     if (shouldAutoScroll.current) {
       parentRef.current?.scrollTo({ top: parentRef.current.scrollHeight, behavior: "smooth" });
     }
   }, [assistant]);
 
-  return (
-    <div
-      className={cn("flex flex-col gap-2 overflow-y-auto px-2 pb-33", className)}
-      ref={parentRef}
-      onScroll={(event) => {
-        event.preventDefault();
+  function handleOnScroll(event: React.UIEvent<HTMLDivElement>) {
+    event.preventDefault();
 
-        // Auto scroll if the user scroll back to bottom
-        // Else we disable auto scroll
-        if (event.currentTarget.scrollHeight - event.currentTarget.scrollTop === event.currentTarget.clientHeight) {
-          shouldAutoScroll.current = true;
-        } else {
-          shouldAutoScroll.current = false;
-        }
-      }}
+    // Auto scroll if the user scroll back to bottom
+    // Else we disable auto scroll
+    if (event.currentTarget.scrollHeight - event.currentTarget.scrollTop === event.currentTarget.clientHeight) {
+      shouldAutoScroll.current = true;
+    } else {
+      shouldAutoScroll.current = false;
+    }
+  }
+
+  return (
+    <ScrollArea
+      ref={parentRef}
+      onScroll={handleOnScroll}
+      id="messages-scrollarea"
+      className={cn("flex h-svh flex-col gap-2", className)}
+      viewportClassName="*:pb-34"
     >
       {messages.map((message, index) => (
         <Message key={message.messageId} message={message} index={index} isLast={index === messages.length - 1} />
       ))}
-    </div>
+    </ScrollArea>
   );
 }
 
@@ -100,7 +106,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
 
   return (
     <div
-      className={cn("group flex w-full items-start gap-2", { "ml-auto w-max": message.role === "user" })}
+      className="group mx-auto flex max-w-4xl items-start gap-2"
       id={message.messageId}
       data-role={message.role}
       data-status={message.status}
@@ -114,12 +120,21 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
         </div>
       )}
 
-      <div className={cn("flex flex-col gap-2", { hidden: message.status === "pending" })}>
+      <div
+        className={cn("flex w-full flex-col", {
+          hidden: message.status === "pending",
+          "mx-0 ml-auto w-max gap-1": message.role === "user",
+        })}
+      >
         <div
-          className={cn("prose dark:prose-invert max-w-none space-y-2", {
-            "bg-muted rounded-md px-4 py-2": message.role === "user",
-            "bg-destructive/60 border-destructive rounded-md px-4 py-2 backdrop-blur-md": message.status === "error",
-          })}
+          className={cn(
+            "prose dark:prose-invert max-w-none space-y-2",
+            "prose-hr:my-4 prose-hr:border-border prose-pre:p-0",
+            {
+              "bg-muted/70 rounded-md px-4 py-2": message.role === "user",
+              "bg-destructive/60 border-destructive rounded-md px-4 py-2 backdrop-blur-md": message.status === "error",
+            },
+          )}
         >
           <MemoizedMarkdown id={message.messageId} content={content} />
         </div>
@@ -127,6 +142,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
         <div
           className={cn("pointer-events-none flex gap-2 opacity-0 transition-opacity", {
             "pointer-events-auto group-hover:opacity-100": message.status === "error" || message.status === "complete",
+            hidden: message.status === "pending" || message.status === "streaming",
           })}
         >
           <div>

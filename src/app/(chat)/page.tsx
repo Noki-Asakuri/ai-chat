@@ -1,9 +1,17 @@
 "use client";
 
+import { ChatMessages } from "@/components/message";
+import { ChatTextarea } from "@/components/chat-textarea";
+
 export default function Page() {
   return (
-    <div className="h-svh max-w-screen px-4 py-6 pb-0">
-      <div className="relative container mx-auto flex h-full max-w-4xl"></div>
+    <div className="grid h-svh max-w-screen grid-cols-1">
+      <div className="border-border border-r"></div>
+
+      <div className="relative flex h-svh flex-col">
+        <ChatMessages />
+        <ChatTextarea />
+      </div>
     </div>
   );
 }

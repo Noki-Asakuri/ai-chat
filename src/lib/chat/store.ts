@@ -10,6 +10,9 @@ export interface ChatState {
 
   assistantMessage?: { id: string; content: string; reasoning: string };
 
+  chatInput: string;
+  setChatInput: (input: string) => void;
+
   setAssistantMessage: (message: { id: string; content: string; reasoning: string }) => void;
   setLocalStreaming: (localStreaming: boolean) => void;
   setIsResuming: (isResuming: boolean) => void;
@@ -31,6 +34,9 @@ export const useChatStore = create<ChatState>((set) => ({
   threadId: "",
   localStreaming: false,
   isResuming: false,
+
+  chatInput: "",
+  setChatInput: (input) => set({ chatInput: input }),
 
   setAssistantMessage: (message) => set({ assistantMessage: message }),
   setLocalStreaming: (localStreaming) => set({ localStreaming }),
