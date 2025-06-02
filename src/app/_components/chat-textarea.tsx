@@ -3,7 +3,7 @@ import { api } from "@/convex/_generated/api";
 
 import { useParams, useRouter } from "next/navigation";
 
-import { SendHorizontalIcon } from "lucide-react";
+import { Loader2Icon, SendHorizontalIcon } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 
 import { Button } from "./ui/button";
@@ -12,6 +12,7 @@ import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { getConvexClient } from "@/lib/convex/client";
 import type { ChatRequest } from "@/lib/types";
 import { useChatStore } from "@/lib/chat/store";
+import { ScrollDownButton } from "./scroll-down-button";
 
 const convexClient = getConvexClient();
 
@@ -25,8 +26,9 @@ async function submitChatMessage(
   const state = useChatStore.getState();
   const chatInput = state.chatInput.trim();
 
-  state.setChatInput("");
+  if (state.status === "streaming") return;
 
+  state.setChatInput("");
   let _threadId: Id<"threads"> | undefined = undefined;
 
   if (typeof currentThreadId === "undefined") {
@@ -88,13 +90,17 @@ export function ChatTextarea() {
   const params = useParams<{ threadId?: string }>();
   const router = useRouter();
 
+  const status = useChatStore((state) => state.status);
+
   const input = useChatStore((state) => state.chatInput);
   const setChatInput = useChatStore((state) => state.setChatInput);
 
   return (
     <form className="absolute bottom-0 w-full">
-      <div className="bg-muted/40 mx-auto max-w-4xl rounded-[calc(2px+8px)] rounded-b-none p-2 pb-0 backdrop-blur-md backdrop-saturate-150">
-        <div className="bg-muted/60 rounded-md rounded-b-none p-2.5">
+      <ScrollDownButton />
+
+      <div className="bg-muted/40 border-border mx-auto max-w-4xl rounded-[calc(2px+8px)] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150">
+        <div className="bg-muted/60 border-border rounded-md rounded-b-none border p-2.5 pb-0">
           <textarea
             rows={3}
             name="user-input"
@@ -108,16 +114,34 @@ export function ChatTextarea() {
             }}
           />
 
-          <div className="flex items-center justify-between">
-            <div></div>
+          <div className="flex items-end justify-between">
+            <div className="space-x-2 py-2">
+              <Button
+                type="button"
+                className="bg-muted/70 focus:bg-muted text-foreground border-border h-max cursor-pointer border px-2 py-1.5 text-sm"
+              >
+                Web Search
+              </Button>
+
+              <Button
+                type="button"
+                className="bg-muted/70 focus:bg-muted text-foreground border-border h-max cursor-pointer border px-2 py-1.5 text-sm"
+              >
+                Reasoning
+              </Button>
+            </div>
 
             <Button
               type="submit"
               onMouseDown={(event) => submitChatMessage(event, router, params.threadId)}
               variant="outline"
-              className="size-9 cursor-pointer"
+              className="size-9 cursor-pointer rounded-b-none border-b-0 bg-transparent"
             >
-              <SendHorizontalIcon className="size-4 -rotate-90" />
+              {status === "complete" || status === "error" ? (
+                <SendHorizontalIcon className="size-4 -rotate-45" />
+              ) : (
+                <Loader2Icon className="size-4 animate-spin" />
+              )}
             </Button>
           </div>
         </div>

@@ -5,7 +5,6 @@ import { chatStore } from "./store";
 
 export async function sendChatRequest(body: ChatRequest) {
   const state = chatStore.getState();
-  state.setLocalStreaming(true);
 
   const res = await fetch("/api/ai/chat", {
     method: "POST",
@@ -36,6 +35,4 @@ export async function sendChatRequest(body: ChatRequest) {
 
     state.setAssistantMessage({ id: body.assistantMessageId, content, reasoning });
   });
-
-  state.setLocalStreaming(false);
 }

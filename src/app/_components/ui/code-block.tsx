@@ -29,9 +29,9 @@ export function ShikiCodeBlock({ children, language, theme, ...props }: CodeBloc
   return (
     <div className="code-block not-prose border-border overflow-hidden rounded-md border bg-transparent" {...props}>
       <div className="bg-muted/50 flex w-full items-center justify-between gap-2 px-6 py-1.5">
-        <span className="text-lg capitalize">{language}</span>
+        <span className="text-lg font-semibold capitalize">{language}</span>
 
-        <div>
+        <div className="space-x-2">
           <Button variant="ghost" className="size-8 cursor-pointer" onMouseDown={() => setWrapline(!wrapline)}>
             {wrapline ? <TextIcon /> : <WrapTextIcon />}
           </Button>

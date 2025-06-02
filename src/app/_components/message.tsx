@@ -1,19 +1,19 @@
 import { CopyCheckIcon, CopyIcon, Loader2Icon, RefreshCcwIcon, SparkleIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { api } from "@/convex/_generated/api";
+import { getConvexClient } from "@/lib/convex/client";
 
 import { MemoizedMarkdown } from "./markdown";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 import { getModelData } from "@/lib/chat/model-data";
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
-import { getConvexClient } from "@/lib/convex/client";
-
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage, ChatRequest } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -24,13 +24,18 @@ export function ChatMessages({ className }: { className?: string }) {
   const messages = useChatStore((state) => state.messages);
   const assistant = useChatStore((state) => state.assistantMessage);
 
+  const setScrollToBottom = useChatStore((state) => state.setScrollToBottom);
+
   const parentRef = useRef<HTMLDivElement>(null);
   const shouldAutoScroll = useRef<boolean>(false);
 
   useEffect(() => {
     console.debug("[Scroll] Scrolling to bottom");
     if (shouldAutoScroll.current) {
-      parentRef.current?.scrollTo({ top: parentRef.current.scrollHeight, behavior: "smooth" });
+      const scrollArea = parentRef.current?.querySelector("div") as HTMLDivElement | undefined;
+      scrollArea?.scrollTo({ top: scrollArea?.scrollHeight, behavior: "smooth" });
+
+      console.log(scrollArea, scrollArea?.scrollHeight);
     }
   }, [assistant]);
 
@@ -44,15 +49,17 @@ export function ChatMessages({ className }: { className?: string }) {
     } else {
       shouldAutoScroll.current = false;
     }
+
+    setScrollToBottom(shouldAutoScroll.current);
   }
 
   return (
     <ScrollArea
       ref={parentRef}
       onScroll={handleOnScroll}
-      id="messages-scrollarea"
       className={cn("flex h-full flex-col gap-2", className)}
       viewportClassName="*:pb-34"
+      viewpartId="messages-scrollarea"
     >
       {messages.map((message, index) => (
         <Message key={message.messageId} message={message} index={index} isLast={index === messages.length - 1} />
@@ -137,7 +144,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
           "mx-0 ml-auto w-max gap-1": message.role === "user",
         })}
       >
-        <ThinkingToggle messageId={message.messageId} reasoning={renderMesssage.reasoning} />
+        <ThinkingToggle messageId={message.messageId} reasoning={renderMesssage.reasoning} status={message.status} />
 
         <div
           className={cn(
@@ -159,21 +166,27 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
           })}
         >
           <div className="flex items-center gap-2">
-            <Button variant="ghost" className="size-8 cursor-pointer p-2" onMouseDown={() => tryMessage(index)}>
+            <ButtonWithTip
+              variant="ghost"
+              className="size-8 cursor-pointer p-2"
+              onMouseDown={() => tryMessage(index)}
+              title="Retry"
+            >
               <RefreshCcwIcon className="size-4" />
-            </Button>
+            </ButtonWithTip>
 
-            <Button
+            <ButtonWithTip
               variant="ghost"
               className="size-8 cursor-pointer p-2"
               onMouseDown={() => copeMessageContent(message.content)}
+              title="Copy"
             >
               {copySuccess ? <CopyCheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
-            </Button>
+            </ButtonWithTip>
           </div>
 
           {message.metadata && (
-            <div className="text-muted-foreground/80 flex items-center gap-1.5 text-sm">
+            <div className="text-muted-foreground/80 flex items-center gap-1.5 text-sm select-none">
               <span>{(message.metadata.duration / 1000).toFixed(2)}s</span>
               <span>-</span>
               <span>{message.metadata.totalTokens} Tokens</span>
@@ -191,11 +204,37 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
   );
 }
 
-function ThinkingToggle({ messageId, reasoning }: { messageId: string; reasoning?: string }) {
+function ButtonWithTip({
+  children,
+  title,
+  side,
+  ...props
+}: React.ComponentProps<typeof Button> & { side?: "left" | "right" | "top" | "bottom" }) {
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <Button {...props}>{children}</Button>
+      </TooltipTrigger>
+
+      <TooltipContent side={side ?? "bottom"}>{title}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function ThinkingToggle({
+  messageId,
+  reasoning,
+  status,
+}: {
+  messageId: string;
+  reasoning?: string;
+  status: ChatMessage["status"];
+}) {
   if (!reasoning) return null;
+  const defaultValue = status === "streaming" ? `${messageId}-thinking` : undefined;
 
   return (
-    <Accordion type="single" collapsible className="my-4 w-full space-y-2">
+    <Accordion type="single" collapsible defaultValue={defaultValue} className="my-4 w-full space-y-2">
       <AccordionItem value={messageId + "-thinking"} className="bg-secondary rounded-md border-none">
         <AccordionTrigger className="w-max cursor-pointer px-4 outline-none">
           <div className="flex items-center gap-3">

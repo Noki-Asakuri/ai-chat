@@ -12,9 +12,7 @@ export function ThreadList() {
   const activeThreadId = useChatStore((state) => state.threadId);
 
   return (
-    <div className="flex flex-col gap-2 px-4 py-6">
-      {activeThreadId}
-
+    <div className="hidden flex-col gap-2 px-4 py-6 md:flex">
       <Link href="/">
         <div className="border-border bg-muted/80 rounded-md border px-4 py-2 transition-colors">
           <div className="flex items-center gap-2">
@@ -31,7 +29,7 @@ export function ThreadList() {
           href={`/chat/${thread.threadId}`}
           key={thread._id}
           className={cn(
-            "border-border bg-muted/40 hover:bg-muted/80 text-muted-foreground/80 rounded-md border px-4 py-2 transition-colors",
+            "border-border hover:bg-muted/80 text-muted-foreground/80 rounded-md border bg-transparent px-4 py-2 transition-colors",
             { "text-muted-foreground bg-muted/80 pointer-events-none": thread.threadId === activeThreadId },
           )}
         >

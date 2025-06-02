@@ -33,9 +33,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       const state = chatStore.getState();
       state.setDataFromConvex(data, lastMessage?.status, threadId);
 
-      if (lastMessage?.resumableStreamId && !state.localStreaming && !state.isResuming && !resumeRef.current) {
+      if (
+        lastMessage?.resumableStreamId &&
+        (lastMessage.status === "streaming" || lastMessage.status === "pending") &&
+        !state.isResuming &&
+        !resumeRef.current
+      ) {
         resumeRef.current = true;
-        console.debug("[Convex] Resuming streaming from Convex");
+        console.debug("[Convex] Resuming chat streaming", { threadId });
         void resumeStreaming(state, lastMessage.resumableStreamId, lastMessage._id);
         resumeRef.current = false;
       }
@@ -56,8 +61,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
 async function resumeStreaming(state: ChatState, streamId: string, assistantMessageId: string) {
   state.setIsResuming(true);
-  state.setLocalStreaming(true);
-
   const res = await fetch("/api/ai/chat?streamId=" + streamId);
 
   let content = "";
@@ -85,6 +88,5 @@ async function resumeStreaming(state: ChatState, streamId: string, assistantMess
     state.setAssistantMessage({ id: assistantMessageId, content, reasoning });
   });
 
-  state.setLocalStreaming(false);
   state.setIsResuming(false);
 }

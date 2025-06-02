@@ -9,7 +9,6 @@ export interface ChatState {
   messages: ChatMessage[];
   status: "pending" | "complete" | "streaming" | "error" | undefined;
   threadId: string;
-  localStreaming: boolean;
   isResuming: boolean;
 
   threads: { _id: Id<"threads">; threadId: string; title: string }[];
@@ -19,11 +18,13 @@ export interface ChatState {
   chatInput: string;
   setChatInput: (input: string) => void;
 
+  scrollToBottom: boolean;
+  setScrollToBottom: (scrollToBottom: boolean) => void;
+
   newThreadId: string;
   rotateNewThreadId: () => void;
 
   setAssistantMessage: (message: { id: string; content: string; reasoning: string }) => void;
-  setLocalStreaming: (localStreaming: boolean) => void;
   setIsResuming: (isResuming: boolean) => void;
 
   setDataFromConvex: (
@@ -44,7 +45,7 @@ export const useChatStore = create<ChatState>((set) => ({
   status: undefined,
   assistantMessage: undefined,
   threadId: "",
-  localStreaming: false,
+
   isResuming: false,
   threads: [],
 
@@ -54,8 +55,10 @@ export const useChatStore = create<ChatState>((set) => ({
   chatInput: "",
   setChatInput: (input) => set({ chatInput: input }),
 
+  scrollToBottom: false,
+  setScrollToBottom: (scrollToBottom) => set({ scrollToBottom }),
+
   setAssistantMessage: (message) => set({ assistantMessage: message }),
-  setLocalStreaming: (localStreaming) => set({ localStreaming }),
   setIsResuming: (isResuming) => set({ isResuming }),
 
   setMessages: (messages) => set({ messages }),
