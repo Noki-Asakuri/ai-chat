@@ -146,8 +146,20 @@ export async function processChatStream(response: Promise<Response>, handler: St
 }
 
 function unescapeString(str: string) {
+  const escapeMap: Record<string, string> = {
+    n: "\n", // newline
+    t: "\t", // tab
+    r: "\r", // carriage return
+    b: "\b", // backspace
+    f: "\f", // form feed
+    v: "\v", // vertical tab
+    '"': '"', // double quote
+    "'": "'", // single quote
+    "\\": "\\", // literal backslash
+  };
+
+  const regex = /\\([nrtbfv'"\\])/g;
   return str
     .substring(1, str.length - 1)
-    .replaceAll("\\n", "\n")
-    .replaceAll('\\"', '"');
+    .replace(regex, (_, charAfterBackslash: string) => escapeMap[charAfterBackslash] ?? charAfterBackslash);
 }
