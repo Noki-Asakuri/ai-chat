@@ -1,16 +1,16 @@
 import { useCopyToClipboard } from "@uidotdev/usehooks";
-import { ChevronDownIcon, ChevronUpIcon, CopyCheckIcon, CopyIcon, TextIcon, WrapTextIcon } from "lucide-react";
+import { ChevronDownIcon, CopyCheckIcon, CopyIcon, TextIcon, WrapTextIcon } from "lucide-react";
 import { useState } from "react";
 
-import { useShikiHighlighter } from "react-shiki";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
+import { useShikiHighlighter } from "react-shiki";
 
-import { Button } from "./button";
-import { ScrollArea, ScrollBar } from "./scroll-area";
 import { Accordion, AccordionContent, AccordionItem } from "./accordion";
+import { Button, ButtonWithTip } from "./button";
+import { ScrollArea, ScrollBar } from "./scroll-area";
 
-import { cn } from "@/lib/utils";
 import { useChatStore } from "@/lib/chat/store";
+import { cn } from "@/lib/utils";
 
 type CodeBlockProps = React.ComponentProps<typeof Accordion> & {
   code: string;
@@ -45,23 +45,35 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
     >
       <AccordionItem value={`${language}-code-block`}>
         <AccordionPrimitive.Header className="relative">
-          <div className="bg-muted/50 flex w-full items-center justify-between gap-2 px-6 py-1.5">
-            <span className="font-semibold">{language}</span>
+          <div className="bg-muted/50 flex w-full items-center justify-between gap-2 px-2 py-1.5">
+            <AccordionPrimitive.Trigger asChild>
+              <Button variant="ghost" className="size-8 cursor-pointer [&[data-state=open]>svg]:-rotate-180">
+                <ChevronDownIcon className="size-4 transition-transform" />
+              </Button>
+            </AccordionPrimitive.Trigger>
 
-            <div className="absolute right-6 isolate z-50 space-x-2">
-              <Button variant="ghost" className="size-8 cursor-pointer" onMouseDown={toggleWrapline}>
+            <span className="font-semibold select-none">{language}</span>
+
+            <div className="space-x-2">
+              <ButtonWithTip
+                title="Wrap Line"
+                side="top"
+                variant="ghost"
+                className="size-8 cursor-pointer"
+                onMouseDown={toggleWrapline}
+              >
                 {wrapline ? <TextIcon className="size-4" /> : <WrapTextIcon className="size-4" />}
-              </Button>
+              </ButtonWithTip>
 
-              <Button variant="ghost" className="size-8 cursor-pointer" onMouseDown={copyCodeBlock}>
+              <ButtonWithTip
+                title="Copy Code"
+                side="top"
+                variant="ghost"
+                className="size-8 cursor-pointer"
+                onMouseDown={copyCodeBlock}
+              >
                 {copySuccess ? <CopyCheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
-              </Button>
-
-              <AccordionPrimitive.Trigger asChild>
-                <Button variant="ghost" className="size-8 cursor-pointer [&[data-state=open]>svg]:-rotate-180">
-                  <ChevronDownIcon className="size-4 transition-transform" />
-                </Button>
-              </AccordionPrimitive.Trigger>
+              </ButtonWithTip>
             </div>
           </div>
         </AccordionPrimitive.Header>
@@ -69,7 +81,7 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
         <AccordionContent className="py-0">
           <ScrollArea className="whitespace-nowrap" viewportClassName="max-w-full">
             <div
-              className={cn("contents font-mono *:overflow-x-auto *:px-6 *:py-2", {
+              className={cn("contents font-mono *:overflow-x-auto *:px-6 *:py-3", {
                 "*:text-wrap *:wrap-anywhere": wrapline,
               })}
             >

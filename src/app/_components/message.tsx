@@ -3,25 +3,24 @@ import { CopyCheckIcon, CopyIcon, Loader2Icon, PencilIcon, PlusIcon, RefreshCcwI
 import React, { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
+import * as AccordionPrimitive from "@radix-ui/react-accordion";
+
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { getConvexReactClient } from "@/lib/convex/client";
 
 import { MemoizedMarkdown } from "./markdown";
 
 import { Accordion, AccordionContent, AccordionItem } from "./ui/accordion";
-import { Button } from "./ui/button";
+import { ButtonWithTip } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
-
-import * as AccordionPrimitive from "@radix-ui/react-accordion";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { Textarea } from "./ui/textarea";
 
 import { getModelData } from "@/lib/chat/model-data";
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage, ChatRequest } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Textarea } from "./ui/textarea";
-import type { Id } from "@/convex/_generated/dataModel";
 
 const convexClient = getConvexReactClient();
 
@@ -296,23 +295,6 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
         <div className="bg-muted flex size-11 shrink-0 items-center justify-center rounded-md">You</div>
       )}
     </div>
-  );
-}
-
-function ButtonWithTip({
-  children,
-  title,
-  side,
-  ...props
-}: React.ComponentProps<typeof Button> & { side?: "left" | "right" | "top" | "bottom" }) {
-  return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <Button {...props}>{children}</Button>
-      </TooltipTrigger>
-
-      <TooltipContent side={side ?? "bottom"}>{title}</TooltipContent>
-    </Tooltip>
   );
 }
 
