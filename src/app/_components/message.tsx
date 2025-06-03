@@ -153,7 +153,7 @@ async function tryMessage(index: number, editedUserMessage?: { _id: Id<"messages
 
 export function Message({ message, index, isLast }: { message: ChatMessage; index: number; isLast: boolean }) {
   const [copySuccess, setCopySuccess] = useState(false);
-  const [_, copyToClipboard] = useCopyToClipboard();
+  const [, copyToClipboard] = useCopyToClipboard();
 
   const copyRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -195,6 +195,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
       data-is-last={isLast}
     >
       {message.role === "assistant" &&
+        message.status !== "error" &&
         (message.status === "pending" || (!renderMesssage.content && !renderMesssage.reasoning)) && (
           <div className="flex h-11 shrink-0 items-center">
             <Loader2Icon className="size-6 animate-spin" />
@@ -241,7 +242,12 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
               },
             )}
           >
-            <MemoizedMarkdown id={message.messageId} content={renderMesssage.content} />
+            {message.status === "error" ? (
+              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+              <p>{message.error || "An error have occurred. Please try again."}</p>
+            ) : (
+              <MemoizedMarkdown id={message.messageId} content={renderMesssage.content} />
+            )}
           </div>
         )}
 
@@ -316,7 +322,7 @@ function ThinkingToggle({
   finished: boolean;
   status: ChatMessage["status"];
 }) {
-  if (!reasoning) return null;
+  if (!reasoning || status === "error") return null;
   const defaultValue = status === "streaming" ? `${messageId}-thinking` : undefined;
 
   return (

@@ -114,12 +114,16 @@ export async function POST(req: Request) {
     system: "You are a helpful assistant.",
     messages,
     providerOptions,
+    abortSignal: req.signal,
+
     async onError({ error }) {
       const err = error as AISDKError;
+      console.log("[Chat] Error:", { err, req: req.signal });
 
+      if (err.name === "AbortError" && req.signal.aborted) return;
       await serverConvexClient.mutation(api.messages.updateMessageById, {
         messageId: assistantMessageId,
-        updates: { status: "error", content: err.message },
+        updates: { status: "error", error: err.message },
       });
     },
   });
@@ -152,6 +156,10 @@ export async function POST(req: Request) {
 
       for await (const stream of result.fullStream) {
         switch (stream.type) {
+          case "error":
+            console.log(stream);
+            break;
+
           case "step-start":
             break;
 

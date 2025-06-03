@@ -26,8 +26,8 @@ export interface ChatState {
   chatConfig: { webSearch: boolean; reasoning: boolean; model: string };
   setChatConfig: (config: Partial<{ webSearch: boolean; reasoning: boolean; model: string }>) => void;
 
-  abortController?: AbortController;
-  setAbortController: (controller?: AbortController) => void;
+  abortController: AbortController;
+  setAbortController: (controller: AbortController) => void;
 
   chatInput: string;
   setChatInput: (input: string) => void;
@@ -41,14 +41,15 @@ export interface ChatState {
   textareaHeight: number;
   setTextareaHeight: (height: number) => void;
 
+  threads: { _id: Id<"threads">; title: string }[];
+  setThreads: (threads: { _id: Id<"threads">; title: string }[]) => void;
+
+  resetState: () => void;
   setDataFromConvex: (
     messages: ChatMessage[],
     status: "pending" | "complete" | "streaming" | "error" | undefined,
     threadId: Id<"threads">,
   ) => void;
-
-  threads: { _id: Id<"threads">; title: string }[];
-  setThreads: (threads: { _id: Id<"threads">; title: string }[]) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -94,8 +95,8 @@ export const useChatStore = create<ChatState>((set) => ({
   editMessageId: null,
   setEditMessageId: (messageId) => set({ editMessageId: messageId }),
 
-  abortController: undefined,
-  setAbortController: (controller) => set({ abortController: controller }),
+  abortController: new AbortController(),
+  setAbortController: (abortController) => set({ abortController }),
 
   chatInput: "",
   setChatInput: (input) => set({ chatInput: input }),
@@ -107,6 +108,14 @@ export const useChatStore = create<ChatState>((set) => ({
   setTextareaHeight: (height) => set({ textareaHeight: height }),
 
   setDataFromConvex: (messages, status, threadId) => set({ messages, status, threadId }),
+  resetState: () =>
+    set(() => ({
+      messages: [],
+      status: "complete",
+      isStreaming: false,
+      editMessageId: null,
+      isAtBottom: true,
+    })),
 }));
 
 export const chatStore = useChatStore;

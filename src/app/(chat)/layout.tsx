@@ -34,7 +34,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const state = chatStore.getState();
-    if (!data?.length) return state.setMessages([]);
+    if (!data?.length) return state.resetState();
 
     const lastMessage = data.at(-1)!;
     const threadId = lastMessage.threadId;
@@ -50,7 +50,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     ) {
       resumeRef.current = true;
       console.debug("[Convex] Resuming chat streaming", { threadId, streamId: lastMessage.resumableStreamId });
-      void resumeStreaming(state, lastMessage.resumableStreamId, lastMessage._id);
+      void resumeStreaming({ state, streamId: lastMessage.resumableStreamId, assistantMessageId: lastMessage._id });
       resumeRef.current = false;
     }
   }, [data]);
@@ -67,7 +67,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-async function resumeStreaming(state: ChatState, streamId: string, assistantMessageId: string) {
+type ResumeData = {
+  state: ChatState;
+  streamId: string;
+  assistantMessageId: string;
+};
+async function resumeStreaming({ assistantMessageId, state, streamId }: ResumeData) {
   let content = "";
   let reasoning = "";
 

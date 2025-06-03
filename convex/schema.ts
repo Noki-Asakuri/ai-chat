@@ -15,6 +15,8 @@ export default defineSchema({
     messageId: v.string(),
     content: v.string(),
     reasoning: v.optional(v.string()),
+    error: v.optional(v.string()),
+
     model: v.string(),
     status: v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming"), v.literal("error")),
     role: v.union(v.literal("assistant"), v.literal("user"), v.literal("system")),

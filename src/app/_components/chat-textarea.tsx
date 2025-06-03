@@ -21,11 +21,7 @@ import { toUUID } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
 
-async function submitChatMessage(
-  event: { preventDefault: () => void },
-  router: ReturnType<typeof useRouter>,
-  currentThreadId?: string,
-) {
+async function submitChatMessage(event: { preventDefault: () => void }, router: ReturnType<typeof useRouter>) {
   event.preventDefault();
 
   const state = useChatStore.getState();
@@ -36,7 +32,7 @@ async function submitChatMessage(
   state.setChatInput("");
   let threadId: Id<"threads"> = state.threadId!;
 
-  if (typeof currentThreadId === "undefined") {
+  if (!state.threadId) {
     threadId = await convexClient.mutation(api.threads.createThread, { title: "New Chat" });
 
     router.push(`/chat/${toUUID(threadId)}`);
@@ -89,17 +85,20 @@ async function submitChatMessage(
   await sendChatRequest(body);
 }
 
-function abortChatRequest() {
+async function abortChatRequest() {
   const state = chatStore.getState();
   if (!state.isStreaming) return;
 
   console.log("[Chat] Aborting chat request");
-  state.abortController?.abort("User aborted chat request");
-  state.setAbortController(undefined);
+  state.abortController.abort();
+
+  await convexClient.mutation(api.messages.updateMessageById, {
+    messageId: state.messages.at(-1)!._id,
+    updates: { status: "error", error: "User have aborted the request." },
+  });
 }
 
 export function ChatTextarea() {
-  const params = useParams<{ threadId?: string }>();
   const router = useRouter();
 
   const status = useChatStore((state) => state.status);
@@ -151,7 +150,7 @@ export function ChatTextarea() {
             className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 text-sm !ring-0"
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
-                void submitChatMessage(event, router, params.threadId);
+                void submitChatMessage(event, router);
               }
             }}
           />
@@ -182,9 +181,7 @@ export function ChatTextarea() {
             <Button
               type={status === "streaming" || status === "pending" ? "button" : "submit"}
               onMouseDown={(event) =>
-                status === "streaming" || status === "pending"
-                  ? abortChatRequest()
-                  : submitChatMessage(event, router, params.threadId)
+                status === "streaming" || status === "pending" ? abortChatRequest() : submitChatMessage(event, router)
               }
               variant="outline"
               className="size-9 cursor-pointer rounded-b-none border-b-0 bg-transparent"
