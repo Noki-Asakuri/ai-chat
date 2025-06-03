@@ -11,7 +11,7 @@ import { z } from "zod/v4";
 
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createGoogleGenerativeAI, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAI, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import { createDataStream, createProviderRegistry, generateId, generateText, streamText, type AISDKError } from "ai";
 
 import { serverConvexClient } from "@/lib/convex/server";
@@ -46,9 +46,20 @@ const inputSchema = z.object({
   assistantMessageId: z.string(),
   threadId: z.string(),
   _threadId: z.string().optional(),
+  config: z
+    .object({
+      webSearch: z.boolean(),
+      reasoning: z.boolean(),
+      model: z.string(),
+    })
+    .partial()
+    .optional(),
 });
 
 async function updateTitle(messages: { role: string; content: string }[], threadId?: Id<"threads">) {
+  console.log(messages.length, messages[0], threadId);
+  console.log("Should update?", !(messages.length > 1 || !messages[0] || !threadId));
+
   if (messages.length > 1 || !messages[0] || !threadId) return;
   console.debug("[Server] Updating thread title", threadId);
 
@@ -82,18 +93,28 @@ export async function POST(req: Request) {
     return Response.json({ error: { message: z.prettifyError(error) } }, { status: 400 });
   }
 
-  const { messages, assistantMessageId: _assistantMessageId, _threadId } = data;
+  const { messages, assistantMessageId: _assistantMessageId, _threadId, config } = data;
   const assistantMessageId = _assistantMessageId as Id<"messages">;
   const streamId = generateId();
+
+  const providerOptions = {
+    google: { thinkingConfig: { includeThoughts: true, thinkingBudget: 0 } } as GoogleGenerativeAIProviderOptions,
+    openai: {} as OpenAIResponsesProviderOptions,
+  };
+
+  if (config?.reasoning && config.model?.includes("gemini-2.5")) {
+    providerOptions.google = {
+      // Unset thinking budget to allow auto budgeting by Google
+      thinkingConfig: { includeThoughts: true },
+    };
+  }
 
   const startTime = Date.now();
   const result = streamText({
     model: registry.languageModel("google/gemini-2.5-flash-preview-05-20"),
     system: "You are a helpful assistant.",
     messages,
-    providerOptions: {
-      google: { thinkingConfig: { includeThoughts: true } } satisfies GoogleGenerativeAIProviderOptions,
-    },
+    providerOptions,
     async onError({ error }) {
       const err = error as AISDKError;
 

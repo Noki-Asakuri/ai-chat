@@ -1,5 +1,5 @@
 export function TypographyP({ children }: React.ComponentProps<"p">) {
-  return <p className="leading-7 [&:not(:first-child)]:mt-6">{children}</p>;
+  return <p className="leading-7 [&:not(:first-child)]:mt-6 [&:not(:last-child)]:mb-6">{children}</p>;
 }
 
 export function TypographyH1({ children }: React.ComponentProps<"h1">) {

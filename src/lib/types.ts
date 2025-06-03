@@ -5,6 +5,7 @@ export type ChatRequest = {
   _threadId?: Id<"threads">;
   assistantMessageId: string;
   messages: Omit<InputMessage, "messageId">[];
+  config?: { webSearch: boolean; reasoning: boolean; model: string };
 };
 
 export type InputMessage = {

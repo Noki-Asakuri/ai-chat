@@ -103,10 +103,24 @@ export const retryChatMessage = mutation({
       createdAt: v.number(),
       updatedAt: v.number(),
     }),
+    userMessage: v.optional(
+      v.object({
+        messageId: v.id("messages"),
+        role: v.literal("user"),
+        content: v.string(),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
     for (const messageId of args.messageIds) {
       await ctx.db.delete(messageId);
+    }
+
+    if (args.userMessage) {
+      await ctx.db.patch(args.userMessage.messageId, {
+        content: args.userMessage.content,
+        updatedAt: Date.now(),
+      });
     }
 
     return await ctx.db.insert("messages", { threadId: args.threadId, ...args.message });

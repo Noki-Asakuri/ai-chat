@@ -1,16 +1,13 @@
-import { ChatMessages } from "@/components/message";
+"use client";
+
 import { ChatTextarea } from "@/components/chat-textarea";
-import { ThreadList } from "@/components/thread-list";
+import { ChatMessages } from "@/components/message";
 
 export function ChatInterface() {
   return (
-    <div className="grid h-svh max-w-screen overflow-x-hidden md:grid-cols-[280px_1fr]">
-      <ThreadList />
-
-      <div className="border-border relative mt-3 flex h-[calc(100vh-12px)] flex-col rounded-tl-2xl border-t border-l pt-6">
-        <ChatMessages />
-        <ChatTextarea />
-      </div>
+    <div className="border-border relative mt-3 flex h-[calc(100vh-12px)] flex-col rounded-tl-2xl border-t border-l pt-6">
+      <ChatMessages />
+      <ChatTextarea />
     </div>
   );
 }

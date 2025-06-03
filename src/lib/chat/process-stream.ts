@@ -1,3 +1,11 @@
+export type StreamBeforeStartData = {
+  type: "before-start";
+};
+
+export type StreamAfterFinishData = {
+  type: "after-finish";
+};
+
 export type StreamTextData = {
   type: "text-delta";
   data: string;
@@ -29,6 +37,8 @@ export type StreamEndData = {
 };
 
 export type ParsedStreamMessage =
+  | StreamBeforeStartData
+  | StreamAfterFinishData
   | StreamFirstData
   | StreamTextData
   | StreamReasoningData
@@ -46,14 +56,12 @@ export function tryParseJson<T>(jsonString: string, context: string): T {
   }
 }
 
-export async function processChatStream(
-  responseBody: ReadableStream<Uint8Array>,
-  handler: StreamDataHandler,
-): Promise<void> {
-  const reader = responseBody.getReader();
+export async function processChatStream(response: Promise<Response>, handler: StreamDataHandler) {
+  const reader = (await response).body!.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
 
+  await handler({ type: "before-start" });
   try {
     while (true) {
       const { done, value } = await reader.read();
@@ -117,7 +125,13 @@ export async function processChatStream(
         }
       }
     }
+    await handler({ type: "after-finish" });
   } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      console.debug("[Chat] Chat request aborted:", error.message);
+      return;
+    }
+
     console.error("Error reading from stream:", error);
   } finally {
     if (reader && typeof reader.releaseLock === "function") {

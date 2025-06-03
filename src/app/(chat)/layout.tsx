@@ -1,22 +1,24 @@
 "use client";
+
 import { api } from "@/convex/_generated/api";
+import { useQuery } from "convex/react";
 
 import { useParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { ThreadList } from "@/components/thread-list";
+
 import { processChatStream } from "@/lib/chat/process-stream";
 import { chatStore, useChatStore, type ChatState } from "@/lib/chat/store";
-import { getConvexClient } from "@/lib/convex/client";
-
-const convexClient = getConvexClient();
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const params = useParams<{ threadId?: string }>();
   const threadId = useChatStore((state) => state.threadId);
   const newThreadId = useChatStore((state) => state.newThreadId);
 
-  const unsubRef = useRef<ReturnType<typeof convexClient.onUpdate>>(null);
   const resumeRef = useRef<boolean>(false);
+
+  const data = useQuery(api.messages.getAllMessagesFromThread, { threadId });
 
   useEffect(() => {
     if (!threadId || threadId !== params.threadId) {
@@ -26,54 +28,51 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [params.threadId, newThreadId]);
 
   useEffect(() => {
-    unsubRef.current ??= convexClient.onUpdate(api.messages.getAllMessagesFromThread, { threadId }, (data) => {
-      console.debug("[Convex] Syncing messages from Convex", { threadId, data });
-      const lastMessage = data.at(-1);
+    if (!data) return;
 
-      const state = chatStore.getState();
-      state.setDataFromConvex(data, lastMessage?.status, threadId);
+    console.debug("[Convex] Syncing messages from Convex", { threadId, data });
+    const lastMessage = data.at(-1);
 
-      if (
-        lastMessage?.resumableStreamId &&
-        (lastMessage.status === "streaming" || lastMessage.status === "pending") &&
-        !state.isResuming &&
-        !resumeRef.current
-      ) {
-        resumeRef.current = true;
-        console.debug("[Convex] Resuming chat streaming", { threadId });
-        void resumeStreaming(state, lastMessage.resumableStreamId, lastMessage._id);
-        resumeRef.current = false;
-      }
-    });
+    const state = chatStore.getState();
+    state.setDataFromConvex(data, lastMessage?.status ?? "complete", threadId);
 
-    return () => {
-      if (unsubRef.current) {
-        console.debug("[Convex] Unsubscribing messages from Convex");
-        unsubRef.current.unsubscribe();
-        chatStore.getState().setMessages([]);
-        unsubRef.current = null;
-      }
-    };
-  }, [params.threadId, threadId]);
+    if (
+      lastMessage?.resumableStreamId &&
+      lastMessage.status === "streaming" &&
+      !state.isStreaming &&
+      !resumeRef.current
+    ) {
+      resumeRef.current = true;
+      console.debug("[Convex] Resuming chat streaming", { threadId });
+      void resumeStreaming(state, lastMessage.resumableStreamId, lastMessage._id);
+      resumeRef.current = false;
+    }
+  }, [data]);
 
-  return children;
+  return (
+    <div className="grid h-svh max-w-screen overflow-x-hidden lg:grid-cols-[280px_1fr]">
+      <ThreadList />
+
+      {children}
+    </div>
+  );
 }
 
 async function resumeStreaming(state: ChatState, streamId: string, assistantMessageId: string) {
-  state.setIsResuming(true);
-  const res = await fetch("/api/ai/chat?streamId=" + streamId);
-
   let content = "";
   let reasoning = "";
 
-  await processChatStream(res.body!, async (stream) => {
+  state.setIsStreaming(true);
+
+  const response = fetch("/api/ai/chat?streamId=" + streamId);
+  await processChatStream(response, async (stream) => {
     switch (stream.type) {
       case "text-delta":
-        content += stream.data.replaceAll("\\n", "\n");
+        content += stream.data;
         break;
 
       case "reasoning":
-        reasoning += stream.data.replaceAll("\\n", "\n");
+        reasoning += stream.data;
         break;
 
       case "custom-json":
@@ -81,12 +80,12 @@ async function resumeStreaming(state: ChatState, streamId: string, assistantMess
         break;
 
       case "finish":
-        chatStore.getState().setStatus("complete");
+        state.setStatus("complete");
         break;
     }
 
     state.setAssistantMessage({ id: assistantMessageId, content, reasoning });
   });
 
-  state.setIsResuming(false);
+  state.setIsStreaming(false);
 }

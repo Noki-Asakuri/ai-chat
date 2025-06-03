@@ -1,6 +1,8 @@
+import { useCopyToClipboard } from "@uidotdev/usehooks";
+import { CopyCheckIcon, CopyIcon, TextIcon, WrapTextIcon } from "lucide-react";
 import { useState } from "react";
+
 import { useShikiHighlighter } from "react-shiki";
-import { CopyIcon, CopyCheckIcon, TextIcon, WrapTextIcon } from "lucide-react";
 
 import { Button } from "./button";
 import { ScrollArea, ScrollBar } from "./scroll-area";
@@ -13,15 +15,22 @@ type CodeBlockProps = React.ComponentProps<"div"> & {
   theme?: string;
 };
 
-export function ShikiCodeBlock({ children, language, theme, ...props }: CodeBlockProps) {
+export function ShikiCodeBlock({ children, language, ...props }: CodeBlockProps) {
   const [wrapline, setWrapline] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
 
-  const highlightedCode = useShikiHighlighter(children, language, theme ?? "github-dark-dimmed", { delay: 150 });
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [copiedText, copyToClipboard] = useCopyToClipboard();
+
+  const highlightedCode = useShikiHighlighter(
+    children,
+    language === "assembly" ? "asm" : language,
+    "github-dark-dimmed",
+    { delay: 150 },
+  );
 
   async function copyCodeBlock() {
-    await navigator.clipboard.writeText(children);
-    setCopySuccess(true);
+    await copyToClipboard(children);
+    setCopySuccess(Boolean(copiedText));
 
     setTimeout(() => setCopySuccess(false), 1000);
   }
@@ -29,9 +38,9 @@ export function ShikiCodeBlock({ children, language, theme, ...props }: CodeBloc
   return (
     <div className="code-block not-prose border-border overflow-hidden rounded-md border bg-transparent" {...props}>
       <div className="bg-muted/50 flex w-full items-center justify-between gap-2 px-6 py-1.5">
-        <span className="text-lg font-semibold capitalize">{language}</span>
+        <span className="font-semibold">{language}</span>
 
-        <div className="space-x-2">
+        <div>
           <Button variant="ghost" className="size-8 cursor-pointer" onMouseDown={() => setWrapline(!wrapline)}>
             {wrapline ? <TextIcon /> : <WrapTextIcon />}
           </Button>
@@ -44,7 +53,7 @@ export function ShikiCodeBlock({ children, language, theme, ...props }: CodeBloc
 
       <ScrollArea className="whitespace-nowrap">
         <div
-          className={cn("contents *:overflow-x-auto *:px-6 *:py-2", {
+          className={cn("contents font-mono *:overflow-x-auto *:px-6 *:py-2", {
             "*:text-wrap *:wrap-anywhere": wrapline,
           })}
         >

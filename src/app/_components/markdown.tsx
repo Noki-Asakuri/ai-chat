@@ -30,9 +30,9 @@ function parseMarkdownIntoBlocks(markdown: string): string[] {
 }
 
 function CodeBlock({ className, children, ...props }: React.ComponentProps<"code">) {
-  const match = /language-(\w+)/.exec(className ?? "");
+  const language = /language-(\w+)/.exec(className ?? "")?.[1];
 
-  if (!match) {
+  if (!language) {
     return (
       <TypographyInlineCode className={cn("not-prose", className)} {...props}>
         {children}
@@ -40,7 +40,7 @@ function CodeBlock({ className, children, ...props }: React.ComponentProps<"code
     );
   }
 
-  return <ShikiCodeBlock language={match[1]}>{String(children as string)}</ShikiCodeBlock>;
+  return <ShikiCodeBlock language={language}>{String(children as string)}</ShikiCodeBlock>;
 }
 
 const MemoizedMarkdownBlock = memo(

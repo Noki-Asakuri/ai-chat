@@ -1,15 +1,18 @@
-import { CopyCheckIcon, CopyIcon, Loader2Icon, RefreshCcwIcon, SparkleIcon } from "lucide-react";
+import { useCopyToClipboard } from "@uidotdev/usehooks";
+import { CopyCheckIcon, CopyIcon, Loader2Icon, PencilIcon, PlusIcon, RefreshCcwIcon, SparkleIcon } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { api } from "@/convex/_generated/api";
-import { getConvexClient } from "@/lib/convex/client";
+import { getConvexReactClient } from "@/lib/convex/client";
 
 import { MemoizedMarkdown } from "./markdown";
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
+import { Accordion, AccordionContent, AccordionItem } from "./ui/accordion";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
+
+import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 import { getModelData } from "@/lib/chat/model-data";
@@ -17,40 +20,67 @@ import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage, ChatRequest } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { Textarea } from "./ui/textarea";
+import type { Id } from "@/convex/_generated/dataModel";
 
-const convexClient = getConvexClient();
+const convexClient = getConvexReactClient();
 
 export function ChatMessages({ className }: { className?: string }) {
   const messages = useChatStore((state) => state.messages);
-  const assistant = useChatStore((state) => state.assistantMessage);
-
-  const setScrollToBottom = useChatStore((state) => state.setScrollToBottom);
+  const setAtBottom = useChatStore((state) => state.setAtBottom);
 
   const parentRef = useRef<HTMLDivElement>(null);
-  const shouldAutoScroll = useRef<boolean>(false);
+  const prevScrollTopRef = useRef<number>(-1);
+  const autoScroll = useRef<boolean>(true);
+
+  function onResize(entries: ResizeObserverEntry[]) {
+    const entry = entries[0];
+    if (!entry) return;
+
+    const parentElement = entry.target.parentElement!;
+    setAtBottom(parentElement.scrollHeight - parentElement.scrollTop - parentElement.clientHeight < 100);
+
+    if (parentElement.scrollHeight === parentElement.clientHeight) {
+      prevScrollTopRef.current = -1;
+      autoScroll.current = true;
+    }
+
+    if (autoScroll.current) {
+      parentElement.scrollTo({ top: parentElement.scrollHeight, behavior: "smooth" });
+    }
+  }
 
   useEffect(() => {
-    console.debug("[Scroll] Scrolling to bottom");
-    if (shouldAutoScroll.current) {
-      const scrollArea = parentRef.current?.querySelector("div") as HTMLDivElement | undefined;
-      scrollArea?.scrollTo({ top: scrollArea?.scrollHeight, behavior: "smooth" });
+    if (!parentRef.current) return;
 
-      console.log(scrollArea, scrollArea?.scrollHeight);
-    }
-  }, [assistant]);
+    const resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(parentRef.current.querySelector("div")!.firstElementChild!);
+
+    // Cleanup function
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   function handleOnScroll(event: React.UIEvent<HTMLDivElement>) {
     event.preventDefault();
 
-    // Auto scroll if the user scroll back to bottom
-    // Else we disable auto scroll
-    if (event.currentTarget.scrollHeight - event.currentTarget.scrollTop === event.currentTarget.clientHeight) {
-      shouldAutoScroll.current = true;
-    } else {
-      shouldAutoScroll.current = false;
+    const element = event.currentTarget;
+
+    const currentScrollTop = element.scrollTop;
+    const prevScrollTop = prevScrollTopRef.current;
+
+    // User scrolling up
+    if (currentScrollTop < prevScrollTop) {
+      autoScroll.current = false;
+    }
+    // User scrolling near bottom
+    else if (element.scrollHeight - element.scrollTop - element.clientHeight < 100) {
+      autoScroll.current = true;
     }
 
-    setScrollToBottom(shouldAutoScroll.current);
+    prevScrollTopRef.current = currentScrollTop;
+    setAtBottom(element.scrollHeight - element.scrollTop - element.clientHeight < 100);
   }
 
   return (
@@ -68,7 +98,7 @@ export function ChatMessages({ className }: { className?: string }) {
   );
 }
 
-async function tryMessage(index: number) {
+async function tryMessage(index: number, editedUserMessage?: { _id: Id<"messages">; content: string }) {
   const state = useChatStore.getState();
   const threadId = state.threadId;
 
@@ -97,7 +127,18 @@ async function tryMessage(index: number) {
     threadId,
     messageIds: deleteMessageIds,
     message: assistantMessage,
+    userMessage: editedUserMessage
+      ? {
+          role: "user" as const,
+          messageId: editedUserMessage._id,
+          content: editedUserMessage.content,
+        }
+      : undefined,
   });
+
+  if (editedUserMessage) {
+    allMessages.at(-1)!.content = editedUserMessage.content;
+  }
 
   const body: ChatRequest = {
     messages: allMessages,
@@ -109,27 +150,42 @@ async function tryMessage(index: number) {
 }
 
 export function Message({ message, index, isLast }: { message: ChatMessage; index: number; isLast: boolean }) {
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [copiedText, copyToClipboard] = useCopyToClipboard();
+
+  const [editedUserMessage, setEditedUserMessage] = useState<string>(message.content);
+
+  const status = useChatStore((state) => state.status);
   const assistantMessage = useChatStore((state) => state.assistantMessage);
+
+  const editMessageId = useChatStore((state) => state.editMessageId);
+  const setEditMessageId = useChatStore((state) => state.setEditMessageId);
+
   const renderMesssage =
     message.role === "assistant" && assistantMessage?.id === message._id ? assistantMessage : message;
 
-  const [copySuccess, setCopySuccess] = useState(false);
-
   async function copeMessageContent(content: string) {
-    await navigator.clipboard.writeText(content.trim());
-    setCopySuccess(true);
+    await copyToClipboard(content.trim());
+    setCopySuccess(Boolean(copiedText));
 
     setTimeout(() => setCopySuccess(false), 1000);
   }
 
+  function handleEditMessage() {
+    if (message.role === "assistant") return;
+
+    setEditMessageId(editMessageId === message._id ? null : message._id);
+    setEditedUserMessage(message.content);
+  }
+
   return (
     <div
-      className="group mx-auto flex max-w-4xl items-start gap-2"
+      className="group mx-auto flex max-w-4xl items-start gap-2 [&:not(:first-child)]:mt-12 [&[data-streaming='false']:last-child]:mb-12"
       id={message.messageId}
       data-role={message.role}
       data-status={message.status}
       data-index={index}
-      data-streaming={message.status === "streaming"}
+      data-streaming={message.status === "streaming" || message.status === "pending"}
       data-is-last={isLast}
     >
       {message.status === "pending" && (
@@ -139,30 +195,49 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
       )}
 
       <div
-        className={cn("flex w-full flex-col", {
+        className={cn("relative flex w-full flex-col", {
           hidden: message.status === "pending",
           "mx-0 ml-auto w-max gap-1": message.role === "user",
         })}
       >
         <ThinkingToggle messageId={message.messageId} reasoning={renderMesssage.reasoning} status={message.status} />
 
-        <div
-          className={cn(
-            "prose dark:prose-invert max-w-none space-y-2",
-            "prose-hr:my-4 prose-hr:border-border prose-pre:p-0 prose-pre:my-0",
-            {
-              "bg-muted/70 rounded-md px-4 py-2": message.role === "user",
-              "bg-destructive/60 border-destructive rounded-md px-4 py-2 backdrop-blur-md": message.status === "error",
-            },
-          )}
-        >
-          <MemoizedMarkdown id={message.messageId} content={renderMesssage.content} />
-        </div>
+        {message.role === "user" && editMessageId === message._id ? (
+          <Textarea
+            rows={3}
+            name="user-input"
+            defaultValue={editedUserMessage}
+            onChange={(event) => setEditedUserMessage(event.target.value)}
+            className="min-h-11 w-full min-w-[80ch] resize-none font-sans outline-none"
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                void tryMessage(index, { _id: message._id, content: editedUserMessage });
+                setEditMessageId(null);
+              }
+            }}
+          />
+        ) : (
+          <div
+            className={cn(
+              "prose dark:prose-invert max-w-none space-y-2",
+              "prose-hr:my-4 prose-hr:border-border prose-pre:p-0 prose-pre:my-0",
+              {
+                "bg-muted/70 rounded-md px-4 py-2": message.role === "user",
+                "bg-destructive/60 border-destructive rounded-md px-4 py-2 backdrop-blur-md":
+                  message.status === "error",
+              },
+            )}
+          >
+            <MemoizedMarkdown id={message.messageId} content={renderMesssage.content} />
+          </div>
+        )}
 
         <div
-          className={cn("pointer-events-none flex gap-2 opacity-0 transition-opacity", {
+          className={cn("pointer-events-none absolute -bottom-10 flex gap-2 opacity-0 transition-opacity select-none", {
             "pointer-events-auto group-hover:opacity-100": message.status === "error" || message.status === "complete",
             hidden: message.status === "pending" || message.status === "streaming",
+            "right-0": message.role === "user",
           })}
         >
           <div className="flex items-center gap-2">
@@ -170,18 +245,32 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
               variant="ghost"
               className="size-8 cursor-pointer p-2"
               onMouseDown={() => tryMessage(index)}
-              title="Retry"
+              title="Retry Message"
+              disabled={status === "streaming" || status === "pending"}
             >
-              <RefreshCcwIcon className="size-4" />
+              <RefreshCcwIcon className="size-5" />
             </ButtonWithTip>
+
+            {message.role === "user" && (
+              <ButtonWithTip
+                variant="ghost"
+                className="size-8 cursor-pointer p-2"
+                onMouseDown={() => handleEditMessage()}
+                title="Edit Message"
+                disabled={status === "streaming" || status === "pending"}
+              >
+                <PencilIcon className="size-5" />
+              </ButtonWithTip>
+            )}
 
             <ButtonWithTip
               variant="ghost"
               className="size-8 cursor-pointer p-2"
               onMouseDown={() => copeMessageContent(message.content)}
-              title="Copy"
+              title="Copy Message"
+              disabled={copySuccess}
             >
-              {copySuccess ? <CopyCheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
+              {copySuccess ? <CopyCheckIcon className="size-5" /> : <CopyIcon className="size-5" />}
             </ButtonWithTip>
           </div>
 
@@ -198,7 +287,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
       </div>
 
       {message.role === "user" && (
-        <div className="bg-muted flex size-11 items-center justify-center rounded-md">You</div>
+        <div className="bg-muted flex size-11 shrink-0 items-center justify-center rounded-md">You</div>
       )}
     </div>
   );
@@ -236,11 +325,25 @@ function ThinkingToggle({
   return (
     <Accordion type="single" collapsible defaultValue={defaultValue} className="my-4 w-full space-y-2">
       <AccordionItem value={messageId + "-thinking"} className="bg-secondary rounded-md border-none">
-        <AccordionTrigger className="w-max cursor-pointer px-4 outline-none">
-          <div className="flex items-center gap-3">
-            <SparkleIcon className="size-5" /> Thinking
-          </div>
-        </AccordionTrigger>
+        <AccordionPrimitive.Header className="flex">
+          <AccordionPrimitive.Trigger
+            className={cn(
+              "flex w-max flex-1 cursor-pointer items-center justify-between px-4 py-4 font-medium transition-all outline-none hover:underline",
+              {
+                "[&[data-state=open]>svg]:rotate-45": status !== "streaming",
+              },
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <SparkleIcon className="size-5" /> Thinking
+            </div>
+            {status === "streaming" ? (
+              <Loader2Icon className="text-muted-foreground size-5 shrink-0 animate-spin" />
+            ) : (
+              <PlusIcon className="text-muted-foreground size-5 shrink-0 transition-transform duration-200" />
+            )}
+          </AccordionPrimitive.Trigger>
+        </AccordionPrimitive.Header>
 
         <AccordionContent>
           <hr />

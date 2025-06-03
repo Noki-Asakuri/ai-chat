@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 
 export function ScrollDownButton() {
-  const isAtBottom = useChatStore((state) => state.scrollToBottom);
+  const isAtBottom = useChatStore((state) => state.isAtBottom);
 
   function handleScrollDown() {
     const element = document.querySelector("#messages-scrollarea") as HTMLDivElement | undefined;
