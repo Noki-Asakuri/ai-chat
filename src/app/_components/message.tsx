@@ -229,7 +229,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
           <div
             className={cn(
               "prose dark:prose-invert max-w-none space-y-2",
-              "prose-hr:my-4 prose-hr:border-border prose-pre:p-0 prose-pre:my-0",
+              "prose-hr:my-4 prose-hr:border-border prose-pre:p-0 prose-pre:my-0 prose-pre:mt-2",
               {
                 "bg-sidebar/50 rounded-md border px-4 py-2": message.role === "user",
                 "bg-destructive/60 border-destructive rounded-md px-4 py-2 backdrop-blur-md":
