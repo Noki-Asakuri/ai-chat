@@ -45,7 +45,6 @@ const inputSchema = z.object({
   ),
   assistantMessageId: z.string(),
   threadId: z.string(),
-  _threadId: z.string().optional(),
   config: z
     .object({
       webSearch: z.boolean(),
@@ -56,10 +55,7 @@ const inputSchema = z.object({
     .optional(),
 });
 
-async function updateTitle(messages: { role: string; content: string }[], threadId?: Id<"threads">) {
-  console.log(messages.length, messages[0], threadId);
-  console.log("Should update?", !(messages.length > 1 || !messages[0] || !threadId));
-
+async function updateTitle(messages: { role: string; content: string }[], threadId: string) {
   if (messages.length > 1 || !messages[0] || !threadId) return;
   console.debug("[Server] Updating thread title", threadId);
 
@@ -83,7 +79,10 @@ Please summarize the above conversation into a title of 10 words or less, withou
     ],
   });
 
-  await serverConvexClient.mutation(api.threads.updateThreadTitle, { threadId, title: text });
+  await serverConvexClient.mutation(api.threads.updateThreadTitle, {
+    threadId: threadId as Id<"threads">,
+    title: text,
+  });
 }
 
 export async function POST(req: Request) {
@@ -93,7 +92,7 @@ export async function POST(req: Request) {
     return Response.json({ error: { message: z.prettifyError(error) } }, { status: 400 });
   }
 
-  const { messages, assistantMessageId: _assistantMessageId, _threadId, config } = data;
+  const { messages, assistantMessageId: _assistantMessageId, threadId, config } = data;
   const assistantMessageId = _assistantMessageId as Id<"messages">;
   const streamId = generateId();
 
@@ -130,7 +129,7 @@ export async function POST(req: Request) {
     updates: { resumableStreamId: streamId, status: "streaming" },
   });
 
-  waitUntil(updateTitle(messages, _threadId as Id<"threads">));
+  waitUntil(updateTitle(messages, threadId));
 
   const stream = createDataStream({
     async execute(dataStream) {

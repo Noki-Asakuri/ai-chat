@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import Link from "next/link";
 
 import { useChatStore } from "@/lib/chat/store";
-import { cn } from "@/lib/utils";
+import { cn, toUUID } from "@/lib/utils";
 
 export function ThreadList() {
   const threads = useQuery(api.threads.getAllThreads);
@@ -22,12 +22,12 @@ export function ThreadList() {
 
       {threads?.map((thread) => (
         <Link
-          href={`/chat/${thread.threadId}`}
+          href={`/chat/${toUUID(thread._id)}`}
           key={thread._id}
           title={thread.title}
           className={cn(
             "hover:bg-primary/20 text-foreground rounded-none border-l-2 border-transparent px-3 py-1.5 transition-colors",
-            { "border-primary bg-primary/5 text-foreground": thread.threadId === activeThreadId },
+            { "border-primary bg-primary/5 text-foreground": thread._id === activeThreadId },
           )}
         >
           <span className="line-clamp-1 w-full text-sm">{thread.title}</span>

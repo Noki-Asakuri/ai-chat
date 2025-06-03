@@ -3,18 +3,20 @@ import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 
 export const getAllMessagesFromThread = query({
-  args: { threadId: v.string() },
+  args: { threadId: v.optional(v.id("threads")) },
   handler: async (ctx, args) => {
+    if (!args.threadId) return [];
+
     return await ctx.db
       .query("messages")
-      .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
+      .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId!))
       .collect();
   },
 });
 
 export const addMessagesToThread = mutation({
   args: {
-    threadId: v.string(),
+    threadId: v.id("threads"),
     messages: v.array(
       v.object({
         messageId: v.string(),
@@ -31,11 +33,11 @@ export const addMessagesToThread = mutation({
   handler: async (ctx, args) => {
     const thread = await ctx.db
       .query("threads")
-      .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
+      .withIndex("by_id", (q) => q.eq("_id", args.threadId))
       .unique();
 
     if (!thread) {
-      await ctx.db.insert("threads", { threadId: args.threadId, title: "New Chat" });
+      await ctx.db.insert("threads", { title: "New Chat" });
     }
 
     let assistantMessageId: Id<"messages"> | undefined;
@@ -92,7 +94,7 @@ export const updateMessageById = mutation({
 export const retryChatMessage = mutation({
   args: {
     messageIds: v.array(v.id("messages")),
-    threadId: v.string(),
+    threadId: v.id("threads"),
     message: v.object({
       messageId: v.string(),
       role: v.union(v.literal("assistant"), v.literal("system")),

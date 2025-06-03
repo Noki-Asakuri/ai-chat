@@ -6,12 +6,11 @@ export default defineSchema({
   ...authTables,
 
   threads: defineTable({
-    threadId: v.string(),
     title: v.string(),
-  }).index("by_threadId", ["threadId"]),
+  }),
 
   messages: defineTable({
-    threadId: v.string(),
+    threadId: v.id("threads"),
 
     messageId: v.string(),
     content: v.string(),

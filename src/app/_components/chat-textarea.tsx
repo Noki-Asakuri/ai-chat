@@ -31,14 +31,13 @@ async function submitChatMessage(
   if (state.status === "streaming") return;
 
   state.setChatInput("");
-  let _threadId: Id<"threads"> | undefined = undefined;
+  let threadId: Id<"threads"> = state.threadId!;
 
   if (typeof currentThreadId === "undefined") {
-    const thread = { threadId: state.threadId, title: "New Chat" };
-    _threadId = await convexClient.mutation(api.threads.createThread, thread);
-    state.rotateNewThreadId();
+    threadId = await convexClient.mutation(api.threads.createThread, { title: "New Chat" });
 
-    router.push(`/chat/${thread.threadId}`);
+    router.push(`/chat/${threadId}`);
+    state.setThreadId(threadId);
   }
 
   const userMessage = {
@@ -62,7 +61,7 @@ async function submitChatMessage(
   };
 
   const assistantMessageId = await convexClient.mutation(api.messages.addMessagesToThread, {
-    threadId: state.threadId,
+    threadId,
     messages: [userMessage, assistantMessage],
   });
 
@@ -79,8 +78,7 @@ async function submitChatMessage(
   });
 
   const body: ChatRequest = {
-    threadId: state.threadId,
-    _threadId,
+    threadId,
     assistantMessageId: assistantMessageId!,
     messages: allMessages,
   };

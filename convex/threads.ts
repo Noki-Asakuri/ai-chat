@@ -2,9 +2,9 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 export const createThread = mutation({
-  args: { threadId: v.string(), title: v.optional(v.string()) },
+  args: { title: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("threads", { threadId: args.threadId, title: args.title ?? "New Chat" });
+    return await ctx.db.insert("threads", { title: args.title ?? "New Chat" });
   },
 });
 

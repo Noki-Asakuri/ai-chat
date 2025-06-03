@@ -100,7 +100,7 @@ export function ChatMessages({ className }: { className?: string }) {
 
 async function tryMessage(index: number, editedUserMessage?: { _id: Id<"messages">; content: string }) {
   const state = useChatStore.getState();
-  const threadId = state.threadId;
+  const threadId = state.threadId!;
 
   const userMessageIndex = index % 2 === 0 ? index : index - 1;
   const allMessages = state.messages.slice(0, userMessageIndex + 1).map((message) => ({

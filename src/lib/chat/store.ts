@@ -1,6 +1,5 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { v4 as uuid } from "uuid";
 import { create } from "zustand";
 
 import type { ChatMessage } from "../types";
@@ -8,14 +7,12 @@ import type { ChatMessage } from "../types";
 export interface ChatState {
   messages: ChatMessage[];
   status: "pending" | "complete" | "streaming" | "error" | undefined;
-  threadId: string;
+  threadId?: Id<"threads"> | null;
 
   editMessageId: string | null;
   setEditMessageId: (messageId: string | null) => void;
 
   isStreaming: boolean;
-
-  threads: { _id: Id<"threads">; threadId: string; title: string }[];
 
   assistantMessage?: { id: string; content: string; reasoning: string };
 
@@ -31,22 +28,21 @@ export interface ChatState {
   isAtBottom: boolean;
   setAtBottom: (value: boolean) => void;
 
-  newThreadId: string;
-  rotateNewThreadId: () => void;
-
   setAssistantMessage: (message: { id: string; content: string; reasoning: string }) => void;
   setIsStreaming: (isResuming: boolean) => void;
 
   setDataFromConvex: (
     messages: ChatMessage[],
     status: "pending" | "complete" | "streaming" | "error" | undefined,
-    threadId: string,
+    threadId: Id<"threads">,
   ) => void;
 
   setMessages: (messages: ChatMessage[]) => void;
-  setThreads: (threads: { _id: Id<"threads">; threadId: string; title: string }[]) => void;
 
-  setThreadId: (threadId: string) => void;
+  threads: { _id: Id<"threads">; title: string }[];
+  setThreads: (threads: { _id: Id<"threads">; title: string }[]) => void;
+
+  setThreadId: (threadId: Id<"threads">) => void;
   setStatus: (status: "pending" | "complete" | "streaming" | "error") => void;
 }
 
@@ -54,7 +50,7 @@ export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   status: undefined,
   assistantMessage: undefined,
-  threadId: "",
+  threadId: null,
 
   isStreaming: false,
   threads: [],
@@ -77,9 +73,6 @@ export const useChatStore = create<ChatState>((set) => ({
 
   abortController: undefined,
   setAbortController: (controller) => set({ abortController: controller }),
-
-  newThreadId: uuid(),
-  rotateNewThreadId: () => set({ newThreadId: uuid() }),
 
   chatInput: "",
   setChatInput: (input) => set({ chatInput: input }),

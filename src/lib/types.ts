@@ -1,8 +1,7 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
 export type ChatRequest = {
-  threadId: string;
-  _threadId?: Id<"threads">;
+  threadId: Id<"threads">;
   assistantMessageId: string;
   messages: Omit<InputMessage, "messageId">[];
   config?: { webSearch: boolean; reasoning: boolean; model: string };
@@ -16,7 +15,7 @@ export type InputMessage = {
 
 export type ChatMessage = {
   _id: Id<"messages">;
-  threadId: string;
+  threadId: Id<"threads">;
   messageId: string;
   content: string;
   reasoning?: string;
