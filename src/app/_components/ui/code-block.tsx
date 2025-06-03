@@ -1,6 +1,6 @@
 import { useCopyToClipboard } from "@uidotdev/usehooks";
 import { ChevronDownIcon, CopyCheckIcon, CopyIcon, TextIcon, WrapTextIcon } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { useShikiHighlighter } from "react-shiki";
@@ -12,7 +12,7 @@ import { ScrollArea, ScrollBar } from "./scroll-area";
 import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";
 
-type CodeBlockProps = React.ComponentProps<typeof Accordion> & {
+type CodeBlockProps = React.ComponentProps<"div"> & {
   code: string;
   language?: string;
   theme?: string;
@@ -23,17 +23,21 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
   const toggleWrapline = useChatStore((state) => state.toggleWrapline);
 
   const [copySuccess, setCopySuccess] = useState(false);
-  const [copiedText, copyToClipboard] = useCopyToClipboard();
+  const [, copyToClipboard] = useCopyToClipboard();
+
+  const copyRef = useRef<NodeJS.Timeout | null>(null);
 
   const highlightedCode = useShikiHighlighter(code, language === "assembly" ? "asm" : language, "github-dark-dimmed", {
-    delay: 150,
+    delay: 50,
   });
 
   async function copyCodeBlock() {
-    await copyToClipboard(code);
-    setCopySuccess(Boolean(copiedText));
+    if (copyRef.current) clearTimeout(copyRef.current);
 
-    setTimeout(() => setCopySuccess(false), 1000);
+    await copyToClipboard(code);
+    setCopySuccess(true);
+
+    copyRef.current = setTimeout(() => setCopySuccess(false), 1000);
   }
 
   return (

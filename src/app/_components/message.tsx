@@ -153,7 +153,9 @@ async function tryMessage(index: number, editedUserMessage?: { _id: Id<"messages
 
 export function Message({ message, index, isLast }: { message: ChatMessage; index: number; isLast: boolean }) {
   const [copySuccess, setCopySuccess] = useState(false);
-  const [copiedText, copyToClipboard] = useCopyToClipboard();
+  const [_, copyToClipboard] = useCopyToClipboard();
+
+  const copyRef = useRef<NodeJS.Timeout | null>(null);
 
   const [editedUserMessage, setEditedUserMessage] = useState<string>(message.content);
 
@@ -167,10 +169,12 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
     message.role === "assistant" && assistantMessage?.id === message._id ? assistantMessage : message;
 
   async function copeMessageContent(content: string) {
-    await copyToClipboard(content.trim());
-    setCopySuccess(Boolean(copiedText));
+    if (copyRef.current) clearTimeout(copyRef.current);
 
-    setTimeout(() => setCopySuccess(false), 1000);
+    await copyToClipboard(content.trim());
+    setCopySuccess(true);
+
+    copyRef.current = setTimeout(() => setCopySuccess(false), 1000);
   }
 
   function handleEditMessage() {

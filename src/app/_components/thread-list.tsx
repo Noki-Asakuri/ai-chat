@@ -2,6 +2,7 @@ import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
 
 import Link from "next/link";
+import { useDocumentTitle } from "@uidotdev/usehooks";
 
 import { useChatStore } from "@/lib/chat/store";
 import { cn, toUUID } from "@/lib/utils";
@@ -9,6 +10,9 @@ import { cn, toUUID } from "@/lib/utils";
 export function ThreadList() {
   const threads = useQuery(api.threads.getAllThreads);
   const activeThreadId = useChatStore((state) => state.threadId);
+
+  const title = threads?.find((thread) => thread._id === activeThreadId)?.title;
+  useDocumentTitle(title ? `${title} - AI Chat` : "AI Chat");
 
   return (
     <div className="hidden flex-col gap-2 px-4 py-6 lg:flex">
