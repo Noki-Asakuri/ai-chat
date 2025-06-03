@@ -88,7 +88,7 @@ export function ChatMessages({ className }: { className?: string }) {
       ref={parentRef}
       onScroll={handleOnScroll}
       className={cn("flex h-full flex-col gap-2", className)}
-      viewportClassName="*:pb-34"
+      viewportClassName="*:pb-34 *:h-full"
       viewpartId="messages-scrollarea"
     >
       {messages.map((message, index) => (
@@ -180,7 +180,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
 
   return (
     <div
-      className="group mx-auto flex max-w-4xl items-start gap-2 [&:not(:first-child)]:mt-12 [&[data-streaming='false']:last-child]:mb-12"
+      className="group mx-auto flex max-w-[calc(896px+32px)] items-start gap-2 px-4 [&:not(:first-child)]:mt-12 [&[data-streaming='false']:last-child]:mb-12"
       id={message.messageId}
       data-role={message.role}
       data-status={message.status}
@@ -188,11 +188,12 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
       data-streaming={message.status === "streaming" || message.status === "pending"}
       data-is-last={isLast}
     >
-      {message.status === "pending" && (
-        <div className="flex h-11 shrink-0 items-center">
-          <Loader2Icon className="size-6 animate-spin" />
-        </div>
-      )}
+      {message.role === "assistant" &&
+        (message.status === "pending" || (!renderMesssage.content && !renderMesssage.reasoning)) && (
+          <div className="flex h-11 shrink-0 items-center">
+            <Loader2Icon className="size-6 animate-spin" />
+          </div>
+        )}
 
       <div
         className={cn("relative flex w-full flex-col", {
@@ -200,7 +201,12 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
           "mx-0 ml-auto w-max gap-1": message.role === "user",
         })}
       >
-        <ThinkingToggle messageId={message.messageId} reasoning={renderMesssage.reasoning} status={message.status} />
+        <ThinkingToggle
+          messageId={message.messageId}
+          finished={renderMesssage.content.length > 0}
+          reasoning={renderMesssage.reasoning}
+          status={message.status}
+        />
 
         {message.role === "user" && editMessageId === message._id ? (
           <Textarea
@@ -313,10 +319,12 @@ function ButtonWithTip({
 function ThinkingToggle({
   messageId,
   reasoning,
+  finished,
   status,
 }: {
   messageId: string;
   reasoning?: string;
+  finished: boolean;
   status: ChatMessage["status"];
 }) {
   if (!reasoning) return null;
@@ -337,7 +345,7 @@ function ThinkingToggle({
             <div className="flex items-center gap-3">
               <SparkleIcon className="size-5" /> Thinking
             </div>
-            {status === "streaming" ? (
+            {status === "streaming" && !finished ? (
               <Loader2Icon className="text-muted-foreground size-5 shrink-0 animate-spin" />
             ) : (
               <PlusIcon className="text-muted-foreground size-5 shrink-0 transition-transform duration-200" />

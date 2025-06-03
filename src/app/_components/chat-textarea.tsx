@@ -107,10 +107,10 @@ export function ChatTextarea() {
   const setChatInput = useChatStore((state) => state.setChatInput);
 
   return (
-    <form className="absolute bottom-0 w-full">
+    <form className="absolute bottom-0 w-full px-4">
       <ScrollDownButton />
 
-      <div className="bg-muted/40 border-border mx-auto max-w-4xl rounded-[calc(2px+8px)] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150">
+      <div className="bg-muted/40 border-border mx-auto max-w-[calc(896px+32px)] rounded-[calc(2px+8px)] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150">
         <div className="bg-muted/60 border-border rounded-md rounded-b-none border border-b-0 p-2.5 pb-0">
           <textarea
             rows={3}
