@@ -7,10 +7,12 @@ import { getConvexReactClient } from "@/lib/convex/client";
 import { useParams, useRouter } from "next/navigation";
 
 import { SendHorizontalIcon, SquareIcon } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { ScrollDownButton } from "./scroll-down-button";
 import { Button } from "./ui/button";
+import { Textarea } from "./ui/textarea";
 
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore, useChatStore } from "@/lib/chat/store";
@@ -104,21 +106,49 @@ export function ChatTextarea() {
   const config = useChatStore((state) => state.chatConfig);
   const setChatConfig = useChatStore((state) => state.setChatConfig);
 
+  const setTextareaHeight = useChatStore((state) => state.setTextareaHeight);
+
   const input = useChatStore((state) => state.chatInput);
   const setChatInput = useChatStore((state) => state.setChatInput);
+
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  function onResize(entries: ResizeObserverEntry[]) {
+    const entry = entries[0];
+    if (!entry) return;
+
+    setTextareaHeight(entry.target.clientHeight);
+  }
+
+  useEffect(() => {
+    if (!parentRef.current) return;
+
+    const resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(parentRef.current);
+
+    // Cleanup function
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   return (
     <form className="absolute bottom-0 w-full px-4">
       <ScrollDownButton />
 
-      <div className="bg-muted/40 border-border mx-auto max-w-4xl rounded-[calc(2px+8px)] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150">
+      <div
+        ref={parentRef}
+        className="bg-muted/40 border-border mx-auto max-w-4xl rounded-[calc(2px+8px)] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150"
+      >
         <div className="bg-muted/60 border-border rounded-md rounded-b-none border border-b-0 p-2.5 pb-0">
-          <textarea
+          <Textarea
             rows={3}
             name="user-input"
+            id="textarea-chat-input"
             value={input}
+            placeholder="Type your message here..."
             onChange={(event) => setChatInput(event.target.value)}
-            className="w-full resize-none text-sm outline-none"
+            className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 text-sm !ring-0"
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 void submitChatMessage(event, router, params.threadId);

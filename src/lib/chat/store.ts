@@ -6,15 +6,22 @@ import type { ChatMessage } from "../types";
 
 export interface ChatState {
   messages: ChatMessage[];
+  setMessages: (messages: ChatMessage[]) => void;
+
   status: "pending" | "complete" | "streaming" | "error" | undefined;
+  setStatus: (status: "pending" | "complete" | "streaming" | "error") => void;
+
   threadId?: Id<"threads"> | null;
+  setThreadId: (threadId: Id<"threads">) => void;
 
   editMessageId: string | null;
   setEditMessageId: (messageId: string | null) => void;
 
   isStreaming: boolean;
+  setIsStreaming: (isResuming: boolean) => void;
 
   assistantMessage?: { id: string; content: string; reasoning: string };
+  setAssistantMessage: (message: { id: string; content: string; reasoning: string }) => void;
 
   chatConfig: { webSearch: boolean; reasoning: boolean; model: string };
   setChatConfig: (config: Partial<{ webSearch: boolean; reasoning: boolean; model: string }>) => void;
@@ -31,8 +38,8 @@ export interface ChatState {
   isAtBottom: boolean;
   setAtBottom: (value: boolean) => void;
 
-  setAssistantMessage: (message: { id: string; content: string; reasoning: string }) => void;
-  setIsStreaming: (isResuming: boolean) => void;
+  textareaHeight: number;
+  setTextareaHeight: (height: number) => void;
 
   setDataFromConvex: (
     messages: ChatMessage[],
@@ -40,23 +47,29 @@ export interface ChatState {
     threadId: Id<"threads">,
   ) => void;
 
-  setMessages: (messages: ChatMessage[]) => void;
-
   threads: { _id: Id<"threads">; title: string }[];
   setThreads: (threads: { _id: Id<"threads">; title: string }[]) => void;
-
-  setThreadId: (threadId: Id<"threads">) => void;
-  setStatus: (status: "pending" | "complete" | "streaming" | "error") => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
   messages: [],
+  setMessages: (messages) => set({ messages }),
+
   status: undefined,
+  setStatus: (status) => set({ status }),
+
   assistantMessage: undefined,
+  setAssistantMessage: (message) => set({ assistantMessage: message }),
+
   threadId: null,
+  setThreadId: (threadId) => set({ threadId }),
 
   isStreaming: false,
+  setIsStreaming: (isStreaming) => set({ isStreaming }),
+
   threads: [],
+  setThreads: (threads) => set({ threads }),
+
   chatConfig: {
     webSearch: typeof window === "undefined" ? false : window.localStorage?.getItem("webSearch") === "true",
     reasoning: typeof window === "undefined" ? false : window.localStorage?.getItem("reasoning") === "true",
@@ -90,15 +103,10 @@ export const useChatStore = create<ChatState>((set) => ({
   isAtBottom: false,
   setAtBottom: (value) => set({ isAtBottom: value }),
 
-  setAssistantMessage: (message) => set({ assistantMessage: message }),
-  setIsStreaming: (isStreaming) => set({ isStreaming }),
+  textareaHeight: 132,
+  setTextareaHeight: (height) => set({ textareaHeight: height }),
 
-  setMessages: (messages) => set({ messages }),
   setDataFromConvex: (messages, status, threadId) => set({ messages, status, threadId }),
-  setThreads: (threads) => set({ threads }),
-
-  setThreadId: (threadId) => set({ threadId }),
-  setStatus: (status) => set({ status }),
 }));
 
 export const chatStore = useChatStore;

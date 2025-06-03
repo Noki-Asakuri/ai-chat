@@ -25,6 +25,7 @@ export function ThreadList() {
           href={`/chat/${toUUID(thread._id)}`}
           key={thread._id}
           title={thread.title}
+          prefetch={false}
           className={cn(
             "hover:bg-primary/20 text-foreground rounded-none border-l-2 border-transparent px-3 py-1.5 transition-colors",
             { "border-primary bg-primary/5 text-foreground": thread._id === activeThreadId },

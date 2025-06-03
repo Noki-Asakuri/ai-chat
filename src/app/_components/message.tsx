@@ -28,6 +28,8 @@ export function ChatMessages({ className }: { className?: string }) {
   const messages = useChatStore((state) => state.messages);
   const setAtBottom = useChatStore((state) => state.setAtBottom);
 
+  const textareaHeight = useChatStore((state) => state.textareaHeight);
+
   const parentRef = useRef<HTMLDivElement>(null);
   const prevScrollTopRef = useRef<number>(-1);
   const autoScroll = useRef<boolean>(true);
@@ -87,8 +89,9 @@ export function ChatMessages({ className }: { className?: string }) {
       ref={parentRef}
       onScroll={handleOnScroll}
       className={cn("flex h-full flex-col gap-2", className)}
-      viewportClassName="*:pb-34 *:h-full"
-      viewpartId="messages-scrollarea"
+      viewportClassName="*:h-full"
+      viewportId="messages-scrollarea"
+      viewportstyle={{ paddingBottom: `${textareaHeight}px` }}
     >
       {messages.map((message, index) => (
         <Message key={message.messageId} message={message} index={index} isLast={index === messages.length - 1} />
@@ -228,7 +231,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
               "prose dark:prose-invert max-w-none space-y-2",
               "prose-hr:my-4 prose-hr:border-border prose-pre:p-0 prose-pre:my-0",
               {
-                "bg-muted/70 rounded-md px-4 py-2": message.role === "user",
+                "bg-sidebar/50 rounded-md border px-4 py-2": message.role === "user",
                 "bg-destructive/60 border-destructive rounded-md px-4 py-2 backdrop-blur-md":
                   message.status === "error",
               },
