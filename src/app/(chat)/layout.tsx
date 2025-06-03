@@ -6,12 +6,15 @@ import { useQuery } from "convex/react";
 
 import { useParams } from "next/navigation";
 import { useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 
 import { ThreadList } from "@/components/thread-list";
 
 import { processChatStream } from "@/lib/chat/process-stream";
 import { chatStore, useChatStore, type ChatState } from "@/lib/chat/store";
 import { fromUUID } from "@/lib/utils";
+
+const ChatTextarea = dynamic(() => import("@/components/chat-textarea").then((d) => d.ChatTextarea), { ssr: false });
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const params = useParams<{ threadId?: string }>();
@@ -56,7 +59,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="grid h-svh max-w-screen overflow-x-hidden lg:grid-cols-[280px_1fr]">
       <ThreadList />
 
-      {children}
+      <div className="border-border relative mt-3 flex h-[calc(100vh-12px)] flex-col rounded-tl-2xl border-t border-l pt-6">
+        {children}
+        <ChatTextarea />
+      </div>
     </div>
   );
 }

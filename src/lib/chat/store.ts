@@ -25,6 +25,9 @@ export interface ChatState {
   chatInput: string;
   setChatInput: (input: string) => void;
 
+  wrapline: boolean;
+  toggleWrapline: () => void;
+
   isAtBottom: boolean;
   setAtBottom: (value: boolean) => void;
 
@@ -66,6 +69,13 @@ export const useChatStore = create<ChatState>((set) => ({
       localStorage.setItem("model", config.model ?? "google/gemini-2.5-flash-preview-05-20");
 
       return { chatConfig: { ...state.chatConfig, ...config } };
+    }),
+
+  wrapline: typeof window === "undefined" ? false : window.localStorage?.getItem("wrapline") === "true",
+  toggleWrapline: () =>
+    set((state) => {
+      localStorage.setItem("wrapline", state.wrapline ? "false" : "true");
+      return { wrapline: !state.wrapline };
     }),
 
   editMessageId: null,

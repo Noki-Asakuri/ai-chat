@@ -1,13 +1,13 @@
 import { marked } from "marked";
 import { memo, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
-import type { ExtraProps } from "react-markdown";
+import { isInlineCode, type Element } from "react-shiki";
 import remarkGfm from "remark-gfm";
 
 import { cn } from "@/lib/utils";
 
+import { ShikiCodeBlock } from "./ui/code-block";
 import {
-  TypographyP,
   TypographyBlockquote,
   TypographyH1,
   TypographyH2,
@@ -15,32 +15,34 @@ import {
   TypographyH4,
   TypographyInlineCode,
   TypographyList,
+  TypographyP,
   TypographySmall,
   TypographyTable,
-  TypographyTableTHead,
-  TypographyTableTH,
-  TypographyTableTR,
   TypographyTableTD,
+  TypographyTableTH,
+  TypographyTableTHead,
+  TypographyTableTR,
 } from "./ui/typography";
-import { ShikiCodeBlock } from "./ui/code-block";
 
 function parseMarkdownIntoBlocks(markdown: string): string[] {
   const tokens = marked.lexer(markdown);
   return tokens.map((token) => token.raw);
 }
 
-function CodeBlock({ className, children, ...props }: React.ComponentProps<"code">) {
+function CodeBlock({ className, children, node, ...props }: React.ComponentProps<"code"> & { node?: Element }) {
+  const code = String(children as string);
+  const isInline = node ? isInlineCode(node) : undefined;
   const language = /language-(\w+)/.exec(className ?? "")?.[1];
 
-  if (!language) {
+  if (isInline) {
     return (
       <TypographyInlineCode className={cn("not-prose", className)} {...props}>
-        {children}
+        {code}
       </TypographyInlineCode>
     );
   }
 
-  return <ShikiCodeBlock language={language}>{String(children as string)}</ShikiCodeBlock>;
+  return <ShikiCodeBlock language={language ?? "plaintext"} code={code} />;
 }
 
 const MemoizedMarkdownBlock = memo(

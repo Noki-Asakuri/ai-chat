@@ -15,6 +15,7 @@ import { Button } from "./ui/button";
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore, useChatStore } from "@/lib/chat/store";
 import type { ChatRequest } from "@/lib/types";
+import { toUUID } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
 
@@ -36,7 +37,7 @@ async function submitChatMessage(
   if (typeof currentThreadId === "undefined") {
     threadId = await convexClient.mutation(api.threads.createThread, { title: "New Chat" });
 
-    router.push(`/chat/${threadId}`);
+    router.push(`/chat/${toUUID(threadId)}`);
     state.setThreadId(threadId);
   }
 
@@ -110,7 +111,7 @@ export function ChatTextarea() {
     <form className="absolute bottom-0 w-full px-4">
       <ScrollDownButton />
 
-      <div className="bg-muted/40 border-border mx-auto max-w-[calc(896px+32px)] rounded-[calc(2px+8px)] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150">
+      <div className="bg-muted/40 border-border mx-auto max-w-4xl rounded-[calc(2px+8px)] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150">
         <div className="bg-muted/60 border-border rounded-md rounded-b-none border border-b-0 p-2.5 pb-0">
           <textarea
             rows={3}
