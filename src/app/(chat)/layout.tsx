@@ -23,12 +23,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const resumeRef = useRef<boolean>(false);
   const setThreadId = useChatStore((state) => state.setThreadId);
 
-  const data = useQuery(api.messages.getAllMessagesFromThread, { threadId: fromUUID(threadId) as Id<"threads"> });
+  const data = useQuery(api.messages.getAllMessagesFromThread, {
+    threadId: fromUUID<Id<"threads">>(threadId),
+  });
 
   useEffect(() => {
     if (threadId !== params.threadId) {
       console.debug("[Thread] Setting thread id", params.threadId);
-      setThreadId(fromUUID(params.threadId) as Id<"threads">);
+      setThreadId(fromUUID<Id<"threads">>(params.threadId));
     }
   }, [params.threadId, setThreadId, threadId]);
 

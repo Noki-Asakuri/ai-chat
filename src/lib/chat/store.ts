@@ -11,8 +11,8 @@ export interface ChatState {
   status: "pending" | "complete" | "streaming" | "error" | undefined;
   setStatus: (status: "pending" | "complete" | "streaming" | "error") => void;
 
-  threadId?: Id<"threads"> | null;
-  setThreadId: (threadId: Id<"threads">) => void;
+  threadId?: Id<"threads">;
+  setThreadId: (threadId?: Id<"threads">) => void;
 
   editMessageId: string | null;
   setEditMessageId: (messageId: string | null) => void;
@@ -62,7 +62,7 @@ export const useChatStore = create<ChatState>((set) => ({
   assistantMessage: undefined,
   setAssistantMessage: (message) => set({ assistantMessage: message }),
 
-  threadId: null,
+  threadId: undefined,
   setThreadId: (threadId) => set({ threadId }),
 
   isStreaming: false,

@@ -27,7 +27,7 @@ async function submitChatMessage(event: { preventDefault: () => void }, router: 
   const state = useChatStore.getState();
   const chatInput = state.chatInput.trim();
 
-  if (state.status === "streaming") return;
+  if (!chatInput || state.status === "streaming") return;
 
   state.setChatInput("");
   let threadId: Id<"threads"> = state.threadId!;

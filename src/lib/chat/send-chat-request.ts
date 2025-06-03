@@ -54,7 +54,7 @@ export async function sendChatRequest(body: ChatRequest) {
     }
 
     console.error(Error(error as string));
+  } finally {
+    state.setIsStreaming(false);
   }
-
-  state.setIsStreaming(false);
 }

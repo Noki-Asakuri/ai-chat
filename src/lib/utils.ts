@@ -15,6 +15,6 @@ export function toUUID(str: string) {
   return [str.slice(0, 8), str.slice(8, 12), str.slice(12, 16), str.slice(16, 20), str.slice(20, 32)].join("-");
 }
 
-export function fromUUID(uuid?: string | null) {
-  return uuid?.replaceAll("-", "");
+export function fromUUID<T extends string>(uuid?: string | null) {
+  return uuid?.replaceAll("-", "") as T | undefined;
 }
