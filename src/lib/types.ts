@@ -19,6 +19,7 @@ export type ChatMessage = {
   messageId: string;
   content: string;
   reasoning?: string;
+  sources?: { id: string; title?: string; url: string }[];
   error?: string;
   role: "assistant" | "user" | "system";
   status: "pending" | "complete" | "streaming" | "error";

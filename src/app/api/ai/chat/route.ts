@@ -2,6 +2,7 @@ import { env } from "@/env";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { serverConvexClient } from "@/lib/convex/server";
 
 import { waitUntil } from "@vercel/functions";
 import { Redis } from "ioredis";
@@ -10,11 +11,21 @@ import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { z } from "zod/v4";
 
 import { createDeepSeek } from "@ai-sdk/deepseek";
-import { createGoogleGenerativeAI, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
+import {
+  createGoogleGenerativeAI,
+  type GoogleGenerativeAIProviderOptions,
+  type GoogleGenerativeAIProviderMetadata,
+} from "@ai-sdk/google";
 import { createOpenAI, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
-import { createDataStream, createProviderRegistry, generateId, generateText, streamText, type AISDKError } from "ai";
-
-import { serverConvexClient } from "@/lib/convex/server";
+import {
+  createProviderRegistry,
+  generateId,
+  generateText,
+  streamText,
+  type AISDKError,
+  type JSONValue,
+  type ProviderMetadata,
+} from "ai";
 
 const openai = createOpenAI({ baseURL: env.PROXY_URL, apiKey: env.PROXY_KEY });
 const deepseek = createDeepSeek({ baseURL: env.PROXY_URL + "/deepseek", apiKey: env.PROXY_KEY });
@@ -44,7 +55,7 @@ const inputSchema = z.object({
     }),
   ),
   assistantMessageId: z.string(),
-  threadId: z.string(),
+  threadId: z.custom<Id<"threads">>((data) => z.string().parse(data)),
   config: z
     .object({
       webSearch: z.boolean(),
@@ -97,15 +108,26 @@ export async function POST(req: Request) {
   const streamId = generateId();
 
   const providerOptions = {
-    google: { thinkingConfig: { includeThoughts: true, thinkingBudget: 0 } } as GoogleGenerativeAIProviderOptions,
+    google: {
+      thinkingConfig: { includeThoughts: true, thinkingBudget: 0 },
+      safetySettings: [
+        { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_HARASSMENT" },
+        { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_HATE_SPEECH" },
+        { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_CIVIC_INTEGRITY" },
+        { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_DANGEROUS_CONTENT" },
+        { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_SEXUALLY_EXPLICIT" },
+      ],
+    } as GoogleGenerativeAIProviderOptions,
     openai: {} as OpenAIResponsesProviderOptions,
   };
 
-  if (config?.reasoning && config.model?.includes("gemini-2.5")) {
-    providerOptions.google = {
-      // Unset thinking budget to allow auto budgeting by Google
-      thinkingConfig: { includeThoughts: true },
-    };
+  if (config?.reasoning) {
+    delete providerOptions.google.thinkingConfig?.thinkingBudget;
+    providerOptions.openai = { reasoningEffort: "high" };
+  }
+
+  if (config?.webSearch) {
+    providerOptions.google.useSearchGrounding = true;
   }
 
   const startTime = Date.now();
@@ -133,67 +155,100 @@ export async function POST(req: Request) {
     updates: { resumableStreamId: streamId, status: "streaming" },
   });
 
-  waitUntil(updateTitle(messages, threadId));
+  let model = "";
+  const metadata = {
+    duration: 0,
+    finishReason: "",
+    totalTokens: 0,
+    thinkingTokens: 0,
+    providerOptions: undefined,
+  } as {
+    duration: number;
+    finishReason: string;
+    totalTokens: number;
+    thinkingTokens: number;
+    providerOptions?: { openai: Record<string, JSONValue>; google: GoogleGenerativeAIProviderMetadata };
+  };
 
-  const stream = createDataStream({
-    async execute(dataStream) {
-      let content = "";
-      let reasoning = "";
-      let model = "";
+  const reader = result
+    .toUIMessageStream({
+      sendFinish: true,
+      sendReasoning: true,
+      sendSources: true,
+      sendStart: true,
+      messageMetadata({ part }): Partial<typeof metadata> | undefined {
+        if (part.type === "finish-step") {
+          model = part.response.modelId;
 
-      const metadata = {
-        duration: 0,
-        finishReason: "",
-        totalTokens: 0,
-        thinkingTokens: 0,
-      };
+          metadata.duration = Date.now() - startTime;
+          metadata.finishReason = part.finishReason;
+          metadata.providerOptions = part.providerMetadata as (typeof metadata)["providerOptions"];
+        }
 
-      result.mergeIntoDataStream(dataStream, {
-        sendUsage: false,
-        sendReasoning: true,
-        experimental_sendStart: false,
-        experimental_sendFinish: false,
-      });
+        if (part.type === "finish") {
+          metadata.totalTokens = part.totalUsage.outputTokens ?? 0;
+          metadata.thinkingTokens = part.totalUsage.reasoningTokens ?? 0;
 
-      for await (const stream of result.fullStream) {
-        switch (stream.type) {
-          case "error":
-            console.log(stream);
-            break;
+          return metadata;
+        }
+      },
+    })
+    .getReader();
 
-          case "step-start":
+  let content = "";
+  let reasoning = "";
+  const sources: { id: string; title?: string; url: string }[] = [];
+
+  const readableStream = new ReadableStream<string>({
+    async start(controller) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        controller.enqueue("data: " + JSON.stringify(value) + "\n\n");
+
+        switch (value.type) {
+          case "text":
+            content += value.text;
             break;
 
           case "reasoning":
-            reasoning += stream.textDelta;
+            reasoning += value.text;
             break;
 
-          case "text-delta":
-            content += stream.textDelta;
+          case "source-url":
+            sources.push({ id: value.sourceId, title: value.title, url: value.url });
             break;
 
-          case "step-finish":
-            model = stream.response.modelId;
-
-            metadata.duration = Date.now() - startTime;
-            metadata.finishReason = stream.finishReason;
-            metadata.totalTokens = stream.usage.completionTokens;
-
-            await serverConvexClient.mutation(api.messages.updateMessageById, {
-              messageId: assistantMessageId,
-              updates: { status: "complete", model, content, reasoning, resumableStreamId: null, metadata },
-            });
-            break;
-
-          case "finish":
+          default:
+            console.log(value);
             break;
         }
       }
+
+      delete metadata.providerOptions;
+
+      metadata.duration = Date.now() - startTime;
+      await serverConvexClient.mutation(api.messages.updateMessageById, {
+        messageId: assistantMessageId,
+        threadId,
+        updates: { model, sources, content, metadata, reasoning, status: "complete", resumableStreamId: null },
+      });
+
+      controller.enqueue("data: [DONE]\n\n");
+      return controller.close();
     },
   });
 
-  return new Response(await streamContext.resumableStream(streamId, () => stream), {
-    headers: { "Content-Type": "text/event-stream" },
+  waitUntil(updateTitle(messages, threadId));
+
+  const resumeableStream = await streamContext.resumableStream(streamId, () => readableStream);
+  return new Response(resumeableStream, {
+    headers: {
+      connection: "keep-alive",
+      "Cache-Control": "no-cache",
+      "Transfer-Encoding": "chunked",
+      "Content-Type": "text/event-stream",
+    },
   });
 }
 
@@ -207,6 +262,11 @@ export async function GET(req: NextRequest) {
 
   const stream = await streamContext.resumeExistingStream(streamId, resumeAt ? parseInt(resumeAt) : undefined);
   return new Response(stream, {
-    headers: { "Content-Type": "text/event-stream" },
+    headers: {
+      connection: "keep-alive",
+      "Cache-Control": "no-cache",
+      "Transfer-Encoding": "chunked",
+      "Content-Type": "text/event-stream",
+    },
   });
 }

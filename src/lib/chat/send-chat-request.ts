@@ -1,51 +1,40 @@
 import { processChatStream } from "./process-stream";
-
-import type { ChatRequest } from "../types";
 import { chatStore } from "./store";
 
-export async function sendChatRequest(body: ChatRequest) {
+export async function sendChatRequest(url: string | URL, init: RequestInit | undefined, assistantMessageId: string) {
   const state = chatStore.getState();
   state.setIsStreaming(true);
 
   let abortController = state.abortController;
-
   if (abortController.signal.aborted) {
     abortController = new AbortController();
     state.setAbortController(abortController);
   }
 
-  body.config = state.chatConfig;
-
+  state.setIsStreaming(true);
   try {
-    const res = fetch("/api/ai/chat", {
-      method: "POST",
-      body: JSON.stringify(body),
-      signal: abortController.signal,
-    });
-
-    let reasoning = "";
     let content = "";
+    let reasoning = "";
 
-    await processChatStream(res, async (stream) => {
-      switch (stream.type) {
-        case "text-delta":
-          content += stream.data;
-          break;
+    await processChatStream({
+      fetch: fetch(url, { ...init, signal: abortController.signal }),
+      handler: async (stream) => {
+        switch (stream.type) {
+          case "text":
+            content += stream.text;
+            break;
 
-        case "reasoning":
-          reasoning += stream.data;
-          break;
+          case "reasoning":
+            reasoning += stream.text;
+            break;
 
-        case "custom-json":
-          console.log(stream.data);
-          break;
+          case "finish":
+            state.setStatus("complete");
+            break;
+        }
 
-        case "finish":
-          state.setStatus("complete");
-          break;
-      }
-
-      state.setAssistantMessage({ id: body.assistantMessageId, content, reasoning });
+        state.setAssistantMessage({ id: assistantMessageId, content, reasoning });
+      },
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {

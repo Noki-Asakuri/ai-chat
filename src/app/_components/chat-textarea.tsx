@@ -4,14 +4,14 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { getConvexReactClient } from "@/lib/convex/client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
-import { SendHorizontalIcon, SquareIcon } from "lucide-react";
+import { SendHorizontalIcon, SquareIcon, ToggleLeftIcon, ToggleRightIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { ScrollDownButton } from "./scroll-down-button";
-import { Button } from "./ui/button";
+import { Button, ButtonWithTip } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
@@ -82,7 +82,7 @@ async function submitChatMessage(event: { preventDefault: () => void }, router: 
     messages: allMessages,
   };
 
-  await sendChatRequest(body);
+  await sendChatRequest("/api/ai/chat", { method: "POST", body: JSON.stringify(body) }, assistantMessageId!);
 }
 
 async function abortChatRequest() {
@@ -157,25 +157,29 @@ export function ChatTextarea() {
 
           <div className="flex items-end justify-between">
             <div className="space-x-2 py-2">
-              <Button
+              <ButtonWithTip
                 type="button"
-                variant="outline"
-                className="border-border data-[active=true]:!bg-input/80 h-max cursor-pointer border px-2 py-1.5 text-xs"
+                variant="secondary"
+                className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground h-max cursor-pointer border px-2 py-1.5 text-xs"
                 data-active={config.webSearch}
                 onMouseDown={() => setChatConfig({ webSearch: !config.webSearch })}
+                title={config.webSearch ? "Disable Web Search" : "Enable Web Search"}
               >
+                {config.webSearch ? <ToggleRightIcon /> : <ToggleLeftIcon />}
                 Web Search
-              </Button>
+              </ButtonWithTip>
 
-              <Button
+              <ButtonWithTip
                 type="button"
-                variant="outline"
-                className="border-border data-[active=true]:!bg-input/80 h-max cursor-pointer border px-2 py-1.5 text-xs"
+                variant="secondary"
+                className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground h-max cursor-pointer border px-2 py-1.5 text-xs"
                 data-active={config.reasoning}
                 onMouseDown={() => setChatConfig({ reasoning: !config.reasoning })}
+                title={config.reasoning ? "Disable Reasoning" : "Enable Reasoning"}
               >
+                {config.reasoning ? <ToggleRightIcon /> : <ToggleLeftIcon />}
                 Reasoning
-              </Button>
+              </ButtonWithTip>
             </div>
 
             <Button

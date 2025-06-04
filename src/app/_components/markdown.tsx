@@ -14,7 +14,7 @@ import {
   TypographyH3,
   TypographyH4,
   TypographyInlineCode,
-  TypographyList,
+  TypographyOrderedList,
   TypographyP,
   TypographySmall,
   TypographyTable,
@@ -22,6 +22,7 @@ import {
   TypographyTableTH,
   TypographyTableTHead,
   TypographyTableTR,
+  TypographyUnorderedList,
 } from "./ui/typography";
 
 function parseMarkdownIntoBlocks(markdown: string): string[] {
@@ -56,7 +57,8 @@ const MemoizedMarkdownBlock = memo(
         h4: TypographyH4,
         blockquote: TypographyBlockquote,
         p: TypographyP,
-        ul: TypographyList,
+        ul: TypographyUnorderedList,
+        ol: TypographyOrderedList,
         small: TypographySmall,
         thead: TypographyTableTHead,
         th: TypographyTableTH,

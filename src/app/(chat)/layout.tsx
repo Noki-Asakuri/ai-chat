@@ -4,12 +4,12 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
 
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useEffect, useRef } from "react";
-import dynamic from "next/dynamic";
 
-import { processChatStream } from "@/lib/chat/process-stream";
-import { chatStore, useChatStore, type ChatState } from "@/lib/chat/store";
+import { sendChatRequest } from "@/lib/chat/send-chat-request";
+import { chatStore, useChatStore } from "@/lib/chat/store";
 import { fromUUID } from "@/lib/utils";
 
 const ChatTextarea = dynamic(() => import("@/components/chat-textarea").then((d) => d.ChatTextarea), { ssr: false });
@@ -51,7 +51,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     ) {
       resumeRef.current = true;
       console.debug("[Convex] Resuming chat streaming", { threadId, streamId: lastMessage.resumableStreamId });
-      void resumeStreaming({ state, streamId: lastMessage.resumableStreamId, assistantMessageId: lastMessage._id });
+      void sendChatRequest(`/api/ai/chat?streamId=${lastMessage.resumableStreamId}`, undefined, lastMessage._id);
       resumeRef.current = false;
     }
   }, [data]);
@@ -66,41 +66,4 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   );
-}
-
-type ResumeData = {
-  state: ChatState;
-  streamId: string;
-  assistantMessageId: string;
-};
-async function resumeStreaming({ assistantMessageId, state, streamId }: ResumeData) {
-  let content = "";
-  let reasoning = "";
-
-  state.setIsStreaming(true);
-
-  const response = fetch("/api/ai/chat?streamId=" + streamId);
-  await processChatStream(response, async (stream) => {
-    switch (stream.type) {
-      case "text-delta":
-        content += stream.data;
-        break;
-
-      case "reasoning":
-        reasoning += stream.data;
-        break;
-
-      case "custom-json":
-        console.log(stream.data);
-        break;
-
-      case "finish":
-        state.setStatus("complete");
-        break;
-    }
-
-    state.setAssistantMessage({ id: assistantMessageId, content, reasoning });
-  });
-
-  state.setIsStreaming(false);
 }

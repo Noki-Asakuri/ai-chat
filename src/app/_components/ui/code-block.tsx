@@ -27,7 +27,7 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
 
   const copyRef = useRef<NodeJS.Timeout | null>(null);
 
-  const highlightedCode = useShikiHighlighter(code, language === "assembly" ? "asm" : language, "github-dark-dimmed", {
+  const highlightedCode = useShikiHighlighter(code, language === "assembly" ? "asm" : language, "vitesse-dark", {
     delay: 50,
   });
 
@@ -45,7 +45,7 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
       type="single"
       collapsible
       defaultValue={`${language}-code-block`}
-      className="code-block not-prose border-border overflow-hidden rounded-md border bg-transparent"
+      className="code-block not-prose border-border my-4 overflow-hidden rounded-md border bg-transparent"
     >
       <AccordionItem value={`${language}-code-block`}>
         <AccordionPrimitive.Header className="relative">

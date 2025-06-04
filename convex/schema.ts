@@ -7,6 +7,7 @@ export default defineSchema({
 
   threads: defineTable({
     title: v.string(),
+    updatedAt: v.number(),
   }),
 
   messages: defineTable({
@@ -38,6 +39,16 @@ export default defineSchema({
 
     createdAt: v.number(),
     updatedAt: v.number(),
+
+    sources: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          title: v.optional(v.string()),
+          url: v.string(),
+        }),
+      ),
+    ),
 
     metadata: v.optional(
       v.object({

@@ -37,11 +37,10 @@ export const addMessagesToThread = mutation({
       .unique();
 
     if (!thread) {
-      await ctx.db.insert("threads", { title: "New Chat" });
+      await ctx.db.insert("threads", { title: "New Chat", updatedAt: Date.now() + 1 });
     }
 
     let assistantMessageId: Id<"messages"> | undefined;
-
     for (const message of args.messages) {
       const data = await ctx.db.insert("messages", {
         threadId: args.threadId,
@@ -67,6 +66,7 @@ export const getMessageByMessageId = query({
 
 export const updateMessageById = mutation({
   args: {
+    threadId: v.optional(v.id("threads")),
     messageId: v.id("messages"),
     updates: v.object({
       status: v.optional(
@@ -77,6 +77,7 @@ export const updateMessageById = mutation({
       error: v.optional(v.string()),
       model: v.optional(v.string()),
       resumableStreamId: v.optional(v.union(v.string(), v.null())),
+      sources: v.optional(v.array(v.object({ id: v.string(), title: v.optional(v.string()), url: v.string() }))),
       metadata: v.optional(
         v.object({
           duration: v.number(),
@@ -88,7 +89,10 @@ export const updateMessageById = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.messageId, args.updates);
+    await ctx.db.patch(args.messageId, { ...args.updates, updatedAt: Date.now() });
+    if (args.threadId) {
+      await ctx.db.patch(args.threadId, { updatedAt: Date.now() });
+    }
   },
 });
 
@@ -126,6 +130,7 @@ export const retryChatMessage = mutation({
       });
     }
 
+    await ctx.db.patch(args.threadId, { updatedAt: Date.now() });
     return await ctx.db.insert("messages", { threadId: args.threadId, ...args.message });
   },
 });

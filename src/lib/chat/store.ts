@@ -104,8 +104,8 @@ export const useChatStore = create<ChatState>((set) => ({
   isAtBottom: false,
   setAtBottom: (value) => set({ isAtBottom: value }),
 
-  textareaHeight: 132,
-  setTextareaHeight: (height) => set({ textareaHeight: height }),
+  textareaHeight: 140,
+  setTextareaHeight: (height) => set({ textareaHeight: Math.max(height, 140) }),
 
   setDataFromConvex: (messages, status, threadId) => set({ messages, status, threadId }),
   resetState: () =>

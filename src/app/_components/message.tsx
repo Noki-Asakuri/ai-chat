@@ -148,7 +148,7 @@ async function retryMessage(index: number, editedUserMessage?: { _id: Id<"messag
     assistantMessageId,
   };
 
-  await sendChatRequest(body);
+  await sendChatRequest("/api/ai/chat", { method: "POST", body: JSON.stringify(body) }, assistantMessageId);
 }
 
 export function Message({ message, index, isLast }: { message: ChatMessage; index: number; isLast: boolean }) {
@@ -166,7 +166,9 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
   const setEditMessageId = useChatStore((state) => state.setEditMessageId);
 
   const renderMesssage =
-    message.role === "assistant" && assistantMessage?.id === message._id ? assistantMessage : message;
+    message.role === "assistant" && assistantMessage?.id === message._id && message.status === "streaming"
+      ? assistantMessage
+      : message;
 
   async function copeMessageContent(content: string) {
     if (copyRef.current) clearTimeout(copyRef.current);
@@ -232,21 +234,36 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
           />
         ) : (
           <div
-            className={cn(
-              "prose dark:prose-invert max-w-none space-y-2",
-              "prose-hr:my-4 prose-hr:border-border prose-pre:p-0 prose-pre:my-0 prose-pre:mt-2",
-              {
-                "bg-sidebar/50 rounded-md border px-4 py-2": message.role === "user",
-                "bg-destructive/60 border-destructive rounded-md px-4 py-2 backdrop-blur-md":
-                  message.status === "error",
-              },
-            )}
+            className={cn("max-w-full space-y-6", "", {
+              "bg-sidebar/50 rounded-md border px-4 py-2": message.role === "user",
+              "bg-destructive/60 border-destructive rounded-md px-4 py-2 backdrop-blur-md": message.status === "error",
+            })}
           >
             {message.status === "error" ? (
               // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
               <p>{message.error || "An error have occurred. Please try again."}</p>
             ) : (
               <MemoizedMarkdown id={message.messageId} content={renderMesssage.content} />
+            )}
+
+            {message.sources && message.sources.filter(({ title }) => !!title).length > 0 && (
+              <div className="not-prose flex w-full flex-wrap items-center gap-2 gap-y-1">
+                <span>Sources: </span>
+
+                {message.sources
+                  .filter(({ title }) => !!title)
+                  .map(({ id, title, url }) => (
+                    <a
+                      key={id}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="capitalize underline underline-offset-2"
+                      href={url}
+                    >
+                      {title?.replace(".com", "")}
+                    </a>
+                  ))}
+              </div>
             )}
           </div>
         )}
@@ -264,7 +281,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
               className="size-8 cursor-pointer p-2"
               onMouseDown={() => retryMessage(index)}
               title="Retry Message"
-              disabled={status === "streaming" || status === "pending"}
+              disabled={status === "pending"}
             >
               <RefreshCcwIcon className="size-5" />
             </ButtonWithTip>
@@ -275,7 +292,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
                 className="size-8 cursor-pointer p-2"
                 onMouseDown={() => handleEditMessage()}
                 title="Edit Message"
-                disabled={status === "streaming" || status === "pending"}
+                disabled={status === "pending"}
               >
                 <PencilIcon className="size-5" />
               </ButtonWithTip>
