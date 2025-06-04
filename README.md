@@ -35,7 +35,7 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 - [x] Add thread support
 - [ ] Add authentication
 - [x] Better markdown support
-- [ ] Support edit and delete messages
+- [x] Support edit and delete messages
 - [ ] Better UI
 - [ ] Add support to change model
 - [ ] Add support to change model params

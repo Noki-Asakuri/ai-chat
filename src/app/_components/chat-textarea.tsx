@@ -78,8 +78,9 @@ async function submitChatMessage(event: { preventDefault: () => void }, router: 
 
   const body: ChatRequest = {
     threadId,
-    assistantMessageId: assistantMessageId!,
     messages: allMessages,
+    config: state.chatConfig,
+    assistantMessageId: assistantMessageId!,
   };
 
   await sendChatRequest("/api/ai/chat", { method: "POST", body: JSON.stringify(body) }, assistantMessageId!);
