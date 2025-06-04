@@ -33,9 +33,9 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 - [x] Add support for streaming
 - [x] Add support for resuming streaming
 - [x] Add thread support
-- [ ] Add authentication
 - [x] Better markdown support
 - [x] Support edit and delete messages
+- [x] Add support to change model
 - [ ] Better UI
-- [ ] Add support to change model
+- [ ] Add authentication
 - [ ] Add support to change model params
