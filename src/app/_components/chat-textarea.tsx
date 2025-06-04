@@ -87,7 +87,8 @@ async function submitChatMessage(event: { preventDefault: () => void }, router: 
 
 async function abortChatRequest() {
   const state = chatStore.getState();
-  if (!state.isStreaming) return;
+  const lastMessage = state.messages.at(-1);
+  if (lastMessage && lastMessage.role === "assistant" && lastMessage.status === "complete") return;
 
   console.log("[Chat] Aborting chat request");
   state.abortController.abort();
