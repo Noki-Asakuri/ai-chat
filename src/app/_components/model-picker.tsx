@@ -1,14 +1,15 @@
 import { BrainIcon, ChevronDownIcon, EyeIcon, RssIcon } from "lucide-react";
 import type React from "react";
 
+import { modelImages } from "./svg/model-svg";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ScrollArea } from "./ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 import { AllModelIds, getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";
-import { modelImages } from "./svg/model-svg";
 
 export function ModelPicker() {
   const { model } = useChatStore((state) => state.chatConfig);
@@ -64,15 +65,23 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
       </div>
 
       <div className="flex items-center gap-2">
-        <CapabilityIcon variant="webSearch" disable={data.capabilities.webSearch}>
+        <CapabilityIcon
+          variant="webSearch"
+          disable={data.capabilities.webSearch}
+          title="This model supports web search."
+        >
           <RssIcon size={16} />
         </CapabilityIcon>
 
-        <CapabilityIcon variant="reasoning" disable={data.capabilities.reasoning}>
+        <CapabilityIcon
+          variant="reasoning"
+          disable={data.capabilities.reasoning}
+          title="This model supports reasoning."
+        >
           <BrainIcon size={16} />
         </CapabilityIcon>
 
-        <CapabilityIcon variant="vision" disable={data.capabilities.vision}>
+        <CapabilityIcon variant="vision" disable={data.capabilities.vision} title="This model supports vision.">
           <EyeIcon size={16} />
         </CapabilityIcon>
       </div>
@@ -84,21 +93,29 @@ function CapabilityIcon({
   children,
   variant,
   disable,
+  title,
 }: {
   children: React.ReactNode;
   variant: "reasoning" | "webSearch" | "vision";
   disable: boolean;
+  title: string;
 }) {
   return (
-    <div
-      className={cn("flex size-7 items-center justify-center rounded-md border", {
-        "bg-[#25252e] *:stroke-[#94b8dc] hover:bg-[#25252e]": variant === "webSearch",
-        "bg-[#252030] *:stroke-[#6a6aa2] hover:bg-[#252030]": variant === "reasoning",
-        "bg-[#252b2b] *:stroke-[#79afa3] hover:bg-[#252b2b]": variant === "vision",
-        hidden: !disable,
-      })}
-    >
-      {children}
-    </div>
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <div
+          className={cn("flex size-7 items-center justify-center rounded-md border", {
+            "bg-[#25252e] *:stroke-[#94b8dc] hover:bg-[#25252e]": variant === "webSearch",
+            "bg-[#252030] *:stroke-[#6a6aa2] hover:bg-[#252030]": variant === "reasoning",
+            "bg-[#252b2b] *:stroke-[#79afa3] hover:bg-[#252b2b]": variant === "vision",
+            hidden: !disable,
+          })}
+        >
+          {children}
+        </div>
+      </TooltipTrigger>
+
+      <TooltipContent side="top">{title}</TooltipContent>
+    </Tooltip>
   );
 }
