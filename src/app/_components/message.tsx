@@ -173,6 +173,7 @@ async function retryMessage(index: number, editedUserMessage?: { _id: Id<"messag
     messages: allMessages,
     threadId,
     assistantMessageId,
+    config: state.chatConfig,
   };
 
   await sendChatRequest("/api/ai/chat", { method: "POST", body: JSON.stringify(body) }, assistantMessageId);
