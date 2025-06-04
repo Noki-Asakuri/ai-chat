@@ -72,6 +72,10 @@ export const updateMessageById = mutation({
       status: v.optional(
         v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming"), v.literal("error")),
       ),
+      enableThinking: v.optional(v.boolean()),
+      enableWebSearch: v.optional(v.boolean()),
+      thinkingBudget: v.optional(v.number()),
+      reasoningEffort: v.optional(v.number()),
       content: v.optional(v.string()),
       reasoning: v.optional(v.string()),
       error: v.optional(v.string()),

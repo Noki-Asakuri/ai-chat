@@ -32,6 +32,8 @@ export default defineSchema({
         frequency_penalty: v.optional(v.number()),
         presence_penalty: v.optional(v.number()),
 
+        enableWebSearch: v.optional(v.boolean()),
+        enableThinking: v.optional(v.boolean()),
         thinkingBudget: v.optional(v.number()),
         reasoningEffort: v.optional(v.number()),
       }),

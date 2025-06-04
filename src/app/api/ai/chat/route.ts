@@ -143,7 +143,12 @@ export async function POST(req: Request) {
 
   await serverConvexClient.mutation(api.messages.updateMessageById, {
     messageId: assistantMessageId,
-    updates: { resumableStreamId: streamId, status: "streaming" },
+    updates: {
+      status: "streaming",
+      resumableStreamId: streamId,
+      enableThinking: config?.reasoning,
+      enableWebSearch: config?.webSearch,
+    },
   });
 
   let model = "";
