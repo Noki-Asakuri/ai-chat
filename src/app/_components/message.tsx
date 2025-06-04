@@ -1,5 +1,14 @@
 import { useCopyToClipboard } from "@uidotdev/usehooks";
-import { CopyCheckIcon, CopyIcon, Loader2Icon, PencilIcon, PlusIcon, RefreshCcwIcon, SparkleIcon } from "lucide-react";
+import {
+  CopyCheckIcon,
+  CopyIcon,
+  Loader2Icon,
+  PencilIcon,
+  PlusIcon,
+  RefreshCcwIcon,
+  SaveIcon,
+  SparkleIcon,
+} from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
@@ -251,7 +260,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
             name="user-input"
             defaultValue={editedUserMessage}
             onChange={(event) => setEditedUserMessage(event.target.value)}
-            className="min-h-11 w-full min-w-[80ch] resize-none font-sans outline-none"
+            className="min-h-11 w-full min-w-[80ch] resize-none px-4 py-2 font-sans outline-none"
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
@@ -301,6 +310,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
             "pointer-events-auto group-hover:opacity-100": message.status === "error" || message.status === "complete",
             hidden: message.status === "pending" || message.status === "streaming",
             "right-0": message.role === "user",
+            "opacity-100": editMessageId === message._id,
           })}
         >
           <div className="flex items-center gap-2">
@@ -322,7 +332,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
                 title="Edit Message"
                 disabled={status === "pending"}
               >
-                <PencilIcon className="size-5" />
+                {editMessageId === message._id ? <SaveIcon className="size-5" /> : <PencilIcon className="size-5" />}
               </ButtonWithTip>
             )}
 

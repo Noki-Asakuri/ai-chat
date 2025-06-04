@@ -108,7 +108,6 @@ export function ChatTextarea() {
   const status = useChatStore((state) => state.status);
   const config = useChatStore((state) => state.chatConfig);
   const setChatConfig = useChatStore((state) => state.setChatConfig);
-  const messages = useChatStore((state) => state.messages);
 
   const setTextareaHeight = useChatStore((state) => state.setTextareaHeight);
 
@@ -152,7 +151,7 @@ export function ChatTextarea() {
             value={input}
             placeholder="Type your message here..."
             onChange={(event) => setChatInput(event.target.value)}
-            className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 text-sm !ring-0"
+            className="w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 void submitChatMessage(event, router);
