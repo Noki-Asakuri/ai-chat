@@ -12,11 +12,61 @@ import { useEffect } from "react";
 
 const THREAD_LOCAL_STORAGE_KEY = "threads";
 
+type Thread = { _id: string; title: string; updatedAt: number };
+
+function groupThreadsByDate(threads: Thread[]) {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0); // Normalize 'now' to the start of today for comparison
+
+  const today = new Date(now);
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(now.getDate() - 7);
+
+  const groupedThreads = {
+    today: [],
+    yesterday: [],
+    sevenDaysAgo: [], // This will represent "Within the last 7 days but not Today/Yesterday"
+    older: [],
+  } as {
+    today: Thread[];
+    yesterday: Thread[];
+    sevenDaysAgo: Thread[];
+    older: Thread[];
+  };
+
+  threads.forEach((thread) => {
+    const threadUpdatedAt = new Date(thread.updatedAt);
+    threadUpdatedAt.setHours(0, 0, 0, 0); // Normalize thread's date for comparison
+
+    if (threadUpdatedAt.getTime() === today.getTime()) {
+      groupedThreads.today.push(thread);
+    } else if (threadUpdatedAt.getTime() === yesterday.getTime()) {
+      groupedThreads.yesterday.push(thread);
+    } else if (threadUpdatedAt >= sevenDaysAgo && threadUpdatedAt < yesterday) {
+      // This captures dates within the last 7 days, excluding today and yesterday
+      groupedThreads.sevenDaysAgo.push(thread);
+    } else {
+      groupedThreads.older.push(thread);
+    }
+  });
+
+  for (const key in groupedThreads) {
+    groupedThreads[key as keyof typeof groupedThreads].sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+
+  return groupedThreads;
+}
+
 export function ThreadList() {
   const threads = useQuery(api.threads.getAllThreads);
   const activeThreadId = useChatStore((state) => state.threadId);
 
   const localThreads = JSON.parse(localStorage.getItem(THREAD_LOCAL_STORAGE_KEY) ?? "[]") as typeof threads;
+  const groupedThreads = groupThreadsByDate(threads ?? localThreads ?? []);
 
   const title = threads?.find((thread) => thread._id === activeThreadId)?.title;
   useDocumentTitle(title ? `${title} - AI Chat` : "AI Chat");
@@ -37,7 +87,30 @@ export function ThreadList() {
 
       <hr />
 
-      {(threads ?? localThreads)?.map((thread) => (
+      <ThreadGroup threads={groupedThreads.today} title="Today" activeThreadId={activeThreadId} />
+      <ThreadGroup threads={groupedThreads.yesterday} title="Yesterday" activeThreadId={activeThreadId} />
+      <ThreadGroup threads={groupedThreads.sevenDaysAgo} title="Last 7 days" activeThreadId={activeThreadId} />
+      <ThreadGroup threads={groupedThreads.older} title="Older" activeThreadId={activeThreadId} />
+    </div>
+  );
+}
+
+function ThreadGroup({
+  title,
+  threads,
+  activeThreadId,
+}: {
+  title: string;
+  threads: Thread[];
+  activeThreadId?: string;
+}) {
+  if (!threads.length) return null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <h4 className="px-2 text-sm">{title}</h4>
+
+      {threads.map((thread) => (
         <Link
           href={`/chat/${toUUID(thread._id)}`}
           key={thread._id}
