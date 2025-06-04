@@ -8,13 +8,12 @@ import { useParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 
-import { ThreadList } from "@/components/thread-list";
-
 import { processChatStream } from "@/lib/chat/process-stream";
 import { chatStore, useChatStore, type ChatState } from "@/lib/chat/store";
 import { fromUUID } from "@/lib/utils";
 
 const ChatTextarea = dynamic(() => import("@/components/chat-textarea").then((d) => d.ChatTextarea), { ssr: false });
+const ThreadList = dynamic(() => import("@/components/thread-list").then((d) => d.ThreadList), { ssr: false });
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const params = useParams<{ threadId?: string }>();

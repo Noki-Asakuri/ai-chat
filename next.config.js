@@ -8,10 +8,7 @@ import "./src/env.js";
 const config = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
-  logging: { fetches: { fullUrl: true } },
-  experimental: {
-    reactCompiler: true,
-  },
+  experimental: { reactCompiler: true },
 };
 
 export default config;

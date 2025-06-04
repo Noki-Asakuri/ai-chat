@@ -140,7 +140,8 @@ export async function POST(req: Request) {
       let content = "";
       let reasoning = "";
       let model = "";
-      let metadata = {
+
+      const metadata = {
         duration: 0,
         finishReason: "",
         totalTokens: 0,
@@ -173,22 +174,18 @@ export async function POST(req: Request) {
 
           case "step-finish":
             model = stream.response.modelId;
+
+            metadata.duration = Date.now() - startTime;
+            metadata.finishReason = stream.finishReason;
+            metadata.totalTokens = stream.usage.completionTokens;
+
+            await serverConvexClient.mutation(api.messages.updateMessageById, {
+              messageId: assistantMessageId,
+              updates: { status: "complete", model, content, reasoning, resumableStreamId: null, metadata },
+            });
             break;
 
           case "finish":
-            metadata = {
-              duration: Date.now() - startTime,
-              finishReason: stream.finishReason,
-              totalTokens: stream.usage.completionTokens,
-              thinkingTokens: 0,
-            };
-
-            dataStream.writeData({ type: "metadata", metadata });
-
-            void serverConvexClient.mutation(api.messages.updateMessageById, {
-              messageId: assistantMessageId,
-              updates: { status: "complete", content, reasoning, model, resumableStreamId: null, metadata },
-            });
             break;
         }
       }

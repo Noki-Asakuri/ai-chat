@@ -1,18 +1,31 @@
+"use client";
+
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
+import { useQuery } from "convex-helpers/react/cache";
 
 import Link from "next/link";
 import { useDocumentTitle } from "@uidotdev/usehooks";
 
 import { useChatStore } from "@/lib/chat/store";
 import { cn, toUUID } from "@/lib/utils";
+import { useEffect } from "react";
+
+const THREAD_LOCAL_STORAGE_KEY = "threads";
 
 export function ThreadList() {
   const threads = useQuery(api.threads.getAllThreads);
   const activeThreadId = useChatStore((state) => state.threadId);
 
+  const localThreads = JSON.parse(localStorage.getItem(THREAD_LOCAL_STORAGE_KEY) ?? "[]") as typeof threads;
+
   const title = threads?.find((thread) => thread._id === activeThreadId)?.title;
   useDocumentTitle(title ? `${title} - AI Chat` : "AI Chat");
+
+  useEffect(() => {
+    if (threads) {
+      localStorage.setItem(THREAD_LOCAL_STORAGE_KEY, JSON.stringify(threads));
+    }
+  }, [threads]);
 
   return (
     <div className="hidden flex-col gap-2 px-4 py-6 lg:flex">
@@ -24,7 +37,7 @@ export function ThreadList() {
 
       <hr />
 
-      {threads?.map((thread) => (
+      {(threads ?? localThreads)?.map((thread) => (
         <Link
           href={`/chat/${toUUID(thread._id)}`}
           key={thread._id}

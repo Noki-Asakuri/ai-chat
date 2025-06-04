@@ -100,7 +100,7 @@ export function ChatMessages({ className }: { className?: string }) {
   );
 }
 
-async function tryMessage(index: number, editedUserMessage?: { _id: Id<"messages">; content: string }) {
+async function retryMessage(index: number, editedUserMessage?: { _id: Id<"messages">; content: string }) {
   const state = useChatStore.getState();
   const threadId = state.threadId!;
 
@@ -225,7 +225,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
-                void tryMessage(index, { _id: message._id, content: editedUserMessage });
+                void retryMessage(index, { _id: message._id, content: editedUserMessage });
                 setEditMessageId(null);
               }
             }}
@@ -262,7 +262,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
             <ButtonWithTip
               variant="ghost"
               className="size-8 cursor-pointer p-2"
-              onMouseDown={() => tryMessage(index)}
+              onMouseDown={() => retryMessage(index)}
               title="Retry Message"
               disabled={status === "streaming" || status === "pending"}
             >
