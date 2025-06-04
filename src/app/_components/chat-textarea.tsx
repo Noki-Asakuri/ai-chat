@@ -10,10 +10,12 @@ import { SendHorizontalIcon, SquareIcon, ToggleLeftIcon, ToggleRightIcon } from 
 import { useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 
+import { ModelPicker } from "./model-picker";
 import { ScrollDownButton } from "./scroll-down-button";
 import { Button, ButtonWithTip } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 
+import { getModelData } from "@/lib/chat/models";
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore, useChatStore } from "@/lib/chat/store";
 import type { ChatRequest } from "@/lib/types";
@@ -106,6 +108,7 @@ export function ChatTextarea() {
   const status = useChatStore((state) => state.status);
   const config = useChatStore((state) => state.chatConfig);
   const setChatConfig = useChatStore((state) => state.setChatConfig);
+  const messages = useChatStore((state) => state.messages);
 
   const setTextareaHeight = useChatStore((state) => state.setTextareaHeight);
 
@@ -158,12 +161,15 @@ export function ChatTextarea() {
           />
 
           <div className="flex items-end justify-between">
-            <div className="space-x-2 py-2">
+            <div className="flex items-center justify-center gap-2 py-2">
+              <ModelPicker />
+
               <ButtonWithTip
                 type="button"
                 variant="secondary"
                 className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground h-max cursor-pointer border px-2 py-1.5 text-xs"
                 data-active={config.webSearch}
+                disabled={!getModelData(config.model).capabilities.webSearch}
                 onMouseDown={() => setChatConfig({ webSearch: !config.webSearch })}
                 title={config.webSearch ? "Disable Web Search" : "Enable Web Search"}
               >
@@ -176,6 +182,7 @@ export function ChatTextarea() {
                 variant="secondary"
                 className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground h-max cursor-pointer border px-2 py-1.5 text-xs"
                 data-active={config.reasoning}
+                disabled={!getModelData(config.model).capabilities.reasoning}
                 onMouseDown={() => setChatConfig({ reasoning: !config.reasoning })}
                 title={config.reasoning ? "Disable Reasoning" : "Enable Reasoning"}
               >

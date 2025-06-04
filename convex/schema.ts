@@ -54,6 +54,7 @@ export default defineSchema({
 
     metadata: v.optional(
       v.object({
+        model: v.optional(v.string()),
         duration: v.number(),
         finishReason: v.string(),
         totalTokens: v.number(),

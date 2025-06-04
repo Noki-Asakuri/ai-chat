@@ -20,8 +20,15 @@ export interface ChatState {
   isStreaming: boolean;
   setIsStreaming: (isResuming: boolean) => void;
 
-  assistantMessage?: { id: string; content: string; reasoning: string };
-  setAssistantMessage: (message: { id: string; content: string; reasoning: string }) => void;
+  assistantMessage: { id: string; content: string; reasoning: string; metadata: ChatMessage["metadata"] };
+  setAssistantMessage: (
+    message: Partial<{
+      id: string;
+      content: string;
+      reasoning: string;
+      metadata: ChatMessage["metadata"];
+    }>,
+  ) => void;
 
   chatConfig: { webSearch: boolean; reasoning: boolean; model: string };
   setChatConfig: (config: Partial<{ webSearch: boolean; reasoning: boolean; model: string }>) => void;
@@ -52,6 +59,11 @@ export interface ChatState {
   ) => void;
 }
 
+function getItemFromLocalStorage<T extends string>(key: string, defaultValue: T) {
+  if (typeof window === "undefined" || window.localStorage === undefined) return defaultValue;
+  return window.localStorage.getItem(key) ?? defaultValue;
+}
+
 export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   setMessages: (messages) => set({ messages }),
@@ -59,8 +71,8 @@ export const useChatStore = create<ChatState>((set) => ({
   status: undefined,
   setStatus: (status) => set({ status }),
 
-  assistantMessage: undefined,
-  setAssistantMessage: (message) => set({ assistantMessage: message }),
+  assistantMessage: { id: "", content: "", reasoning: "", metadata: undefined },
+  setAssistantMessage: (message) => set((state) => ({ assistantMessage: { ...state.assistantMessage, ...message } })),
 
   threadId: undefined,
   setThreadId: (threadId) => set({ threadId }),
@@ -72,14 +84,14 @@ export const useChatStore = create<ChatState>((set) => ({
   setThreads: (threads) => set({ threads }),
 
   chatConfig: {
-    webSearch: typeof window === "undefined" ? false : window.localStorage?.getItem("webSearch") === "true",
-    reasoning: typeof window === "undefined" ? false : window.localStorage?.getItem("reasoning") === "true",
-    model: "google/gemini-2.5-flash-preview-05-20",
+    webSearch: getItemFromLocalStorage("webSearch", "false") === "true",
+    reasoning: getItemFromLocalStorage("reasoning", "false") === "true",
+    model: getItemFromLocalStorage("model", "google/gemini-2.5-flash-preview-05-20"),
   },
   setChatConfig: (config) =>
     set((state) => {
-      localStorage.setItem("webSearch", config.webSearch ? "true" : "false");
-      localStorage.setItem("reasoning", config.reasoning ? "true" : "false");
+      localStorage.setItem("webSearch", String(config.webSearch));
+      localStorage.setItem("reasoning", String(config.reasoning));
       localStorage.setItem("model", config.model ?? "google/gemini-2.5-flash-preview-05-20");
 
       return { chatConfig: { ...state.chatConfig, ...config } };

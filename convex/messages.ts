@@ -72,10 +72,7 @@ export const updateMessageById = mutation({
       status: v.optional(
         v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming"), v.literal("error")),
       ),
-      enableThinking: v.optional(v.boolean()),
-      enableWebSearch: v.optional(v.boolean()),
-      thinkingBudget: v.optional(v.number()),
-      reasoningEffort: v.optional(v.number()),
+
       content: v.optional(v.string()),
       reasoning: v.optional(v.string()),
       error: v.optional(v.string()),
@@ -84,10 +81,25 @@ export const updateMessageById = mutation({
       sources: v.optional(v.array(v.object({ id: v.string(), title: v.optional(v.string()), url: v.string() }))),
       metadata: v.optional(
         v.object({
+          model: v.string(),
           duration: v.number(),
           finishReason: v.string(),
           totalTokens: v.number(),
           thinkingTokens: v.number(),
+        }),
+      ),
+      modelParams: v.optional(
+        v.object({
+          temperature: v.optional(v.number()),
+          top_p: v.optional(v.number()),
+          top_k: v.optional(v.number()),
+          frequency_penalty: v.optional(v.number()),
+          presence_penalty: v.optional(v.number()),
+
+          enableThinking: v.optional(v.boolean()),
+          enableWebSearch: v.optional(v.boolean()),
+          thinkingBudget: v.optional(v.number()),
+          reasoningEffort: v.optional(v.number()),
         }),
       ),
     }),

@@ -1,9 +1,12 @@
+import type { ChatMessage } from "../types";
 import { processChatStream } from "./process-stream";
 import { chatStore } from "./store";
 
 export async function sendChatRequest(url: string | URL, init: RequestInit | undefined, assistantMessageId: string) {
   const state = chatStore.getState();
+
   state.setIsStreaming(true);
+  state.setStatus("streaming");
 
   let abortController = state.abortController;
   if (abortController.signal.aborted) {
@@ -11,10 +14,10 @@ export async function sendChatRequest(url: string | URL, init: RequestInit | und
     state.setAbortController(abortController);
   }
 
-  state.setIsStreaming(true);
   try {
     let content = "";
     let reasoning = "";
+    let metadata: ChatMessage["metadata"] | undefined;
 
     await processChatStream({
       fetch: fetch(url, { ...init, signal: abortController.signal }),
@@ -29,11 +32,12 @@ export async function sendChatRequest(url: string | URL, init: RequestInit | und
             break;
 
           case "finish":
+            metadata = stream.metadata as ChatMessage["metadata"];
             state.setStatus("complete");
             break;
         }
 
-        state.setAssistantMessage({ id: assistantMessageId, content, reasoning });
+        state.setAssistantMessage({ id: assistantMessageId, content, reasoning, metadata });
       },
     });
   } catch (error) {

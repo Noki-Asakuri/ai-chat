@@ -32,7 +32,7 @@ export function TypographyOrderedList({ children }: React.ComponentProps<"ul">) 
 
 export function TypographyInlineCode({ children }: React.ComponentProps<"code">) {
   return (
-    <code className="bg-muted/40 relative rounded border px-[0.3rem] py-[0.2rem] text-[0.85em] before:content-[''] after:content-['']">
+    <code className="bg-muted/40 relative rounded border px-[0.3rem] py-[0.2rem] text-[0.80em] before:content-[''] after:content-['']">
       {children}
     </code>
   );

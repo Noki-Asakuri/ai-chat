@@ -11,13 +11,11 @@ import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { z } from "zod/v4";
 
 import { createDeepSeek } from "@ai-sdk/deepseek";
-import {
-  createGoogleGenerativeAI,
-  type GoogleGenerativeAIProviderMetadata,
-  type GoogleGenerativeAIProviderOptions,
-} from "@ai-sdk/google";
+import { createGoogleGenerativeAI, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { createOpenAI, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
-import { createProviderRegistry, generateId, generateText, streamText, type AISDKError, type JSONValue } from "ai";
+import { createProviderRegistry, generateId, generateText, streamText, type AISDKError } from "ai";
+
+import { AllModelIds } from "@/lib/chat/models";
 
 const openai = createOpenAI({ baseURL: env.PROXY_URL, apiKey: env.PROXY_KEY });
 const deepseek = createDeepSeek({ baseURL: env.PROXY_URL + "/deepseek", apiKey: env.PROXY_KEY });
@@ -46,7 +44,7 @@ const inputSchema = z.object({
       content: z.string(),
     }),
   ),
-  assistantMessageId: z.string(),
+  assistantMessageId: z.custom<Id<"messages">>((data) => z.string().parse(data)),
   threadId: z.custom<Id<"threads">>((data) => z.string().parse(data)),
   config: z
     .object({
@@ -56,6 +54,11 @@ const inputSchema = z.object({
     })
     .partial(),
 });
+
+const modelValidator = z
+  .enum(AllModelIds)
+  .default("google/gemini-2.5-flash-preview-05-20")
+  .catch("google/gemini-2.5-flash-preview-05-20");
 
 async function updateTitle(messages: { role: string; content: string }[], threadId: Id<"threads">) {
   if (messages.length > 1 || !messages[0] || !threadId) return;
@@ -94,9 +97,9 @@ export async function POST(req: Request) {
     return Response.json({ error: { message: z.prettifyError(error) } }, { status: 400 });
   }
 
-  const { messages, assistantMessageId: _assistantMessageId, threadId, config } = data;
-  const assistantMessageId = _assistantMessageId as Id<"messages">;
   const streamId = generateId();
+  const { messages, assistantMessageId, threadId, config } = data;
+  const model = modelValidator.parse(config?.model);
 
   const providerOptions = {
     google: {
@@ -123,7 +126,7 @@ export async function POST(req: Request) {
 
   const startTime = Date.now();
   const result = streamText({
-    model: registry.languageModel("google/gemini-2.5-flash-preview-05-20"),
+    model: registry.languageModel(model),
     system: "You are a helpful assistant.",
     messages,
     providerOptions,
@@ -146,24 +149,27 @@ export async function POST(req: Request) {
     updates: {
       status: "streaming",
       resumableStreamId: streamId,
-      enableThinking: config?.reasoning,
-      enableWebSearch: config?.webSearch,
+      modelParams: {
+        enableWebSearch: config?.webSearch,
+        enableThinking: config?.reasoning,
+      },
     },
   });
 
-  let model = "";
   const metadata = {
+    model,
     duration: 0,
     finishReason: "",
     totalTokens: 0,
     thinkingTokens: 0,
     providerOptions: undefined,
   } as {
+    model: string;
     duration: number;
     finishReason: string;
     totalTokens: number;
     thinkingTokens: number;
-    providerOptions?: { openai: Record<string, JSONValue>; google: GoogleGenerativeAIProviderMetadata };
+    // providerOptions?: { openai: Record<string, JSONValue>; google: GoogleGenerativeAIProviderMetadata };
   };
 
   const reader = result
@@ -174,11 +180,10 @@ export async function POST(req: Request) {
       sendStart: true,
       messageMetadata({ part }): Partial<typeof metadata> | undefined {
         if (part.type === "finish-step") {
-          model = part.response.modelId;
-
+          metadata.model = part.response.modelId;
           metadata.duration = Date.now() - startTime;
           metadata.finishReason = part.finishReason;
-          metadata.providerOptions = part.providerMetadata as (typeof metadata)["providerOptions"];
+          // metadata.providerOptions = part.providerMetadata as (typeof metadata)["providerOptions"];
         }
 
         if (part.type === "finish") {
@@ -221,13 +226,19 @@ export async function POST(req: Request) {
         }
       }
 
-      delete metadata.providerOptions;
+      const updates = {
+        model,
+        content,
+        metadata,
+        resumableStreamId: null,
+        status: "complete" as const,
+        reasoning: reasoning.length > 0 ? reasoning.trim() : undefined,
+      };
 
-      metadata.duration = Date.now() - startTime;
       await serverConvexClient.mutation(api.messages.updateMessageById, {
         messageId: assistantMessageId,
         threadId,
-        updates: { model, sources, content, metadata, reasoning, status: "complete", resumableStreamId: null },
+        updates,
       });
 
       controller.enqueue("data: [DONE]\n\n");
