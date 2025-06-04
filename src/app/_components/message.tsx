@@ -27,6 +27,7 @@ const convexClient = getConvexReactClient();
 export function ChatMessages({ className }: { className?: string }) {
   const messages = useChatStore((state) => state.messages);
   const setAtBottom = useChatStore((state) => state.setAtBottom);
+  const abortController = useRef<AbortController>(new AbortController());
 
   const textareaHeight = useChatStore((state) => state.textareaHeight);
 
@@ -50,6 +51,32 @@ export function ChatMessages({ className }: { className?: string }) {
       parentElement.scrollTo({ top: parentElement.scrollHeight, behavior: "smooth" });
     }
   }
+
+  useEffect(() => {
+    const controller = abortController.current;
+    const signal = controller.signal;
+
+    document.addEventListener(
+      "copy",
+      function (event) {
+        const selectedText = window.getSelection()?.toString();
+        if (!selectedText) return;
+
+        if (navigator?.clipboard) {
+          event.preventDefault();
+          void navigator.clipboard.writeText(selectedText.trim());
+        }
+      },
+      { signal },
+    );
+
+    return () => {
+      if (!controller.signal.aborted) {
+        controller.abort();
+        abortController.current = new AbortController();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!parentRef.current) return;
