@@ -13,19 +13,11 @@ import { z } from "zod/v4";
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import {
   createGoogleGenerativeAI,
-  type GoogleGenerativeAIProviderOptions,
   type GoogleGenerativeAIProviderMetadata,
+  type GoogleGenerativeAIProviderOptions,
 } from "@ai-sdk/google";
 import { createOpenAI, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
-import {
-  createProviderRegistry,
-  generateId,
-  generateText,
-  streamText,
-  type AISDKError,
-  type JSONValue,
-  type ProviderMetadata,
-} from "ai";
+import { createProviderRegistry, generateId, generateText, streamText, type AISDKError, type JSONValue } from "ai";
 
 const openai = createOpenAI({ baseURL: env.PROXY_URL, apiKey: env.PROXY_KEY });
 const deepseek = createDeepSeek({ baseURL: env.PROXY_URL + "/deepseek", apiKey: env.PROXY_KEY });
@@ -62,11 +54,10 @@ const inputSchema = z.object({
       reasoning: z.boolean(),
       model: z.string(),
     })
-    .partial()
-    .optional(),
+    .partial(),
 });
 
-async function updateTitle(messages: { role: string; content: string }[], threadId: string) {
+async function updateTitle(messages: { role: string; content: string }[], threadId: Id<"threads">) {
   if (messages.length > 1 || !messages[0] || !threadId) return;
   console.debug("[Server] Updating thread title", threadId);
 
@@ -91,7 +82,7 @@ Please summarize the above conversation into a title of 10 words or less, withou
   });
 
   await serverConvexClient.mutation(api.threads.updateThreadTitle, {
-    threadId: threadId as Id<"threads">,
+    threadId,
     title: text,
   });
 }
