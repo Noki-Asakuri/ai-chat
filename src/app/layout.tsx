@@ -13,15 +13,18 @@ export const metadata: Metadata = {
 };
 
 const poppins = Poppins({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
   display: "swap",
+  weight: ["300"],
+  subsets: ["latin"],
+  style: ["normal", "italic"],
   variable: "--font-poppins",
 });
 
 const jetBrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
   display: "swap",
+  weight: ["200", "400"],
+  style: ["normal", "italic"],
+  subsets: ["latin", "vietnamese"],
   variable: "--font-jetbrains-mono",
 });
 
