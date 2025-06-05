@@ -1,8 +1,19 @@
+import { api } from "@/convex/_generated/api";
+
+import { getConvexReactClient } from "../convex/client";
 import type { ChatMessage } from "../types";
+
 import { processChatStream } from "./process-stream";
 import { chatStore } from "./store";
+import type { Id } from "@/convex/_generated/dataModel";
 
-export async function sendChatRequest(url: string | URL, init: RequestInit | undefined, assistantMessageId: string) {
+const convexClient = getConvexReactClient();
+
+export async function sendChatRequest(
+  url: string | URL,
+  init: RequestInit | undefined,
+  assistantMessageId: Id<"messages">,
+) {
   const state = chatStore.getState();
 
   state.setIsStreaming(true);
@@ -41,12 +52,19 @@ export async function sendChatRequest(url: string | URL, init: RequestInit | und
       },
     });
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      console.debug("[Chat] Chat request aborted:", error.message);
+    if (!(error instanceof Error)) {
+      console.warn("[Chat] Error:", error);
       return;
     }
+    if (error.name === "AbortError") return;
 
-    console.error(Error(error as string));
+    const errorMessage = "Failed to generate response. Please try again later. Error: " + error.message;
+    console.log("[Chat] Chat error:", error);
+
+    void convexClient.mutation(api.messages.updateErrorMessage, {
+      messageId: assistantMessageId,
+      error: errorMessage,
+    });
   } finally {
     state.setIsStreaming(false);
   }

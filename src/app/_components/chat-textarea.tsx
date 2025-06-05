@@ -96,9 +96,9 @@ async function abortChatRequest() {
   console.log("[Chat] Aborting chat request");
   state.abortController.abort();
 
-  await convexClient.mutation(api.messages.updateMessageById, {
+  await convexClient.mutation(api.messages.updateErrorMessage, {
     messageId: state.messages.at(-1)!._id,
-    updates: { status: "error", error: "User have aborted the request." },
+    error: "User have aborted the request.",
   });
 }
 

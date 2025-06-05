@@ -64,18 +64,26 @@ export const getMessageByMessageId = query({
   },
 });
 
+export const updateErrorMessage = mutation({
+  args: { messageId: v.id("messages"), error: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.messageId, {
+      status: "error",
+      error: args.error,
+      resumableStreamId: null,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 export const updateMessageById = mutation({
   args: {
     threadId: v.optional(v.id("threads")),
     messageId: v.id("messages"),
     updates: v.object({
-      status: v.optional(
-        v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming"), v.literal("error")),
-      ),
-
+      status: v.optional(v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming"))),
       content: v.optional(v.string()),
       reasoning: v.optional(v.string()),
-      error: v.optional(v.string()),
       model: v.optional(v.string()),
       resumableStreamId: v.optional(v.union(v.string(), v.null())),
       sources: v.optional(v.array(v.object({ id: v.string(), title: v.optional(v.string()), url: v.string() }))),

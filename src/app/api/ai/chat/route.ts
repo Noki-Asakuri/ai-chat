@@ -19,11 +19,7 @@ import { AllModelIds } from "@/lib/chat/models";
 
 const openai = createOpenAI({ baseURL: env.PROXY_URL, apiKey: env.PROXY_KEY });
 const deepseek = createDeepSeek({ baseURL: env.PROXY_URL + "/deepseek", apiKey: env.PROXY_KEY });
-const google = createGoogleGenerativeAI({
-  apiKey: env.PROXY_KEY,
-  baseURL: env.PROXY_URL + "/v1beta/",
-  headers: { Authorization: `Bearer ${env.PROXY_KEY}` },
-});
+const google = createGoogleGenerativeAI({ baseURL: env.PROXY_URL + "/v1beta/", apiKey: env.PROXY_KEY });
 
 const registry = createProviderRegistry({ google, openai, deepseek }, { separator: "/" });
 
@@ -137,9 +133,9 @@ export async function POST(req: Request) {
       console.log("[Chat] Error:", { err, req: req.signal });
 
       if (err.name === "AbortError" && req.signal.aborted) return;
-      await serverConvexClient.mutation(api.messages.updateMessageById, {
+      await serverConvexClient.mutation(api.messages.updateErrorMessage, {
         messageId: assistantMessageId,
-        updates: { status: "error", error: err.message },
+        error: err.message,
       });
     },
   });
@@ -204,7 +200,7 @@ export async function POST(req: Request) {
     async start(controller) {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done || req.signal.aborted) break;
         controller.enqueue("data: " + JSON.stringify(value) + "\n\n");
 
         switch (value.type) {
@@ -235,20 +231,26 @@ export async function POST(req: Request) {
         reasoning: reasoning.length > 0 ? reasoning.trim() : undefined,
       };
 
-      await serverConvexClient.mutation(api.messages.updateMessageById, {
-        messageId: assistantMessageId,
-        threadId,
-        updates,
-      });
+      if (!req.signal.aborted) {
+        await serverConvexClient.mutation(api.messages.updateMessageById, {
+          messageId: assistantMessageId,
+          threadId,
+          updates,
+        });
 
-      controller.enqueue("data: [DONE]\n\n");
+        controller.enqueue("data: [DONE]\n\n");
+      }
+
       return controller.close();
     },
   });
-
+  const resumeableStream = await streamContext.resumableStream(streamId, () => readableStream);
   waitUntil(updateTitle(messages, threadId));
 
-  const resumeableStream = await streamContext.resumableStream(streamId, () => readableStream);
+  req.signal.onabort = async () => {
+    await reader.cancel(new Error("Request aborted"));
+  };
+
   return new Response(resumeableStream, {
     headers: {
       connection: "keep-alive",
