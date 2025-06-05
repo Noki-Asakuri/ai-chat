@@ -22,7 +22,7 @@ export function ModelPicker() {
         <Button
           type="button"
           variant="ghost"
-          className="hover:!bg-foreground/10 h-max cursor-pointer justify-between px-2 py-1.5 text-xs"
+          className="hover:!bg-primary/15 h-max cursor-pointer justify-between px-2 py-1.5 text-xs"
         >
           <div className="flex items-center justify-center gap-2">
             {Icon && <Icon className="size-4" />}
@@ -56,7 +56,7 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
     <button
       data-model={modelId}
       data-active={modelId === currentModel}
-      className="hover:bg-input data-[active=true]:bg-input flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-2"
+      className="hover:bg-primary/10 data-[active=true]:border-primary/70 data-[active=true]:bg-primary/20 text-foreground flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-2"
       onMouseDown={() => setActiveModel({ model: modelId })}
     >
       <div className="flex items-center justify-center gap-2">
@@ -105,9 +105,9 @@ function CapabilityIcon({
       <TooltipTrigger asChild>
         <div
           className={cn("flex size-7 items-center justify-center rounded-md border", {
-            "bg-[#25252e] *:stroke-[#94b8dc] hover:bg-[#25252e]": variant === "webSearch",
-            "bg-[#252030] *:stroke-[#6a6aa2] hover:bg-[#252030]": variant === "reasoning",
-            "bg-[#252b2b] *:stroke-[#79afa3] hover:bg-[#252b2b]": variant === "vision",
+            "bg-[#25252e] *:stroke-[#94b8dc]": variant === "webSearch",
+            "bg-[#252030] *:stroke-[#6a6aa2]": variant === "reasoning",
+            "bg-[#252b2b] *:stroke-[#79afa3]": variant === "vision",
             hidden: !disable,
           })}
         >

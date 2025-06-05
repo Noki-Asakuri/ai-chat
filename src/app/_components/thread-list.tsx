@@ -108,7 +108,7 @@ function ThreadGroup({
 
   return (
     <div className="flex flex-col gap-2">
-      <h4 className="px-2 text-sm">{title}</h4>
+      <h4 className="text-primary px-2 text-sm font-semibold">{title}</h4>
 
       {threads.map((thread) => (
         <Link
@@ -118,7 +118,7 @@ function ThreadGroup({
           prefetch={false}
           className={cn(
             "hover:bg-primary/20 text-foreground rounded-none border-l-2 border-transparent px-3 py-1.5 transition-colors",
-            { "border-primary bg-primary/5 text-foreground": thread._id === activeThreadId },
+            { "border-primary bg-primary/10 text-foreground": thread._id === activeThreadId },
           )}
         >
           <span className="line-clamp-1 w-full text-sm">{thread.title}</span>

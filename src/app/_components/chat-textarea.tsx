@@ -168,7 +168,7 @@ export function ChatTextarea() {
               <ButtonWithTip
                 type="button"
                 variant="secondary"
-                className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground h-max cursor-pointer border px-2 py-1.5 text-xs"
+                className="data-[active=true]:border-primary data-[active=true]:bg-primary/40 h-max cursor-pointer border px-2 py-1.5 text-xs"
                 data-active={config.webSearch}
                 disabled={!getModelData(config.model).capabilities.webSearch}
                 onMouseDown={() => setChatConfig({ webSearch: !config.webSearch })}
@@ -181,7 +181,7 @@ export function ChatTextarea() {
               <ButtonWithTip
                 type="button"
                 variant="secondary"
-                className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground h-max cursor-pointer border px-2 py-1.5 text-xs"
+                className="data-[active=true]:border-primary data-[active=true]:bg-primary/40 h-max cursor-pointer border px-2 py-1.5 text-xs"
                 data-active={config.reasoning}
                 disabled={!getModelData(config.model).capabilities.reasoning}
                 onMouseDown={() => setChatConfig({ reasoning: !config.reasoning })}
@@ -193,11 +193,10 @@ export function ChatTextarea() {
             </div>
 
             <ButtonWithTip
+              type="button"
               title={isStreaming ? "Abort Request" : "Send Message"}
-              type={isStreaming ? "button" : "submit"}
               onMouseDown={(event) => (isStreaming ? abortChatRequest() : submitChatMessage(event, router))}
-              variant="outline"
-              className="size-9 cursor-pointer rounded-b-none border-b-0 bg-transparent"
+              className="border-primary bg-primary/30 size-9 cursor-pointer rounded-b-none border border-b-0"
             >
               {isStreaming ? <SquareIcon className="size-4" /> : <SendHorizontalIcon className="size-4 -rotate-45" />}
             </ButtonWithTip>
