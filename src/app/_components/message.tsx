@@ -50,14 +50,17 @@ export function ChatMessages({ className }: { className?: string }) {
 
     const parentElement = entry.target.parentElement!;
 
-    const position =
-      parentElement.scrollTop === 0
-        ? "top"
-        : parentElement.scrollTop + parentElement.clientHeight === parentElement.scrollHeight
-          ? "bottom"
-          : "middle";
+    console.log(parentElement.scrollHeight, parentElement.clientHeight, parentElement.scrollTop);
 
-    setScrollPosition(position);
+    if (parentElement.scrollHeight === parentElement.clientHeight && parentElement.scrollTop === 0) {
+      setScrollPosition(null);
+    } else if (parentElement.scrollTop === 0) {
+      setScrollPosition("top");
+    } else if (parentElement.scrollTop + parentElement.clientHeight === parentElement.scrollHeight) {
+      setScrollPosition("bottom");
+    } else {
+      setScrollPosition("middle");
+    }
 
     if (parentElement.scrollHeight === parentElement.clientHeight) {
       prevScrollTopRef.current = -1;
@@ -126,13 +129,15 @@ export function ChatMessages({ className }: { className?: string }) {
 
     prevScrollTopRef.current = currentScrollTop;
 
-    setScrollPosition(
-      element.scrollTop === 0
-        ? "top"
-        : element.scrollTop + element.clientHeight === element.scrollHeight
-          ? "bottom"
-          : "middle",
-    );
+    if (element.scrollHeight === element.clientHeight && element.scrollTop === 0) {
+      setScrollPosition(null);
+    } else if (element.scrollTop === 0 && element.scrollHeight > element.clientHeight) {
+      setScrollPosition("top");
+    } else if (element.scrollTop + element.clientHeight === element.scrollHeight) {
+      setScrollPosition("bottom");
+    } else {
+      setScrollPosition("middle");
+    }
   }
 
   return (

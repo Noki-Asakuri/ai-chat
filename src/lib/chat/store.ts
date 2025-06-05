@@ -42,8 +42,8 @@ export interface ChatState {
   wrapline: boolean;
   toggleWrapline: () => void;
 
-  scrollPosition: "top" | "bottom" | "middle";
-  setScrollPosition: (value: "top" | "bottom" | "middle") => void;
+  scrollPosition: "top" | "bottom" | "middle" | null;
+  setScrollPosition: (value: "top" | "bottom" | "middle" | null) => void;
 
   textareaHeight: number;
   setTextareaHeight: (height: number) => void;
@@ -113,7 +113,7 @@ export const useChatStore = create<ChatState>((set) => ({
   chatInput: "",
   setChatInput: (input) => set({ chatInput: input }),
 
-  scrollPosition: "top",
+  scrollPosition: null,
   setScrollPosition: (value) => set({ scrollPosition: value }),
 
   textareaHeight: 140,
@@ -126,7 +126,7 @@ export const useChatStore = create<ChatState>((set) => ({
       status: "complete",
       isStreaming: false,
       editMessageId: null,
-      scrollPosition: "top",
+      scrollPosition: null,
     })),
 }));
 

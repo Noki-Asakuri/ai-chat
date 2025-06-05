@@ -108,6 +108,7 @@ export function ChatTextarea() {
   const status = useChatStore((state) => state.status);
   const config = useChatStore((state) => state.chatConfig);
   const setChatConfig = useChatStore((state) => state.setChatConfig);
+  const scrollPosition = useChatStore((state) => state.scrollPosition);
 
   const setTextareaHeight = useChatStore((state) => state.setTextareaHeight);
 

@@ -20,9 +20,9 @@ export function ScrollButton() {
     <div className="pointer-events-none absolute -top-10 flex w-full items-center justify-center">
       <Button
         className={cn(
-          "absolute -top-[80vh] w-38",
-          "bg-muted/70 text-muted-foreground hover:bg-muted/90 border-border pointer-events-auto h-max cursor-pointer rounded-full border px-1.5 py-1 text-xs backdrop-blur-md transition-opacity",
-          { "pointer-events-none opacity-0": scrollPosition === "top" },
+          "absolute -top-[80vh]",
+          "bg-muted/70 text-muted-foreground hover:bg-muted/90 border-border pointer-events-none h-max w-38 cursor-pointer rounded-full border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md transition-opacity",
+          { "pointer-events-auto opacity-100": scrollPosition === "bottom" || scrollPosition === "middle" },
         )}
         type="button"
         onMouseDown={handleScrollTop}
@@ -33,8 +33,8 @@ export function ScrollButton() {
 
       <Button
         className={cn(
-          "bg-muted/70 text-muted-foreground hover:bg-muted/90 border-border pointer-events-auto h-max w-38 cursor-pointer rounded-full border px-1.5 py-1 text-xs backdrop-blur-md transition-opacity",
-          { "pointer-events-none opacity-0": scrollPosition === "bottom" },
+          "bg-muted/70 text-muted-foreground hover:bg-muted/90 border-border pointer-events-none h-max w-38 cursor-pointer rounded-full border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md transition-opacity",
+          { "pointer-events-auto opacity-100": scrollPosition === "top" || scrollPosition === "middle" },
         )}
         type="button"
         onMouseDown={handleScrollBottom}
