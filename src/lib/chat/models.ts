@@ -27,7 +27,7 @@ export const ModelsData = {
     provider: "google",
     capabilities: { webSearch: true, reasoning: true, vision: true },
   },
-  "google/gemini-2.5-pro-preview-05-06": {
+  "google/gemini-2.5-pro-preview-06-05": {
     displayName: "Gemini 2.5 Pro",
     provider: "google",
     capabilities: { webSearch: true, reasoning: true, vision: true },
