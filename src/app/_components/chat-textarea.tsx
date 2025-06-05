@@ -154,7 +154,7 @@ export function ChatTextarea() {
             value={input}
             placeholder="Type your message here..."
             onChange={(event) => setChatInput(event.target.value)}
-            className="w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
+            className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 void submitChatMessage(event, router);

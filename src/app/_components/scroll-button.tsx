@@ -5,39 +5,37 @@ import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 
 export function ScrollButton() {
   const scrollPosition = useChatStore((state) => state.scrollPosition);
+  const textareaHeight = useChatStore((state) => state.textareaHeight);
 
-  function handleScrollBottom() {
+  function handleScroll(position: "top" | "bottom") {
     const element = document.querySelector("#messages-scrollarea") as HTMLDivElement | undefined;
-    element?.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
-  }
-
-  function handleScrollTop() {
-    const element = document.querySelector("#messages-scrollarea") as HTMLDivElement | undefined;
-    element?.scrollTo({ top: 0, behavior: "smooth" });
+    element?.scrollTo({ top: position === "top" ? 0 : element.scrollHeight, behavior: "smooth" });
   }
 
   return (
-    <div className="pointer-events-none absolute -top-10 flex w-full items-center justify-center">
+    <div
+      className="pointer-events-none fixed top-6 right-0 z-50 flex w-full flex-col items-center justify-between lg:w-[calc(100vw-280px)]"
+      style={{ height: `calc(100% - ${textareaHeight === 140 ? 140 : textareaHeight + 10}px - 24px)` }}
+    >
       <Button
+        type="button"
+        onMouseDown={() => handleScroll("top")}
         className={cn(
-          "absolute -top-[80vh]",
-          "bg-muted/70 text-muted-foreground hover:bg-muted/90 border-border pointer-events-none h-max w-38 cursor-pointer rounded-full border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md transition-opacity",
+          "bg-muted/70 text-muted-foreground hover:bg-muted/90 h-max w-38 cursor-pointer border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md transition-opacity",
           { "pointer-events-auto opacity-100": scrollPosition === "bottom" || scrollPosition === "middle" },
         )}
-        type="button"
-        onMouseDown={handleScrollTop}
       >
         Scroll to Top
         <ChevronUpIcon />
       </Button>
 
       <Button
+        type="button"
+        onMouseDown={() => handleScroll("bottom")}
         className={cn(
-          "bg-muted/70 text-muted-foreground hover:bg-muted/90 border-border pointer-events-none h-max w-38 cursor-pointer rounded-full border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md transition-opacity",
+          "bg-muted/70 text-muted-foreground hover:bg-muted/90 h-max w-38 cursor-pointer border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md transition-opacity",
           { "pointer-events-auto opacity-100": scrollPosition === "top" || scrollPosition === "middle" },
         )}
-        type="button"
-        onMouseDown={handleScrollBottom}
       >
         Scroll to Bottom
         <ChevronDownIcon />
