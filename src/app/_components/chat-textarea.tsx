@@ -12,7 +12,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { ModelPicker } from "./model-picker";
 import { ScrollDownButton } from "./scroll-down-button";
-import { Button, ButtonWithTip } from "./ui/button";
+import { ButtonWithTip } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 
 import { getModelData } from "@/lib/chat/models";
@@ -116,6 +116,8 @@ export function ChatTextarea() {
 
   const parentRef = useRef<HTMLDivElement>(null);
 
+  const isStreaming = status === "pending" || status === "streaming";
+
   function onResize(entries: ResizeObserverEntry[]) {
     const entry = entries[0];
     if (!entry) return;
@@ -190,20 +192,15 @@ export function ChatTextarea() {
               </ButtonWithTip>
             </div>
 
-            <Button
-              type={status === "streaming" || status === "pending" ? "button" : "submit"}
-              onMouseDown={(event) =>
-                status === "streaming" || status === "pending" ? abortChatRequest() : submitChatMessage(event, router)
-              }
+            <ButtonWithTip
+              title={isStreaming ? "Abort Request" : "Send Message"}
+              type={isStreaming ? "button" : "submit"}
+              onMouseDown={(event) => (isStreaming ? abortChatRequest() : submitChatMessage(event, router))}
               variant="outline"
               className="size-9 cursor-pointer rounded-b-none border-b-0 bg-transparent"
             >
-              {status === "complete" || status === "error" ? (
-                <SendHorizontalIcon className="size-4 -rotate-45" />
-              ) : (
-                <SquareIcon className="size-4" />
-              )}
-            </Button>
+              {isStreaming ? <SquareIcon className="size-4" /> : <SendHorizontalIcon className="size-4 -rotate-45" />}
+            </ButtonWithTip>
           </div>
         </div>
       </div>
