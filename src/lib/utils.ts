@@ -2,11 +2,12 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
-const numberFormat = new Intl.NumberFormat("en-US", {
+const numberFormat = new Intl.NumberFormat("en-US");
+const timeFormat = new Intl.NumberFormat("en-US", {
   style: "unit",
   unit: "second",
   unitDisplay: "narrow",
-  maximumFractionDigits: 1,
+  maximumFractionDigits: 2,
 });
 
 export function cn(...inputs: ClassValue[]) {
@@ -25,4 +26,5 @@ export function fromUUID<T extends string>(uuid?: string | null) {
 
 export const format = {
   number: numberFormat.format,
+  time: timeFormat.format,
 };

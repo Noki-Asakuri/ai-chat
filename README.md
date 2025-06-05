@@ -41,4 +41,5 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 - [ ] Support send Image/PDF/Docs/etc
 - [ ] Custom system prompts
 - [ ] Agents selection
+- [ ] Support branching
 - [ ] Add support to change model params
