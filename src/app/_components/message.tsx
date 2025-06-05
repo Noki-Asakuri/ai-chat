@@ -35,7 +35,7 @@ const convexClient = getConvexReactClient();
 
 export function ChatMessages({ className }: { className?: string }) {
   const messages = useChatStore((state) => state.messages);
-  const setAtBottom = useChatStore((state) => state.setAtBottom);
+  const setScrollPosition = useChatStore((state) => state.setScrollPosition);
   const abortController = useRef<AbortController>(new AbortController());
 
   const textareaHeight = useChatStore((state) => state.textareaHeight);
@@ -49,7 +49,15 @@ export function ChatMessages({ className }: { className?: string }) {
     if (!entry) return;
 
     const parentElement = entry.target.parentElement!;
-    setAtBottom(parentElement.scrollHeight - parentElement.scrollTop - parentElement.clientHeight < 100);
+
+    const position =
+      parentElement.scrollTop === 0
+        ? "top"
+        : parentElement.scrollTop + parentElement.clientHeight === parentElement.scrollHeight
+          ? "bottom"
+          : "middle";
+
+    setScrollPosition(position);
 
     if (parentElement.scrollHeight === parentElement.clientHeight) {
       prevScrollTopRef.current = -1;
@@ -117,7 +125,14 @@ export function ChatMessages({ className }: { className?: string }) {
     }
 
     prevScrollTopRef.current = currentScrollTop;
-    setAtBottom(element.scrollHeight - element.scrollTop - element.clientHeight < 100);
+
+    setScrollPosition(
+      element.scrollTop === 0
+        ? "top"
+        : element.scrollTop + element.clientHeight === element.scrollHeight
+          ? "bottom"
+          : "middle",
+    );
   }
 
   return (

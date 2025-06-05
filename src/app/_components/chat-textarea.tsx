@@ -11,7 +11,7 @@ import { useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { ModelPicker } from "./model-picker";
-import { ScrollDownButton } from "./scroll-down-button";
+import { ScrollButton } from "./scroll-button";
 import { ButtonWithTip } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 
@@ -139,7 +139,7 @@ export function ChatTextarea() {
 
   return (
     <form className="absolute bottom-0 w-full px-4">
-      <ScrollDownButton />
+      <ScrollButton />
 
       <div
         ref={parentRef}
