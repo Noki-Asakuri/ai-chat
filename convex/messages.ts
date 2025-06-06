@@ -5,11 +5,14 @@ import { mutation, query } from "./_generated/server";
 export const getAllMessagesFromThread = query({
   args: { threadId: v.optional(v.id("threads")) },
   handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+
     if (!args.threadId) return [];
 
     return await ctx.db
       .query("messages")
-      .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId!))
+      .withIndex("by_userId_threadId", (q) => q.eq("userId", user.tokenIdentifier).eq("threadId", args.threadId!))
       .collect();
   },
 });
@@ -31,19 +34,22 @@ export const addMessagesToThread = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const thread = await ctx.db
-      .query("threads")
-      .withIndex("by_id", (q) => q.eq("_id", args.threadId))
-      .unique();
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+
+    const thread = await ctx.db.get(args.threadId);
 
     if (!thread) {
-      await ctx.db.insert("threads", { title: "New Chat", updatedAt: Date.now() + 1 });
+      await ctx.db.insert("threads", { title: "New Chat", updatedAt: Date.now() + 1, userId: user.tokenIdentifier });
+    } else if (thread.userId !== user.tokenIdentifier) {
+      throw new Error("Not authorized");
     }
 
     let assistantMessageId: Id<"messages"> | undefined;
     for (const message of args.messages) {
       const data = await ctx.db.insert("messages", {
         threadId: args.threadId,
+        userId: user.tokenIdentifier,
         ...message,
       });
 
@@ -54,19 +60,16 @@ export const addMessagesToThread = mutation({
   },
 });
 
-export const getMessageByMessageId = query({
-  args: { messageId: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("messages")
-      .withIndex("by_messageId", (q) => q.eq("messageId", args.messageId))
-      .unique();
-  },
-});
-
 export const updateErrorMessage = mutation({
   args: { messageId: v.id("messages"), error: v.string() },
   handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+    if (message.userId !== user.tokenIdentifier) throw new Error("Not authorized");
+
     await ctx.db.patch(args.messageId, {
       status: "error",
       error: args.error,
@@ -113,6 +116,13 @@ export const updateMessageById = mutation({
     }),
   },
   handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+    if (message.userId !== user.tokenIdentifier) throw new Error("Not authorized");
+
     await ctx.db.patch(args.messageId, { ...args.updates, updatedAt: Date.now() });
     if (args.threadId) {
       await ctx.db.patch(args.threadId, { updatedAt: Date.now() });
@@ -143,6 +153,13 @@ export const retryChatMessage = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== user.tokenIdentifier) throw new Error("Not authorized");
+
     for (const messageId of args.messageIds) {
       await ctx.db.delete(messageId);
     }
@@ -155,6 +172,6 @@ export const retryChatMessage = mutation({
     }
 
     await ctx.db.patch(args.threadId, { updatedAt: Date.now() });
-    return await ctx.db.insert("messages", { threadId: args.threadId, ...args.message });
+    return await ctx.db.insert("messages", { threadId: args.threadId, userId: user.tokenIdentifier, ...args.message });
   },
 });

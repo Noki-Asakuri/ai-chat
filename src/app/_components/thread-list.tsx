@@ -3,12 +3,15 @@
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex-helpers/react/cache";
 
+import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
-import { useDocumentTitle } from "@uidotdev/usehooks";
+import { useEffect } from "react";
+
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 import { useChatStore } from "@/lib/chat/store";
+import { useThreadUpdateDocumentTitle } from "@/lib/hook";
 import { cn, toUUID } from "@/lib/utils";
-import { useEffect } from "react";
 
 const THREAD_LOCAL_STORAGE_KEY = "threads";
 
@@ -63,48 +66,77 @@ function groupThreadsByDate(threads: Thread[]) {
 
 export function ThreadList() {
   const threads = useQuery(api.threads.getAllThreads);
-  const activeThreadId = useChatStore((state) => state.threadId);
+  const setThreads = useChatStore((state) => state.setThreads);
 
   const localThreads = JSON.parse(localStorage.getItem(THREAD_LOCAL_STORAGE_KEY) ?? "[]") as typeof threads;
   const groupedThreads = groupThreadsByDate(threads ?? localThreads ?? []);
 
-  const title = threads?.find((thread) => thread._id === activeThreadId)?.title;
-  useDocumentTitle(title ? `${title} - AI Chat` : "AI Chat");
-
   useEffect(() => {
     if (threads) {
       localStorage.setItem(THREAD_LOCAL_STORAGE_KEY, JSON.stringify(threads));
+      setThreads(threads);
     }
   }, [threads]);
 
+  useThreadUpdateDocumentTitle();
+
   return (
-    <div className="hidden flex-col gap-2 px-4 py-6 lg:flex">
-      <Link href="/">
-        <div className="hover:bg-primary/20 text-foreground rounded-md border px-3 py-1.5 text-center">
-          <span className="line-clamp-1 w-full text-sm">Create new thread</span>
-        </div>
-      </Link>
+    <div className="hidden h-full grid-cols-1 grid-rows-[1fr_max-content] gap-y-3 py-4 lg:grid">
+      <div className="flex flex-col gap-3 px-4">
+        <Link href="/">
+          <div className="hover:bg-primary/20 text-foreground rounded-md border px-3 py-1.5 text-center">
+            <span className="line-clamp-1 w-full text-sm">Create new thread</span>
+          </div>
+        </Link>
 
-      <hr />
+        <hr />
 
-      <ThreadGroup threads={groupedThreads.today} title="Today" activeThreadId={activeThreadId} />
-      <ThreadGroup threads={groupedThreads.yesterday} title="Yesterday" activeThreadId={activeThreadId} />
-      <ThreadGroup threads={groupedThreads.sevenDaysAgo} title="Last 7 days" activeThreadId={activeThreadId} />
-      <ThreadGroup threads={groupedThreads.older} title="Older" activeThreadId={activeThreadId} />
+        <ThreadGroup threads={groupedThreads.today} title="Today" />
+        <ThreadGroup threads={groupedThreads.yesterday} title="Yesterday" />
+        <ThreadGroup threads={groupedThreads.sevenDaysAgo} title="Last 7 days" />
+        <ThreadGroup threads={groupedThreads.older} title="Older" />
+      </div>
+
+      <UserProfile />
     </div>
   );
 }
 
-function ThreadGroup({
-  title,
-  threads,
-  activeThreadId,
-}: {
-  title: string;
-  threads: Thread[];
-  activeThreadId?: string;
-}) {
+function UserProfile() {
+  const { isLoaded, isSignedIn, user } = useUser();
+  if (!isLoaded || !isSignedIn) return null;
+
+  const fallback = user.username
+    ?.split(" ")
+    .map((name) => name[0])
+    .join("");
+
+  return (
+    <div className="mt-auto flex flex-col">
+      <hr className="mb-4" />
+
+      <Link
+        prefetch={false}
+        href="/auth/settings"
+        className="hover:bg-primary/20 hover:border-primary/30 mx-4 flex gap-2 rounded-md border border-transparent p-2 transition-colors"
+      >
+        <Avatar className="size-11 rounded-md">
+          <AvatarImage src={user.imageUrl} alt={user.username!} />
+          <AvatarFallback className="bg-primary text-primary-foreground text-sm">{fallback}</AvatarFallback>
+        </Avatar>
+
+        <div className="ml-1 flex flex-col justify-center">
+          <p className="text-sm font-medium capitalize">{user.username}</p>
+          <p className="text-muted-foreground text-sm">Settings</p>
+        </div>
+      </Link>
+    </div>
+  );
+}
+
+function ThreadGroup({ title, threads }: { title: string; threads: Thread[] }) {
   if (!threads.length) return null;
+  const activeThreadId = useChatStore((state) => state.threadId);
 
   return (
     <div className="flex flex-col gap-2">

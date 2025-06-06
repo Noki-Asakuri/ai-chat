@@ -2,10 +2,10 @@
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { useQuery } from "convex/react";
+import { Authenticated, Unauthenticated, useQuery } from "convex/react";
 
 import dynamic from "next/dynamic";
-import { useParams } from "next/navigation";
+import { redirect, useParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
@@ -15,7 +15,7 @@ import { fromUUID } from "@/lib/utils";
 const ChatTextarea = dynamic(() => import("@/components/chat-textarea").then((d) => d.ChatTextarea), { ssr: false });
 const ThreadList = dynamic(() => import("@/components/thread-list").then((d) => d.ThreadList), { ssr: false });
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+function Chat({ children }: { children: React.ReactNode }) {
   const params = useParams<{ threadId?: string }>();
   const threadId = useChatStore((state) => state.threadId);
 
@@ -60,10 +60,28 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div className="grid h-svh max-w-screen overflow-x-hidden lg:grid-cols-[280px_1fr]">
       <ThreadList />
 
-      <div className="border-border relative mt-3 flex h-[calc(100vh-12px)] flex-col rounded-tl-2xl border-t border-l pt-6">
+      <div className="border-border relative mt-3 flex h-[calc(100vh-12px)] max-w-screen flex-col rounded-tl-2xl border-t border-l pt-6">
         {children}
         <ChatTextarea />
       </div>
     </div>
   );
+}
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <Authenticated>
+        <Chat>{children}</Chat>
+      </Authenticated>
+
+      <Unauthenticated>
+        <RedirectToSignIn />
+      </Unauthenticated>
+    </>
+  );
+}
+
+function RedirectToSignIn() {
+  return redirect("/auth/login");
 }

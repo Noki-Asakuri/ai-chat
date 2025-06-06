@@ -90,9 +90,9 @@ export const useChatStore = create<ChatState>((set) => ({
   },
   setChatConfig: (config) =>
     set((state) => {
-      localStorage.setItem("webSearch", String(config.webSearch));
-      localStorage.setItem("reasoning", String(config.reasoning));
-      localStorage.setItem("model", config.model ?? "google/gemini-2.5-flash-preview-05-20");
+      localStorage.setItem("webSearch", String(config.webSearch ?? state.chatConfig.webSearch));
+      localStorage.setItem("reasoning", String(config.reasoning ?? state.chatConfig.reasoning));
+      localStorage.setItem("model", config.model ?? state.chatConfig.model ?? "google/gemini-2.5-flash-preview-05-20");
 
       return { chatConfig: { ...state.chatConfig, ...config } };
     }),

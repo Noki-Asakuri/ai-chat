@@ -12,6 +12,7 @@ import {
 import React, { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
+import { useUser } from "@clerk/nextjs";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 
 import { api } from "@/convex/_generated/api";
@@ -21,6 +22,7 @@ import { getConvexReactClient } from "@/lib/convex/client";
 import { MemoizedMarkdown } from "./markdown";
 
 import { Accordion, AccordionContent, AccordionItem } from "./ui/accordion";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ButtonWithTip } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { Textarea } from "./ui/textarea";
@@ -33,7 +35,7 @@ import { cn, format } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
 
-export function ChatMessages({ className }: { className?: string }) {
+export function ChatMessages() {
   const messages = useChatStore((state) => state.messages);
   const setScrollPosition = useChatStore((state) => state.setScrollPosition);
   const abortController = useRef<AbortController>(new AbortController());
@@ -49,8 +51,6 @@ export function ChatMessages({ className }: { className?: string }) {
     if (!entry) return;
 
     const parentElement = entry.target.parentElement!;
-
-    console.log(parentElement.scrollHeight, parentElement.clientHeight, parentElement.scrollTop);
 
     if (parentElement.scrollHeight === parentElement.clientHeight && parentElement.scrollTop === 0) {
       setScrollPosition(null);
@@ -144,14 +144,15 @@ export function ChatMessages({ className }: { className?: string }) {
     <ScrollArea
       ref={parentRef}
       onScroll={handleOnScroll}
-      className={cn("flex h-full flex-col gap-2", className)}
-      viewportClassName="*:h-full"
+      className="h-full w-full"
+      viewportClassName="*:!contents"
       viewportId="messages-scrollarea"
-      viewportstyle={{ paddingBottom: `${textareaHeight}px` }}
     >
-      {messages.map((message, index) => (
-        <Message key={message.messageId} message={message} index={index} isLast={index === messages.length - 1} />
-      ))}
+      <div className="max-w-full" style={{ paddingBottom: `${textareaHeight}px`, fontVariantLigatures: "none" }}>
+        {messages.map((message, index) => (
+          <Message key={message.messageId} message={message} index={index} isLast={index === messages.length - 1} />
+        ))}
+      </div>
     </ScrollArea>
   );
 }
@@ -264,7 +265,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
       <div
         className={cn("relative flex w-full flex-col", {
           hidden: message.status === "pending",
-          "mx-0 ml-auto w-max gap-1": message.role === "user",
+          "mx-0 ml-auto w-auto gap-1": message.role === "user",
         })}
       >
         <ThinkingToggle
@@ -292,7 +293,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
           />
         ) : (
           <div
-            className={cn("max-w-full space-y-6", "", {
+            className={cn("space-y-6", {
               "bg-sidebar/50 rounded-md border px-4 py-2": message.role === "user",
               "bg-destructive/20 border-destructive/50 rounded-md border px-4 py-2 backdrop-blur-md":
                 message.status === "error",
@@ -328,12 +329,16 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
         )}
 
         <div
-          className={cn("pointer-events-none absolute -bottom-10 flex gap-2 opacity-0 transition-opacity select-none", {
-            "pointer-events-auto group-hover:opacity-100": message.status === "error" || message.status === "complete",
-            hidden: message.status === "pending" || message.status === "streaming",
-            "right-0": message.role === "user",
-            "opacity-100": editMessageId === message._id,
-          })}
+          className={cn(
+            "pointer-events-none absolute -bottom-10 flex gap-2 transition-opacity select-none sm:opacity-0",
+            {
+              "pointer-events-auto group-hover:opacity-100":
+                message.status === "error" || message.status === "complete",
+              hidden: message.status === "pending" || message.status === "streaming",
+              "right-0": message.role === "user",
+              "opacity-100": editMessageId === message._id,
+            },
+          )}
         >
           <div className="flex items-center gap-2">
             <ButtonWithTip
@@ -370,10 +375,10 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
           </div>
 
           {renderMesssage.metadata && (
-            <div className="text-muted-foreground/90 flex items-center gap-1.5 text-sm select-none">
+            <div className="text-muted-foreground/90 flex flex-wrap items-center gap-1.5 text-sm select-none">
               <span>{format.time(renderMesssage.metadata.duration / 1000)}</span>
               <span>-</span>
-              <span>Generated By {getModelData(message.model).displayName}</span>
+              <span>Generated By {getModelData(message.model)?.displayName}</span>
               <span>-</span>
               <span>{format.number(renderMesssage.metadata.totalTokens)} Tokens</span>
               {renderMesssage.metadata.thinkingTokens > 0 && (
@@ -390,10 +395,21 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
         </div>
       </div>
 
-      {message.role === "user" && (
-        <div className="bg-muted flex size-11 shrink-0 items-center justify-center rounded-md">You</div>
-      )}
+      {message.role === "user" && <UserPicture />}
     </div>
+  );
+}
+
+function UserPicture() {
+  const { user } = useUser();
+
+  <div className="">You</div>;
+
+  return (
+    <Avatar className="size-11 shrink-0 rounded-md border">
+      {user && <AvatarImage src={user.imageUrl} alt={user.username!} />}
+      <AvatarFallback className="bg-muted size-full rounded-md">You</AvatarFallback>
+    </Avatar>
   );
 }
 

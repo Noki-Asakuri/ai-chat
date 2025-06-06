@@ -1,13 +1,15 @@
 export function getModelData(modelId: AllModelIds | (string & {})): ModelData {
   const data = ModelsData[modelId as AllModelIds];
 
-  if (!data)
-    return {
-      displayName: modelId,
-      provider: "unknown",
-      capabilities: { webSearch: false, reasoning: false, vision: false },
-    };
-  return data;
+  for (const id of AllModelIds) {
+    if (id.includes(modelId)) return data;
+  }
+
+  return {
+    displayName: modelId.split("/")[1]!,
+    provider: "unknown",
+    capabilities: { webSearch: false, reasoning: false, vision: false },
+  };
 }
 
 type Capability = Record<"webSearch" | "reasoning" | "vision", boolean>;
@@ -24,6 +26,11 @@ export type ModelIdKey = `${Provider}/${string}`;
 export const ModelsData = {
   "google/gemini-2.5-flash-preview-05-20": {
     displayName: "Gemini 2.5 Flash",
+    provider: "google",
+    capabilities: { webSearch: true, reasoning: true, vision: true },
+  },
+  "google/gemini-2.5-pro-preview-05-06": {
+    displayName: "Gemini 2.5 Pro",
     provider: "google",
     capabilities: { webSearch: true, reasoning: true, vision: true },
   },
@@ -116,11 +123,3 @@ export const ModelsData = {
 } satisfies Record<ModelIdKey, ModelData>;
 
 export const AllModelIds = Object.keys(ModelsData) as AllModelIds[];
-export const ModelsByProvider = Object.entries(ModelsData).reduce(
-  (acc, [key, value]) => {
-    acc[value.provider] ??= [];
-    acc[value.provider].push(key as AllModelIds);
-    return acc;
-  },
-  {} as Record<Provider, AllModelIds[]>,
-);

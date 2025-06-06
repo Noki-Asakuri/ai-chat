@@ -37,7 +37,8 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 - [x] Support edit and delete messages
 - [x] Add support to change model
 - [ ] Better UI
-- [ ] Add authentication
+- [x] Add authentication
+- [ ] Add Settings page
 - [ ] Support send Image/PDF/Docs/etc
 - [ ] Custom system prompts
 - [ ] Agents selection

@@ -12,6 +12,20 @@
   --font-mono:
     var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
     monospace;
+
+  --animate-caret-blink: caret-blink 1.25s ease-out infinite;
+
+  @keyframes caret-blink {
+    0%,
+    70%,
+    100 {
+      opacity: "1";
+    }
+    20%,
+    50% {
+      opacity: "0";
+    }
+  }
 }
 
 @theme inline {
@@ -125,24 +139,30 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
 }
 
-#textarea-chat-input {
-  scrollbar-color: var(--border) transparent;
-}
-
+.codeblock pre.shiki::-webkit-scrollbar,
 #textarea-chat-input::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
+.codeblock pre.shiki::-webkit-scrollbar-track,
 #textarea-chat-input::-webkit-scrollbar-track {
   background: transparent;
 }
 
+.codeblock pre.shiki::-webkit-scrollbar-thumb,
 #textarea-chat-input::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 4px;
+  border-radius: 0.5rem;
+}
+
+.codeblock pre.shiki::-webkit-scrollbar-thumb:hover,
+#textarea-chat-input::-webkit-scrollbar-thumb:hover {
+  background: var(--border);
 }
