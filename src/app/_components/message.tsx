@@ -42,7 +42,7 @@ export function ChatMessages() {
 
   const textareaHeight = useChatStore((state) => state.textareaHeight);
 
-  const parentRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevScrollTopRef = useRef<number>(-1);
   const autoScroll = useRef<boolean>(true);
 
@@ -50,7 +50,7 @@ export function ChatMessages() {
     const entry = entries[0];
     if (!entry) return;
 
-    const parentElement = entry.target.parentElement!;
+    const parentElement = entry.target.parentElement!.parentElement!;
 
     if (parentElement.scrollHeight === parentElement.clientHeight && parentElement.scrollTop === 0) {
       setScrollPosition(null);
@@ -99,10 +99,10 @@ export function ChatMessages() {
   }, []);
 
   useEffect(() => {
-    if (!parentRef.current) return;
+    if (!scrollContainerRef.current) return;
 
     const resizeObserver = new ResizeObserver(onResize);
-    resizeObserver.observe(parentRef.current.querySelector("div")!.firstElementChild!);
+    resizeObserver.observe(scrollContainerRef.current);
 
     // Cleanup function
     return () => {
@@ -122,6 +122,7 @@ export function ChatMessages() {
     if (currentScrollTop < prevScrollTop) {
       autoScroll.current = false;
     }
+
     // User scrolling near bottom
     else if (element.scrollHeight - element.scrollTop - element.clientHeight < 100) {
       autoScroll.current = true;
@@ -142,13 +143,17 @@ export function ChatMessages() {
 
   return (
     <ScrollArea
-      ref={parentRef}
       onScroll={handleOnScroll}
       className="h-full w-full"
       viewportClassName="*:!contents"
       viewportId="messages-scrollarea"
     >
-      <div className="max-w-full" style={{ paddingBottom: `${textareaHeight}px`, fontVariantLigatures: "none" }}>
+      <div
+        className="max-w-full"
+        id="messages-container"
+        ref={scrollContainerRef}
+        style={{ paddingBottom: `${textareaHeight}px`, fontVariantLigatures: "none" }}
+      >
         {messages.map((message, index) => (
           <Message key={message.messageId} message={message} index={index} isLast={index === messages.length - 1} />
         ))}
