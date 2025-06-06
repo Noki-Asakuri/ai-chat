@@ -4,9 +4,10 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { serverConvexClient } from "@/lib/convex/server";
 
+import { auth } from "@clerk/nextjs/server";
 import { waitUntil } from "@vercel/functions";
 import { Redis } from "ioredis";
-import { after, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { z } from "zod/v4";
 
@@ -87,8 +88,19 @@ Please summarize the above conversation into a title of 10 words or less, withou
 }
 
 export async function POST(req: Request) {
-  const { success, data, error } = inputSchema.safeParse(await req.json());
+  const user = await auth();
 
+  if (!user.userId) {
+    return NextResponse.json({ error: { message: "Error: No signed in user" } }, { status: 401 });
+  }
+  const authToken = await user.getToken({ template: "convex" })!;
+  if (!authToken) {
+    return NextResponse.json({ error: { message: "Error: No convex auth token" } }, { status: 401 });
+  }
+
+  serverConvexClient.setAuth(authToken);
+
+  const { success, data, error } = inputSchema.safeParse(await req.json());
   if (!success) {
     return Response.json({ error: { message: z.prettifyError(error) } }, { status: 400 });
   }
@@ -142,6 +154,7 @@ export async function POST(req: Request) {
 
   await serverConvexClient.mutation(api.messages.updateMessageById, {
     messageId: assistantMessageId,
+    threadId,
     updates: {
       status: "streaming",
       resumableStreamId: streamId,
@@ -241,6 +254,7 @@ export async function POST(req: Request) {
         controller.enqueue("data: [DONE]\n\n");
       }
 
+      serverConvexClient.clearAuth();
       return controller.close();
     },
   });

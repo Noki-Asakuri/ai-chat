@@ -9,7 +9,7 @@ export const createThread = mutation({
 
     return await ctx.db.insert("threads", {
       updatedAt: Date.now() + 1,
-      userId: user.tokenIdentifier,
+      userId: user.subject,
       title: args.title ?? "New Chat",
     });
   },
@@ -23,7 +23,7 @@ export const getAllThreads = query({
 
     const data = await ctx.db
       .query("threads")
-      .withIndex("by_userId", (q) => q.eq("userId", user.tokenIdentifier))
+      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
       .collect();
 
     return data.sort((a, b) => b.updatedAt - a.updatedAt);
@@ -38,7 +38,7 @@ export const updateThreadTitle = mutation({
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
-    if (thread.userId !== user.tokenIdentifier) throw new Error("Not authorized");
+    if (thread.userId !== user.subject) throw new Error("Not authorized");
 
     await ctx.db.patch(args.threadId, { title: args.title });
   },

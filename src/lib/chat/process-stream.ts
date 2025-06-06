@@ -11,14 +11,15 @@ export function tryParseJson<T>(jsonString: string, context: string): T {
   }
 }
 
-export async function processChatStream({
-  fetch: response,
-  handler,
-}: {
-  fetch: Promise<Response>;
-  handler: StreamDataHandler;
-}) {
-  const reader = (await response).body!.getReader();
+export async function processChatStream({ fetch, handler }: { fetch: Promise<Response>; handler: StreamDataHandler }) {
+  const response = await fetch;
+
+  if (!response.ok) {
+    const { error } = await response.json().catch(() => ({ error: { message: "Failed to parse error response." } }));
+    throw new Error(`Failed to fetch: ${response.status} - ${error.message}`);
+  }
+
+  const reader = response.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
 

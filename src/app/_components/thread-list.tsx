@@ -4,13 +4,13 @@ import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex-helpers/react/cache";
 
 import { useUser } from "@clerk/nextjs";
+import { useDocumentTitle } from "@uidotdev/usehooks";
 import Link from "next/link";
 import { useEffect } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 import { useChatStore } from "@/lib/chat/store";
-import { useThreadUpdateDocumentTitle } from "@/lib/hook";
 import { cn, toUUID } from "@/lib/utils";
 
 const THREAD_LOCAL_STORAGE_KEY = "threads";
@@ -78,8 +78,6 @@ export function ThreadList() {
     }
   }, [threads]);
 
-  useThreadUpdateDocumentTitle();
-
   return (
     <div className="hidden h-full grid-cols-1 grid-rows-[1fr_max-content] gap-y-3 py-4 lg:grid">
       <div className="flex flex-col gap-3 px-4">
@@ -134,9 +132,13 @@ function UserProfile() {
   );
 }
 
+const DEFAULT_TITLE = "AI Chat";
 function ThreadGroup({ title, threads }: { title: string; threads: Thread[] }) {
   if (!threads.length) return null;
   const activeThreadId = useChatStore((state) => state.threadId);
+
+  const documentTitle = threads.find((thread) => thread._id === activeThreadId)?.title;
+  useDocumentTitle(documentTitle ? `${documentTitle} - ${DEFAULT_TITLE}` : DEFAULT_TITLE);
 
   return (
     <div className="flex flex-col gap-2">
