@@ -12,7 +12,9 @@ import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore, useChatStore } from "@/lib/chat/store";
 import { fromUUID } from "@/lib/utils";
 
-const ChatTextarea = dynamic(() => import("@/components/chat-textarea").then((d) => d.ChatTextarea), { ssr: false });
+const ChatTextarea = dynamic(() => import("@/components/chat/chat-textarea").then((d) => d.ChatTextarea), {
+  ssr: false,
+});
 const ThreadList = dynamic(() => import("@/components/thread-list").then((d) => d.ThreadList), { ssr: false });
 
 function Chat({ children }: { children: React.ReactNode }) {

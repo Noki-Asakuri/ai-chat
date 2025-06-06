@@ -1,39 +1,18 @@
-import { useCopyToClipboard } from "@uidotdev/usehooks";
-import {
-  CopyCheckIcon,
-  CopyIcon,
-  Loader2Icon,
-  PencilIcon,
-  PlusIcon,
-  RefreshCcwIcon,
-  SaveIcon,
-  SparkleIcon,
-} from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import { Loader2Icon } from "lucide-react";
+import React, { useEffect, useRef } from "react";
 
-import { useUser } from "@clerk/nextjs";
-import * as AccordionPrimitive from "@radix-ui/react-accordion";
-
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
-import { getConvexReactClient } from "@/lib/convex/client";
-
-import { MemoizedMarkdown } from "./markdown";
-
-import { Accordion, AccordionContent, AccordionItem } from "./ui/accordion";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { ButtonWithTip } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
-import { Textarea } from "./ui/textarea";
 
-import { getModelData } from "@/lib/chat/models";
-import { sendChatRequest } from "@/lib/chat/send-chat-request";
+import { MessageActionButtons } from "./chat/message-action-buttons";
+import { MessageContent } from "./chat/message-content";
+import { MessageEdit } from "./chat/message-edit";
+import { MessageMetadata } from "./chat/message-metadata";
+import { ThinkingToggle } from "./chat/message-thinking";
+import { UserAvatar } from "./chat/user-avatar";
+
 import { useChatStore } from "@/lib/chat/store";
-import type { ChatMessage, ChatRequest } from "@/lib/types";
-import { cn, format } from "@/lib/utils";
-
-const convexClient = getConvexReactClient();
+import type { ChatMessage } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function ChatMessages() {
   const messages = useChatStore((state) => state.messages);
@@ -162,92 +141,14 @@ export function ChatMessages() {
   );
 }
 
-async function retryMessage(index: number, editedUserMessage?: { _id: Id<"messages">; content: string }) {
-  const state = useChatStore.getState();
-  const threadId = state.threadId!;
-
-  const userMessageIndex = index % 2 === 0 ? index : index - 1;
-  const allMessages = state.messages.slice(0, userMessageIndex + 1).map((message) => ({
-    id: message.messageId,
-    role: message.role,
-    content: message.content,
-  }));
-
-  const assistantMessage = {
-    messageId: uuidv4(),
-    content: "",
-    role: "assistant" as const,
-    status: "pending" as const,
-    model: "",
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
-
-  const deleteMessageIds = state.messages
-    .slice(userMessageIndex + 1, state.messages.length)
-    .map((message) => message._id);
-
-  const assistantMessageId = await convexClient.mutation(api.messages.retryChatMessage, {
-    threadId,
-    messageIds: deleteMessageIds,
-    message: assistantMessage,
-    userMessage: editedUserMessage
-      ? {
-          role: "user" as const,
-          messageId: editedUserMessage._id,
-          content: editedUserMessage.content,
-        }
-      : undefined,
-  });
-
-  if (editedUserMessage) {
-    allMessages.at(-1)!.content = editedUserMessage.content;
-  }
-
-  const body: ChatRequest = {
-    messages: allMessages,
-    threadId,
-    assistantMessageId,
-    config: state.chatConfig,
-  };
-
-  await sendChatRequest("/api/ai/chat", { method: "POST", body: JSON.stringify(body) }, assistantMessageId);
-}
-
 export function Message({ message, index, isLast }: { message: ChatMessage; index: number; isLast: boolean }) {
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [, copyToClipboard] = useCopyToClipboard();
-
-  const copyRef = useRef<NodeJS.Timeout | null>(null);
-
-  const [editedUserMessage, setEditedUserMessage] = useState<string>(message.content);
-
-  const status = useChatStore((state) => state.status);
   const assistantMessage = useChatStore((state) => state.assistantMessage);
-
   const editMessageId = useChatStore((state) => state.editMessageId);
-  const setEditMessageId = useChatStore((state) => state.setEditMessageId);
 
-  const renderMesssage =
+  const renderMessage =
     message.role === "assistant" && assistantMessage?.id === message._id && message.status === "streaming"
       ? assistantMessage
       : message;
-
-  async function copeMessageContent(content: string) {
-    if (copyRef.current) clearTimeout(copyRef.current);
-
-    await copyToClipboard(content.trim());
-    setCopySuccess(true);
-
-    copyRef.current = setTimeout(() => setCopySuccess(false), 1000);
-  }
-
-  function handleEditMessage() {
-    if (message.role === "assistant") return;
-
-    setEditMessageId(editMessageId === message._id ? null : message._id);
-    setEditedUserMessage(message.content);
-  }
 
   return (
     <div
@@ -261,7 +162,7 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
     >
       {message.role === "assistant" &&
         message.status !== "error" &&
-        (message.status === "pending" || (!renderMesssage.content && !renderMesssage.reasoning)) && (
+        (message.status === "pending" || (!renderMessage.content && !renderMessage.reasoning)) && (
           <div className="flex h-11 shrink-0 items-center">
             <Loader2Icon className="size-6 animate-spin" />
           </div>
@@ -275,195 +176,59 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
       >
         <ThinkingToggle
           messageId={message.messageId}
-          finished={renderMesssage.content.length > 0}
-          reasoning={renderMesssage.reasoning}
+          finished={renderMessage.content.length > 0}
+          reasoning={renderMessage.reasoning}
           status={message.status}
-          tokens={renderMesssage.metadata?.thinkingTokens}
+          tokens={renderMessage.metadata?.thinkingTokens}
         />
 
         {message.role === "user" && editMessageId === message._id ? (
-          <Textarea
-            rows={3}
-            name="user-input"
-            defaultValue={editedUserMessage}
-            onChange={(event) => setEditedUserMessage(event.target.value)}
-            className="min-h-11 w-full min-w-[80ch] resize-none px-4 py-2 font-sans outline-none"
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                void retryMessage(index, { _id: message._id, content: editedUserMessage });
-                setEditMessageId(null);
-              }
-            }}
-          />
+          <MessageEdit content={message.content} index={index} id={message._id} />
         ) : (
-          <div
-            className={cn("space-y-6", {
-              "bg-sidebar/50 rounded-md border px-4 py-2": message.role === "user",
-              "bg-destructive/20 border-destructive/50 rounded-md border px-4 py-2 backdrop-blur-md":
-                message.status === "error",
-            })}
-          >
-            {message.status === "error" ? (
-              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-              <p>{message.error || "An error have occurred. Please try again."}</p>
-            ) : (
-              <MemoizedMarkdown id={message.messageId} content={renderMesssage.content} />
-            )}
-
-            {message.sources && message.sources.filter(({ title }) => !!title).length > 0 && (
-              <div className="not-prose flex w-full flex-wrap items-center gap-2 gap-y-1">
-                <span>Sources: </span>
-
-                {message.sources
-                  .filter(({ title }) => !!title)
-                  .map(({ id, title, url }) => (
-                    <a
-                      key={id}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="capitalize underline underline-offset-2"
-                      href={url}
-                    >
-                      {title?.replace(".com", "")}
-                    </a>
-                  ))}
-              </div>
-            )}
-          </div>
+          <MessageContent content={renderMessage.content} message={message} />
         )}
 
-        <div
-          className={cn(
-            "pointer-events-none absolute -bottom-10 flex gap-2 transition-opacity select-none sm:opacity-0",
-            {
-              "pointer-events-auto group-hover:opacity-100":
-                message.status === "error" || message.status === "complete",
-              hidden: message.status === "pending" || message.status === "streaming",
-              "right-0": message.role === "user",
-              "opacity-100": editMessageId === message._id,
-            },
-          )}
-        >
-          <div className="flex items-center gap-2">
-            <ButtonWithTip
-              variant="ghost"
-              className="size-8 cursor-pointer p-2"
-              onMouseDown={() => retryMessage(index)}
-              title="Retry Message"
-              disabled={status === "pending"}
-            >
-              <RefreshCcwIcon className="size-5" />
-            </ButtonWithTip>
-
-            {message.role === "user" && (
-              <ButtonWithTip
-                variant="ghost"
-                className="size-8 cursor-pointer p-2"
-                onMouseDown={() => handleEditMessage()}
-                title="Edit Message"
-                disabled={status === "pending"}
-              >
-                {editMessageId === message._id ? <SaveIcon className="size-5" /> : <PencilIcon className="size-5" />}
-              </ButtonWithTip>
-            )}
-
-            <ButtonWithTip
-              variant="ghost"
-              className="size-8 cursor-pointer p-2"
-              onMouseDown={() => copeMessageContent(message.content)}
-              title="Copy Message"
-              disabled={copySuccess}
-            >
-              {copySuccess ? <CopyCheckIcon className="size-5" /> : <CopyIcon className="size-5" />}
-            </ButtonWithTip>
-          </div>
-
-          {renderMesssage.metadata && (
-            <div className="text-muted-foreground/90 flex flex-wrap items-center gap-1.5 text-sm select-none">
-              <span>{format.time(renderMesssage.metadata.duration / 1000)}</span>
-              <span>-</span>
-              <span>Generated By {getModelData(message.model)?.displayName}</span>
-              <span>-</span>
-              <span>{format.number(renderMesssage.metadata.totalTokens)} Tokens</span>
-              {renderMesssage.metadata.thinkingTokens > 0 && (
-                <>
-                  <span>-</span>
-                  <span>
-                    {format.number(renderMesssage.metadata.thinkingTokens)} {renderMesssage.reasoning ? "" : "Hidden"}{" "}
-                    Thinking Tokens
-                  </span>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+        <MessageFooter message={message} index={index} renderMessage={renderMessage} />
       </div>
 
-      {message.role === "user" && <UserPicture />}
+      {message.role === "user" && <UserAvatar />}
     </div>
   );
 }
 
-function UserPicture() {
-  const { user } = useUser();
-
-  <div className="">You</div>;
-
-  return (
-    <Avatar className="size-11 shrink-0 rounded-md border">
-      {user && <AvatarImage src={user.imageUrl} alt={user.username!} />}
-      <AvatarFallback className="bg-muted size-full rounded-md">You</AvatarFallback>
-    </Avatar>
-  );
-}
-
-function ThinkingToggle({
-  messageId,
-  reasoning,
-  finished,
-  status,
-  tokens,
+function MessageFooter({
+  index,
+  message,
+  renderMessage,
 }: {
-  messageId: string;
-  reasoning?: string;
-  finished: boolean;
-  status: ChatMessage["status"];
-  tokens?: number;
+  index: number;
+  message: ChatMessage;
+  renderMessage: { reasoning?: string; metadata?: ChatMessage["metadata"] };
 }) {
-  if (!reasoning || status === "error") return null;
-  const defaultValue = status === "streaming" ? `${messageId}-thinking` : undefined;
+  const editMessageId = useChatStore((state) => state.editMessageId);
 
   return (
-    <Accordion type="single" collapsible defaultValue={defaultValue} className="my-4 w-full space-y-2">
-      <AccordionItem value={messageId + "-thinking"} className="bg-secondary rounded-md border-none">
-        <AccordionPrimitive.Header className="flex">
-          <AccordionPrimitive.Trigger
-            className={cn(
-              "flex w-max flex-1 cursor-pointer items-center justify-between px-4 py-4 font-medium transition-all outline-none",
-              { "[&[data-state=open]>svg]:rotate-45": status !== "streaming" },
-            )}
-          >
-            <div className="group flex items-center gap-2">
-              <SparkleIcon className="size-5" />
-              <p>Thinking {tokens && <span className="text-sm">- {format.number(tokens)} Thinking Tokens</span>}</p>
-            </div>
+    <div
+      className={cn("pointer-events-none absolute -bottom-10 flex gap-2 transition-opacity select-none sm:opacity-0", {
+        "pointer-events-auto group-hover:opacity-100": message.status === "error" || message.status === "complete",
+        hidden: message.status === "pending" || message.status === "streaming",
+        "right-0": message.role === "user",
+        "opacity-100": editMessageId === message._id,
+      })}
+    >
+      <MessageActionButtons
+        content={message.content}
+        id={message._id}
+        index={index}
+        role={message.role}
+        status={message.status}
+      />
 
-            {status === "streaming" && !finished ? (
-              <Loader2Icon className="text-muted-foreground size-5 shrink-0 animate-spin" />
-            ) : (
-              <PlusIcon className="text-muted-foreground size-5 shrink-0 transition-transform duration-200" />
-            )}
-          </AccordionPrimitive.Trigger>
-        </AccordionPrimitive.Header>
-
-        <AccordionContent>
-          <hr />
-          <div className="prose dark:prose-invert max-w-none space-y-2 px-4 pt-4">
-            <MemoizedMarkdown id={messageId + "-thinking"} content={reasoning} />
-          </div>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+      <MessageMetadata
+        model={message.model}
+        metadata={renderMessage.metadata}
+        hiddenReasoning={!renderMessage.reasoning}
+      />
+    </div>
   );
 }
