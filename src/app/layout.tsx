@@ -2,6 +2,7 @@ import "@/globals.css";
 
 import { type Metadata } from "next";
 import { Poppins, JetBrains_Mono } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { ConvexClientProvider } from "./_components/provider/convex-client";
 import { Toaster } from "./_components/ui/sonner";
@@ -34,6 +35,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="dark">
         <ConvexClientProvider>{children}</ConvexClientProvider>
         <Toaster />
+
+        <SpeedInsights />
       </body>
     </html>
   );
