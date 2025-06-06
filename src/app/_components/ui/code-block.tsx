@@ -1,10 +1,9 @@
-import { useCopyToClipboard } from "@uidotdev/usehooks";
-import { ChevronDownIcon, CopyCheckIcon, CopyIcon, TextIcon, WrapTextIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { ChevronDownIcon, TextIcon, WrapTextIcon } from "lucide-react";
 
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { useShikiHighlighter } from "react-shiki";
 
+import { CopyButton } from "../chat/copy-button";
 import { Accordion, AccordionContent, AccordionItem } from "./accordion";
 import { Button, ButtonWithTip } from "./button";
 import { ScrollArea, ScrollBar } from "./scroll-area";
@@ -22,23 +21,9 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
   const wrapline = useChatStore((state) => state.wrapline);
   const toggleWrapline = useChatStore((state) => state.toggleWrapline);
 
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [, copyToClipboard] = useCopyToClipboard();
-
-  const copyRef = useRef<NodeJS.Timeout | null>(null);
-
   const highlightedCode = useShikiHighlighter(code, language === "assembly" ? "asm" : language, "vitesse-dark", {
     delay: 50,
   });
-
-  async function copyCodeBlock() {
-    if (copyRef.current) clearTimeout(copyRef.current);
-
-    await copyToClipboard(code);
-    setCopySuccess(true);
-
-    copyRef.current = setTimeout(() => setCopySuccess(false), 1000);
-  }
 
   return (
     <Accordion
@@ -69,15 +54,7 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
                 {wrapline ? <TextIcon className="size-4" /> : <WrapTextIcon className="size-4" />}
               </ButtonWithTip>
 
-              <ButtonWithTip
-                title="Copy Code"
-                side="top"
-                variant="ghost"
-                className="size-8 cursor-pointer"
-                onMouseDown={copyCodeBlock}
-              >
-                {copySuccess ? <CopyCheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
-              </ButtonWithTip>
+              <CopyButton content={code} />
             </div>
           </div>
         </AccordionPrimitive.Header>
