@@ -1,5 +1,12 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
+export type Thread = {
+  _id: Id<"threads">;
+  title: string;
+  updatedAt: number;
+  pinned: boolean;
+};
+
 export type ChatRequest = {
   threadId: Id<"threads">;
   assistantMessageId: Id<"messages">;

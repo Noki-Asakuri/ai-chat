@@ -6,6 +6,7 @@ export default defineSchema({
     title: v.string(),
     userId: v.string(),
     updatedAt: v.number(),
+    pinned: v.optional(v.boolean()),
   }).index("by_userId", ["userId"]),
 
   messages: defineTable({
@@ -18,7 +19,13 @@ export default defineSchema({
     error: v.optional(v.string()),
 
     model: v.string(),
-    status: v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming"), v.literal("error")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("complete"),
+      v.literal("streaming"),
+      v.literal("error"),
+    ),
+
     role: v.union(v.literal("assistant"), v.literal("user"), v.literal("system")),
 
     resumableStreamId: v.optional(v.union(v.string(), v.null())),
@@ -50,6 +57,8 @@ export default defineSchema({
         }),
       ),
     ),
+
+    attachments: v.optional(v.array(v.id("attachments"))),
 
     metadata: v.optional(
       v.object({

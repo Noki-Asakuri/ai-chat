@@ -12,10 +12,16 @@ import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore, useChatStore } from "@/lib/chat/store";
 import { fromUUID } from "@/lib/utils";
 
-const ChatTextarea = dynamic(() => import("@/components/chat/chat-textarea").then((d) => d.ChatTextarea), {
-  ssr: false,
-});
-const ThreadList = dynamic(() => import("@/components/thread-list").then((d) => d.ThreadList), { ssr: false });
+const ChatTextarea = dynamic(
+  () => import("@/components/chat/chat-textarea").then((d) => d.ChatTextarea),
+  {
+    ssr: false,
+  },
+);
+const ThreadSidebar = dynamic(
+  () => import("@/components/threads/thread-sidebar").then((d) => d.ThreadSidebar),
+  { ssr: false },
+);
 
 function Chat({ children }: { children: React.ReactNode }) {
   const params = useParams<{ threadId?: string }>();
@@ -52,15 +58,22 @@ function Chat({ children }: { children: React.ReactNode }) {
       !resumeRef.current
     ) {
       resumeRef.current = true;
-      console.debug("[Convex] Resuming chat streaming", { threadId, streamId: lastMessage.resumableStreamId });
-      void sendChatRequest(`/api/ai/chat?streamId=${lastMessage.resumableStreamId}`, undefined, lastMessage._id);
+      console.debug("[Convex] Resuming chat streaming", {
+        threadId,
+        streamId: lastMessage.resumableStreamId,
+      });
+      void sendChatRequest(
+        `/api/ai/chat?streamId=${lastMessage.resumableStreamId}`,
+        undefined,
+        lastMessage._id,
+      );
       resumeRef.current = false;
     }
   }, [data]);
 
   return (
     <div className="grid h-svh max-w-screen overflow-x-hidden lg:grid-cols-[280px_1fr]">
-      <ThreadList />
+      <ThreadSidebar />
 
       <div className="border-border relative mt-3 flex h-[calc(100vh-12px)] max-w-screen flex-col rounded-tl-2xl border-t border-l pt-6">
         {children}
