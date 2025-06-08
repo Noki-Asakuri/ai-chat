@@ -31,12 +31,12 @@ export function ThreadItem({ thread }: { thread: Thread }) {
       title={thread.title}
       prefetch={false}
       className={cn(
-        "group relative isolate flex overflow-hidden",
+        "group relative isolate flex overflow-hidden px-3 py-1.5",
         "text-sidebar-primary-foreground hover:bg-sidebar-primary/20 rounded-none border-l-2 border-transparent transition-colors",
         { "border-sidebar-ring bg-sidebar-primary/20": thread._id === activeThreadId },
       )}
     >
-      <p className="line-clamp-1 w-full px-3 py-1.5 text-sm">{thread.title}</p>
+      <span className="line-clamp-1 text-sm">{thread.title}</span>
 
       <div className="absolute top-0 -right-[91px] flex items-center transition-[right] group-hover:right-0">
         <div className="h-8 w-6 bg-gradient-to-r from-transparent to-[#200e3c]"></div>
