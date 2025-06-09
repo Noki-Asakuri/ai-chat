@@ -2,14 +2,19 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { create } from "zustand";
 
-import type { ChatMessage } from "../types";
+import type { UserAttachment, ChatMessage } from "../types";
 
 export interface ChatState {
   messages: ChatMessage[];
   setMessages: (messages: ChatMessage[]) => void;
 
+  attachments: UserAttachment[];
+  setAttachment: (attachments: UserAttachment[]) => void;
+  addAttachment: (attachments: UserAttachment[]) => void;
+
   status: "pending" | "complete" | "streaming" | "error" | undefined;
   setStatus: (status: "pending" | "complete" | "streaming" | "error") => void;
+  removeAttachment: (attachmentId: string) => void;
 
   threadId?: Id<"threads">;
   setThreadId: (threadId?: Id<"threads">) => void;
@@ -20,7 +25,12 @@ export interface ChatState {
   isStreaming: boolean;
   setIsStreaming: (isResuming: boolean) => void;
 
-  assistantMessage: { id: string; content: string; reasoning: string; metadata: ChatMessage["metadata"] };
+  assistantMessage: {
+    id: string;
+    content: string;
+    reasoning: string;
+    metadata: ChatMessage["metadata"];
+  };
   setAssistantMessage: (
     message: Partial<{
       id: string;
@@ -31,7 +41,9 @@ export interface ChatState {
   ) => void;
 
   chatConfig: { webSearch: boolean; reasoning: boolean; model: string };
-  setChatConfig: (config: Partial<{ webSearch: boolean; reasoning: boolean; model: string }>) => void;
+  setChatConfig: (
+    config: Partial<{ webSearch: boolean; reasoning: boolean; model: string }>,
+  ) => void;
 
   abortController: AbortController;
   setAbortController: (controller: AbortController) => void;
@@ -68,11 +80,19 @@ export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   setMessages: (messages) => set({ messages }),
 
+  attachments: [],
+  setAttachment: (attachments) => set({ attachments }),
+  addAttachment: (attachments) =>
+    set((state) => ({ attachments: [...state.attachments, ...attachments] })),
+  removeAttachment: (attachmentId) =>
+    set((state) => ({ attachments: state.attachments.filter((a) => a.id !== attachmentId) })),
+
   status: undefined,
   setStatus: (status) => set({ status }),
 
   assistantMessage: { id: "", content: "", reasoning: "", metadata: undefined },
-  setAssistantMessage: (message) => set((state) => ({ assistantMessage: { ...state.assistantMessage, ...message } })),
+  setAssistantMessage: (message) =>
+    set((state) => ({ assistantMessage: { ...state.assistantMessage, ...message } })),
 
   threadId: undefined,
   setThreadId: (threadId) => set({ threadId }),
@@ -92,12 +112,16 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => {
       localStorage.setItem("webSearch", String(config.webSearch ?? state.chatConfig.webSearch));
       localStorage.setItem("reasoning", String(config.reasoning ?? state.chatConfig.reasoning));
-      localStorage.setItem("model", config.model ?? state.chatConfig.model ?? "google/gemini-2.5-flash-preview-05-20");
+      localStorage.setItem(
+        "model",
+        config.model ?? state.chatConfig.model ?? "google/gemini-2.5-flash-preview-05-20",
+      );
 
       return { chatConfig: { ...state.chatConfig, ...config } };
     }),
 
-  wrapline: typeof window === "undefined" ? false : window.localStorage?.getItem("wrapline") === "true",
+  wrapline:
+    typeof window === "undefined" ? false : window.localStorage?.getItem("wrapline") === "true",
   toggleWrapline: () =>
     set((state) => {
       localStorage.setItem("wrapline", state.wrapline ? "false" : "true");

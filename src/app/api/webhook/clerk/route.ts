@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
       case "user.deleted":
         console.log("User deleted", evt.data);
-        // await serverConvexClient.mutation(api.users.deleteUser, { userId: evt.data.id! });
+        await serverConvexClient.mutation(api.users.deleteUserData, { userId: evt.data.id! });
         break;
 
       default:

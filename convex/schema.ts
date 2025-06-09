@@ -9,6 +9,15 @@ export default defineSchema({
     pinned: v.optional(v.boolean()),
   }).index("by_userId", ["userId"]),
 
+  attachments: defineTable({
+    id: v.string(),
+    name: v.string(),
+    size: v.number(),
+    type: v.string(),
+    userId: v.string(),
+    threadId: v.id("threads"),
+  }).index("by_userId", ["userId"]),
+
   messages: defineTable({
     threadId: v.id("threads"),
     userId: v.string(),
@@ -25,7 +34,6 @@ export default defineSchema({
       v.literal("streaming"),
       v.literal("error"),
     ),
-
     role: v.union(v.literal("assistant"), v.literal("user"), v.literal("system")),
 
     resumableStreamId: v.optional(v.union(v.string(), v.null())),

@@ -3,10 +3,9 @@ import React, { useEffect, useRef } from "react";
 
 import { ScrollArea } from "./ui/scroll-area";
 
-import { MessageActionButtons } from "./chat/message-action-buttons";
 import { MessageContent } from "./chat/message-content";
 import { MessageEdit } from "./chat/message-edit";
-import { MessageMetadata } from "./chat/message-metadata";
+import { MessageFooter } from "./chat/message-footer";
 import { ThinkingToggle } from "./chat/message-thinking";
 import { UserAvatar } from "./chat/user-avatar";
 
@@ -31,11 +30,17 @@ export function ChatMessages() {
 
     const parentElement = entry.target.parentElement!.parentElement!;
 
-    if (parentElement.scrollHeight === parentElement.clientHeight && parentElement.scrollTop === 0) {
+    if (
+      parentElement.scrollHeight === parentElement.clientHeight &&
+      parentElement.scrollTop === 0
+    ) {
       setScrollPosition(null);
     } else if (parentElement.scrollTop === 0) {
       setScrollPosition("top");
-    } else if (parentElement.scrollTop + parentElement.clientHeight === parentElement.scrollHeight) {
+    } else if (
+      parentElement.scrollTop + parentElement.clientHeight ===
+      parentElement.scrollHeight
+    ) {
       setScrollPosition("bottom");
     } else {
       setScrollPosition("middle");
@@ -134,25 +139,40 @@ export function ChatMessages() {
         style={{ paddingBottom: `${textareaHeight}px`, fontVariantLigatures: "none" }}
       >
         {messages.map((message, index) => (
-          <Message key={message.messageId} message={message} index={index} isLast={index === messages.length - 1} />
+          <Message
+            key={message.messageId}
+            message={message}
+            index={index}
+            isLast={index === messages.length - 1}
+          />
         ))}
       </div>
     </ScrollArea>
   );
 }
 
-export function Message({ message, index, isLast }: { message: ChatMessage; index: number; isLast: boolean }) {
+export function Message({
+  message,
+  index,
+  isLast,
+}: {
+  message: ChatMessage;
+  index: number;
+  isLast: boolean;
+}) {
   const assistantMessage = useChatStore((state) => state.assistantMessage);
   const editMessageId = useChatStore((state) => state.editMessageId);
 
   const renderMessage =
-    message.role === "assistant" && assistantMessage?.id === message._id && message.status === "streaming"
+    message.role === "assistant" &&
+    assistantMessage?.id === message._id &&
+    message.status === "streaming"
       ? assistantMessage
       : message;
 
   return (
     <div
-      className="group mx-auto flex max-w-[calc(896px+32px)] items-start gap-2 px-4 [&:not(:first-child)]:mt-12 [&[data-streaming='false']:last-child]:mb-12"
+      className="group mx-auto flex max-w-[calc(896px+32px)] items-start gap-2 px-4 [&:not(:first-child)]:mt-14 [&[data-streaming='false']:last-child]:mb-14"
       id={message.messageId}
       data-role={message.role}
       data-status={message.status}
@@ -192,43 +212,6 @@ export function Message({ message, index, isLast }: { message: ChatMessage; inde
       </div>
 
       {message.role === "user" && <UserAvatar />}
-    </div>
-  );
-}
-
-function MessageFooter({
-  index,
-  message,
-  renderMessage,
-}: {
-  index: number;
-  message: ChatMessage;
-  renderMessage: { reasoning?: string; metadata?: ChatMessage["metadata"] };
-}) {
-  const editMessageId = useChatStore((state) => state.editMessageId);
-
-  return (
-    <div
-      className={cn("pointer-events-none absolute -bottom-10 flex gap-2 transition-opacity select-none sm:opacity-0", {
-        "pointer-events-auto group-hover:opacity-100": message.status === "error" || message.status === "complete",
-        hidden: message.status === "pending" || message.status === "streaming",
-        "right-0": message.role === "user",
-        "opacity-100": editMessageId === message._id,
-      })}
-    >
-      <MessageActionButtons
-        content={message.content}
-        id={message._id}
-        index={index}
-        role={message.role}
-        status={message.status}
-      />
-
-      <MessageMetadata
-        model={message.model}
-        metadata={renderMessage.metadata}
-        hiddenReasoning={!renderMessage.reasoning}
-      />
     </div>
   );
 }

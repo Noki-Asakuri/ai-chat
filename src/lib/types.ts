@@ -1,4 +1,4 @@
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 export type Thread = {
   _id: Id<"threads">;
@@ -20,10 +20,19 @@ export type InputMessage = {
   role: "assistant" | "user" | "system";
 };
 
+export type UserAttachment = {
+  id: string;
+  name: string;
+  size: number;
+  file: File;
+  type: "image" | "pdf" | "doc";
+};
+
 export type ChatMessage = {
   _id: Id<"messages">;
   threadId: Id<"threads">;
   messageId: string;
+  userId: string;
   content: string;
   reasoning?: string;
   sources?: { id: string; title?: string; url: string }[];
@@ -34,6 +43,8 @@ export type ChatMessage = {
   resumableStreamId?: string | null;
   createdAt: number;
   updatedAt: number;
+
+  attachments?: Doc<"attachments">[];
 
   metadata?: {
     duration: number;

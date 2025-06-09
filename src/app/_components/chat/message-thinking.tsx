@@ -48,7 +48,7 @@ export function ThinkingToggle({
 
         <AccordionPrimitive.AccordionContent>
           <hr />
-          <div className="prose dark:prose-invert max-w-none space-y-2 px-4 pt-4">
+          <div className="prose dark:prose-invert max-w-none space-y-2 px-4 py-4">
             <MemoizedMarkdown id={messageId + "-thinking"} content={reasoning} />
           </div>
         </AccordionPrimitive.AccordionContent>

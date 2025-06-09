@@ -8,6 +8,7 @@ import { ScrollButton } from "../scroll-button";
 import { Textarea } from "../ui/textarea";
 
 import { ChatActionButtons } from "./chat-action-buttons";
+import { ChatAttachmentDisplay } from "./chat-attachment-display";
 import { ChatSendButton } from "./chat-send-button";
 
 import { submitChatMessage } from "@/lib/chat/send-chat-request";
@@ -42,12 +43,14 @@ export function ChatTextarea() {
 
       <div
         ref={parentRef}
-        className="bg-muted/40 border-border mx-auto max-w-4xl rounded-[calc(2px+8px)] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150"
+        className="bg-muted/40 border-border mx-auto max-w-4xl space-y-2 rounded-[calc(2px+8px)] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150"
       >
+        <ChatAttachmentDisplay />
+
         <div className="bg-muted/60 border-border rounded-md rounded-b-none border border-b-0 p-2.5 pb-0">
           <InputTextArea />
 
-          <div className="flex items-end justify-between">
+          <div className="flex items-end justify-between py-2">
             <ChatActionButtons />
             <ChatSendButton />
           </div>
@@ -74,7 +77,8 @@ function InputTextArea() {
       className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
       onKeyDown={(event) => {
         if (event.key === "Enter" && !event.shiftKey) {
-          void submitChatMessage(event, router);
+          event.preventDefault();
+          void submitChatMessage({ router });
         }
       }}
     />

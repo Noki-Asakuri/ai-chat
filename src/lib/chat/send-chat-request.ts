@@ -10,6 +10,7 @@ import { chatStore } from "./store";
 
 import type { ChatMessage, ChatRequest } from "../types";
 import { toUUID } from "../utils";
+import { uploadFile } from "../convex/uploadFiles";
 
 const convexClient = getConvexReactClient();
 
@@ -62,7 +63,8 @@ export async function sendChatRequest(
     }
     if (error.name === "AbortError") return;
 
-    const errorMessage = "Failed to generate response. Please try again later. \nError: " + error.message;
+    const errorMessage =
+      "Failed to generate response. Please try again later. \nError: " + error.message;
     console.log("[Chat] Chat error:", error);
 
     void convexClient.mutation(api.messages.updateErrorMessage, {
@@ -74,22 +76,25 @@ export async function sendChatRequest(
   }
 }
 
-export async function submitChatMessage(event: { preventDefault: () => void }, router: ReturnType<typeof useRouter>) {
-  event.preventDefault();
+type SubmitChatMessageParams = {
+  router: ReturnType<typeof useRouter>;
+};
 
+export async function submitChatMessage({ router }: SubmitChatMessageParams) {
   const state = chatStore.getState();
   const chatInput = state.chatInput.trim();
 
-  if (!chatInput || state.status === "streaming") return;
+  if (!chatInput || state.status === "streaming" || state.status === "pending") return;
 
   state.setChatInput("");
-  let threadId: Id<"threads"> = state.threadId!;
+  state.setAttachment([]);
 
+  let threadId: Id<"threads"> = state.threadId!;
   if (!state.threadId) {
     threadId = await convexClient.mutation(api.threads.createThread, { title: "New Chat" });
+    state.setThreadId(threadId);
 
     router.push(`/chat/${toUUID(threadId)}`);
-    state.setThreadId(threadId);
   }
 
   const userMessage = {
@@ -100,6 +105,7 @@ export async function submitChatMessage(event: { preventDefault: () => void }, r
     model: "",
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    attachments: [] as Id<"attachments">[],
   };
 
   const assistantMessage = {
@@ -110,7 +116,25 @@ export async function submitChatMessage(event: { preventDefault: () => void }, r
     model: "",
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    attachments: [] as Id<"attachments">[],
   };
+
+  if (state.attachments.length) {
+    await Promise.all(
+      state.attachments.map(async (attachment) => {
+        const attachmentId = await convexClient.mutation(api.attachments.createAttachment, {
+          id: attachment.id,
+          name: attachment.name,
+          size: attachment.size,
+          type: attachment.type,
+          threadId,
+        });
+
+        await uploadFile(attachment.file, threadId, attachmentId);
+        userMessage.attachments.push(attachmentId);
+      }),
+    );
+  }
 
   const assistantMessageId = await convexClient.mutation(api.messages.addMessagesToThread, {
     threadId,
@@ -121,12 +145,14 @@ export async function submitChatMessage(event: { preventDefault: () => void }, r
     id: message.messageId,
     role: message.role as "assistant" | "user",
     content: message.content,
+    attachments: message.attachments?.map((attachment) => attachment._id),
   }));
 
   allMessages.push({
     role: "user",
     content: chatInput,
     id: userMessage.messageId,
+    attachments: userMessage.attachments,
   });
 
   const body: ChatRequest = {
@@ -136,7 +162,11 @@ export async function submitChatMessage(event: { preventDefault: () => void }, r
     assistantMessageId: assistantMessageId!,
   };
 
-  await sendChatRequest("/api/ai/chat", { method: "POST", body: JSON.stringify(body) }, assistantMessageId!);
+  await sendChatRequest(
+    "/api/ai/chat",
+    { method: "POST", body: JSON.stringify(body) },
+    assistantMessageId!,
+  );
 }
 
 export async function abortChatRequest() {

@@ -7,7 +7,13 @@ import { Textarea } from "../ui/textarea";
 import { retryMessage } from "@/lib/chat/retry-message";
 import { useChatStore } from "@/lib/chat/store";
 
-export function MessageEdit({ id, content, index }: { id: Id<"messages">; content: string; index: number }) {
+type MessageEditProps = {
+  id: Id<"messages">;
+  content: string;
+  index: number;
+};
+
+export function MessageEdit({ id, content, index }: MessageEditProps) {
   const [editedUserMessage, setEditedUserMessage] = useState<string>(content);
   const setEditMessageId = useChatStore((state) => state.setEditMessageId);
 

@@ -12,7 +12,10 @@ import { getConvexReactClient } from "@/lib/convex/client";
 
 const convexClient = getConvexReactClient();
 
-export async function retryMessage(index: number, editedUserMessage?: { _id: Id<"messages">; content: string }) {
+export async function retryMessage(
+  index: number,
+  editedUserMessage?: { _id: Id<"messages">; content: string },
+) {
   const state = chatStore.getState();
   const threadId = state.threadId!;
 
@@ -21,6 +24,7 @@ export async function retryMessage(index: number, editedUserMessage?: { _id: Id<
     id: message.messageId,
     role: message.role,
     content: message.content,
+    attachments: message.attachments,
   }));
 
   const assistantMessage = {
@@ -31,6 +35,7 @@ export async function retryMessage(index: number, editedUserMessage?: { _id: Id<
     model: "",
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    attachments: [] as Id<"attachments">[],
   };
 
   const deleteMessageIds = state.messages
@@ -55,11 +60,15 @@ export async function retryMessage(index: number, editedUserMessage?: { _id: Id<
   }
 
   const body: ChatRequest = {
-    messages: allMessages,
     threadId,
     assistantMessageId,
+    messages: allMessages,
     config: state.chatConfig,
   };
 
-  await sendChatRequest("/api/ai/chat", { method: "POST", body: JSON.stringify(body) }, assistantMessageId);
+  await sendChatRequest(
+    "/api/ai/chat",
+    { method: "POST", body: JSON.stringify(body) },
+    assistantMessageId,
+  );
 }

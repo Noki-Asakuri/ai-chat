@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 
 export const getAllMessagesFromThread = query({
@@ -10,10 +10,41 @@ export const getAllMessagesFromThread = query({
 
     if (!args.threadId) return [];
 
-    return await ctx.db
+    const messages = await ctx.db
       .query("messages")
-      .withIndex("by_userId_threadId", (q) => q.eq("userId", user.subject).eq("threadId", args.threadId!))
+      .withIndex("by_userId_threadId", (q) =>
+        q.eq("userId", user.subject).eq("threadId", args.threadId!),
+      )
+      .order("asc")
       .collect();
+
+    return await Promise.all(
+      messages.map(async (message) => {
+        const attachments = (await Promise.all(
+          message.attachments?.map((attachmentId) => ctx.db.get(attachmentId)) ?? [],
+        )) as Doc<"attachments">[];
+
+        return { ...message, attachments };
+      }),
+    );
+  },
+});
+
+export const addAttachmentsToMessage = mutation({
+  args: { messageId: v.string(), attachmentId: v.id("attachments") },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+
+    const message = await ctx.db
+      .query("messages")
+      .withIndex("by_messageId", (q) => q.eq("messageId", args.messageId))
+      .first();
+
+    if (!message) throw new Error("Message not found");
+    if (message.userId !== user.subject) throw new Error("Not authorized");
+
+    await ctx.db.patch(message._id, { attachments: [args.attachmentId] });
   },
 });
 
@@ -30,6 +61,8 @@ export const addMessagesToThread = mutation({
 
         createdAt: v.number(),
         updatedAt: v.number(),
+
+        attachments: v.optional(v.array(v.id("attachments"))),
       }),
     ),
   },
@@ -40,7 +73,11 @@ export const addMessagesToThread = mutation({
     const thread = await ctx.db.get(args.threadId);
 
     if (!thread) {
-      await ctx.db.insert("threads", { title: "New Chat", updatedAt: Date.now() + 1, userId: user.subject });
+      await ctx.db.insert("threads", {
+        title: "New Chat",
+        updatedAt: Date.now() + 1,
+        userId: user.subject,
+      });
     } else if (thread.userId !== user.subject) {
       throw new Error("Not authorized");
     }
@@ -84,12 +121,16 @@ export const updateMessageById = mutation({
     threadId: v.id("threads"),
     messageId: v.id("messages"),
     updates: v.object({
-      status: v.optional(v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming"))),
+      status: v.optional(
+        v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
+      ),
       content: v.optional(v.string()),
       reasoning: v.optional(v.string()),
       model: v.optional(v.string()),
       resumableStreamId: v.optional(v.union(v.string(), v.null())),
-      sources: v.optional(v.array(v.object({ id: v.string(), title: v.optional(v.string()), url: v.string() }))),
+      sources: v.optional(
+        v.array(v.object({ id: v.string(), title: v.optional(v.string()), url: v.string() })),
+      ),
       metadata: v.optional(
         v.object({
           model: v.string(),
@@ -140,6 +181,7 @@ export const retryChatMessage = mutation({
       content: v.string(),
       status: v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
       model: v.string(),
+      attachments: v.array(v.id("attachments")),
 
       createdAt: v.number(),
       updatedAt: v.number(),
@@ -172,6 +214,10 @@ export const retryChatMessage = mutation({
     }
 
     await ctx.db.patch(args.threadId, { updatedAt: Date.now() });
-    return await ctx.db.insert("messages", { threadId: args.threadId, userId: user.subject, ...args.message });
+    return await ctx.db.insert("messages", {
+      threadId: args.threadId,
+      userId: user.subject,
+      ...args.message,
+    });
   },
 });

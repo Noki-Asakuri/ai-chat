@@ -1,10 +1,10 @@
 import { useCopyToClipboard } from "@uidotdev/usehooks";
 import { CopyCheckIcon, CopyIcon } from "lucide-react";
-import { useRef, useState, useTransition } from "react";
+import { useTransition } from "react";
 
 import { ButtonWithTip } from "../ui/button";
 
-export function CopyButton({ content }: { content: string }) {
+export function CopyButton({ content, className }: { content: string; className?: string }) {
   const [pedding, startTransition] = useTransition();
   const [, copyToClipboard] = useCopyToClipboard();
 
@@ -18,7 +18,7 @@ export function CopyButton({ content }: { content: string }) {
   return (
     <ButtonWithTip
       variant="ghost"
-      className="size-8 cursor-pointer p-2"
+      className={className}
       onMouseDown={() => copeMessageContent(content)}
       title="Copy Message"
       disabled={pedding}

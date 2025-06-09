@@ -1,3 +1,5 @@
+import { api } from "@/convex/_generated/api";
+
 import { SendHorizontalIcon, SquareIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -13,11 +15,12 @@ export function ChatSendButton() {
   return (
     <ButtonWithTip
       type="button"
+      variant="secondary"
       title={isStreaming ? "Abort Request" : "Send Message"}
-      onMouseDown={(event) => (isStreaming ? abortChatRequest() : submitChatMessage(event, router))}
-      className="border-primary bg-primary/30 size-9 cursor-pointer rounded-b-none border border-b-0"
+      onMouseDown={() => (isStreaming ? abortChatRequest() : submitChatMessage({ router }))}
+      className="hover:border-primary hover:bg-primary/40 size-9 border transition-colors"
     >
-      {isStreaming ? <SquareIcon className="size-4" /> : <SendHorizontalIcon className="size-4 -rotate-45" />}
+      {isStreaming ? <SquareIcon /> : <SendHorizontalIcon className="-rotate-45" />}
     </ButtonWithTip>
   );
 }

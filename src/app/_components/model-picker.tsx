@@ -1,8 +1,8 @@
 import { BrainIcon, ChevronDownIcon, EyeIcon, RssIcon } from "lucide-react";
 import type React from "react";
 
-import { modelImages } from "./svg/model-svg";
 import { Button } from "./ui/button";
+import { Icons } from "./ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ScrollArea } from "./ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -14,7 +14,6 @@ import { cn } from "@/lib/utils";
 export function ModelPicker() {
   const { model } = useChatStore((state) => state.chatConfig);
   const data = getModelData(model);
-  const Icon = data.provider === "unknown" ? null : modelImages[data.provider];
 
   return (
     <Popover>
@@ -22,10 +21,10 @@ export function ModelPicker() {
         <Button
           type="button"
           variant="ghost"
-          className="hover:!bg-primary/15 h-max cursor-pointer justify-between px-2 py-1.5 text-xs"
+          className="hover:!bg-primary/15 h-9 cursor-pointer justify-between px-2 py-1.5 text-xs"
         >
           <div className="flex items-center justify-center gap-2">
-            {Icon && <Icon className="size-4" />}
+            <Icons.provider provider={data.provider} className="size-4" />
             <span className="w-max">{data.displayName}</span>
           </div>
 
@@ -50,8 +49,6 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
   const data = getModelData(modelId);
   const setActiveModel = useChatStore((state) => state.setChatConfig);
 
-  const Icon = data.provider === "unknown" ? null : modelImages[data.provider];
-
   return (
     <button
       data-model={modelId}
@@ -60,7 +57,7 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
       onMouseDown={() => setActiveModel({ model: modelId })}
     >
       <div className="flex items-center justify-center gap-2">
-        {Icon && <Icon className="size-4" />}
+        <Icons.provider provider={data.provider} className="size-4" />
         <span className="w-max">{data.displayName}</span>
       </div>
 
@@ -81,7 +78,11 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
           <BrainIcon size={16} />
         </CapabilityIcon>
 
-        <CapabilityIcon variant="vision" disable={data.capabilities.vision} title="This model supports vision.">
+        <CapabilityIcon
+          variant="vision"
+          disable={data.capabilities.vision}
+          title="This model supports vision."
+        >
           <EyeIcon size={16} />
         </CapabilityIcon>
       </div>

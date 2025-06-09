@@ -1,9 +1,16 @@
 import { MemoizedMarkdown } from "../markdown";
 
+import { MessageAttachmentDisplay } from "./message-attachment-display";
+
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/lib/types";
 
-export function MessageContent({ message, content }: { message: ChatMessage; content: string }) {
+type MessageContentProps = {
+  message: ChatMessage;
+  content: string;
+};
+
+export function MessageContent({ message, content }: MessageContentProps) {
   return (
     <div
       className={cn("space-y-6", {
@@ -18,6 +25,8 @@ export function MessageContent({ message, content }: { message: ChatMessage; con
       ) : (
         <MemoizedMarkdown id={message.messageId} content={content} />
       )}
+
+      <MessageAttachmentDisplay message={message} />
     </div>
   );
 }

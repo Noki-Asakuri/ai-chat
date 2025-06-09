@@ -88,10 +88,10 @@ export function ThreadSidebar() {
 
   useEffect(() => {
     const thread = threads?.find((thread) => thread._id === fromUUID(threadId));
-    if (!thread) return router.push("/");
+    if (!thread) return;
 
     document.title = `${thread.title} - ${DEFAULT_TITLE}`;
-  }, [threadId]);
+  }, [threadId, threads]);
 
   return (
     <div className="hidden h-full grid-cols-1 grid-rows-[1fr_max-content] gap-y-3 py-4 lg:grid">
