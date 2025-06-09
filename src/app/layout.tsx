@@ -1,10 +1,10 @@
 import "@/globals.css";
 
 import { type Metadata } from "next";
-import { Poppins, JetBrains_Mono } from "next/font/google";
+import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
 
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { ConvexClientProvider } from "./_components/provider/convex-client";
 import { Toaster } from "./_components/ui/sonner";
@@ -17,26 +17,30 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-const poppins = Poppins({
+const mainFont = Be_Vietnam_Pro({
   display: "swap",
-  weight: ["300"],
-  subsets: ["latin"],
+  weight: ["300", "400"],
+  subsets: ["latin", "vietnamese"],
   style: ["normal", "italic"],
-  variable: "--font-poppins",
+  variable: "--font-main",
 });
 
-const jetBrainsMono = JetBrains_Mono({
+const codeFont = JetBrains_Mono({
   display: "swap",
   weight: ["200", "400"],
   style: ["normal", "italic"],
   subsets: ["latin", "vietnamese"],
-  variable: "--font-jetbrains-mono",
+  variable: "--font-codeblock",
 });
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${poppins.variable} ${jetBrainsMono.variable} antialiased`}>
-      <head>{env.NODE_ENV === "development" && <script src="https://unpkg.com/react-scan/dist/auto.global.js" />}</head>
+    <html lang="en" className={`${mainFont.variable} ${codeFont.variable} antialiased`}>
+      <head>
+        {env.NODE_ENV === "development" && (
+          <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+        )}
+      </head>
 
       <body className="dark">
         <ConvexClientProvider>{children}</ConvexClientProvider>
