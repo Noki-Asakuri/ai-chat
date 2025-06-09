@@ -61,6 +61,7 @@ export async function POST(req: Request) {
     messages: transformedMessages,
     providerOptions,
     abortSignal: req.signal,
+    maxOutputTokens: 64000,
 
     async onError({ error }) {
       const err = error as AISDKError;
