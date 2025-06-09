@@ -24,7 +24,7 @@ export async function retryMessage(
     id: message.messageId,
     role: message.role,
     content: message.content,
-    attachments: message.attachments,
+    attachments: message.attachments?.map((attachment) => attachment._id),
   }));
 
   const assistantMessage = {

@@ -21,7 +21,7 @@ export function ChatActionButtons() {
         variant="secondary"
         className="data-[active=true]:border-primary data-[active=true]:bg-primary/40 h-9 cursor-pointer border px-2 py-1.5 text-xs"
         data-active={config.webSearch}
-        disabled={!getModelData(config.model).capabilities.webSearch}
+        disabled={!getModelData(config.model)?.capabilities.webSearch}
         onMouseDown={() => setChatConfig({ webSearch: !config.webSearch })}
         title={config.webSearch ? "Disable Web Search" : "Enable Web Search"}
       >
@@ -34,7 +34,7 @@ export function ChatActionButtons() {
         variant="secondary"
         className="data-[active=true]:border-primary data-[active=true]:bg-primary/40 h-9 cursor-pointer border px-2 py-1.5 text-xs"
         data-active={config.reasoning}
-        disabled={!getModelData(config.model).capabilities.reasoning}
+        disabled={!getModelData(config.model)?.capabilities.reasoning}
         onMouseDown={() => setChatConfig({ reasoning: !config.reasoning })}
         title={config.reasoning ? "Disable Reasoning" : "Enable Reasoning"}
       >

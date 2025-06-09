@@ -29,7 +29,7 @@ export async function updateTitle(
         role: "user",
         content: `User: ${messages[0].content}
 
-Please summarize the above conversation into a title of 10 words or less, without punctuation.`,
+Please summarize the above conversation into a title of 10 words or less, without punctuation or special characters and in English.`,
       },
       {
         role: "assistant",

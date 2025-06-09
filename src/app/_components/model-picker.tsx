@@ -24,8 +24,8 @@ export function ModelPicker() {
           className="hover:!bg-primary/15 h-9 cursor-pointer justify-between px-2 py-1.5 text-xs"
         >
           <div className="flex items-center justify-center gap-2">
-            <Icons.provider provider={data.provider} className="size-4" />
-            <span className="w-max">{data.displayName}</span>
+            <Icons.provider provider={data?.provider} className="size-4" />
+            <span className="w-max">{data?.displayName}</span>
           </div>
 
           <ChevronDownIcon />

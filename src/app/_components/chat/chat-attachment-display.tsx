@@ -12,7 +12,7 @@ export function ChatAttachmentButton() {
   const model = useChatStore((state) => state.chatConfig.model);
   const addAttachment = useChatStore((state) => state.addAttachment);
 
-  const hasImageVision = getModelData(model).capabilities.vision;
+  const hasImageVision = getModelData(model)?.capabilities.vision;
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files![0];
