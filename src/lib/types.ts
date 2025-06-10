@@ -5,6 +5,7 @@ export type Thread = {
   title: string;
   updatedAt: number;
   pinned: boolean;
+  branchedFrom?: Id<"threads">;
 };
 
 export type ChatRequest = {
@@ -43,6 +44,8 @@ export type ChatMessage = {
   resumableStreamId?: string | null;
   createdAt: number;
   updatedAt: number;
+
+  _creationTime: number;
 
   attachments?: Doc<"attachments">[];
 

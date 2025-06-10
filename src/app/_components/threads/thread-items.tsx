@@ -1,7 +1,8 @@
 import { api } from "@/convex/_generated/api";
 
-import { PinIcon, PinOffIcon, TrashIcon } from "lucide-react";
+import { GitBranchIcon, PinIcon, PinOffIcon, TrashIcon } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { ButtonWithTip } from "../ui/button";
 
@@ -15,14 +16,25 @@ const convexClient = getConvexReactClient();
 
 export function ThreadItem({ thread }: { thread: Thread }) {
   const activeThreadId = useChatStore((state) => state.threadId);
+  const router = useRouter();
 
-  function pinThread() {
+  function pinThread(event: React.MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    event.preventDefault();
+
     console.debug("[Thread] Pin thread", thread);
 
     void convexClient.mutation(api.threads.pinThread, {
       threadId: thread._id,
       pinned: !thread.pinned,
     });
+  }
+
+  function goToParentThread(event: React.MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    event.preventDefault();
+
+    router.push(`/chat/${toUUID(thread.branchedFrom!)}`);
   }
 
   return (
@@ -36,7 +48,20 @@ export function ThreadItem({ thread }: { thread: Thread }) {
         { "border-sidebar-ring bg-sidebar-primary/20": thread._id === activeThreadId },
       )}
     >
-      <span className="line-clamp-1 text-sm">{thread.title}</span>
+      <div className="flex items-center justify-center gap-2">
+        {thread.branchedFrom && (
+          <ButtonWithTip
+            variant="none"
+            size="none"
+            title="Go to parent thread"
+            className=""
+            onClick={goToParentThread}
+          >
+            <GitBranchIcon className="size-4 rotate-180" />
+          </ButtonWithTip>
+        )}
+        <span className="line-clamp-1 text-sm">{thread.title}</span>
+      </div>
 
       <div className="absolute top-0 -right-[91px] flex items-center transition-[right] group-hover:right-0">
         <div className="h-8 w-6 bg-gradient-to-r from-transparent to-[#200e3c]"></div>
@@ -46,16 +71,12 @@ export function ThreadItem({ thread }: { thread: Thread }) {
             title={thread.pinned ? "Unpin Thread" : "Pin Thread"}
             variant="none"
             className="size-8"
-            onMouseDown={pinThread}
+            onClick={pinThread}
           >
             {thread.pinned ? <PinOffIcon size={10} /> : <PinIcon size={10} />}
           </ButtonWithTip>
 
-          <ThreadDeleteDialog thread={thread}>
-            <ButtonWithTip title="Delete Thread" variant="none" className="size-8">
-              <TrashIcon size={10} />
-            </ButtonWithTip>
-          </ThreadDeleteDialog>
+          <ThreadDeleteDialog thread={thread} />
         </div>
       </div>
     </Link>

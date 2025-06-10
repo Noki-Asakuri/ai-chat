@@ -1,35 +1,28 @@
-import type { Id } from "@/convex/_generated/dataModel";
-
-import { PencilIcon, RefreshCcwIcon, SaveIcon } from "lucide-react";
+import { PencilIcon, RefreshCcwIcon, SaveIcon, SplitIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { ButtonWithTip } from "../ui/button";
 import { CopyButton } from "./copy-button";
 
+import { handleBranchOff } from "@/lib/chat/action-branch-off";
 import { retryMessage } from "@/lib/chat/retry-message";
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
 
 type MessageActionButtonsProps = {
-  id: Id<"messages">;
   index: number;
-  content: string;
-  role: ChatMessage["role"];
-  status: ChatMessage["status"];
+  message: ChatMessage;
 };
 
-export function MessageActionButtons({
-  role,
-  status,
-  index,
-  id,
-  content,
-}: MessageActionButtonsProps) {
+export function MessageActionButtons({ index, message }: MessageActionButtonsProps) {
   const setEditMessageId = useChatStore((state) => state.setEditMessageId);
   const editMessageId = useChatStore((state) => state.editMessageId);
 
+  const router = useRouter();
+
   function handleEditMessage() {
-    if (role === "assistant") return;
-    setEditMessageId(editMessageId === id ? null : id);
+    if (message.role === "assistant") return;
+    setEditMessageId(editMessageId === message._id ? null : message._id);
   }
 
   return (
@@ -39,20 +32,32 @@ export function MessageActionButtons({
         className="size-10"
         onMouseDown={() => retryMessage(index)}
         title="Retry Message"
-        disabled={status === "pending"}
+        disabled={message.status === "pending"}
       >
         <RefreshCcwIcon className="size-5" />
       </ButtonWithTip>
 
-      {role === "user" && (
+      {message.role === "assistant" && (
+        <ButtonWithTip
+          variant="ghost"
+          className="size-10"
+          onMouseDown={() => handleBranchOff(message, router)}
+          title="Branch Off"
+          disabled={message.status === "pending" || message.status === "streaming"}
+        >
+          <SplitIcon className="size-5 rotate-180" />
+        </ButtonWithTip>
+      )}
+
+      {message.role === "user" && (
         <ButtonWithTip
           variant="ghost"
           className="size-10"
           onMouseDown={handleEditMessage}
           title="Edit Message"
-          disabled={status === "pending"}
+          disabled={message.status === "pending"}
         >
-          {editMessageId === id ? (
+          {editMessageId === message._id ? (
             <SaveIcon className="size-5" />
           ) : (
             <PencilIcon className="size-5" />
@@ -60,7 +65,7 @@ export function MessageActionButtons({
         </ButtonWithTip>
       )}
 
-      <CopyButton className="size-10" content={content} />
+      <CopyButton className="size-10" content={message.content} />
     </div>
   );
 }

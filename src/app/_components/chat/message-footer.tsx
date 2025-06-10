@@ -27,13 +27,7 @@ export function MessageFooter({ index, message, renderMessage }: MessageFooterPr
         },
       )}
     >
-      <MessageActionButtons
-        content={message.content}
-        id={message._id}
-        index={index}
-        role={message.role}
-        status={message.status}
-      />
+      <MessageActionButtons index={index} message={message} />
 
       <MessageMetadata
         model={message.model}

@@ -1,5 +1,6 @@
-import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
 
 export const createThread = mutation({
   args: { title: v.optional(v.string()) },
@@ -12,6 +13,46 @@ export const createThread = mutation({
       userId: user.subject,
       title: args.title ?? "New Chat",
     });
+  },
+});
+
+export const branchThread = mutation({
+  args: { threadId: v.id("threads"), lastMessageCreatedAt: v.number() },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== user.subject) throw new Error("Not authorized");
+
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_threadId", (q) =>
+        q.eq("threadId", args.threadId).lte("_creationTime", args.lastMessageCreatedAt),
+      )
+      .order("asc")
+      .collect();
+
+    const newThreadId = await ctx.db.insert("threads", {
+      updatedAt: Date.now() + 1,
+      userId: user.subject,
+      title: thread.title,
+      branchedFrom: args.threadId,
+    });
+
+    for (const { _id, _creationTime, ...message } of messages) {
+      await ctx.db.insert("messages", {
+        ...message,
+        createdAt: Date.now(),
+        updatedAt: Date.now() + 1,
+        userId: user.subject,
+        threadId: newThreadId,
+        messageId: crypto.randomUUID(),
+      });
+    }
+
+    return newThreadId;
   },
 });
 

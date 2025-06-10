@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import {
   AlertDialog,
@@ -17,16 +17,19 @@ import {
 
 import { getConvexReactClient } from "@/lib/convex/client";
 import type { Thread } from "@/lib/types";
+import { ButtonWithTip } from "../ui/button";
+import { TrashIcon } from "lucide-react";
 
 type ThreadDeleteDialogProps = {
-  children: React.ReactNode;
   thread: Thread;
 };
 
 const convexClient = getConvexReactClient();
 
-export function ThreadDeleteDialog({ children, thread }: ThreadDeleteDialogProps) {
+export function ThreadDeleteDialog({ thread }: ThreadDeleteDialogProps) {
   const [pending, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
+
   const router = useRouter();
 
   function deleteThread() {
@@ -38,9 +41,23 @@ export function ThreadDeleteDialog({ children, thread }: ThreadDeleteDialogProps
     });
   }
 
+  function handleToggleOpen(event: React.MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    event.preventDefault();
+
+    setOpen(!open);
+  }
+
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <ButtonWithTip
+        title="Delete Thread"
+        variant="none"
+        className="size-8"
+        onClick={handleToggleOpen}
+      >
+        <TrashIcon size={10} />
+      </ButtonWithTip>
 
       <AlertDialogContent>
         <AlertDialogHeader>

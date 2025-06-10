@@ -7,6 +7,7 @@ export default defineSchema({
     userId: v.string(),
     updatedAt: v.number(),
     pinned: v.optional(v.boolean()),
+    branchedFrom: v.optional(v.id("threads")),
   }).index("by_userId", ["userId"]),
 
   attachments: defineTable({
