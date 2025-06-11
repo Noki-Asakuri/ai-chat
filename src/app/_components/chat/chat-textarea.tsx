@@ -15,8 +15,8 @@ import { submitChatMessage } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 
 export function ChatTextarea() {
-  const setTextareaHeight = useChatStore((state) => state.setTextareaHeight);
   const parentRef = useRef<HTMLDivElement>(null);
+  const setTextareaHeight = useChatStore((state) => state.setTextareaHeight);
 
   function onResize(entries: ResizeObserverEntry[]) {
     const entry = entries[0];

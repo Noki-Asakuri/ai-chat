@@ -8,18 +8,15 @@ import dynamic from "next/dynamic";
 import { redirect, useParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { ThreadSidebar } from "@/components/threads/thread-sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore, useChatStore } from "@/lib/chat/store";
-import { fromUUID } from "@/lib/utils";
+import { cn, fromUUID } from "@/lib/utils";
 
 const ChatTextarea = dynamic(
   () => import("@/components/chat/chat-textarea").then((d) => d.ChatTextarea),
-  {
-    ssr: false,
-  },
-);
-const ThreadSidebar = dynamic(
-  () => import("@/components/threads/thread-sidebar").then((d) => d.ThreadSidebar),
   { ssr: false },
 );
 
@@ -72,14 +69,20 @@ function Chat({ children }: { children: React.ReactNode }) {
   }, [data]);
 
   return (
-    <div className="grid h-svh max-w-screen overflow-x-hidden lg:grid-cols-[280px_1fr]">
+    <SidebarProvider className="bg-sidebar">
       <ThreadSidebar />
+      <SidebarTrigger />
 
-      <div className="border-border relative mt-3 flex h-[calc(100vh-12px)] max-w-screen flex-col rounded-tl-2xl border-t border-l pt-6">
+      <main
+        className={cn(
+          "bg-background relative mt-3 flex h-[calc(100vh-12px)] w-full max-w-screen flex-1 flex-col rounded-tl-2xl pt-6 transition-[margin-top,border-radius,height]",
+          "peer-data-[state=collapsed]:mt-0 peer-data-[state=collapsed]:h-svh peer-data-[state=collapsed]:rounded-none",
+        )}
+      >
         {children}
         <ChatTextarea />
-      </div>
-    </div>
+      </main>
+    </SidebarProvider>
   );
 }
 

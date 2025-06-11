@@ -43,7 +43,7 @@ export function ThreadItem({ thread }: { thread: Thread }) {
       title={thread.title}
       prefetch={false}
       className={cn(
-        "group relative isolate flex overflow-hidden px-3 py-1.5",
+        "group/thread relative isolate flex overflow-hidden px-3 py-1.5",
         "text-sidebar-primary-foreground hover:bg-sidebar-primary/20 rounded-none border-l-2 border-transparent transition-colors",
         { "border-sidebar-ring bg-sidebar-primary/20": thread._id === activeThreadId },
       )}
@@ -63,10 +63,10 @@ export function ThreadItem({ thread }: { thread: Thread }) {
         <span className="line-clamp-1 text-sm">{thread.title}</span>
       </div>
 
-      <div className="absolute top-0 -right-[91px] flex items-center transition-[right] group-hover:right-0">
-        <div className="h-8 w-6 bg-gradient-to-r from-transparent to-[#200e3c]"></div>
+      <div className="absolute top-0 -right-[91px] flex items-center transition-[right] group-hover/thread:right-0">
+        <div className="h-8 w-6 bg-gradient-to-r from-transparent to-[#2c1a49]"></div>
 
-        <div className="flex items-center gap-0.75 bg-[#200e3c]">
+        <div className="flex items-center gap-0.75 bg-[#2c1a49]">
           <ButtonWithTip
             title={thread.pinned ? "Unpin Thread" : "Pin Thread"}
             variant="none"

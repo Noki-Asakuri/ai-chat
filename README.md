@@ -44,6 +44,6 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 - [ ] Agents selection
 - [x] Support branching
 - [ ] Add support to change model params
-- [ ] Use shadcn/ui side-bar for threads
+- [x] Use shadcn/ui side-bar for threads
 - [ ] Drag and drop files
 - [ ] Remove attachments on messages.

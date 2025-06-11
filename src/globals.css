@@ -146,23 +146,27 @@
 }
 
 .codeblock pre.shiki::-webkit-scrollbar,
+.custom-scroll::-webkit-scrollbar,
 #textarea-chat-input::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 .codeblock pre.shiki::-webkit-scrollbar-track,
+.custom-scroll::-webkit-scrollbar-track,
 #textarea-chat-input::-webkit-scrollbar-track {
   background: transparent;
 }
 
 .codeblock pre.shiki::-webkit-scrollbar-thumb,
+.custom-scroll::-webkit-scrollbar-thumb,
 #textarea-chat-input::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 0.5rem;
 }
 
 .codeblock pre.shiki::-webkit-scrollbar-thumb:hover,
+.custom-scroll::-webkit-scrollbar-thumb:hover,
 #textarea-chat-input::-webkit-scrollbar-thumb:hover {
   background: var(--border);
 }
