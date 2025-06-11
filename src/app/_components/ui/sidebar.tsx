@@ -2,7 +2,8 @@
 
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { PanelLeftIcon } from "lucide-react";
+import { PanelLeftIcon, PlusIcon } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
 
 import { Button } from "./button";
@@ -241,10 +242,15 @@ function Sidebar({
 }
 
 function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, state } = useSidebar();
 
   return (
-    <div className="absolute top-4 left-4 z-50">
+    <div
+      className={cn(
+        "absolute top-3 left-3 z-50 flex items-center justify-center gap-1 rounded-md p-1",
+        { "bg-sidebar": state === "collapsed" },
+      )}
+    >
       <Button
         data-sidebar="trigger"
         data-slot="sidebar-trigger"
@@ -259,6 +265,18 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
       >
         <PanelLeftIcon />
         <span className="sr-only">Toggle Sidebar</span>
+      </Button>
+
+      <Button
+        asChild
+        size="icon"
+        variant="ghost"
+        className={cn("size-7", { hidden: state === "expanded" })}
+      >
+        <Link href="/">
+          <PlusIcon />
+          <span className="sr-only">New Thread</span>
+        </Link>
       </Button>
     </div>
   );

@@ -75,7 +75,7 @@ function Chat({ children }: { children: React.ReactNode }) {
 
       <main
         className={cn(
-          "bg-background relative mt-3 flex h-[calc(100vh-12px)] w-full max-w-screen flex-1 flex-col rounded-tl-2xl pt-6 transition-[margin-top,border-radius,height]",
+          "bg-background relative flex h-[calc(100vh-12px)] flex-1 flex-col pt-6 transition-[margin-top,border-radius,height] md:mt-3 md:rounded-tl-2xl",
           "peer-data-[state=collapsed]:mt-0 peer-data-[state=collapsed]:h-svh peer-data-[state=collapsed]:rounded-none",
         )}
       >
