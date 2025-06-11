@@ -58,8 +58,13 @@ export async function getRequestBody(req: Request, userId: string) {
     openai: {} as OpenAIResponsesProviderOptions,
   };
 
+  if (model.includes("gemini-2.5-pro")) {
+    // 128 is the lowest budget we can set.
+    providerOptions.google.thinkingConfig = { includeThoughts: true, thinkingBudget: 128 };
+  }
+
   if (config?.reasoning) {
-    delete providerOptions.google.thinkingConfig?.thinkingBudget;
+    providerOptions.google.thinkingConfig = { includeThoughts: true, thinkingBudget: 20_000 };
     providerOptions.openai = { reasoningEffort: "high" };
   }
 

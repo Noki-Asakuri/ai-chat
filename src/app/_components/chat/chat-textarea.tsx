@@ -65,6 +65,7 @@ function InputTextArea() {
 
   const input = useChatStore((state) => state.chatInput);
   const setChatInput = useChatStore((state) => state.setChatInput);
+  const addAttachment = useChatStore((state) => state.addAttachment);
 
   return (
     <Textarea
@@ -75,6 +76,26 @@ function InputTextArea() {
       placeholder="Type your message here..."
       onChange={(event) => setChatInput(event.target.value)}
       className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
+      onPaste={(event) => {
+        const { items } = event.clipboardData;
+        const imageItems = Array.from(items).filter((item) => item.type.includes("image"));
+
+        if (imageItems.length > 0) {
+          event.preventDefault();
+          const imageFiles = imageItems.map((item) => {
+            const file = item.getAsFile();
+            if (!file) throw new Error("Failed to get file from item");
+            return {
+              id: crypto.randomUUID(),
+              name: file.name,
+              size: file.size,
+              file,
+              type: "image" as const,
+            };
+          });
+          addAttachment(imageFiles);
+        }
+      }}
       onKeyDown={(event) => {
         if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault();
