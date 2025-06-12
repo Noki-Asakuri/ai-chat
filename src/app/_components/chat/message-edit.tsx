@@ -14,21 +14,24 @@ type MessageEditProps = {
 };
 
 export function MessageEdit({ id, content, index }: MessageEditProps) {
-  const [editedUserMessage, setEditedUserMessage] = useState<string>(content);
-  const setEditMessageId = useChatStore((state) => state.setEditMessageId);
+  const editedUserMessage = useChatStore((state) => state.editMessage);
+  const setEditMessage = useChatStore((state) => state.setEditMessage);
 
   return (
     <Textarea
       rows={3}
       name="user-input"
-      defaultValue={editedUserMessage}
-      onChange={(event) => setEditedUserMessage(event.target.value)}
+      defaultValue={content}
+      onChange={(event) => setEditMessage({ _id: id, content: event.target.value })}
       className="min-h-11 w-full min-w-[80ch] resize-none px-4 py-2 font-sans outline-none"
-      onKeyDown={(event) => {
+      onKeyDown={async (event) => {
         if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault();
-          void retryMessage(index, { _id: id, content: editedUserMessage });
-          setEditMessageId(null);
+
+          setEditMessage(null);
+          if (editedUserMessage?.content && editedUserMessage.content !== content) {
+            void retryMessage(index, { _id: id, content: editedUserMessage.content });
+          }
         }
       }}
     />

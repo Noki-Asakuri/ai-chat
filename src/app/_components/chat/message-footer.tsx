@@ -12,7 +12,7 @@ type MessageFooterProps = {
 };
 
 export function MessageFooter({ index, message, renderMessage }: MessageFooterProps) {
-  const editMessageId = useChatStore((state) => state.editMessageId);
+  const editMessage = useChatStore((state) => state.editMessage);
 
   return (
     <div
@@ -23,7 +23,7 @@ export function MessageFooter({ index, message, renderMessage }: MessageFooterPr
             message.status === "error" || message.status === "complete",
           hidden: message.status === "pending" || message.status === "streaming",
           "right-0": message.role === "user",
-          "opacity-100": editMessageId === message._id,
+          "opacity-100": editMessage?._id === message._id,
         },
       )}
     >

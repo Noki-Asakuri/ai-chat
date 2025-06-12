@@ -161,7 +161,7 @@ export function Message({
   isLast: boolean;
 }) {
   const assistantMessage = useChatStore((state) => state.assistantMessage);
-  const editMessageId = useChatStore((state) => state.editMessageId);
+  const editMessage = useChatStore((state) => state.editMessage);
 
   const renderMessage =
     message.role === "assistant" &&
@@ -202,7 +202,7 @@ export function Message({
           tokens={renderMessage.metadata?.thinkingTokens}
         />
 
-        {message.role === "user" && editMessageId === message._id ? (
+        {message.role === "user" && editMessage?._id === message._id ? (
           <MessageEdit content={message.content} index={index} id={message._id} />
         ) : (
           <MessageContent content={renderMessage.content} message={message} />

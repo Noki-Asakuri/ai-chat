@@ -64,7 +64,7 @@ function ButtonWithTip({
   ...props
 }: React.ComponentProps<typeof Button> & { side?: "left" | "right" | "top" | "bottom" }) {
   return (
-    <Tooltip delayDuration={150}>
+    <Tooltip delayDuration={300}>
       <TooltipTrigger asChild>
         <Button {...props}>{children}</Button>
       </TooltipTrigger>

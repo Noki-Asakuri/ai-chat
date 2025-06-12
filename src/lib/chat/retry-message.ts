@@ -19,6 +19,8 @@ export async function retryMessage(
   const state = chatStore.getState();
   const threadId = state.threadId!;
 
+  state.setEditMessage(null);
+
   const userMessageIndex = index % 2 === 0 ? index : index - 1;
   const allMessages = state.messages.slice(0, userMessageIndex + 1).map((message) => ({
     id: message.messageId,

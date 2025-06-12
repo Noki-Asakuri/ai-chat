@@ -15,6 +15,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore, useChatStore } from "@/lib/chat/store";
 import { cn, fromUUID } from "@/lib/utils";
+import { RegisterHotkeys } from "@/components/register-hotkeys";
 
 const ChatTextarea = dynamic(
   () => import("@/components/chat/chat-textarea").then((d) => d.ChatTextarea),
@@ -83,6 +84,8 @@ function Chat({ children }: { children: React.ReactNode }) {
         {children}
         <ChatTextarea />
       </main>
+
+      <RegisterHotkeys />
     </SidebarProvider>
   );
 }

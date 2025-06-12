@@ -1,4 +1,4 @@
-import { PencilIcon, RefreshCcwIcon, SaveIcon, SplitIcon } from "lucide-react";
+import { PencilIcon, RefreshCcwIcon, SaveIcon, SplitIcon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { ButtonWithTip } from "../ui/button";
@@ -8,6 +8,7 @@ import { handleBranchOff } from "@/lib/chat/action-branch-off";
 import { retryMessage } from "@/lib/chat/retry-message";
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type MessageActionButtonsProps = {
   index: number;
@@ -15,14 +16,22 @@ type MessageActionButtonsProps = {
 };
 
 export function MessageActionButtons({ index, message }: MessageActionButtonsProps) {
-  const setEditMessageId = useChatStore((state) => state.setEditMessageId);
-  const editMessageId = useChatStore((state) => state.editMessageId);
+  const setEditMessage = useChatStore((state) => state.setEditMessage);
+  const editMessage = useChatStore((state) => state.editMessage);
 
   const router = useRouter();
 
-  function handleEditMessage() {
+  async function handleEditMessage() {
     if (message.role === "assistant") return;
-    setEditMessageId(editMessageId === message._id ? null : message._id);
+    if (editMessage?._id === message._id) {
+      setEditMessage(null);
+      if (editMessage.content !== message.content) {
+        await retryMessage(index, { _id: editMessage._id, content: editMessage.content });
+      }
+      return;
+    }
+
+    setEditMessage({ _id: message._id, content: message.content });
   }
 
   return (
@@ -50,19 +59,31 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
       )}
 
       {message.role === "user" && (
-        <ButtonWithTip
-          variant="ghost"
-          className="size-10"
-          onMouseDown={handleEditMessage}
-          title="Edit Message"
-          disabled={message.status === "pending"}
-        >
-          {editMessageId === message._id ? (
-            <SaveIcon className="size-5" />
-          ) : (
-            <PencilIcon className="size-5" />
-          )}
-        </ButtonWithTip>
+        <>
+          <ButtonWithTip
+            variant="ghost"
+            title="Cancel Edit"
+            disabled={message.status === "pending"}
+            onMouseDown={() => setEditMessage(null)}
+            className={cn("hidden size-10", { flex: editMessage?._id === message._id })}
+          >
+            <XIcon className="size-5" />
+          </ButtonWithTip>
+
+          <ButtonWithTip
+            variant="ghost"
+            className="size-10"
+            onMouseDown={handleEditMessage}
+            disabled={message.status === "pending"}
+            title={editMessage?._id === message._id ? "Save Message" : "Edit Message"}
+          >
+            {editMessage?._id === message._id ? (
+              <SaveIcon className="size-5" />
+            ) : (
+              <PencilIcon className="size-5" />
+            )}
+          </ButtonWithTip>
+        </>
       )}
 
       <CopyButton className="size-10" content={message.content} />

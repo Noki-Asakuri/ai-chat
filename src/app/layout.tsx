@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 const mainFont = Be_Vietnam_Pro({
   display: "swap",
-  weight: ["300", "400"],
+  weight: ["200", "300"],
   subsets: ["latin", "vietnamese"],
   style: ["normal", "italic"],
   variable: "--font-main",
@@ -27,7 +27,7 @@ const mainFont = Be_Vietnam_Pro({
 
 const codeFont = JetBrains_Mono({
   display: "swap",
-  weight: ["200", "400"],
+  weight: ["200", "300"],
   style: ["normal", "italic"],
   subsets: ["latin", "vietnamese"],
   variable: "--font-codeblock",

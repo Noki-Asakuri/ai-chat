@@ -19,8 +19,8 @@ export interface ChatState {
   threadId?: Id<"threads">;
   setThreadId: (threadId?: Id<"threads">) => void;
 
-  editMessageId: string | null;
-  setEditMessageId: (messageId: string | null) => void;
+  editMessage: { _id: Id<"messages">; content: string } | null;
+  setEditMessage: (message: { _id: Id<"messages">; content: string } | null) => void;
 
   isStreaming: boolean;
   setIsStreaming: (isResuming: boolean) => void;
@@ -63,6 +63,9 @@ export interface ChatState {
   threads: Thread[];
   setThreads: (threads: Thread[]) => void;
 
+  threadCommandOpen: boolean;
+  setThreadCommandOpen: (open: boolean | ((open: boolean) => boolean)) => void;
+
   resetState: () => void;
   setDataFromConvex: (
     messages: ChatMessage[],
@@ -103,6 +106,12 @@ export const useChatStore = create<ChatState>((set) => ({
   threads: [],
   setThreads: (threads) => set({ threads }),
 
+  threadCommandOpen: false,
+  setThreadCommandOpen: (open) =>
+    set((state) => ({
+      threadCommandOpen: typeof open === "function" ? open(state.threadCommandOpen) : open,
+    })),
+
   chatConfig: {
     webSearch: getItemFromLocalStorage("webSearch", "false") === "true",
     reasoning: getItemFromLocalStorage("reasoning", "false") === "true",
@@ -128,8 +137,8 @@ export const useChatStore = create<ChatState>((set) => ({
       return { wrapline: !state.wrapline };
     }),
 
-  editMessageId: null,
-  setEditMessageId: (messageId) => set({ editMessageId: messageId }),
+  editMessage: null,
+  setEditMessage: (editMessage) => set({ editMessage }),
 
   abortController: new AbortController(),
   setAbortController: (abortController) => set({ abortController }),

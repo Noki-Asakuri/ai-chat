@@ -1,5 +1,4 @@
 import { SearchIcon } from "lucide-react";
-import { useEffect, useState } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,52 +19,34 @@ import type { Thread } from "@/lib/types";
 import { cn, toUUID } from "@/lib/utils";
 
 export function ThreadCommand({ sidebarState }: { sidebarState: "expanded" | "collapsed" }) {
-  const [open, setOpen] = useState(false);
   const threads = useChatStore((state) => state.threads);
+  const setThreadCommandOpen = useChatStore((state) => state.setThreadCommandOpen);
+  const threadCommandOpen = useChatStore((state) => state.threadCommandOpen);
 
   const groupedThreads = groupByDate(threads ?? []);
-
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((open) => !open);
-      }
-    };
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, []);
 
   return (
     <>
       <Button
         size="icon"
         variant="ghost"
-        onClick={() => setOpen(true)}
+        onClick={() => setThreadCommandOpen(true)}
         className={cn("size-7", { hidden: sidebarState === "expanded" })}
       >
         <SearchIcon />
         <span className="sr-only">Search Threads</span>
       </Button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandDialog open={threadCommandOpen} onOpenChange={setThreadCommandOpen}>
         <CommandInput placeholder="Type a command or search..." />
         <CommandList className="custom-scroll">
           <CommandEmpty>No results found.</CommandEmpty>
 
-          <ThreadCommandGroup setOpen={setOpen} heading="Pinned" threads={groupedThreads.pinned} />
-          <ThreadCommandGroup setOpen={setOpen} heading="Today" threads={groupedThreads.today} />
-          <ThreadCommandGroup
-            setOpen={setOpen}
-            heading="Yesterday"
-            threads={groupedThreads.yesterday}
-          />
-          <ThreadCommandGroup
-            setOpen={setOpen}
-            heading="Last 7 days"
-            threads={groupedThreads.sevenDaysAgo}
-          />
-          <ThreadCommandGroup setOpen={setOpen} heading="Older" threads={groupedThreads.older} />
+          <ThreadCommandGroup heading="Pinned" threads={groupedThreads.pinned} />
+          <ThreadCommandGroup heading="Today" threads={groupedThreads.today} />
+          <ThreadCommandGroup heading="Yesterday" threads={groupedThreads.yesterday} />
+          <ThreadCommandGroup heading="Last 7 days" threads={groupedThreads.sevenDaysAgo} />
+          <ThreadCommandGroup heading="Older" threads={groupedThreads.older} />
         </CommandList>
       </CommandDialog>
     </>
@@ -75,11 +56,12 @@ export function ThreadCommand({ sidebarState }: { sidebarState: "expanded" | "co
 type ThreadCommandGroupProps = {
   threads: Thread[];
   heading: string;
-  setOpen: (open: boolean) => void;
 };
 
-function ThreadCommandGroup({ threads, heading, setOpen }: ThreadCommandGroupProps) {
+function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
   const router = useRouter();
+  const setThreadCommandOpen = useChatStore((state) => state.setThreadCommandOpen);
+
   if (threads.length === 0) return null;
 
   return (
@@ -90,12 +72,12 @@ function ThreadCommandGroup({ threads, heading, setOpen }: ThreadCommandGroupPro
           className="!p-0"
           onSelect={() => {
             router.push(`/chat/${toUUID(thread._id)}`);
-            setOpen(false);
+            setThreadCommandOpen(false);
           }}
         >
           <Link
             className="px-2 py-1.5"
-            onClick={() => setOpen(false)}
+            onClick={() => setThreadCommandOpen(false)}
             href={`/chat/${toUUID(thread._id)}`}
           >
             {thread.title}

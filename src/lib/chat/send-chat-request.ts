@@ -88,6 +88,7 @@ export async function submitChatMessage({ router }: SubmitChatMessageParams) {
 
   state.setChatInput("");
   state.setAttachment([]);
+  state.setEditMessage(null);
 
   let threadId: Id<"threads"> = state.threadId!;
   if (!state.threadId) {
