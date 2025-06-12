@@ -6,6 +6,7 @@ import { PanelLeftIcon, PlusIcon } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
+import { ThreadCommand } from "../threads/thread-command";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Separator } from "./separator";
@@ -245,40 +246,21 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
   const { toggleSidebar, state } = useSidebar();
 
   return (
-    <div
-      className={cn(
-        "absolute top-3 left-3 z-50 flex items-center justify-center gap-1 rounded-md p-1",
-        { "bg-sidebar": state === "collapsed" },
-      )}
+    <Button
+      data-sidebar="trigger"
+      data-slot="sidebar-trigger"
+      variant="ghost"
+      size="icon"
+      className={cn("size-7", className)}
+      onClick={(event) => {
+        onClick?.(event);
+        toggleSidebar();
+      }}
+      {...props}
     >
-      <Button
-        data-sidebar="trigger"
-        data-slot="sidebar-trigger"
-        variant="ghost"
-        size="icon"
-        className={cn("size-7", className)}
-        onClick={(event) => {
-          onClick?.(event);
-          toggleSidebar();
-        }}
-        {...props}
-      >
-        <PanelLeftIcon />
-        <span className="sr-only">Toggle Sidebar</span>
-      </Button>
-
-      <Button
-        asChild
-        size="icon"
-        variant="ghost"
-        className={cn("size-7", { hidden: state === "expanded" })}
-      >
-        <Link href="/">
-          <PlusIcon />
-          <span className="sr-only">New Thread</span>
-        </Link>
-      </Button>
-    </div>
+      <PanelLeftIcon />
+      <span className="sr-only">Toggle Sidebar</span>
+    </Button>
   );
 }
 

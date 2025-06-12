@@ -2,7 +2,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { create } from "zustand";
 
-import type { UserAttachment, ChatMessage } from "../types";
+import type { UserAttachment, ChatMessage, Thread } from "../types";
 
 export interface ChatState {
   messages: ChatMessage[];
@@ -60,8 +60,8 @@ export interface ChatState {
   textareaHeight: number;
   setTextareaHeight: (height: number) => void;
 
-  threads: { _id: Id<"threads">; title: string }[];
-  setThreads: (threads: { _id: Id<"threads">; title: string }[]) => void;
+  threads: Thread[];
+  setThreads: (threads: Thread[]) => void;
 
   resetState: () => void;
   setDataFromConvex: (

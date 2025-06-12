@@ -11,61 +11,10 @@ import { ThreadUserProfile } from "./thread-user-profile";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
 
 import { useChatStore } from "@/lib/chat/store";
-import type { Thread } from "@/lib/types";
+import { groupByDate } from "@/lib/threads/group-by-date";
 import { fromUUID } from "@/lib/utils";
 
 const THREAD_LOCAL_STORAGE_KEY = "threads";
-
-function groupThreadsByDate(threads: Thread[]) {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0); // Normalize 'now' to the start of today for comparison
-
-  const today = new Date(now);
-
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-
-  const sevenDaysAgo = new Date(now);
-  sevenDaysAgo.setDate(now.getDate() - 7);
-
-  const groupedThreads = {
-    pinned: [],
-    today: [],
-    yesterday: [],
-    sevenDaysAgo: [], // This will represent "Within the last 7 days but not Today/Yesterday"
-    older: [],
-  } as {
-    pinned: Thread[];
-    today: Thread[];
-    yesterday: Thread[];
-    sevenDaysAgo: Thread[];
-    older: Thread[];
-  };
-
-  threads.forEach((thread) => {
-    const threadUpdatedAt = new Date(thread.updatedAt);
-    threadUpdatedAt.setHours(0, 0, 0, 0); // Normalize thread's date for comparison
-
-    if (thread.pinned) {
-      groupedThreads.pinned.push(thread);
-    } else if (threadUpdatedAt.getTime() === today.getTime()) {
-      groupedThreads.today.push(thread);
-    } else if (threadUpdatedAt.getTime() === yesterday.getTime()) {
-      groupedThreads.yesterday.push(thread);
-    } else if (threadUpdatedAt >= sevenDaysAgo && threadUpdatedAt < yesterday) {
-      // This captures dates within the last 7 days, excluding today and yesterday
-      groupedThreads.sevenDaysAgo.push(thread);
-    } else {
-      groupedThreads.older.push(thread);
-    }
-  });
-
-  for (const key in groupedThreads) {
-    groupedThreads[key as keyof typeof groupedThreads].sort((a, b) => b.updatedAt - a.updatedAt);
-  }
-
-  return groupedThreads;
-}
 
 const DEFAULT_TITLE = "AI Chat";
 
@@ -78,7 +27,7 @@ export function ThreadSidebar() {
   const localThreads = JSON.parse(
     localStorage.getItem(THREAD_LOCAL_STORAGE_KEY) ?? "[]",
   ) as typeof threads;
-  const groupedThreads = groupThreadsByDate(threads ?? localThreads ?? []);
+  const groupedThreads = groupByDate(threads ?? localThreads ?? []);
 
   useEffect(() => {
     if (threads) {

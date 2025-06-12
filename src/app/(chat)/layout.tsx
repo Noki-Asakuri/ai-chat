@@ -8,8 +8,9 @@ import dynamic from "next/dynamic";
 import { redirect, useParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { ThreadGroupButtons } from "@/components/threads/thread-group-buttons";
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore, useChatStore } from "@/lib/chat/store";
@@ -71,7 +72,7 @@ function Chat({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider className="bg-sidebar">
       <ThreadSidebar />
-      <SidebarTrigger />
+      <ThreadGroupButtons />
 
       <main
         className={cn(
@@ -90,7 +91,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Authenticated>
-        <Chat>{children}</Chat>
+        <Chat children={children} />
       </Authenticated>
 
       <Unauthenticated>
