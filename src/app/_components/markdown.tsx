@@ -1,8 +1,12 @@
 import { marked } from "marked";
 import { memo, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
+
 import { isInlineCode, type Element } from "react-shiki";
+
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 
 import { cn } from "@/lib/utils";
 
@@ -30,7 +34,12 @@ function parseMarkdownIntoBlocks(markdown: string): string[] {
   return tokens.map((token) => token.raw);
 }
 
-function CodeBlock({ className, children, node, ...props }: React.ComponentProps<"code"> & { node?: Element }) {
+function CodeBlock({
+  className,
+  children,
+  node,
+  ...props
+}: React.ComponentProps<"code"> & { node?: Element }) {
   const code = String(children as string);
   const isInline = node ? isInlineCode(node) : undefined;
   const language = /language-(\w+)/.exec(className ?? "")?.[1];
@@ -49,7 +58,8 @@ function CodeBlock({ className, children, node, ...props }: React.ComponentProps
 const MemoizedMarkdownBlock = memo(
   ({ content }: { content: string }) => (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
+      remarkPlugins={[remarkGfm, remarkMath]}
+      rehypePlugins={[rehypeKatex]}
       components={{
         h1: TypographyH1,
         h2: TypographyH2,
@@ -81,7 +91,9 @@ MemoizedMarkdownBlock.displayName = "MemoizedMarkdownBlock";
 
 export const MemoizedMarkdown = memo(({ content, id }: { content: string; id: string }) => {
   const blocks = useMemo(() => parseMarkdownIntoBlocks(content), [content]);
-  return blocks.map((block, index) => <MemoizedMarkdownBlock content={block} key={`${id}-block_${index}`} />);
+  return blocks.map((block, index) => (
+    <MemoizedMarkdownBlock content={block} key={`${id}-block_${index}`} />
+  ));
 });
 
 MemoizedMarkdown.displayName = "MemoizedMarkdown";
