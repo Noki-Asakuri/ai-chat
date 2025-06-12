@@ -2,6 +2,7 @@ import { Loader2Icon } from "lucide-react";
 import React, { useEffect, useRef } from "react";
 
 import { ScrollArea } from "./ui/scroll-area";
+import { WelcomeScreen } from "./welcome-screen";
 
 import { MessageContent } from "./chat/message-content";
 import { MessageEdit } from "./chat/message-edit";
@@ -126,28 +127,31 @@ export function ChatMessages() {
   }
 
   return (
-    <ScrollArea
-      onScroll={handleOnScroll}
-      className="h-full w-full"
-      viewportClassName="*:!contents"
-      viewportId="messages-scrollarea"
-    >
-      <div
-        className="max-w-full"
-        id="messages-container"
-        ref={scrollContainerRef}
-        style={{ paddingBottom: `${textareaHeight}px`, fontVariantLigatures: "none" }}
+    <>
+      <WelcomeScreen />
+      <ScrollArea
+        onScroll={handleOnScroll}
+        className="h-full w-full"
+        viewportClassName="*:!contents"
+        viewportId="messages-scrollarea"
       >
-        {messages.map((message, index) => (
-          <Message
-            key={message.messageId}
-            message={message}
-            index={index}
-            isLast={index === messages.length - 1}
-          />
-        ))}
-      </div>
-    </ScrollArea>
+        <div
+          className="max-w-full"
+          id="messages-container"
+          ref={scrollContainerRef}
+          style={{ paddingBottom: `${textareaHeight}px`, fontVariantLigatures: "none" }}
+        >
+          {messages.map((message, index) => (
+            <Message
+              key={message.messageId}
+              message={message}
+              index={index}
+              isLast={index === messages.length - 1}
+            />
+          ))}
+        </div>
+      </ScrollArea>
+    </>
   );
 }
 
