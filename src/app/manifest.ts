@@ -9,6 +9,22 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
+    screenshots: [
+      {
+        src: "/screenshots/mobile-screenshot-1.png",
+        sizes: "408x905",
+        type: "image/png",
+        form_factor: "narrow",
+        label: "App view on mobile",
+      },
+      {
+        src: "/screenshots/desktop-screenshot-1.png",
+        sizes: "1858x993",
+        type: "image/png",
+        form_factor: "wide",
+        label: "App view on desktop",
+      },
+    ],
     icons: [
       {
         src: "/icons/icon-48x48.png",
