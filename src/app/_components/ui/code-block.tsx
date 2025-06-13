@@ -3,7 +3,7 @@ import { ChevronDownIcon, TextIcon, WrapTextIcon } from "lucide-react";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { useShikiHighlighter } from "react-shiki";
 
-import { CopyButton } from "../chat/copy-button";
+import { CopyButton } from "../copy-button";
 import { Accordion, AccordionContent, AccordionItem } from "./accordion";
 import { Button, ButtonWithTip } from "./button";
 import { ScrollArea, ScrollBar } from "./scroll-area";

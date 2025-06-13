@@ -2,7 +2,7 @@ import { useCopyToClipboard } from "@uidotdev/usehooks";
 import { CopyCheckIcon, CopyIcon } from "lucide-react";
 import { useTransition } from "react";
 
-import { ButtonWithTip } from "../ui/button";
+import { ButtonWithTip } from "./ui/button";
 
 export function CopyButton({ content, className }: { content: string; className?: string }) {
   const [pedding, startTransition] = useTransition();

@@ -24,8 +24,16 @@ export function ThinkingToggle({
   const defaultValue = status === "streaming" ? `${messageId}-thinking` : undefined;
 
   return (
-    <Accordion type="single" collapsible defaultValue={defaultValue} className="my-4 w-full space-y-2">
-      <AccordionItem value={messageId + "-thinking"} className="bg-secondary rounded-md border-none">
+    <Accordion
+      type="single"
+      collapsible
+      defaultValue={defaultValue}
+      className="my-4 w-full space-y-2"
+    >
+      <AccordionItem
+        value={messageId + "-thinking"}
+        className="bg-secondary rounded-md border-none"
+      >
         <AccordionPrimitive.Header className="flex">
           <AccordionPrimitive.Trigger
             className={cn(
@@ -35,7 +43,12 @@ export function ThinkingToggle({
           >
             <div className="group flex items-center gap-2">
               <SparkleIcon className="size-5" />
-              <p>Thinking {tokens && <span className="text-sm">- {format.number(tokens)} Thinking Tokens</span>}</p>
+              <p>
+                Thinking{" "}
+                {tokens && (
+                  <span className="text-sm">- {format.number(tokens)} Thinking Tokens</span>
+                )}
+              </p>
             </div>
 
             {status === "streaming" && !finished ? (

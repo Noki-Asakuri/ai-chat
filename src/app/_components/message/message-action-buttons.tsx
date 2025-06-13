@@ -2,7 +2,7 @@ import { PencilIcon, RefreshCcwIcon, SaveIcon, SplitIcon, XIcon } from "lucide-r
 import { useRouter } from "next/navigation";
 
 import { ButtonWithTip } from "../ui/button";
-import { CopyButton } from "./copy-button";
+import { CopyButton } from "../copy-button";
 
 import { handleBranchOff } from "@/lib/chat/action-branch-off";
 import { retryMessage } from "@/lib/chat/retry-message";

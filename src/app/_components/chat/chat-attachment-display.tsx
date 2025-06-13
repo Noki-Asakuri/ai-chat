@@ -1,4 +1,4 @@
-import { UploadIcon, XIcon } from "lucide-react";
+import { FileUpIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
@@ -27,7 +27,8 @@ export function ChatAttachmentButton() {
     <>
       <ButtonWithTip title="Upload Image" variant="outline" className="size-9 gap-2" asChild>
         <label htmlFor="image-upload" className="cursor-pointer">
-          <UploadIcon />
+          <FileUpIcon />
+          <span className="sr-only">Upload Image</span>
         </label>
       </ButtonWithTip>
 
