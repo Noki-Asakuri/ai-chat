@@ -66,7 +66,9 @@ function ButtonWithTip({
   return (
     <Tooltip delayDuration={300}>
       <TooltipTrigger asChild>
-        <Button {...props}>{children}</Button>
+        <Button {...props} aria-label={title}>
+          {children}
+        </Button>
       </TooltipTrigger>
 
       <TooltipContent side={side ?? "bottom"}>{title}</TooltipContent>

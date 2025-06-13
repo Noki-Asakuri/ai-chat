@@ -57,6 +57,7 @@ export function ThreadDeleteDialog({ thread }: ThreadDeleteDialogProps) {
         onClick={handleToggleOpen}
       >
         <TrashIcon size={10} />
+        <span className="sr-only">Delete Thread</span>
       </ButtonWithTip>
 
       <AlertDialogContent>

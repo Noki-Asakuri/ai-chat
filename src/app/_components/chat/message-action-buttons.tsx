@@ -68,6 +68,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
             className={cn("hidden size-10", { flex: editMessage?._id === message._id })}
           >
             <XIcon className="size-5" />
+            <span className="sr-only">Cancel Edit</span>
           </ButtonWithTip>
 
           <ButtonWithTip
@@ -82,6 +83,9 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
             ) : (
               <PencilIcon className="size-5" />
             )}
+            <span className="sr-only">
+              {editMessage?._id === message._id ? "Save Message" : "Edit Message"}
+            </span>
           </ButtonWithTip>
         </>
       )}

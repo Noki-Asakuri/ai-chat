@@ -21,9 +21,12 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
   const wrapline = useChatStore((state) => state.wrapline);
   const toggleWrapline = useChatStore((state) => state.toggleWrapline);
 
-  const highlightedCode = useShikiHighlighter(code, language === "assembly" ? "asm" : language, "vitesse-dark", {
-    delay: 50,
-  });
+  const highlightedCode = useShikiHighlighter(
+    code,
+    language === "assembly" ? "asm" : language,
+    "one-dark-pro",
+    { delay: 50 },
+  );
 
   return (
     <Accordion
@@ -35,8 +38,11 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
       <AccordionItem value={`${language}-code-block`}>
         <AccordionPrimitive.Header className="relative">
           <div className="bg-muted/50 flex w-full items-center justify-between gap-2 px-2 py-1.5">
-            <AccordionPrimitive.Trigger asChild>
-              <Button variant="ghost" className="size-8 cursor-pointer [&[data-state=open]>svg]:-rotate-180">
+            <AccordionPrimitive.Trigger asChild title="Toggle Code Block">
+              <Button
+                variant="ghost"
+                className="size-8 cursor-pointer [&[data-state=open]>svg]:-rotate-180"
+              >
                 <ChevronDownIcon className="size-4 transition-transform" />
               </Button>
             </AccordionPrimitive.Trigger>

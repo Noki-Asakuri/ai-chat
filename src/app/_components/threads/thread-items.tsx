@@ -54,10 +54,10 @@ export function ThreadItem({ thread }: { thread: Thread }) {
             variant="none"
             size="none"
             title="Go to parent thread"
-            className=""
             onClick={goToParentThread}
           >
             <GitBranchIcon className="size-4 rotate-180" />
+            <span className="sr-only">Go to parent thread</span>
           </ButtonWithTip>
         )}
         <span className="line-clamp-1 text-sm">{thread.title}</span>
@@ -74,6 +74,7 @@ export function ThreadItem({ thread }: { thread: Thread }) {
             onClick={pinThread}
           >
             {thread.pinned ? <PinOffIcon size={10} /> : <PinIcon size={10} />}
+            <span className="sr-only">{thread.pinned ? "Unpin Thread" : "Pin Thread"}</span>
           </ButtonWithTip>
 
           <ThreadDeleteDialog thread={thread} />

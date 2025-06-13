@@ -21,6 +21,7 @@ export function ChatSendButton() {
       className="hover:border-primary hover:bg-primary/40 size-9 border transition-colors"
     >
       {isStreaming ? <SquareIcon /> : <SendHorizontalIcon className="-rotate-45" />}
+      <span className="sr-only">{isStreaming ? "Abort Request" : "Send Message"}</span>
     </ButtonWithTip>
   );
 }
