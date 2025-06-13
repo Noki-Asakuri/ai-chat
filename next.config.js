@@ -5,15 +5,24 @@
 import "./src/env.js";
 import withSerwistInit from "@serwist/next";
 
-const withSerwist = withSerwistInit({
-  cacheOnNavigation: true,
-  swSrc: "src/app/sw.ts",
-  swDest: "public/sw.js",
-  disable: process.env.NODE_ENV !== "production",
-});
+/**
+ * @param {import("next").NextConfig} config
+ */
+function noWrapper(config) {
+  return config;
+}
+
+const withSerwist =
+  process.env.NODE_ENV === "production"
+    ? withSerwistInit({
+        cacheOnNavigation: true,
+        swSrc: "src/app/sw.ts",
+        swDest: "public/sw.js",
+      })
+    : noWrapper;
 
 /** @type {import("next").NextConfig} */
-const config = {
+const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   experimental: { reactCompiler: true },
@@ -51,11 +60,15 @@ const config = {
         headers: [
           { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
           { key: "Content-Type", value: "application/javascript; charset=utf-8" },
-          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+          {
+            key: "Content-Security-Policy",
+            value:
+              "default-src 'self'; script-src 'self'; connect-src 'self' https://clerk.chat.asakuri.me https://*.clerk.dev;",
+          },
         ],
       },
     ];
   },
 };
 
-export default withSerwist(config);
+export default withSerwist(nextConfig);
