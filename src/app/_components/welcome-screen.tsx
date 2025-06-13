@@ -82,7 +82,7 @@ export function WelcomeScreen() {
           How can I help you, <span className="capitalize">{user?.username}</span>?
         </h1>
 
-        <Tabs defaultValue="Create" className="w-full px-4 md:w-max">
+        <Tabs defaultValue="Create" className="w-full px-4 md:min-w-[650px]">
           <TabsList className="w-full">
             {categories.map((category) => (
               <TabsTrigger key={category.topic} value={category.topic} className="cursor-pointer">
