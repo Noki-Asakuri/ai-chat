@@ -126,10 +126,10 @@ export function MessageHistory() {
       viewportId="messages-scrollarea"
     >
       <div
-        className="max-w-full"
+        className="max-w-full py-10"
         id="messages-container"
         ref={scrollContainerRef}
-        style={{ paddingBottom: `${textareaHeight}px`, fontVariantLigatures: "none" }}
+        style={{ paddingBottom: `${textareaHeight + 20}px`, fontVariantLigatures: "none" }}
       >
         {messages.map((message, index) => (
           <Message

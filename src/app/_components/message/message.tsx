@@ -43,7 +43,10 @@ export function Message({
 
   return (
     <div
-      className="group mx-auto flex max-w-[calc(896px+32px)] items-start gap-2 px-4 [&:not(:first-child)]:mt-14 [&[data-streaming='false']:last-child]:mb-14"
+      className={cn(
+        "group mx-auto flex max-w-[calc(896px+32px)] items-start gap-2 px-4",
+        "[&:not(:first-child)]:mt-14 [&[data-streaming='false']:last-child]:mb-14",
+      )}
       id={message.messageId}
       data-role={message.role}
       data-status={message.status}

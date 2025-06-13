@@ -49,7 +49,7 @@ export function ThreadSidebar() {
         <span className="text-center text-lg">AI Chat</span>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-2 md:px-0">
         <Link
           href="/"
           className="hover:bg-primary/20 bg-sidebar rounded-md border px-3 py-1.5 text-center transition-colors"

@@ -8,23 +8,24 @@ import { ThreadCommand } from "./thread-command";
 import { cn } from "@/lib/utils";
 
 export function ThreadGroupButtons() {
-  const { state } = useSidebar();
+  const { state, isMobile } = useSidebar();
 
   return (
     <div
+      data-state={isMobile ? "collapsed" : state}
       className={cn(
         "absolute top-3 left-3 z-50 flex items-center justify-center gap-1 rounded-md p-1",
-        { "bg-sidebar": state === "collapsed" },
+        "bg-sidebar group data-[state=collapsed]:!bg-sidebar md:bg-transparent",
       )}
     >
       <SidebarTrigger />
-      <ThreadCommand sidebarState={state} />
+      <ThreadCommand />
 
       <Button
         asChild
         size="icon"
         variant="ghost"
-        className={cn("size-7", { hidden: state === "expanded" })}
+        className={cn("size-7 group-data-[state=expanded]:hidden")}
       >
         <Link href="/">
           <PlusIcon />

@@ -59,6 +59,8 @@ const nextConfig = {
     ];
   },
   async headers() {
+    if (process.env.NODE_ENV !== "production") return [];
+
     return [
       {
         source: "/(.*)",
@@ -76,7 +78,7 @@ const nextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self'; connect-src 'self' https://clerk.chat.asakuri.me https://*.clerk.dev https://*.clerk.com;",
+              "default-src 'self'; script-src 'self'; connect-src 'self' https://clerk.chat.asakuri.me https://img.clerk.com;",
           },
         ],
       },

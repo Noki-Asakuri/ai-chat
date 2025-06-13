@@ -18,7 +18,7 @@ import { groupByDate } from "@/lib/threads/group-by-date";
 import type { Thread } from "@/lib/types";
 import { cn, toUUID } from "@/lib/utils";
 
-export function ThreadCommand({ sidebarState }: { sidebarState: "expanded" | "collapsed" }) {
+export function ThreadCommand() {
   const threads = useChatStore((state) => state.threads);
   const setThreadCommandOpen = useChatStore((state) => state.setThreadCommandOpen);
   const threadCommandOpen = useChatStore((state) => state.threadCommandOpen);
@@ -30,8 +30,9 @@ export function ThreadCommand({ sidebarState }: { sidebarState: "expanded" | "co
       <Button
         size="icon"
         variant="ghost"
+        title="Search Threads"
         onClick={() => setThreadCommandOpen(true)}
-        className={cn("size-7", { hidden: sidebarState === "expanded" })}
+        className={cn("size-7 group-data-[state=expanded]:hidden")}
       >
         <SearchIcon />
         <span className="sr-only">Search Threads</span>
