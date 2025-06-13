@@ -10,7 +10,7 @@ export function ScrollButton() {
   const scrollPosition = useChatStore((state) => state.scrollPosition);
   const textareaHeight = useChatStore((state) => state.textareaHeight);
 
-  const { state } = useSidebar();
+  const { state, isMobile } = useSidebar();
 
   function handleScroll(position: "top" | "bottom") {
     const element = document.querySelector("#messages-scrollarea") as HTMLDivElement | undefined;
@@ -22,7 +22,7 @@ export function ScrollButton() {
       className="pointer-events-none fixed top-6 right-0 z-50 flex w-full flex-col items-center justify-between transition-[width]"
       style={{
         height: `calc(100% - ${textareaHeight === 140 ? 140 : textareaHeight + 10}px - 24px)`,
-        width: `${state === "collapsed" ? "100vw" : "calc(100vw - var(--sidebar-width))"}`,
+        width: `${state === "collapsed" || isMobile ? "100vw" : "calc(100vw - var(--sidebar-width))"}`,
       }}
     >
       <Button

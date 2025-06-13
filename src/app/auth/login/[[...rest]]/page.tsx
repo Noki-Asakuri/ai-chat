@@ -3,7 +3,7 @@ import { dark } from "@clerk/themes";
 
 export default function SignInPage() {
   return (
-    <div className="grid h-svh w-full items-center px-4 sm:justify-center">
+    <div className="grid h-svh w-screen items-center justify-center px-4">
       <SignIn waitlistUrl="/auth/waitlist" withSignUp appearance={{ baseTheme: dark }} />
     </div>
   );

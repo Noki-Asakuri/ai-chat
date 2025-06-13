@@ -16,17 +16,17 @@ interface CategoryButton {
 }
 
 const createPrompts = [
+  "Give me 5 creative writing prompts for flash fiction",
   "Write a short story about a robot discovering emotions",
   "Help me outline a sci-fi novel set in a post-apocalyptic world",
   "Create a character profile for a complex villain with sympathetic motives",
-  "Give me 5 creative writing prompts for flash fiction",
 ];
 
 const explorePrompts = [
-  "What are the latest discoveries in space exploration?",
   "Tell me about the history of the Silk Road.",
-  "What are some of the most mysterious places on Earth?",
   "Explain the theory of relativity in simple terms.",
+  "What are the latest discoveries in space exploration?",
+  "What are some of the most mysterious places on Earth?",
 ];
 
 const codePrompts = [
@@ -39,8 +39,8 @@ const codePrompts = [
 const learnPrompts = [
   "Teach me the basics of machine learning.",
   "How can I improve my public speaking skills?",
-  "Summarize the main ideas of 'Sapiens' by Yuval Noah Harari.",
   "What are the fundamentals of financial literacy?",
+  "Summarize the main ideas of 'Sapiens' by Yuval Noah Harari.",
 ];
 
 const categories: CategoryButton[] = [
@@ -82,12 +82,12 @@ export function WelcomeScreen() {
           How can I help you, <span className="capitalize">{user?.username}</span>?
         </h1>
 
-        <Tabs defaultValue="Create" className="w-full md:w-[600px]">
+        <Tabs defaultValue="Create" className="w-full px-4 md:w-[600px]">
           <TabsList className="w-full">
             {categories.map((category) => (
               <TabsTrigger key={category.topic} value={category.topic} className="cursor-pointer">
                 <category.icon className="size-4" />
-                {category.topic}
+                <span>{category.topic}</span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -99,7 +99,7 @@ export function WelcomeScreen() {
                   <button
                     key={index}
                     onClick={() => handlePromptClick(prompt)}
-                    className="hover:bg-muted/40 flex cursor-pointer items-center justify-start rounded-md px-4 py-2 transition-colors"
+                    className="hover:bg-muted/40 flex cursor-pointer items-center justify-center rounded-md px-4 py-2 text-sm text-pretty transition-colors md:justify-start md:text-base"
                   >
                     {prompt}
                   </button>
@@ -108,22 +108,6 @@ export function WelcomeScreen() {
             </TabsContent>
           ))}
         </Tabs>
-
-        {/*
-
-        <div className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2">
-          {categories
-            .flatMap((category) => category.prompts)
-            .map((prompt, index) => (
-              <button
-                key={index}
-                onClick={() => handlePromptClick(prompt)}
-                className="text-muted-foreground hover:text-foreground block w-full rounded-lg bg-zinc-50/50 px-4 py-3 text-left text-base transition-colors dark:bg-zinc-900/50"
-              >
-                {prompt}
-              </button>
-            ))}
-        </div> */}
       </div>
     </div>
   );
