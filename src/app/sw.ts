@@ -1,3 +1,5 @@
+/// <reference lib="WebWorker" />
+
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { Serwist } from "serwist";
@@ -8,7 +10,6 @@ declare global {
   }
 }
 
-// @ts-expect-error Unable to find type definition for `ServiceWorkerGlobalScope`
 declare const self: ServiceWorkerGlobalScope;
 
 const serwist = new Serwist({

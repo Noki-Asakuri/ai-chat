@@ -15,7 +15,7 @@ import { env } from "@/env";
 export const metadata: Metadata = {
   title: "AI Chat",
   description: "AI Chat",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  icons: [{ rel: "icon", url: "/favicon.svg", type: "image/svg+xml" }],
   manifest: "/manifest.json",
 };
 
