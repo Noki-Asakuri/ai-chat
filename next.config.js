@@ -63,7 +63,7 @@ const nextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self'; connect-src 'self' https://clerk.chat.asakuri.me https://*.clerk.dev;",
+              "default-src 'self'; script-src 'self'; connect-src 'self' https://clerk.chat.asakuri.me https://*.clerk.dev https://*.clerk.com;",
           },
         ],
       },
