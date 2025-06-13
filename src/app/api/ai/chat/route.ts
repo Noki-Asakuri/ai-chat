@@ -82,10 +82,6 @@ export async function POST(req: Request) {
     updates: {
       status: "streaming",
       resumableStreamId: streamId,
-      modelParams: {
-        enableWebSearch: config?.webSearch,
-        enableThinking: config?.reasoning,
-      },
     },
   });
 

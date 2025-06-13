@@ -1,8 +1,53 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { create } from "zustand";
+import { z } from "zod";
 
-import type { UserAttachment, ChatMessage, Thread } from "../types";
+import type { UserAttachment, ChatMessage, Thread, ReasoningEffort } from "../types";
+import { getModelData } from "./models";
+
+function getItemFromLocalStorage<T, U>(key: string, defaultValue: T, schema: z.ZodType<U>) {
+  if (typeof window === "undefined" || window.localStorage === undefined) return defaultValue;
+
+  const value = window.localStorage.getItem(key);
+  if (typeof value === "undefined") return defaultValue;
+  if (value === null) return defaultValue;
+
+  try {
+    return schema.parse(JSON.parse(value));
+  } catch (error) {
+    return defaultValue;
+  }
+}
+
+const DEFAULT_CONFIG = {
+  webSearch: false,
+  reasoning: false,
+  model: "google/gemini-2.5-flash-preview-05-20",
+} as const;
+
+function getChatConfigFromLS() {
+  if (typeof window === "undefined" || window.localStorage === undefined) {
+    return DEFAULT_CONFIG;
+  }
+
+  const config = window.localStorage.getItem("chatConfig");
+  if (!config) return DEFAULT_CONFIG;
+
+  const schema = z.object({
+    model: z.string().catch(DEFAULT_CONFIG.model),
+    webSearch: z.boolean().catch(DEFAULT_CONFIG.webSearch),
+    reasoning: z
+      .union([z.enum(["high", "medium", "low"]), z.number(), z.literal(false)])
+      .catch(DEFAULT_CONFIG.reasoning),
+  });
+
+  try {
+    return schema.parse(JSON.parse(config));
+  } catch (error) {
+    return DEFAULT_CONFIG;
+  }
+}
 
 export interface ChatState {
   messages: ChatMessage[];
@@ -40,10 +85,8 @@ export interface ChatState {
     }>,
   ) => void;
 
-  chatConfig: { webSearch: boolean; reasoning: boolean; model: string };
-  setChatConfig: (
-    config: Partial<{ webSearch: boolean; reasoning: boolean; model: string }>,
-  ) => void;
+  chatConfig: ReturnType<typeof getChatConfigFromLS>;
+  setChatConfig: (config: Partial<ReturnType<typeof getChatConfigFromLS>>) => void;
 
   abortController: AbortController;
   setAbortController: (controller: AbortController) => void;
@@ -72,11 +115,6 @@ export interface ChatState {
     status: "pending" | "complete" | "streaming" | "error" | undefined,
     threadId: Id<"threads">,
   ) => void;
-}
-
-function getItemFromLocalStorage<T extends string>(key: string, defaultValue: T) {
-  if (typeof window === "undefined" || window.localStorage === undefined) return defaultValue;
-  return window.localStorage.getItem(key) ?? defaultValue;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -112,21 +150,34 @@ export const useChatStore = create<ChatState>((set) => ({
       threadCommandOpen: typeof open === "function" ? open(state.threadCommandOpen) : open,
     })),
 
-  chatConfig: {
-    webSearch: getItemFromLocalStorage("webSearch", "false") === "true",
-    reasoning: getItemFromLocalStorage("reasoning", "false") === "true",
-    model: getItemFromLocalStorage("model", "google/gemini-2.5-flash-preview-05-20"),
-  },
+  chatConfig: getChatConfigFromLS(),
   setChatConfig: (config) =>
     set((state) => {
-      localStorage.setItem("webSearch", String(config.webSearch ?? state.chatConfig.webSearch));
-      localStorage.setItem("reasoning", String(config.reasoning ?? state.chatConfig.reasoning));
-      localStorage.setItem(
-        "model",
-        config.model ?? state.chatConfig.model ?? "google/gemini-2.5-flash-preview-05-20",
-      );
+      const newConfig = { ...state.chatConfig, ...config };
 
-      return { chatConfig: { ...state.chatConfig, ...config } };
+      if (config.model) {
+        const model = getModelData(config.model);
+
+        if (!model.capabilities.reasoning) newConfig.reasoning = false;
+        if (!model.capabilities.webSearch) newConfig.webSearch = false;
+
+        if (model.capabilities.reasoning === "options") newConfig.reasoning = "medium";
+        if (
+          typeof model.capabilities.reasoning === "object" &&
+          model.capabilities.reasoning.type === "slider"
+        ) {
+          if (typeof newConfig.reasoning !== "number") {
+            newConfig.reasoning = model.capabilities.reasoning.min;
+          } else if (newConfig.reasoning < model.capabilities.reasoning.min) {
+            newConfig.reasoning = model.capabilities.reasoning.min;
+          } else if (newConfig.reasoning > model.capabilities.reasoning.max) {
+            newConfig.reasoning = model.capabilities.reasoning.max;
+          }
+        }
+      }
+
+      localStorage.setItem("chatConfig", JSON.stringify(newConfig));
+      return { chatConfig: newConfig };
     }),
 
   wrapline:

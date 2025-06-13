@@ -22,7 +22,11 @@ const inputSchema = z.object({
   config: z
     .object({
       webSearch: z.boolean(),
-      reasoning: z.boolean(),
+      reasoning: z.union([
+        z.number().min(0).max(32_768),
+        z.enum(["low", "medium", "high"]),
+        z.literal(false),
+      ]),
       model: z.string(),
     })
     .partial(),
@@ -51,21 +55,21 @@ export async function getRequestBody(req: Request, userId: string) {
   const model = modelValidator.parse(config?.model);
 
   const providerOptions = {
-    google: {
-      safetySettings,
-      thinkingConfig: { includeThoughts: true, thinkingBudget: 0 },
-    } as GoogleGenerativeAIProviderOptions,
+    google: { safetySettings } as GoogleGenerativeAIProviderOptions,
     openai: {} as OpenAIResponsesProviderOptions,
   };
 
-  if (model.includes("gemini-2.5-pro")) {
-    // 128 is the lowest budget we can set.
-    providerOptions.google.thinkingConfig = { includeThoughts: true, thinkingBudget: 128 };
-  }
-
   if (config?.reasoning) {
-    providerOptions.google.thinkingConfig = { includeThoughts: true, thinkingBudget: 20_000 };
-    providerOptions.openai = { reasoningEffort: "high" };
+    if (typeof config.reasoning === "number") {
+      providerOptions.google.thinkingConfig = {
+        includeThoughts: true,
+        thinkingBudget: config.reasoning,
+      };
+    }
+
+    if (typeof config.reasoning === "string") {
+      providerOptions.openai = { reasoningEffort: config.reasoning };
+    }
   }
 
   if (config?.webSearch) {

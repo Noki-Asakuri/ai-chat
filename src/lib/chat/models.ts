@@ -12,7 +12,11 @@ export function getModelData(modelId: AllModelIds | (string & {})): ModelData {
   };
 }
 
-type Capability = Record<"webSearch" | "reasoning" | "vision", boolean>;
+type Capability = {
+  webSearch: boolean;
+  reasoning: { type: "slider"; min: number; max: number } | "options" | "always" | false;
+  vision: boolean;
+};
 export type Provider = "google" | "openai" | "deepseek" | "unknown";
 export type ModelData = {
   displayName: string;
@@ -27,17 +31,29 @@ export const ModelsData = {
   "google/gemini-2.5-flash-preview-05-20": {
     displayName: "Gemini 2.5 Flash",
     provider: "google",
-    capabilities: { webSearch: true, reasoning: true, vision: true },
+    capabilities: {
+      webSearch: true,
+      reasoning: { type: "slider", min: 0, max: 24_576 },
+      vision: true,
+    },
   },
   "google/gemini-2.5-pro-preview-05-06": {
     displayName: "Gemini 2.5 Pro",
     provider: "google",
-    capabilities: { webSearch: true, reasoning: true, vision: true },
+    capabilities: {
+      webSearch: true,
+      reasoning: { type: "slider", min: 128, max: 32_768 },
+      vision: true,
+    },
   },
   "google/gemini-2.5-pro-preview-06-05": {
     displayName: "Gemini 2.5 Pro",
     provider: "google",
-    capabilities: { webSearch: true, reasoning: true, vision: true },
+    capabilities: {
+      webSearch: true,
+      reasoning: { type: "slider", min: 128, max: 32_768 },
+      vision: true,
+    },
   },
   "google/gemini-2.0-flash": {
     displayName: "Gemini 2.0 Flash",
@@ -58,7 +74,7 @@ export const ModelsData = {
   "deepseek/deepseek-reasoner": {
     displayName: "DeepSeek R1",
     provider: "deepseek",
-    capabilities: { webSearch: false, reasoning: true, vision: false },
+    capabilities: { webSearch: false, reasoning: "always", vision: false },
   },
 
   "openai/gpt-4.1": {
@@ -96,23 +112,23 @@ export const ModelsData = {
   "openai/o1": {
     displayName: "o1",
     provider: "openai",
-    capabilities: { webSearch: false, reasoning: true, vision: true },
+    capabilities: { webSearch: false, reasoning: "options", vision: true },
   },
   "openai/o3": {
     displayName: "o3",
     provider: "openai",
-    capabilities: { webSearch: false, reasoning: true, vision: true },
+    capabilities: { webSearch: false, reasoning: "options", vision: true },
   },
 
   "openai/o3-mini": {
     displayName: "o3 Mini",
     provider: "openai",
-    capabilities: { webSearch: false, reasoning: true, vision: true },
+    capabilities: { webSearch: false, reasoning: "options", vision: true },
   },
   "openai/o4-mini": {
     displayName: "o4 Mini",
     provider: "openai",
-    capabilities: { webSearch: false, reasoning: true, vision: true },
+    capabilities: { webSearch: false, reasoning: "options", vision: true },
   },
 
   "openai/gpt-4.5-preview": {
