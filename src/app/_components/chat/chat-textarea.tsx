@@ -43,7 +43,7 @@ export function ChatTextarea() {
 
       <div
         ref={parentRef}
-        className="bg-muted/40 border-border mx-auto max-w-4xl space-y-2 rounded-[calc(2px+8px)] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150"
+        className="bg-muted/40 border-border mx-auto max-w-4xl space-y-2 rounded-[calc(var(--spacing)*2+calc(var(--radius)-2px))] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150"
       >
         <ChatAttachmentDisplay />
 
