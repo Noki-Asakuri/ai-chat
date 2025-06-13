@@ -26,6 +26,18 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   experimental: { reactCompiler: true },
+  async rewrites() {
+    const host = process.env.VERCEL_URL || "http://localhost:3000";
+
+    return {
+      beforeFiles: [
+        {
+          source: "/api/vercel/:path*",
+          destination: `${host}/_vercel/:path*`,
+        },
+      ],
+    };
+  },
   async redirects() {
     return [
       {
@@ -35,7 +47,7 @@ const nextConfig = {
       },
       {
         source: "/chat",
-        destination: "/chat/new",
+        destination: "/",
         permanent: true,
       },
       {

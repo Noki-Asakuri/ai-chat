@@ -4,8 +4,8 @@ import "katex/dist/katex.min.css";
 import { type Metadata } from "next";
 import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
 
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { ConvexClientProvider } from "./_components/provider/convex-client";
 import { Toaster } from "./_components/ui/sonner";
@@ -48,8 +48,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <ConvexClientProvider>{children}</ConvexClientProvider>
         <Toaster />
 
-        <SpeedInsights />
-        <Analytics />
+        <Analytics basePath="/api/vercel" />
+        <SpeedInsights basePath="/api/vercel" />
       </body>
     </html>
   );
