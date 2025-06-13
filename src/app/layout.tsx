@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   title: "AI Chat",
   description: "AI Chat",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
+  manifest: "/manifest.json",
 };
 
 const mainFont = Be_Vietnam_Pro({

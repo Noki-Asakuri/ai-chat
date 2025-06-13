@@ -3,6 +3,14 @@
  * for Docker builds.
  */
 import "./src/env.js";
+import withSerwistInit from "@serwist/next";
+
+const withSerwist = withSerwistInit({
+  cacheOnNavigation: true,
+  swSrc: "src/app/sw.ts",
+  swDest: "public/sw.js",
+  disable: process.env.NODE_ENV !== "production",
+});
 
 /** @type {import("next").NextConfig} */
 const config = {
@@ -21,8 +29,13 @@ const config = {
         destination: "/chat/new",
         permanent: true,
       },
+      {
+        destination: "/manifest.webmanifest",
+        permanent: true,
+        source: "/manifest.json",
+      },
     ];
   },
 };
 
-export default config;
+export default withSerwist(config);
