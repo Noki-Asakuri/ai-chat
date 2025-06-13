@@ -27,7 +27,8 @@ const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   experimental: { reactCompiler: true },
   async rewrites() {
-    const host = process.env.VERCEL_URL || "http://localhost:3000";
+    const host =
+      process.env.NODE_ENV === "production" ? "https://chat.asakuri.me" : "http://localhost:3000";
 
     return {
       beforeFiles: [
