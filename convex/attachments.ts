@@ -1,12 +1,12 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation } from "./_generated/server";
 
 export const createAttachment = mutation({
   args: {
     id: v.string(),
     name: v.string(),
     size: v.number(),
-    type: v.string(),
+    type: v.union(v.literal("image"), v.literal("pdf")),
     threadId: v.id("threads"),
   },
   handler: async (ctx, args) => {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-
 import { useEffect, useRef } from "react";
 
 import { ScrollButton } from "../scroll-button";
@@ -78,22 +77,24 @@ function InputTextArea() {
       className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
       onPaste={(event) => {
         const { items } = event.clipboardData;
-        const imageItems = Array.from(items).filter((item) => item.type.includes("image"));
+        const acceptedFiles = Array.from(items).filter(
+          (item) => item.type.includes("image") || item.type.includes("pdf"),
+        );
 
-        if (imageItems.length > 0) {
+        if (acceptedFiles.length > 0) {
           event.preventDefault();
-          const imageFiles = imageItems.map((item) => {
+          const files = acceptedFiles.map((item) => {
             const file = item.getAsFile();
             if (!file) throw new Error("Failed to get file from item");
-            return {
-              id: crypto.randomUUID(),
-              name: file.name,
-              size: file.size,
-              file,
-              type: "image" as const,
-            };
+
+            let type: "image" | "pdf" = "image";
+            if (item.type.includes("pdf")) {
+              type = "pdf";
+            }
+
+            return { id: crypto.randomUUID(), name: file.name, size: file.size, file, type };
           });
-          addAttachment(imageFiles);
+          addAttachment(files);
         }
       }}
       onKeyDown={(event) => {

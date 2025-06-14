@@ -146,14 +146,30 @@ export async function submitChatMessage({ router }: SubmitChatMessageParams) {
     id: message.messageId,
     role: message.role as "assistant" | "user",
     content: message.content,
-    attachments: message.attachments?.map((attachment) => attachment._id),
+    attachments: message.attachments?.map((attachment) => ({
+      _id: attachment._id,
+      name: attachment.name,
+      size: attachment.size,
+      type: attachment.type,
+    })),
   }));
 
   allMessages.push({
     role: "user",
     content: chatInput,
     id: userMessage.messageId,
-    attachments: userMessage.attachments,
+    attachments: userMessage.attachments.map((attachmentId, index) => {
+      const attachment = state.attachments[index];
+      if (!attachment) {
+        throw new Error("Attachment not found");
+      }
+      return {
+        _id: attachmentId,
+        name: attachment.name,
+        size: attachment.size,
+        type: attachment.type,
+      };
+    }),
   });
 
   const body: ChatRequest = {

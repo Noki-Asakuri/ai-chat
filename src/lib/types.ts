@@ -28,7 +28,7 @@ export type UserAttachment = {
   name: string;
   size: number;
   file: File;
-  type: "image" | "pdf" | "doc";
+  type: "image" | "pdf";
 };
 
 export type ChatMessage = {

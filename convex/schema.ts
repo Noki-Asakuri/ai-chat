@@ -14,7 +14,7 @@ export default defineSchema({
     id: v.string(),
     name: v.string(),
     size: v.number(),
-    type: v.string(),
+    type: v.union(v.literal("image"), v.literal("pdf")),
     userId: v.string(),
     threadId: v.id("threads"),
   }).index("by_userId", ["userId"]),

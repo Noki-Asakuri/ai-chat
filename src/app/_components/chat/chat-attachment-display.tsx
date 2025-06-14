@@ -1,4 +1,4 @@
-import { FileUpIcon, XIcon } from "lucide-react";
+import { FileIcon, FileUpIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
@@ -18,7 +18,12 @@ export function ChatAttachmentButton() {
     const file = event.target.files![0];
     if (!file) return;
 
-    addAttachment([{ id: uuidv4(), type: "image", name: file.name, size: file.size, file }]);
+    let type: "image" | "pdf" = "image";
+    if (file.type.includes("pdf")) {
+      type = "pdf";
+    }
+
+    addAttachment([{ id: uuidv4(), type, name: file.name, size: file.size, file }]);
   }
 
   if (!hasImageVision) return null;
@@ -33,9 +38,9 @@ export function ChatAttachmentButton() {
       </ButtonWithTip>
 
       <input
-        id="image-upload"
         type="file"
-        accept="image/*"
+        id="image-upload"
+        accept="image/*,application/pdf"
         onChange={handleChange}
         className="hidden"
       />
@@ -43,7 +48,13 @@ export function ChatAttachmentButton() {
   );
 }
 
-type Preview = { id: string; url: string; name: string; size: number };
+type Preview = {
+  id: string;
+  type: "image" | "pdf";
+  url: string;
+  name: string;
+  size: number;
+};
 
 export function ChatAttachmentDisplay() {
   const attachments = useChatStore((state) => state.attachments);
@@ -62,6 +73,7 @@ export function ChatAttachmentDisplay() {
         id: attachment.id,
         name: attachment.name,
         size: attachment.size,
+        type: attachment.type,
       };
       return preview;
     });
@@ -88,7 +100,14 @@ function AttachmentPreview({ attachment }: { attachment: Preview }) {
 
   return (
     <div className="relative flex items-center justify-center gap-2">
-      <img src={attachment.url} alt="Attachment" className="h-12 rounded-md object-contain" />
+      {attachment.type === "image" ? (
+        <img src={attachment.url} alt="Attachment" className="h-12 rounded-md object-contain" />
+      ) : (
+        <div className="flex h-12 w-12 items-center justify-center rounded-md bg-gray-200">
+          <FileIcon className="size-6" />
+        </div>
+      )}
+
       <div className="flex flex-col gap-0.5">
         <span className="line-clamp-1 max-w-[12ch]" title={attachment.name}>
           {attachment.name}

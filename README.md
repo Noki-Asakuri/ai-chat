@@ -39,7 +39,7 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 - [ ] Better UI
 - [x] Add authentication
 - [ ] Add Settings page
-- [ ] Support send Image/PDF/Docs/etc
+- [x] Support send Image/PDF/etc
 - [ ] Custom system prompts
 - [ ] Agents selection
 - [x] Support branching

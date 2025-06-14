@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 
 import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import type { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
-import type { ModelMessage } from "ai";
+import type { ModelMessage, UserContent } from "ai";
 
 import { AllModelIds } from "../chat/models";
 
@@ -14,7 +14,16 @@ const inputSchema = z.object({
       id: z.string(),
       role: z.enum(["assistant", "user"]),
       content: z.string(),
-      attachments: z.string().array().optional(),
+      attachments: z
+        .array(
+          z.object({
+            _id: z.string(),
+            name: z.string(),
+            size: z.number(),
+            type: z.enum(["image", "pdf"]),
+          }),
+        )
+        .optional(),
     }),
   ),
   assistantMessageId: z.custom<Id<"messages">>((data) => z.string().parse(data)),
@@ -97,21 +106,28 @@ function transformMessages(
   return messages.map((message): ModelMessage => {
     if (message.role === "assistant") return { role: "assistant", content: message.content };
 
-    const attachmentUrls = message.attachments
-      ? message.attachments.map((attachment) => {
-          return `https://files.chat.asakuri.me/${userId}/${threadId}/${attachment}`;
+    const attachmentParts = message.attachments
+      ? message.attachments.map((attachment): Exclude<UserContent[number], string> => {
+          const url = `https://files.chat.asakuri.me/${userId}/${threadId}/${attachment._id}`;
+
+          if (attachment.type === "image") {
+            return { type: "image" as const, image: url };
+          }
+
+          if (attachment.type === "pdf") {
+            return { type: "file" as const, data: url, mediaType: "application/pdf" };
+          }
+
+          return { type: "text" as const, text: url };
         })
       : [];
 
     return {
       role: "user",
       content:
-        attachmentUrls.length === 0
+        attachmentParts.length === 0
           ? message.content
-          : [
-              { type: "text", text: message.content },
-              ...attachmentUrls.map((url) => ({ type: "image" as const, image: url })),
-            ],
+          : [{ type: "text", text: message.content }, ...attachmentParts],
     };
   });
 }
