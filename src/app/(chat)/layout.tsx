@@ -2,12 +2,14 @@
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { Authenticated, Unauthenticated, useQuery } from "convex/react";
+import { Authenticated, AuthLoading, Unauthenticated, useQuery } from "convex/react";
 
 import dynamic from "next/dynamic";
 import { redirect, useParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { LoadingPage } from "@/components/loading-page";
+import { RegisterHotkeys } from "@/components/register-hotkeys";
 import { ThreadGroupButtons } from "@/components/threads/thread-group-buttons";
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -15,7 +17,6 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore, useChatStore } from "@/lib/chat/store";
 import { cn, fromUUID } from "@/lib/utils";
-import { RegisterHotkeys } from "@/components/register-hotkeys";
 
 const ChatTextarea = dynamic(
   () => import("@/components/chat/chat-textarea").then((d) => d.ChatTextarea),
@@ -97,6 +98,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <Authenticated>
         <Chat children={children} />
       </Authenticated>
+
+      <AuthLoading>
+        <LoadingPage />
+      </AuthLoading>
 
       <Unauthenticated>
         <RedirectToSignIn />
