@@ -173,26 +173,12 @@ export const updateMessageById = mutation({
 
 export const retryChatMessage = mutation({
   args: {
-    messageIds: v.array(v.id("messages")),
     threadId: v.id("threads"),
-    message: v.object({
-      messageId: v.string(),
-      role: v.union(v.literal("assistant"), v.literal("system")),
-      content: v.string(),
-      status: v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
-      model: v.string(),
-      attachments: v.array(v.id("attachments")),
-
-      createdAt: v.number(),
-      updatedAt: v.number(),
+    assistantMessageId: v.id("messages"),
+    userMessage: v.object({
+      messageId: v.id("messages"),
+      content: v.optional(v.string()),
     }),
-    userMessage: v.optional(
-      v.object({
-        messageId: v.id("messages"),
-        role: v.literal("user"),
-        content: v.string(),
-      }),
-    ),
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
@@ -202,22 +188,45 @@ export const retryChatMessage = mutation({
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.subject) throw new Error("Not authorized");
 
-    for (const messageId of args.messageIds) {
-      await ctx.db.delete(messageId);
-    }
+    const assistantMessage = await ctx.db.get(args.assistantMessageId);
+    if (!assistantMessage) throw new Error("Message not found");
 
-    if (args.userMessage) {
+    const deleteMessages = await ctx.db
+      .query("messages")
+      .withIndex("by_userId_threadId", (q) =>
+        q
+          .eq("userId", user.subject)
+          .eq("threadId", args.threadId)
+          .gt("_creationTime", assistantMessage._creationTime),
+      )
+      .collect();
+
+    if (args.userMessage.content) {
       await ctx.db.patch(args.userMessage.messageId, {
         content: args.userMessage.content,
         updatedAt: Date.now(),
       });
     }
 
-    await ctx.db.patch(args.threadId, { updatedAt: Date.now() });
-    return await ctx.db.insert("messages", {
-      threadId: args.threadId,
-      userId: user.subject,
-      ...args.message,
-    });
+    for (const message of deleteMessages) {
+      await ctx.db.delete(message._id);
+    }
+
+    await Promise.all([
+      ctx.db.patch(args.threadId, { updatedAt: Date.now() }),
+      ctx.db.patch(args.assistantMessageId, {
+        status: "pending",
+        content: "",
+        reasoning: "",
+        metadata: undefined,
+        sources: undefined,
+        resumableStreamId: null,
+        error: undefined,
+        modelParams: undefined,
+        model: "",
+        attachments: [],
+        updatedAt: Date.now(),
+      }),
+    ]);
   },
 });

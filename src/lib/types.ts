@@ -33,6 +33,8 @@ export type UserAttachment = {
 
 export type ChatMessage = {
   _id: Id<"messages">;
+  _creationTime: number;
+
   threadId: Id<"threads">;
   messageId: string;
   userId: string;
@@ -46,10 +48,7 @@ export type ChatMessage = {
   resumableStreamId?: string | null;
   createdAt: number;
   updatedAt: number;
-
-  _creationTime: number;
-
-  attachments?: Doc<"attachments">[];
+  attachments: Doc<"attachments">[];
 
   metadata?: {
     duration: number;

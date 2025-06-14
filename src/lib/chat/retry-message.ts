@@ -22,6 +22,8 @@ export async function retryMessage(
   state.setEditMessage(null);
 
   const userMessageIndex = index % 2 === 0 ? index : index - 1;
+  const assistantMessage = state.messages[userMessageIndex + 1]!;
+
   const allMessages = state.messages.slice(0, userMessageIndex + 1).map((message) => ({
     id: message.messageId,
     role: message.role,
@@ -29,32 +31,13 @@ export async function retryMessage(
     attachments: message.attachments?.map((attachment) => attachment._id),
   }));
 
-  const assistantMessage = {
-    messageId: uuidv4(),
-    content: "",
-    role: "assistant" as const,
-    status: "pending" as const,
-    model: "",
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    attachments: [] as Id<"attachments">[],
-  };
-
-  const deleteMessageIds = state.messages
-    .slice(userMessageIndex + 1, state.messages.length)
-    .map((message) => message._id);
-
-  const assistantMessageId = await convexClient.mutation(api.messages.retryChatMessage, {
+  await convexClient.mutation(api.messages.retryChatMessage, {
     threadId,
-    messageIds: deleteMessageIds,
-    message: assistantMessage,
-    userMessage: editedUserMessage
-      ? {
-          role: "user" as const,
-          messageId: editedUserMessage._id,
-          content: editedUserMessage.content,
-        }
-      : undefined,
+    assistantMessageId: assistantMessage._id,
+    userMessage: {
+      messageId: state.messages[userMessageIndex]!._id,
+      content: editedUserMessage?.content,
+    },
   });
 
   if (editedUserMessage) {
@@ -63,7 +46,7 @@ export async function retryMessage(
 
   const body: ChatRequest = {
     threadId,
-    assistantMessageId,
+    assistantMessageId: assistantMessage._id,
     messages: allMessages,
     config: state.chatConfig,
   };
@@ -71,6 +54,6 @@ export async function retryMessage(
   await sendChatRequest(
     "/api/ai/chat",
     { method: "POST", body: JSON.stringify(body) },
-    assistantMessageId,
+    assistantMessage._id,
   );
 }
