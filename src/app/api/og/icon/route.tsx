@@ -1,12 +1,7 @@
 import { ImageResponse } from "next/og";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-
-    const hasTitle = searchParams.has("title");
-    const title = hasTitle ? searchParams.get("title")?.slice(0, 100) : "My default title";
-
     return new ImageResponse(
       (
         <div
@@ -43,11 +38,10 @@ export async function GET(request: Request) {
           </svg>
         </div>
       ),
-
       { width: 512, height: 512 },
     );
-  } catch (e: any) {
-    console.log(`${e.message}`);
+  } catch (error) {
+    console.log(error);
     return new Response(`Failed to generate the image`, {
       status: 500,
     });

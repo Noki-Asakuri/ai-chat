@@ -1,7 +1,5 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { useState } from "react";
-
 import { Textarea } from "../ui/textarea";
 
 import { retryMessage } from "@/lib/chat/retry-message";

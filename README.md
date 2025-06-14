@@ -36,14 +36,14 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 - [x] Better markdown support
 - [x] Support edit and delete messages
 - [x] Add support to change model
-- [ ] Better UI
 - [x] Add authentication
-- [ ] Add Settings page
 - [x] Support send Image/PDF/etc
+- [x] Support branching
+- [x] Use shadcn/ui side-bar for threads
+- [ ] Better UI
+- [ ] Add Settings page
 - [ ] Custom system prompts
 - [ ] Agents selection
-- [x] Support branching
 - [ ] Add support to change model params
-- [x] Use shadcn/ui side-bar for threads
 - [ ] Drag and drop files
 - [ ] Remove attachments on messages.

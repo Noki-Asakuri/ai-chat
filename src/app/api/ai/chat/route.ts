@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   if (!user.userId) {
     return NextResponse.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
   }
-  const authToken = await user.getToken({ template: "convex" })!;
+  const authToken = await user.getToken({ template: "convex" });
   if (!authToken) {
     return NextResponse.json(
       { error: { message: "Error: Missing Convex auth token!" } },
@@ -39,15 +39,8 @@ export async function POST(req: Request) {
   }
   serverConvexClient.setAuth(authToken);
 
-  const {
-    messages,
-    transformedMessages,
-    assistantMessageId,
-    threadId,
-    config,
-    model,
-    providerOptions,
-  } = await getRequestBody(req, user.userId);
+  const { messages, transformedMessages, assistantMessageId, threadId, model, providerOptions } =
+    await getRequestBody(req, user.userId);
 
   const startTime = Date.now();
   const result = streamText({

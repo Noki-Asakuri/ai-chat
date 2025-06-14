@@ -1,17 +1,9 @@
 import convexPlugin from "@convex-dev/eslint-plugin";
-import { FlatCompat } from "@eslint/eslintrc";
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
-const compat = new FlatCompat({
-  baseDirectory: import.meta.dirname,
-});
-
 export default tseslint.config(
-  {
-    ignores: [".next"],
-  },
-  ...compat.extends("next/core-web-vitals"),
+  { ignores: [".next", "convex/_generated"] },
   {
     files: ["**/*.ts", "**/*.tsx"],
     extends: [
@@ -19,17 +11,22 @@ export default tseslint.config(
       ...tseslint.configs.recommendedTypeChecked,
       ...tseslint.configs.stylisticTypeChecked,
       ...convexPlugin.configs.recommended,
+      reactHooks.configs["recommended-latest"],
     ],
     rules: {
       "@typescript-eslint/array-type": "off",
       "@typescript-eslint/require-await": "off",
       "@typescript-eslint/consistent-type-definitions": "off",
+      "@typescript-eslint/restrict-template-expressions": "off",
       "@typescript-eslint/consistent-type-imports": [
         "warn",
         { prefer: "type-imports", fixStyle: "inline-type-imports" },
       ],
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
-      "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false } }],
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        { checksVoidReturn: { attributes: false } },
+      ],
       "@typescript-eslint/no-floating-promises": "error",
     },
   },
@@ -37,5 +34,4 @@ export default tseslint.config(
     linterOptions: { reportUnusedDisableDirectives: true },
     languageOptions: { parserOptions: { projectService: true } },
   },
-  reactHooks.configs["recommended-latest"],
 );

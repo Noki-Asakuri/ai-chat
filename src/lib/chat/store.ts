@@ -1,24 +1,10 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { create } from "zustand";
 import { z } from "zod";
+import { create } from "zustand";
 
-import type { UserAttachment, ChatMessage, Thread, ReasoningEffort } from "../types";
+import type { ChatMessage, Thread, UserAttachment } from "../types";
 import { getModelData } from "./models";
-
-function getItemFromLocalStorage<T, U>(key: string, defaultValue: T, schema: z.ZodType<U>) {
-  if (typeof window === "undefined" || window.localStorage === undefined) return defaultValue;
-
-  const value = window.localStorage.getItem(key);
-  if (typeof value === "undefined") return defaultValue;
-  if (value === null) return defaultValue;
-
-  try {
-    return schema.parse(JSON.parse(value));
-  } catch (error) {
-    return defaultValue;
-  }
-}
 
 const DEFAULT_CONFIG = {
   webSearch: false,
@@ -44,7 +30,7 @@ function getChatConfigFromLS() {
 
   try {
     return schema.parse(JSON.parse(config));
-  } catch (error) {
+  } catch {
     return DEFAULT_CONFIG;
   }
 }

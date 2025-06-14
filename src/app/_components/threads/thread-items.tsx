@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 
-import { GitBranchIcon, PinIcon, PinOffIcon, TrashIcon } from "lucide-react";
+import { GitBranchIcon, PinIcon, PinOffIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 

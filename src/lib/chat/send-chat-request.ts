@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { useRouter } from "next/navigation";
+import { type useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
 import { getConvexReactClient } from "../convex/client";

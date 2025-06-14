@@ -1,10 +1,9 @@
 "use client";
 
-import { BookOpenIcon, CodeIcon, CompassIcon, SparklesIcon } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
+import { BookOpenIcon, CodeIcon, CompassIcon, SparklesIcon } from "lucide-react";
 
-import { Button } from "./ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";

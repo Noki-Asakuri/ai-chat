@@ -6,17 +6,31 @@ export function tryParseJson<T>(jsonString: string, context: string): T {
   try {
     return JSON.parse(jsonString) as T;
   } catch (error) {
-    console.warn(`Failed to parse JSON arguments for ${context}:`, error, `\nString was: ${jsonString}`);
+    console.warn(
+      `Failed to parse JSON arguments for ${context}:`,
+      error,
+      `\nString was: ${jsonString}`,
+    );
     return {} as T;
   }
 }
 
-export async function processChatStream({ fetch, handler }: { fetch: Promise<Response>; handler: StreamDataHandler }) {
+export async function processChatStream({
+  fetch,
+  handler,
+}: {
+  fetch: Promise<Response>;
+  handler: StreamDataHandler;
+}) {
   const response = await fetch;
 
   if (!response.ok) {
-    const { error } = await response.json().catch(() => ({ error: { message: "Failed to parse error response." } }));
-    throw new Error(`Failed to fetch: ${response.status} - ${error.message}`);
+    const error = await response
+      .json()
+      .then((response: { error: string }) => response.error)
+      .catch(() => "Failed to parse error response.");
+
+    throw new Error(`Failed to fetch: ${response.status} - ${error}`);
   }
 
   const reader = response.body!.getReader();

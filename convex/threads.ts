@@ -1,6 +1,5 @@
-import type { Id } from "./_generated/dataModel";
-import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
 
 export const createThread = mutation({
   args: { title: v.optional(v.string()) },
@@ -41,6 +40,7 @@ export const branchThread = mutation({
       branchedFrom: args.threadId,
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for (const { _id, _creationTime, ...message } of messages) {
       await ctx.db.insert("messages", {
         ...message,

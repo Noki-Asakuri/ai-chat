@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { ScrollArea } from "../ui/scroll-area";
 
@@ -17,37 +17,40 @@ export function MessageHistory() {
   const prevScrollTopRef = useRef<number>(-1);
   const autoScroll = useRef<boolean>(true);
 
-  function onResize(entries: ResizeObserverEntry[]) {
-    const entry = entries[0];
-    if (!entry) return;
+  const onResize = useCallback(
+    (entries: ResizeObserverEntry[]) => {
+      const entry = entries[0];
+      if (!entry) return;
 
-    const parentElement = entry.target.parentElement!.parentElement!;
+      const parentElement = entry.target.parentElement!.parentElement!;
 
-    if (
-      parentElement.scrollHeight === parentElement.clientHeight &&
-      parentElement.scrollTop === 0
-    ) {
-      setScrollPosition(null);
-    } else if (parentElement.scrollTop === 0) {
-      setScrollPosition("top");
-    } else if (
-      parentElement.scrollTop + parentElement.clientHeight ===
-      parentElement.scrollHeight
-    ) {
-      setScrollPosition("bottom");
-    } else {
-      setScrollPosition("middle");
-    }
+      if (
+        parentElement.scrollHeight === parentElement.clientHeight &&
+        parentElement.scrollTop === 0
+      ) {
+        setScrollPosition(null);
+      } else if (parentElement.scrollTop === 0) {
+        setScrollPosition("top");
+      } else if (
+        parentElement.scrollTop + parentElement.clientHeight ===
+        parentElement.scrollHeight
+      ) {
+        setScrollPosition("bottom");
+      } else {
+        setScrollPosition("middle");
+      }
 
-    if (parentElement.scrollHeight === parentElement.clientHeight) {
-      prevScrollTopRef.current = -1;
-      autoScroll.current = true;
-    }
+      if (parentElement.scrollHeight === parentElement.clientHeight) {
+        prevScrollTopRef.current = -1;
+        autoScroll.current = true;
+      }
 
-    if (autoScroll.current) {
-      parentElement.scrollTo({ top: parentElement.scrollHeight, behavior: "smooth" });
-    }
-  }
+      if (autoScroll.current) {
+        parentElement.scrollTo({ top: parentElement.scrollHeight, behavior: "smooth" });
+      }
+    },
+    [setScrollPosition],
+  );
 
   useEffect(() => {
     const controller = abortController.current;
@@ -85,7 +88,7 @@ export function MessageHistory() {
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [onResize]);
 
   function handleOnScroll(event: React.UIEvent<HTMLDivElement>) {
     event.preventDefault();

@@ -1,5 +1,3 @@
-import { api } from "@/convex/_generated/api";
-
 import { SendHorizontalIcon, SquareIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 

@@ -11,7 +11,7 @@ export function RegisterHotkeys() {
   const setThreadCommandOpen = useChatStore((state) => state.setThreadCommandOpen);
 
   useEffect(() => {
-    const handleKeyboardShortcut = (event: KeyboardEvent) => {
+    function handleKeyboardShortcut(event: KeyboardEvent) {
       if (
         event.key.toLowerCase() === THREAD_COMMAND_KEYBOARD_SHORTCUT &&
         (event.metaKey || event.ctrlKey)
@@ -28,11 +28,11 @@ export function RegisterHotkeys() {
         event.preventDefault();
         router.push("/");
       }
-    };
+    }
 
     window.addEventListener("keydown", handleKeyboardShortcut);
     return () => window.removeEventListener("keydown", handleKeyboardShortcut);
-  }, []);
+  }, [router, setThreadCommandOpen]);
 
   return null;
 }

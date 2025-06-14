@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { ScrollButton } from "../scroll-button";
 import { Textarea } from "../ui/textarea";
@@ -17,12 +17,15 @@ export function ChatTextarea() {
   const parentRef = useRef<HTMLDivElement>(null);
   const setTextareaHeight = useChatStore((state) => state.setTextareaHeight);
 
-  function onResize(entries: ResizeObserverEntry[]) {
-    const entry = entries[0];
-    if (!entry) return;
+  const onResize = useCallback(
+    (entries: ResizeObserverEntry[]) => {
+      const entry = entries[0];
+      if (!entry) return;
 
-    setTextareaHeight(entry.target.clientHeight);
-  }
+      setTextareaHeight(entry.target.clientHeight);
+    },
+    [setTextareaHeight],
+  );
 
   useEffect(() => {
     if (!parentRef.current) return;
@@ -34,7 +37,7 @@ export function ChatTextarea() {
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [onResize]);
 
   return (
     <form className="absolute bottom-0 w-full px-4">

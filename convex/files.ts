@@ -11,7 +11,7 @@ const callbacks: R2Callbacks = internal.files;
 export const { syncMetadata, getMetadata, listMetadata, deleteObject, onSyncMetadata } =
   r2.clientApi<DataModel>({
     callbacks,
-    async checkUpload(ctx, bucket) {
+    async checkUpload(ctx) {
       const user = await ctx.auth.getUserIdentity();
       if (!user) throw new Error("Not authenticated");
     },

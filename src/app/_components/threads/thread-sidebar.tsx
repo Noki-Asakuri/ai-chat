@@ -34,7 +34,7 @@ export function ThreadSidebar() {
       localStorage.setItem(THREAD_LOCAL_STORAGE_KEY, JSON.stringify(threads));
       setThreads(threads);
     }
-  }, [threads]);
+  }, [threads, setThreads]);
 
   useEffect(() => {
     const thread = threads?.find((thread) => thread._id === fromUUID(threadId));

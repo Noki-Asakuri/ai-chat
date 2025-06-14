@@ -12,13 +12,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "../ui/alert-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
 import type { Thread } from "@/lib/types";
-import { ButtonWithTip } from "../ui/button";
 import { TrashIcon } from "lucide-react";
+import { ButtonWithTip } from "../ui/button";
 
 type ThreadDeleteDialogProps = {
   thread: Thread;
