@@ -72,7 +72,7 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
 
         <CapabilityIcon
           variant="reasoning"
-          disable={data.capabilities.reasoning}
+          disable={data.capabilities.reasoning !== false}
           title="This model supports reasoning."
         >
           <BrainIcon size={16} />

@@ -2,20 +2,23 @@ import { BrainIcon } from "lucide-react";
 import { useState } from "react";
 
 import { ButtonWithTip } from "../ui/button";
-import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Slider } from "../ui/slider";
 
 import { getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
 import { cn, format } from "@/lib/utils";
-import { Input } from "../ui/input";
 
 export function ChatReasoningPopup() {
   const config = useChatStore((state) => state.chatConfig);
-
   const modelConfig = getModelData(config.model)?.capabilities.reasoning;
+
+  const title =
+    modelConfig === "always" || (typeof modelConfig === "object" && modelConfig.min > 0)
+      ? "Reasoning is always enabled for this model."
+      : modelConfig === "options"
+        ? "Adjust Reasoning Effort"
+        : "Adjust Thinking Budget.";
 
   if (!modelConfig) return null;
 
@@ -25,22 +28,14 @@ export function ChatReasoningPopup() {
         <ButtonWithTip
           type="button"
           variant="secondary"
-          className="size-9 border px-2 py-1.5 text-xs data-[active=true]:border-yellow-400 data-[active=true]:bg-yellow-500/15"
-          data-active={config.reasoning !== false || modelConfig === "always"}
-          title={
-            modelConfig === "always"
-              ? "Reasoning is always enabled for this model."
-              : modelConfig === "options"
-                ? "Change Reasoning Effort"
-                : "Change Thinking Budget"
-          }
+          className="group size-9 border px-2 py-1.5 text-xs data-[active=true]:border-yellow-400 data-[active=true]:bg-yellow-500/15"
+          data-active={!!config.reasoning || modelConfig === "always"}
+          title={title}
         >
           <BrainIcon
-            className={cn("transition-colors", { "stroke-yellow-400": config.reasoning })}
+            className={cn("transition-colors group-data-[active=true]:stroke-yellow-400")}
           />
-          <span className="sr-only">
-            {config.reasoning ? "Disable Reasoning" : "Enable Reasoning"}
-          </span>
+          <span className="sr-only">{title}</span>
         </ButtonWithTip>
       </PopoverTrigger>
 
@@ -71,7 +66,7 @@ function SliderReasoning({ min, max }: { min: number; max: number }) {
             step={128}
             id="reasoning-slider"
             className=""
-            defaultValue={value}
+            value={value}
             onValueChange={(value) => setValue(value)}
             onValueCommit={(value) => setChatConfig({ reasoning: value[0] })}
           />
@@ -87,8 +82,10 @@ function SliderReasoning({ min, max }: { min: number; max: number }) {
           value={value[0]}
           className="w-20 appearance-none rounded-md border p-2 text-sm outline-none"
           onChange={(event) => {
-            const value = Number(event.target.value);
-            if (isNaN(value) || value < min || value > max) return;
+            const rawValue = Number(event.target.value);
+            if (isNaN(rawValue)) return;
+
+            const value = Math.max(min, Math.min(max, rawValue));
             setValue([value]);
             setChatConfig({ reasoning: value });
           }}

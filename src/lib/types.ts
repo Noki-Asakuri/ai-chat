@@ -8,16 +8,13 @@ export type Thread = {
   branchedFrom?: Id<"threads">;
 };
 
-type ReasoningSlider = { type: "slider"; number: number };
-type ReasoningOptions = { type: "options"; value?: "low" | "medium" | "high" };
-
-export type ReasoningEffort = ReasoningSlider | ReasoningOptions | null;
+export type ReasoningEffort = "low" | "medium" | "high" | number | false;
 
 export type ChatRequest = {
   threadId: Id<"threads">;
   assistantMessageId: Id<"messages">;
   messages: Omit<InputMessage, "messageId">[];
-  config: { webSearch: boolean; reasoning: ReasoningSlider; model: string };
+  config: { webSearch: boolean; reasoning: ReasoningEffort; model: string };
 };
 
 export type InputMessage = {
