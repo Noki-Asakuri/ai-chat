@@ -26,18 +26,30 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   experimental: { reactCompiler: true },
+
+  skipTrailingSlashRedirect: true,
   async rewrites() {
     const host =
       process.env.NODE_ENV === "production" ? "https://chat.asakuri.me" : "http://localhost:3000";
 
-    return {
-      beforeFiles: [
-        {
-          source: "/api/vercel/:path*",
-          destination: `${host}/_vercel/:path*`,
-        },
-      ],
-    };
+    return [
+      {
+        source: "/relay-gTFD/static/:path*",
+        destination: "https://us-assets.i.posthog.com/static/:path*",
+      },
+      {
+        source: "/relay-gTFD/:path*",
+        destination: "https://us.i.posthog.com/:path*",
+      },
+      {
+        source: "/relay-gTFD/flags",
+        destination: "https://us.i.posthog.com/flags",
+      },
+      {
+        source: "/api/vercel/:path*",
+        destination: `${host}/_vercel/:path*`,
+      },
+    ];
   },
   async redirects() {
     return [

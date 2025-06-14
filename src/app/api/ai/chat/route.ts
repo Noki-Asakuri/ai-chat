@@ -1,5 +1,3 @@
-import { env } from "@/env";
-
 import { api } from "@/convex/_generated/api";
 import { serverConvexClient } from "@/lib/convex/server";
 
@@ -13,8 +11,11 @@ import { generateId, streamText, type AISDKError } from "ai";
 
 import { getRequestBody } from "@/lib/server/get-request-body";
 import { registry } from "@/lib/server/model-registry";
+import { getDistinctId, PostHogClient } from "@/lib/server/posthog";
 import { updateTitle } from "@/lib/server/update-title";
 import { tryCatch } from "@/lib/utils";
+
+import { env } from "@/env";
 
 const publisher = new Redis(env.REDIS_URL);
 const subscriber = new Redis(env.REDIS_URL);
@@ -28,11 +29,20 @@ const streamContext = createResumableStreamContext({
 export async function POST(req: Request) {
   const user = await auth();
 
+  const posthog = PostHogClient();
+  const distinctId = getDistinctId(req);
+
   if (!user.userId) {
+    posthog.capture({ distinctId, event: "chat_error", properties: { error: "Unauthenticated" } });
     return NextResponse.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
   }
   const authToken = await user.getToken({ template: "convex" });
   if (!authToken) {
+    posthog.capture({
+      distinctId,
+      event: "chat_error",
+      properties: { error: "Missing Convex auth token", userId: user.userId },
+    });
     return NextResponse.json(
       { error: { message: "Error: Missing Convex auth token!" } },
       { status: 401 },
@@ -42,6 +52,7 @@ export async function POST(req: Request) {
 
   const [data, error] = await tryCatch(() => getRequestBody(req, user.userId));
   if (error) {
+    posthog.capture({ distinctId, event: "chat_error", properties: { error: error.message } });
     return NextResponse.json({ error: { message: error.message } }, { status: 400 });
   }
 
@@ -55,7 +66,15 @@ export async function POST(req: Request) {
     config,
   } = data;
 
+  const streamId = generateId();
   const startTime = Date.now();
+
+  posthog.capture({
+    distinctId,
+    event: "chat_request",
+    properties: { userId: user.userId, model, streamId },
+  });
+
   const result = streamText({
     model: registry.languageModel(model),
     system: "You are a helpful assistant.",
@@ -79,10 +98,15 @@ export async function POST(req: Request) {
         messageId: assistantMessageId,
         error: err.message,
       });
+
+      posthog.capture({
+        distinctId,
+        event: "chat_error",
+        properties: { error: err.message, model, streamId, userId: user.userId },
+      });
     },
   });
 
-  const streamId = generateId();
   await serverConvexClient.mutation(api.messages.updateMessageById, {
     threadId,
     messageId: assistantMessageId,
@@ -186,6 +210,12 @@ export async function POST(req: Request) {
   waitUntil(updateTitle(messages, threadId));
 
   req.signal.onabort = async () => {
+    console.log("[Chat] Chat request aborted");
+    posthog.capture({
+      distinctId,
+      event: "chat_aborted",
+      properties: { model, streamId, userId: user.userId },
+    });
     await reader.cancel(new Error("Request aborted"));
   };
 
