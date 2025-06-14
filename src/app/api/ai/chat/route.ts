@@ -14,6 +14,7 @@ import { generateId, streamText, type AISDKError } from "ai";
 import { getRequestBody } from "@/lib/server/get-request-body";
 import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
+import { tryCatch } from "@/lib/utils";
 
 const publisher = new Redis(env.REDIS_URL);
 const subscriber = new Redis(env.REDIS_URL);
@@ -39,8 +40,13 @@ export async function POST(req: Request) {
   }
   serverConvexClient.setAuth(authToken);
 
+  const [data, error] = await tryCatch(() => getRequestBody(req, user.userId));
+  if (error) {
+    return NextResponse.json({ error: { message: error.message } }, { status: 400 });
+  }
+
   const { messages, transformedMessages, assistantMessageId, threadId, model, providerOptions } =
-    await getRequestBody(req, user.userId);
+    data;
 
   const startTime = Date.now();
   const result = streamText({
