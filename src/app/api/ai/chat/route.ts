@@ -62,11 +62,17 @@ export async function POST(req: Request) {
     messages: transformedMessages,
     providerOptions,
     abortSignal: req.signal,
-    ...config,
+
+    topP: config.topP,
+    topK: config.topK,
+    temperature: config.temperature,
+    maxOutputTokens: config.maxTokens,
+    presencePenalty: config.presencePenalty,
+    frequencyPenalty: config.frequencyPenalty,
 
     async onError({ error }) {
       const err = error as AISDKError;
-      console.log("[Chat] Error:", { err, req: req.signal });
+      console.error("[Chat] Error:", err);
 
       if (err.name === "AbortError" && req.signal.aborted) return;
       await serverConvexClient.mutation(api.messages.updateErrorMessage, {
@@ -78,12 +84,9 @@ export async function POST(req: Request) {
 
   const streamId = generateId();
   await serverConvexClient.mutation(api.messages.updateMessageById, {
-    messageId: assistantMessageId,
     threadId,
-    updates: {
-      status: "streaming",
-      resumableStreamId: streamId,
-    },
+    messageId: assistantMessageId,
+    updates: { status: "streaming", resumableStreamId: streamId },
   });
 
   const metadata = {
