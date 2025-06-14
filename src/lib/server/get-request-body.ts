@@ -31,12 +31,16 @@ const inputSchema = z.object({
   config: z
     .object({
       webSearch: z.boolean(),
-      reasoning: z.union([
-        z.number().min(0).max(32_768),
-        z.enum(["low", "medium", "high"]),
-        z.literal(false),
-      ]),
+      reasoningEffort: z.enum(["low", "medium", "high"]),
+      thinkingBudget: z.number().min(0).max(32_768),
+
       model: z.string(),
+      temperature: z.number().min(0).max(1),
+      topP: z.number().min(0).max(1),
+      topK: z.number().min(1).max(100),
+      maxTokens: z.number().min(1024).max(65_536),
+      presencePenalty: z.number().min(0).max(1),
+      frequencyPenalty: z.number().min(0).max(1),
     })
     .partial(),
 });
@@ -68,17 +72,13 @@ export async function getRequestBody(req: Request, userId: string) {
     openai: {} as OpenAIResponsesProviderOptions,
   };
 
-  if (config?.reasoning) {
-    if (typeof config.reasoning === "number") {
-      providerOptions.google.thinkingConfig = {
-        includeThoughts: true,
-        thinkingBudget: config.reasoning,
-      };
-    }
+  if (config?.thinkingBudget || config?.reasoningEffort) {
+    providerOptions.google.thinkingConfig = {
+      includeThoughts: true,
+      thinkingBudget: config.thinkingBudget,
+    };
 
-    if (typeof config.reasoning === "string") {
-      providerOptions.openai = { reasoningEffort: config.reasoning };
-    }
+    providerOptions.openai = { reasoningEffort: config.reasoningEffort };
   }
 
   if (config?.webSearch) {

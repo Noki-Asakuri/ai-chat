@@ -44,6 +44,6 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 - [ ] Add Settings page
 - [ ] Custom system prompts
 - [ ] Agents selection
-- [ ] Add support to change model params
+- [x] Add support to change model params
 - [ ] Drag and drop files
 - [ ] Remove attachments on messages.

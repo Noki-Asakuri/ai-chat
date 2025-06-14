@@ -8,8 +8,15 @@ import { getModelData } from "./models";
 
 const DEFAULT_CONFIG = {
   webSearch: false,
-  reasoning: false,
+  reasoningEffort: "medium",
+  thinkingBudget: 0,
   model: "google/gemini-2.5-flash-preview-05-20",
+  temperature: 1,
+  topP: 1,
+  topK: 40,
+  maxTokens: 4096,
+  presencePenalty: 0,
+  frequencyPenalty: 0,
 } as const;
 
 function getChatConfigFromLS() {
@@ -23,9 +30,15 @@ function getChatConfigFromLS() {
   const schema = z.object({
     model: z.string().catch(DEFAULT_CONFIG.model),
     webSearch: z.boolean().catch(DEFAULT_CONFIG.webSearch),
-    reasoning: z
-      .union([z.enum(["high", "medium", "low"]), z.number(), z.literal(false)])
-      .catch(DEFAULT_CONFIG.reasoning),
+    thinkingBudget: z.number().catch(DEFAULT_CONFIG.thinkingBudget),
+    reasoningEffort: z.enum(["low", "medium", "high"]).catch(DEFAULT_CONFIG.reasoningEffort),
+
+    temperature: z.number().catch(DEFAULT_CONFIG.temperature),
+    topP: z.number().catch(DEFAULT_CONFIG.topP),
+    topK: z.number().catch(DEFAULT_CONFIG.topK),
+    maxTokens: z.number().catch(DEFAULT_CONFIG.maxTokens),
+    presencePenalty: z.number().catch(DEFAULT_CONFIG.presencePenalty),
+    frequencyPenalty: z.number().catch(DEFAULT_CONFIG.frequencyPenalty),
   });
 
   try {
@@ -140,25 +153,29 @@ export const useChatStore = create<ChatState>((set) => ({
   setChatConfig: (config) =>
     set((state) => {
       const newConfig = { ...state.chatConfig, ...config };
+      const model = getModelData(newConfig.model);
 
       if (config.model) {
-        const model = getModelData(config.model);
-
-        if (!model.capabilities.reasoning) newConfig.reasoning = false;
         if (!model.capabilities.webSearch) newConfig.webSearch = false;
 
-        if (model.capabilities.reasoning === "options") newConfig.reasoning = "medium";
-        if (
-          typeof model.capabilities.reasoning === "object" &&
-          model.capabilities.reasoning.type === "slider"
-        ) {
-          if (typeof newConfig.reasoning !== "number") {
-            newConfig.reasoning = model.capabilities.reasoning.min;
-          } else if (newConfig.reasoning < model.capabilities.reasoning.min) {
-            newConfig.reasoning = model.capabilities.reasoning.min;
-          } else if (newConfig.reasoning > model.capabilities.reasoning.max) {
-            newConfig.reasoning = model.capabilities.reasoning.max;
-          }
+        if (model.capabilities.reasoning === "budget") {
+          const value = Math.max(
+            model.capabilities.budgetLimit!.min,
+            Math.min(model.capabilities.budgetLimit!.max, newConfig.thinkingBudget),
+          );
+
+          newConfig.thinkingBudget = value;
+        }
+
+        if (newConfig.maxTokens > model.capabilities.maxTokens) {
+          newConfig.maxTokens = model.capabilities.maxTokens;
+        }
+      }
+
+      if (typeof newConfig.thinkingBudget === "number" && newConfig.thinkingBudget > 0) {
+        const maxBudget = Math.floor(newConfig.maxTokens * 0.8);
+        if (newConfig.thinkingBudget > maxBudget) {
+          newConfig.thinkingBudget = maxBudget;
         }
       }
 

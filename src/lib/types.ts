@@ -8,13 +8,26 @@ export type Thread = {
   branchedFrom?: Id<"threads">;
 };
 
-export type ReasoningEffort = "low" | "medium" | "high" | number | false;
+export type ReasoningEffort = "low" | "medium" | "high";
+export type ThinkingBudget = number;
 
 export type ChatRequest = {
   threadId: Id<"threads">;
   assistantMessageId: Id<"messages">;
   messages: Omit<InputMessage, "messageId">[];
-  config: { webSearch: boolean; reasoning: ReasoningEffort; model: string };
+  config: {
+    temperature: number;
+    topP: number;
+    topK: number;
+    maxTokens: number;
+    presencePenalty: number;
+    frequencyPenalty: number;
+
+    webSearch: boolean;
+    reasoningEffort: ReasoningEffort;
+    thinkingBudget: ThinkingBudget;
+    model: string;
+  };
 };
 
 export type InputMessage = {

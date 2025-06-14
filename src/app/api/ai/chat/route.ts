@@ -45,22 +45,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: { message: error.message } }, { status: 400 });
   }
 
-  const { messages, transformedMessages, assistantMessageId, threadId, model, providerOptions } =
-    data;
+  const {
+    messages,
+    transformedMessages,
+    assistantMessageId,
+    threadId,
+    model,
+    providerOptions,
+    config,
+  } = data;
 
   const startTime = Date.now();
   const result = streamText({
     model: registry.languageModel(model),
     system: "You are a helpful assistant.",
-    topK: 40,
-    topP: 0.87,
-    temperature: 1.6,
-    presencePenalty: 0.2,
-    frequencyPenalty: 0.2,
     messages: transformedMessages,
     providerOptions,
     abortSignal: req.signal,
-    maxOutputTokens: 64000,
+    ...config,
 
     async onError({ error }) {
       const err = error as AISDKError;

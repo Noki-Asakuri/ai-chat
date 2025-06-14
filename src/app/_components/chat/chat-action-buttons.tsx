@@ -4,7 +4,7 @@ import { ModelPicker } from "../model-picker";
 import { ButtonWithTip } from "../ui/button";
 
 import { ChatAttachmentButton } from "./chat-attachment-display";
-import { ChatReasoningPopup } from "./chat-reasoning-popup";
+import { ChatParamsPopup } from "./chat-params-popup";
 
 import { getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
@@ -33,7 +33,7 @@ export function ChatActionButtons() {
         </span>
       </ButtonWithTip>
 
-      <ChatReasoningPopup />
+      <ChatParamsPopup />
       <ChatAttachmentButton />
     </div>
   );
