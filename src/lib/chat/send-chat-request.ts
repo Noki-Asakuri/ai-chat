@@ -48,7 +48,7 @@ export async function sendChatRequest(
             break;
 
           case "finish":
-            metadata = stream.metadata as ChatMessage["metadata"];
+            metadata = stream.messageMetadata as ChatMessage["metadata"];
             state.setStatus("complete");
             break;
         }

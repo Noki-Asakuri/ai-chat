@@ -16,10 +16,10 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/deepseek": "^1.0.0-alpha.12",
-    "@ai-sdk/google": "^2.0.0-alpha.12",
-    "@ai-sdk/openai": "^2.0.0-alpha.12",
-    "@ai-sdk/react": "^2.0.0-alpha.12",
+    "@ai-sdk/deepseek": "^1.0.0-alpha.13",
+    "@ai-sdk/google": "^2.0.0-alpha.13",
+    "@ai-sdk/openai": "^2.0.0-alpha.13",
+    "@ai-sdk/react": "^2.0.0-alpha.13",
     "@clerk/nextjs": "^6.21.0",
     "@clerk/themes": "^2.2.49",
     "@convex-dev/r2": "^0.6.1",
@@ -46,7 +46,7 @@
     "@vercel/analytics": "^1.5.0",
     "@vercel/functions": "^2.2.0",
     "@vercel/speed-insights": "^1.2.0",
-    "ai": "^5.0.0-alpha.12",
+    "ai": "^5.0.0-alpha.13",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
