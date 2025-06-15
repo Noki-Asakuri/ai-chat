@@ -17,6 +17,7 @@ export function ChatActionButtons() {
   return (
     <div className="flex items-center justify-center gap-2">
       <ModelPicker />
+      <ChatParamsPopup />
 
       <ButtonWithTip
         type="button"
@@ -33,7 +34,6 @@ export function ChatActionButtons() {
         </span>
       </ButtonWithTip>
 
-      <ChatParamsPopup />
       <ChatAttachmentButton />
     </div>
   );

@@ -37,6 +37,7 @@ export function ChatParamsPopup() {
             max={2}
             step={0.01}
             onChange={(value) => setChatConfig({ temperature: value })}
+            hidden={!modelConfig.capabilities.config.temperature}
           />
           <ParameterSlider
             label="Top P"
@@ -45,6 +46,7 @@ export function ChatParamsPopup() {
             max={1}
             step={0.01}
             onChange={(value) => setChatConfig({ topP: value })}
+            hidden={!modelConfig.capabilities.config.topP}
           />
           <ParameterSlider
             label="Top K"
@@ -53,6 +55,7 @@ export function ChatParamsPopup() {
             max={100}
             step={1}
             onChange={(value) => setChatConfig({ topK: value })}
+            hidden={!modelConfig.capabilities.config.topP}
           />
           <ParameterSlider
             label="Presence Penalty"
@@ -61,6 +64,7 @@ export function ChatParamsPopup() {
             max={1}
             step={0.01}
             onChange={(value) => setChatConfig({ presencePenalty: value })}
+            hidden={!modelConfig.capabilities.config.presencePenalty}
           />
           <ParameterSlider
             label="Frequency Penalty"
@@ -69,6 +73,7 @@ export function ChatParamsPopup() {
             max={1}
             step={0.01}
             onChange={(value) => setChatConfig({ frequencyPenalty: value })}
+            hidden={!modelConfig.capabilities.config.frequencyPenalty}
           />
           <ParameterSlider
             label="Max Tokens"
@@ -99,14 +104,15 @@ type ParameterSliderProps = {
   max: number;
   step: number;
   onChange: (value: number) => void;
+  hidden?: boolean;
 };
 
-function ParameterSlider({ label, value, min, max, step, onChange }: ParameterSliderProps) {
+function ParameterSlider({ label, value, min, max, step, hidden, onChange }: ParameterSliderProps) {
   const [inputValue, setInputValue] = useState(value);
 
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between">
+    <div hidden={hidden} className="space-y-2">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-sm font-medium">{label}</span>
         <input
           type="number"
@@ -139,24 +145,21 @@ function ParameterSlider({ label, value, min, max, step, onChange }: ParameterSl
 }
 
 function SliderReasoning({ min, max }: { min: number; max: number }) {
-  const thinkingBudget = useChatStore((state) => state.chatConfig.thinkingBudget);
   const maxTokens = useChatStore((state) => state.chatConfig.maxTokens);
+  const thinkingBudget = useChatStore((state) => state.chatConfig.thinkingBudget);
 
   const setChatConfig = useChatStore((state) => state.setChatConfig);
 
   const [localBudget, setBudget] = useState(thinkingBudget);
-
   const maxBudget = Math.floor(maxTokens * 0.8);
-  const isCapped = localBudget >= maxBudget;
 
   useEffect(() => {
     if (localBudget > maxBudget) setBudget(maxBudget);
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maxBudget]);
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">Thinking Budget</span>
         <input
@@ -186,10 +189,7 @@ function SliderReasoning({ min, max }: { min: number; max: number }) {
         onValueCommit={([value]) => setChatConfig({ thinkingBudget: value! })}
       />
 
-      <p
-        data-is-capped={isCapped}
-        className="text-muted-foreground invisible text-xs data-[is-capped=true]:visible"
-      >
+      <p className="text-muted-foreground text-xs">
         Thinking budget can not exceed 80% of max tokens.
       </p>
     </div>

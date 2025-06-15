@@ -11,6 +11,13 @@ export function getModelData(modelId: AllModelIds | (string & {})): ModelData {
     displayName: modelId,
     provider: "unknown",
     capabilities: {
+      config: {
+        temperature: true,
+        topP: true,
+        topK: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
       webSearch: false,
       reasoning: false,
       vision: false,
@@ -23,6 +30,13 @@ type Capability = {
   webSearch: boolean;
   reasoning: "budget" | "effort" | "always" | false;
   budgetLimit?: { min: number; max: number };
+  config: {
+    temperature?: boolean;
+    topP?: boolean;
+    topK?: boolean;
+    presencePenalty?: boolean;
+    frequencyPenalty?: boolean;
+  };
 
   vision: boolean;
   maxTokens: number;
@@ -48,6 +62,11 @@ export const ModelsData = {
       budgetLimit: { min: 0, max: 24_576 },
       vision: true,
       maxTokens: 65_536,
+      config: {
+        temperature: true,
+        topP: true,
+        topK: true,
+      },
     },
   },
   "google/gemini-2.5-pro-preview-06-05": {
@@ -60,6 +79,11 @@ export const ModelsData = {
       budgetLimit: { min: 128, max: 32_768 },
       vision: true,
       maxTokens: 65_536,
+      config: {
+        temperature: true,
+        topP: true,
+        topK: true,
+      },
     },
   },
   "google/gemini-2.0-flash": {
@@ -70,6 +94,13 @@ export const ModelsData = {
       reasoning: false,
       vision: true,
       maxTokens: 8_192,
+      config: {
+        temperature: true,
+        topP: true,
+        topK: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
     },
   },
   "google/gemini-2.0-flash-lite": {
@@ -80,6 +111,13 @@ export const ModelsData = {
       reasoning: false,
       vision: true,
       maxTokens: 8_192,
+      config: {
+        temperature: true,
+        topP: true,
+        topK: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
     },
   },
 
@@ -91,6 +129,13 @@ export const ModelsData = {
       reasoning: false,
       vision: false,
       maxTokens: 8_192,
+      config: {
+        temperature: true,
+        topP: true,
+        topK: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
     },
   },
   "deepseek/deepseek-reasoner": {
@@ -101,6 +146,7 @@ export const ModelsData = {
       reasoning: "always",
       vision: false,
       maxTokens: 65_536,
+      config: {},
     },
   },
 
@@ -112,6 +158,12 @@ export const ModelsData = {
       reasoning: false,
       vision: true,
       maxTokens: 32_768,
+      config: {
+        temperature: true,
+        topP: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
     },
   },
   "openai/gpt-4.1-mini": {
@@ -122,6 +174,12 @@ export const ModelsData = {
       reasoning: false,
       vision: true,
       maxTokens: 32_768,
+      config: {
+        temperature: true,
+        topP: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
     },
   },
   "openai/chatgpt-4o": {
@@ -132,6 +190,12 @@ export const ModelsData = {
       reasoning: false,
       vision: true,
       maxTokens: 16_384,
+      config: {
+        temperature: true,
+        topP: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
     },
   },
   "openai/gpt-4o": {
@@ -142,6 +206,12 @@ export const ModelsData = {
       reasoning: false,
       vision: true,
       maxTokens: 16_384,
+      config: {
+        temperature: true,
+        topP: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
     },
   },
   "openai/gpt-4o-mini": {
@@ -152,6 +222,12 @@ export const ModelsData = {
       reasoning: false,
       vision: true,
       maxTokens: 16_384,
+      config: {
+        temperature: true,
+        topP: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
     },
   },
   "openai/o3": {
@@ -162,6 +238,12 @@ export const ModelsData = {
       reasoning: "effort",
       vision: true,
       maxTokens: 100_000,
+      config: {
+        temperature: true,
+        topP: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
     },
   },
 
@@ -173,6 +255,12 @@ export const ModelsData = {
       reasoning: "effort",
       vision: true,
       maxTokens: 100_000,
+      config: {
+        temperature: true,
+        topP: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
     },
   },
   "openai/o4-mini": {
@@ -183,6 +271,12 @@ export const ModelsData = {
       reasoning: "effort",
       vision: true,
       maxTokens: 100_000,
+      config: {
+        temperature: true,
+        topP: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
     },
   },
 
@@ -194,6 +288,12 @@ export const ModelsData = {
       reasoning: false,
       vision: true,
       maxTokens: 16_384,
+      config: {
+        temperature: true,
+        topP: true,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
     },
   },
 } satisfies Record<ModelIdKey, ModelData>;
