@@ -1,8 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { v4 as uuidv4 } from "uuid";
-
 import { sendChatRequest } from "./send-chat-request";
 import { chatStore } from "./store";
 
@@ -28,7 +26,7 @@ export async function retryMessage(
     id: message.messageId,
     role: message.role,
     content: message.content,
-    attachments: message.attachments?.map((attachment) => attachment._id),
+    attachments: message.attachments,
   }));
 
   await convexClient.mutation(api.messages.retryChatMessage, {
