@@ -145,6 +145,13 @@
   }
 }
 
+.codeblock pre.shiki,
+.custom-scroll,
+#textarea-chat-input {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
 .codeblock pre.shiki::-webkit-scrollbar,
 .custom-scroll::-webkit-scrollbar,
 #textarea-chat-input::-webkit-scrollbar {

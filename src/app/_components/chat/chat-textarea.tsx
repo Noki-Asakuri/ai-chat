@@ -70,42 +70,52 @@ function InputTextArea() {
   const addAttachment = useChatStore((state) => state.addAttachment);
 
   return (
-    <Textarea
-      rows={3}
-      name="user-input"
-      id="textarea-chat-input"
-      value={input}
-      placeholder="Type your message here..."
-      onChange={(event) => setChatInput(event.target.value)}
-      className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
-      onPaste={(event) => {
-        const { items } = event.clipboardData;
-        const acceptedFiles = Array.from(items).filter(
-          (item) => item.type.includes("image") || item.type.includes("pdf"),
-        );
+    <div className="flex flex-grow flex-row items-start">
+      <Textarea
+        rows={3}
+        name="user-input"
+        id="textarea-chat-input"
+        autoComplete="off"
+        aria-multiline="true"
+        aria-autocomplete="none"
+        aria-describedby="textarea-description"
+        aria-label="Type your message here..."
+        placeholder="Type your message here..."
+        value={input}
+        onChange={(event) => setChatInput(event.target.value)}
+        className="max-h-[250px] min-h-0 w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
+        onPaste={(event) => {
+          const { items } = event.clipboardData;
+          const acceptedFiles = Array.from(items).filter(
+            (item) => item.type.includes("image") || item.type.includes("pdf"),
+          );
 
-        if (acceptedFiles.length > 0) {
-          event.preventDefault();
-          const files = acceptedFiles.map((item) => {
-            const file = item.getAsFile();
-            if (!file) throw new Error("Failed to get file from item");
+          if (acceptedFiles.length > 0) {
+            event.preventDefault();
+            const files = acceptedFiles.map((item) => {
+              const file = item.getAsFile();
+              if (!file) throw new Error("Failed to get file from item");
 
-            let type: "image" | "pdf" = "image";
-            if (item.type.includes("pdf")) {
-              type = "pdf";
-            }
+              let type: "image" | "pdf" = "image";
+              if (item.type.includes("pdf")) {
+                type = "pdf";
+              }
 
-            return { id: crypto.randomUUID(), name: file.name, size: file.size, file, type };
-          });
-          addAttachment(files);
-        }
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" && !event.shiftKey) {
-          event.preventDefault();
-          void submitChatMessage({ router });
-        }
-      }}
-    />
+              return { id: crypto.randomUUID(), name: file.name, size: file.size, file, type };
+            });
+            addAttachment(files);
+          }
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && (!event.shiftKey || event.metaKey || event.ctrlKey)) {
+            event.preventDefault();
+            void submitChatMessage({ router });
+          }
+        }}
+      />
+      <span id="textarea-description" className="sr-only">
+        Press enter to send message. Shift + enter or Ctrl + enter to add new line.
+      </span>
+    </div>
   );
 }

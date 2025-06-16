@@ -22,9 +22,9 @@ export async function GET() {
             viewBox="-8 -8 40 40"
             fill="none"
             stroke="#e0d4ff"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             style={{
               filter: "drop-shadow(0px 5px 6px black) drop-shadow(0px 4px 10px black)",
             }}
