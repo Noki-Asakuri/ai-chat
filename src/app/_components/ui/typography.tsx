@@ -1,6 +1,6 @@
 export function TypographyP({ children }: React.ComponentProps<"p">) {
   return (
-    <p className="leading-7 [&:not(:first-child)]:mt-6 [&:not(:last-child)]:mb-6">{children}</p>
+    <p className="leading-7 [&:not(:first-child)]:mt-4 [&:not(:last-child)]:mb-4">{children}</p>
   );
 }
 
@@ -14,7 +14,7 @@ export function TypographyH1({ children }: React.ComponentProps<"h1">) {
 
 export function TypographyH2({ children }: React.ComponentProps<"h2">) {
   return (
-    <h2 className="scroll-m-20 border-b pb-6 text-3xl font-semibold tracking-tight first:mt-0">
+    <h2 className="scroll-m-20 border-b pb-4 text-3xl font-semibold tracking-tight first:mt-0">
       {children}
     </h2>
   );
@@ -29,15 +29,23 @@ export function TypographyH4({ children }: React.ComponentProps<"h4">) {
 }
 
 export function TypographyBlockquote({ children }: React.ComponentProps<"blockquote">) {
-  return <blockquote className="mt-6 border-l-2 pl-6 italic">{children}</blockquote>;
+  return <blockquote className="mt-4 border-l-2 pl-6 italic">{children}</blockquote>;
 }
 
 export function TypographyUnorderedList({ children }: React.ComponentProps<"ul">) {
-  return <ul className="ml-6 list-disc [&>li]:mt-2">{children}</ul>;
+  return (
+    <ul className="ml-6 list-disc [&>li]:my-2 [&>li:first-child]:mt-4 [&>li:last-child]:mb-4">
+      {children}
+    </ul>
+  );
 }
 
 export function TypographyOrderedList({ children }: React.ComponentProps<"ul">) {
-  return <ol className="ml-6 list-decimal [&>li]:mt-2">{children}</ol>;
+  return (
+    <ol className="ml-6 list-decimal [&>li]:my-2 [&>li:first-child]:mt-4 [&>li:last-child]:mb-4">
+      {children}
+    </ol>
+  );
 }
 
 export function TypographyInlineCode({ children }: React.ComponentProps<"code">) {

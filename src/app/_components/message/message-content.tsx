@@ -13,7 +13,7 @@ type MessageContentProps = {
 export function MessageContent({ message, content }: MessageContentProps) {
   return (
     <div
-      className={cn("space-y-6", {
+      className={cn("space-y-4", {
         "bg-sidebar/50 rounded-md border px-4 py-2": message.role === "user",
         "bg-destructive/20 border-destructive/50 rounded-md border px-4 py-2 backdrop-blur-md":
           message.status === "error",
