@@ -9,6 +9,7 @@ import { redirect, useParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { LoadingPage } from "@/components/loading-page";
+import PostHogIdentify from "@/components/posthog-identify";
 import { RegisterHotkeys } from "@/components/register-hotkeys";
 import { ThreadGroupButtons } from "@/components/threads/thread-group-buttons";
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
@@ -25,9 +26,9 @@ const ChatTextarea = dynamic(
 
 function Chat({ children }: { children: React.ReactNode }) {
   const params = useParams<{ threadId?: string }>();
-  const threadId = useChatStore((state) => state.threadId);
-
   const resumeRef = useRef<boolean>(false);
+
+  const threadId = useChatStore((state) => state.threadId);
   const setThreadId = useChatStore((state) => state.setThreadId);
 
   const data = useQuery(api.messages.getAllMessagesFromThread, {
@@ -95,6 +96,8 @@ function Chat({ children }: { children: React.ReactNode }) {
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
+      <PostHogIdentify />
+
       <Authenticated>
         <Chat children={children} />
       </Authenticated>
