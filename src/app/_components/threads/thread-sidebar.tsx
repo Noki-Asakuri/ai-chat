@@ -48,7 +48,7 @@ export function ThreadSidebar() {
   return (
     <Sidebar variant="inset">
       <SidebarHeader>
-        <span className="text-center text-lg">AI Chat</span>
+        <span className="text-center text-xl">AI Chat</span>
       </SidebarHeader>
 
       <SidebarContent className="px-2 md:px-0">
@@ -56,7 +56,7 @@ export function ThreadSidebar() {
           to="/"
           className="hover:bg-primary/20 bg-sidebar rounded-md border px-3 py-1.5 text-center transition-colors"
         >
-          <span className="line-clamp-1 w-full text-sm">Create new thread</span>
+          <span className="line-clamp-1 w-full">Create new thread</span>
         </NavLink>
 
         <div className="custom-scroll space-y-2 overflow-y-auto pr-1">

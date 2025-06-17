@@ -18,10 +18,14 @@ export function ThreadGroup({ title, threads, defaultOpen = true }: ThreadGroupP
   return (
     <Collapsible defaultOpen={defaultOpen} className="group/collapsible">
       <SidebarGroup>
-        <SidebarGroupLabel asChild className="text-primary px-2 text-sm font-medium">
+        <SidebarGroupLabel asChild className="text-primary px-2 text-base font-medium">
           <CollapsibleTrigger>
-            {title}
-            <ChevronDownIcon className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+            <span>{title}</span>
+
+            <div className="ml-auto flex items-center justify-center gap-2">
+              <span className="text-xs">{threads.length}</span>
+              <ChevronDownIcon className="transition-transform group-data-[state=open]/collapsible:rotate-180" />
+            </div>
           </CollapsibleTrigger>
         </SidebarGroupLabel>
 
