@@ -1,6 +1,6 @@
 "use client";
 
-import { ClerkProvider, useAuth } from "@clerk/nextjs";
+import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import { ConvexQueryCacheProvider } from "convex-helpers/react/cache";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 
@@ -11,7 +11,10 @@ const convex = getConvexReactClient();
 
 export function ConvexClientProvider({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider publishableKey={env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY} waitlistUrl="/auth/waitlist">
+    <ClerkProvider
+      publishableKey={env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      waitlistUrl="/auth/waitlist"
+    >
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <ConvexQueryCacheProvider>{children}</ConvexQueryCacheProvider>
       </ConvexProviderWithClerk>

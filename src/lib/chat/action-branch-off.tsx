@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 
-import type { useRouter } from "next/navigation";
+import type { useNavigate } from "react-router";
 
 import { getConvexReactClient } from "../convex/client";
 import type { ChatMessage } from "../types";
@@ -8,7 +8,10 @@ import { toUUID } from "../utils";
 
 const convexClient = getConvexReactClient();
 
-export async function handleBranchOff(message: ChatMessage, router: ReturnType<typeof useRouter>) {
+export async function handleBranchOff(
+  message: ChatMessage,
+  navigate: ReturnType<typeof useNavigate>,
+) {
   console.log("Branch off", message._creationTime);
 
   const newThreadId = await convexClient.mutation(api.threads.branchThread, {
@@ -16,5 +19,5 @@ export async function handleBranchOff(message: ChatMessage, router: ReturnType<t
     threadId: message.threadId,
   });
 
-  router.push(`/chat/${toUUID(newThreadId)}`);
+  await navigate(`/chat/${toUUID(newThreadId)}`);
 }

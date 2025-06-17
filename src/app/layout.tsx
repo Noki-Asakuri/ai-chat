@@ -4,12 +4,6 @@ import "katex/dist/katex.min.css";
 import { type Metadata } from "next";
 import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
 
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/react";
-
-import { ConvexClientProvider } from "./_components/provider/convex-client";
-import { Toaster } from "./_components/ui/sonner";
-
 import { env } from "@/env";
 
 export const metadata: Metadata = {
@@ -44,13 +38,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         )}
       </head>
 
-      <body className="dark">
-        <ConvexClientProvider>{children}</ConvexClientProvider>
-        <Toaster />
-
-        <Analytics basePath="/api/vercel" />
-        <SpeedInsights basePath="/api/vercel" />
-      </body>
+      <body className="dark">{children}</body>
     </html>
   );
 }

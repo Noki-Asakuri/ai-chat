@@ -1,5 +1,5 @@
 import { PlusIcon } from "lucide-react";
-import Link from "next/link";
+import { NavLink } from "react-router";
 
 import { Button } from "../ui/button";
 import { SidebarTrigger, useSidebar } from "../ui/sidebar";
@@ -25,12 +25,12 @@ export function ThreadGroupButtons() {
         asChild
         size="icon"
         variant="ghost"
-        className={cn("size-7 group-data-[state=expanded]:hidden")}
+        className="size-7 group-data-[state=expanded]:hidden"
       >
-        <Link href="/">
+        <NavLink to="/">
           <PlusIcon />
           <span className="sr-only">New Thread</span>
-        </Link>
+        </NavLink>
       </Button>
     </div>
   );

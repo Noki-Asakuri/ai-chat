@@ -1,8 +1,8 @@
 import { PencilIcon, RefreshCcwIcon, SaveIcon, SplitIcon, XIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router";
 
-import { ButtonWithTip } from "../ui/button";
 import { CopyButton } from "../copy-button";
+import { ButtonWithTip } from "../ui/button";
 
 import { handleBranchOff } from "@/lib/chat/action-branch-off";
 import { retryMessage } from "@/lib/chat/retry-message";
@@ -19,7 +19,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
   const setEditMessage = useChatStore((state) => state.setEditMessage);
   const editMessage = useChatStore((state) => state.editMessage);
 
-  const router = useRouter();
+  const navigate = useNavigate();
 
   async function handleEditMessage() {
     if (message.role === "assistant") return;
@@ -50,7 +50,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
         <ButtonWithTip
           variant="ghost"
           className="size-10"
-          onMouseDown={() => handleBranchOff(message, router)}
+          onMouseDown={() => handleBranchOff(message, navigate)}
           title="Branch Off"
           disabled={message.status === "pending" || message.status === "streaming"}
         >

@@ -49,24 +49,19 @@ const nextConfig = {
         source: "/api/vercel/:path*",
         destination: `${host}/_vercel/:path*`,
       },
+      {
+        // 👇 matches all routes except /api
+        source: "/((?!api/).*)",
+        destination: "/static-app-shell",
+      },
     ];
   },
   async redirects() {
     return [
       {
-        source: "/auth/settings",
-        destination: "/auth/settings/account",
-        permanent: false,
-      },
-      {
-        source: "/chat",
-        destination: "/",
-        permanent: true,
-      },
-      {
-        destination: "/manifest.webmanifest",
         permanent: true,
         source: "/manifest.json",
+        destination: "/manifest.webmanifest",
       },
     ];
   },
@@ -98,4 +93,4 @@ const nextConfig = {
   },
 };
 
-export default withSerwist(nextConfig);
+export default nextConfig;

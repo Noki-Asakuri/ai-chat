@@ -1,16 +1,17 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { type useRouter } from "next/navigation";
+import type { useNavigate } from "react-router";
 import { v4 as uuidv4 } from "uuid";
 
 import { getConvexReactClient } from "../convex/client";
+import { uploadFile } from "../convex/uploadFiles";
+
 import { processChatStream } from "./process-stream";
 import { chatStore } from "./store";
 
 import type { ChatMessage, ChatRequest } from "../types";
 import { toUUID } from "../utils";
-import { uploadFile } from "../convex/uploadFiles";
 
 const convexClient = getConvexReactClient();
 
@@ -77,10 +78,10 @@ export async function sendChatRequest(
 }
 
 type SubmitChatMessageParams = {
-  router: ReturnType<typeof useRouter>;
+  navigate: ReturnType<typeof useNavigate>;
 };
 
-export async function submitChatMessage({ router }: SubmitChatMessageParams) {
+export async function submitChatMessage({ navigate }: SubmitChatMessageParams) {
   const state = chatStore.getState();
   const chatInput = state.chatInput.trim();
 
@@ -95,7 +96,7 @@ export async function submitChatMessage({ router }: SubmitChatMessageParams) {
     threadId = await convexClient.mutation(api.threads.createThread, { title: "New Chat" });
     state.setThreadId(threadId);
 
-    router.push(`/chat/${toUUID(threadId)}`);
+    await navigate(`/chat/${toUUID(threadId)}`);
   }
 
   const userMessage = {

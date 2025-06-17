@@ -1,52 +1,49 @@
 import { api } from "@/convex/_generated/api";
 
 import { GitBranchIcon, PinIcon, PinOffIcon } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { NavLink, useNavigate } from "react-router";
 
 import { ButtonWithTip } from "../ui/button";
+import { ThreadDeleteDialog } from "./thread-delete-dialog";
 
-import { useChatStore } from "@/lib/chat/store";
 import { getConvexReactClient } from "@/lib/convex/client";
 import type { Thread } from "@/lib/types";
 import { cn, toUUID } from "@/lib/utils";
-import { ThreadDeleteDialog } from "./thread-delete-dialog";
 
 const convexClient = getConvexReactClient();
 
 export function ThreadItem({ thread }: { thread: Thread }) {
-  const activeThreadId = useChatStore((state) => state.threadId);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   function pinThread(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
     event.preventDefault();
 
     console.debug("[Thread] Pin thread", thread);
-
     void convexClient.mutation(api.threads.pinThread, {
       threadId: thread._id,
       pinned: !thread.pinned,
     });
   }
 
-  function goToParentThread(event: React.MouseEvent<HTMLButtonElement>) {
+  async function goToParentThread(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
     event.preventDefault();
 
-    router.push(`/chat/${toUUID(thread.branchedFrom!)}`);
+    await navigate(`/chat/${toUUID(thread.branchedFrom!)}`);
   }
 
   return (
-    <Link
-      href={`/chat/${toUUID(thread._id)}`}
+    <NavLink
+      to={`/chat/${toUUID(thread._id)}`}
       title={thread.title}
-      prefetch={false}
-      className={cn(
-        "group/thread relative isolate flex overflow-hidden px-3 py-1.5",
-        "text-sidebar-primary-foreground hover:bg-sidebar-primary/20 rounded-none border-l-2 border-transparent transition-colors",
-        { "border-sidebar-ring bg-sidebar-primary/20": thread._id === activeThreadId },
-      )}
+      className={({ isActive }) =>
+        cn(
+          "group/thread relative isolate flex overflow-hidden px-3 py-1.5",
+          "text-sidebar-primary-foreground hover:bg-sidebar-primary/20 rounded-none border-l-2 border-transparent transition-colors",
+          { "border-sidebar-ring bg-sidebar-primary/20": isActive },
+        )
+      }
     >
       <div className="flex items-center justify-center gap-2">
         {thread.branchedFrom && (
@@ -80,6 +77,6 @@ export function ThreadItem({ thread }: { thread: Thread }) {
           <ThreadDeleteDialog thread={thread} />
         </div>
       </div>
-    </Link>
+    </NavLink>
   );
 }

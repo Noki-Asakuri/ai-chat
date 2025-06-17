@@ -1,7 +1,6 @@
 import { SearchIcon } from "lucide-react";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { NavLink, useNavigate } from "react-router";
 
 import { Button } from "../ui/button";
 import {
@@ -60,7 +59,7 @@ type ThreadCommandGroupProps = {
 };
 
 function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const setThreadCommandOpen = useChatStore((state) => state.setThreadCommandOpen);
 
   if (threads.length === 0) return null;
@@ -72,17 +71,17 @@ function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
           key={"thread-cmd-group-" + thread._id}
           className="!p-0"
           onSelect={() => {
-            router.push(`/chat/${toUUID(thread._id)}`);
+            void navigate(`/chat/${toUUID(thread._id)}`);
             setThreadCommandOpen(false);
           }}
         >
-          <Link
+          <NavLink
             className="px-2 py-1.5"
             onClick={() => setThreadCommandOpen(false)}
-            href={`/chat/${toUUID(thread._id)}`}
+            to={{ pathname: `/chat/${toUUID(thread._id)}` }}
           >
             {thread.title}
-          </Link>
+          </NavLink>
         </CommandItem>
       ))}
     </CommandGroup>

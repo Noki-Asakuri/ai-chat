@@ -1,20 +1,21 @@
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router";
 
-import { useChatStore } from "@/lib/chat/store";
 import { abortChatRequest } from "@/lib/chat/send-chat-request";
+import { useChatStore } from "@/lib/chat/store";
 
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
 const NEW_THREAD_KEYBOARD_SHORTCUT = "n";
 
 export function RegisterHotkeys() {
-  const router = useRouter();
-  const setThreadCommandOpen = useChatStore((state) => state.setThreadCommandOpen);
-  const abortController = useChatStore((state) => state.abortController);
+  const navigate = useNavigate();
+
   const status = useChatStore((state) => state.status);
   const isStreaming = useChatStore((state) => state.isStreaming);
   const editMessage = useChatStore((state) => state.editMessage);
+
   const setEditMessage = useChatStore((state) => state.setEditMessage);
+  const setThreadCommandOpen = useChatStore((state) => state.setThreadCommandOpen);
 
   useEffect(() => {
     function handleKeyboardShortcut(event: KeyboardEvent) {
@@ -34,8 +35,10 @@ export function RegisterHotkeys() {
 
       if (event.key === "Escape") {
         if (status === "pending" || isStreaming) {
+          event.preventDefault();
           void abortChatRequest();
         } else if (editMessage) {
+          event.preventDefault();
           setEditMessage(null);
         }
       }
@@ -54,21 +57,13 @@ export function RegisterHotkeys() {
         (event.metaKey || event.ctrlKey)
       ) {
         event.preventDefault();
-        router.push("/");
+        void navigate("/");
       }
     }
 
     window.addEventListener("keydown", handleKeyboardShortcut);
     return () => window.removeEventListener("keydown", handleKeyboardShortcut);
-  }, [
-    router,
-    setThreadCommandOpen,
-    abortController,
-    status,
-    isStreaming,
-    editMessage,
-    setEditMessage,
-  ]);
+  }, [editMessage, isStreaming, navigate, setEditMessage, setThreadCommandOpen, status]);
 
   return null;
 }

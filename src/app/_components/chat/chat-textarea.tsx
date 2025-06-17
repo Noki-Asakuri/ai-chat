@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
+import { useNavigate } from "react-router";
 
 import { ScrollButton } from "../scroll-button";
 import { Textarea } from "../ui/textarea";
@@ -63,7 +63,7 @@ export function ChatTextarea() {
 }
 
 function InputTextArea() {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const input = useChatStore((state) => state.chatInput);
   const setChatInput = useChatStore((state) => state.setChatInput);
@@ -83,7 +83,7 @@ function InputTextArea() {
         placeholder="Type your message here..."
         value={input}
         onChange={(event) => setChatInput(event.target.value)}
-        className="max-h-[250px] min-h-0 w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
+        className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
         onPaste={(event) => {
           const { items } = event.clipboardData;
           const acceptedFiles = Array.from(items).filter(
@@ -109,7 +109,7 @@ function InputTextArea() {
         onKeyDown={(event) => {
           if (event.key === "Enter" && (!event.shiftKey || event.metaKey || event.ctrlKey)) {
             event.preventDefault();
-            void submitChatMessage({ router });
+            void submitChatMessage({ navigate });
           }
         }}
       />

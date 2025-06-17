@@ -1,9 +1,8 @@
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex-helpers/react/cache";
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
 import { useEffect } from "react";
+import { NavLink, useParams } from "react-router";
 
 import { ThreadGroup } from "./thread-group";
 import { ThreadUserProfile } from "./thread-user-profile";
@@ -23,6 +22,7 @@ export function ThreadSidebar() {
 
   const threads = useQuery(api.threads.getAllThreads);
   const setThreads = useChatStore((state) => state.setThreads);
+  const setThreadId = useChatStore((state) => state.setThreadId);
 
   const localThreads = JSON.parse(
     localStorage.getItem(THREAD_LOCAL_STORAGE_KEY) ?? "[]",
@@ -37,11 +37,13 @@ export function ThreadSidebar() {
   }, [threads, setThreads]);
 
   useEffect(() => {
+    setThreadId(fromUUID(threadId));
+
     const thread = threads?.find((thread) => thread._id === fromUUID(threadId));
     if (!thread) return;
 
     document.title = `${thread.title} - ${DEFAULT_TITLE}`;
-  }, [threadId, threads]);
+  }, [threadId, threads, setThreadId]);
 
   return (
     <Sidebar variant="inset">
@@ -50,12 +52,12 @@ export function ThreadSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 md:px-0">
-        <Link
-          href="/"
+        <NavLink
+          to="/"
           className="hover:bg-primary/20 bg-sidebar rounded-md border px-3 py-1.5 text-center transition-colors"
         >
           <span className="line-clamp-1 w-full text-sm">Create new thread</span>
-        </Link>
+        </NavLink>
 
         <div className="custom-scroll space-y-2 overflow-y-auto pr-1">
           <ThreadGroup threads={groupedThreads.pinned} title="Pinned" />

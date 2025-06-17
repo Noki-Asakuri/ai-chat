@@ -1,8 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { Button } from "../ui/button";
-import Link from "next/link";
+import { NavLink } from "react-router";
+
+import { buttonVariants } from "../ui/button";
+import { cn } from "@/lib/utils";
 
 const paths = [
   {
@@ -32,20 +33,20 @@ const paths = [
 ];
 
 export function UserNavbar() {
-  const pathname = usePathname();
-
   return (
     <div className="bg-primary/30 border-primary/50 w-max space-x-2 rounded-md border p-2">
       {paths.map(({ path, name }) => (
-        <Button
-          asChild
+        <NavLink
           key={path}
-          variant="ghost"
-          className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground h-max px-2 py-1 text-base"
-          data-state={pathname === path ? "active" : "inactive"}
+          to={path}
+          className={({ isActive }) =>
+            cn(buttonVariants({ variant: "ghost" }), "h-max px-2 py-1 text-base", {
+              "bg-primary text-primary-foreground": isActive,
+            })
+          }
         >
-          <Link href={path}>{name}</Link>
-        </Button>
+          {name}
+        </NavLink>
       ))}
     </div>
   );

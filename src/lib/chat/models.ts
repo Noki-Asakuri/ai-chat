@@ -67,7 +67,7 @@ export const ModelsData = {
   },
   "google/gemini-2.5-flash": {
     displayName: "Gemini 2.5 Flash",
-    modelIds: ["gemini-2.5-flash-preview-05-20"],
+    modelIds: ["google/gemini-2.5-flash-preview-05-20"],
     provider: "google",
     capabilities: {
       vision: true,

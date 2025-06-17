@@ -1,12 +1,11 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/react-router";
 import { BookOpenIcon, CodeIcon, CompassIcon, SparklesIcon } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 import { useChatStore } from "@/lib/chat/store";
-import { cn } from "@/lib/utils";
 
 interface CategoryButton {
   icon: React.ComponentType<{ className?: string }>;
@@ -60,21 +59,20 @@ export function WelcomeScreen() {
 
   const handlePromptClick = (prompt: string) => {
     setChatInput(prompt);
-    // Focus the textarea after setting the input
+
     setTimeout(() => {
       const textarea = document.getElementById("textarea-chat-input");
       textarea?.focus();
     }, 100);
   };
 
+  if (chatInput > 0 || !!threadId) return null;
+
   return (
     <div
-      style={{ height: `calc(100% - ${textareaHeight}px)` }}
       id="welcome-screen"
-      className={cn(
-        "pointer-events-auto absolute z-40 flex w-full flex-col items-center justify-center opacity-100 transition-opacity",
-        { "pointer-events-none opacity-0": chatInput > 0 || !!threadId },
-      )}
+      style={{ height: `calc(100% - ${textareaHeight}px)` }}
+      className="absolute z-40 flex w-full flex-col items-center justify-center transition-opacity"
     >
       <div className="mx-auto max-w-2xl space-y-4 text-center">
         <h1 className="text-foreground text-4xl font-light">

@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/react-router";
 
 import { Avatar, AvatarImage, AvatarFallback } from "../ui/avatar";
 

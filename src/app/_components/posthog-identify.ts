@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/react-router";
 import posthog from "posthog-js";
+import { useEffect } from "react";
 
 export default function PostHogIdentify() {
   const { isLoaded, isSignedIn, userId } = useAuth();

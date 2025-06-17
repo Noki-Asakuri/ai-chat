@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { useNavigate } from "react-router";
 
 import {
   AlertDialog,
@@ -29,14 +29,14 @@ export function ThreadDeleteDialog({ thread }: ThreadDeleteDialogProps) {
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
 
-  const router = useRouter();
+  const navigate = useNavigate();
 
   function deleteThread() {
     console.debug("[Thread] Delete thread", thread);
 
     startTransition(async () => {
       await convexClient.mutation(api.threads.deleteThread, { threadId: thread._id });
-      router.push("/");
+      await navigate("/");
     });
   }
 
