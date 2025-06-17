@@ -53,71 +53,42 @@ export type AllModelIds = keyof typeof ModelsData;
 export type ModelIdKey = `${Provider}/${string}`;
 
 export const ModelsData = {
-  "google/gemini-2.5-flash-preview-05-20": {
-    displayName: "Gemini 2.5 Flash",
+  "google/gemini-2.5-flash-lite-preview-06-17": {
+    displayName: "Gemini 2.5 Flash Lite",
     provider: "google",
     capabilities: {
+      vision: true,
+      webSearch: true,
+      reasoning: "budget",
+      budgetLimit: { min: 512, max: 24_576 },
+      maxTokens: 64_000,
+      config: { temperature: true, topP: true, topK: true },
+    },
+  },
+  "google/gemini-2.5-flash": {
+    displayName: "Gemini 2.5 Flash",
+    modelIds: ["gemini-2.5-flash-preview-05-20"],
+    provider: "google",
+    capabilities: {
+      vision: true,
       webSearch: true,
       reasoning: "budget",
       budgetLimit: { min: 0, max: 24_576 },
-      vision: true,
       maxTokens: 65_536,
-      config: {
-        temperature: true,
-        topP: true,
-        topK: true,
-      },
+      config: { temperature: true, topP: true, topK: true },
     },
   },
-  "google/gemini-2.5-pro-preview-06-05": {
+  "google/gemini-2.5-pro": {
     displayName: "Gemini 2.5 Pro",
-    modelIds: ["google/gemini-2.5-pro-preview-05-06"],
+    modelIds: ["google/gemini-2.5-pro-preview-05-06", "google/gemini-2.5-pro-preview-06-05"],
     provider: "google",
     capabilities: {
+      vision: true,
       webSearch: true,
       reasoning: "budget",
       budgetLimit: { min: 128, max: 32_768 },
-      vision: true,
       maxTokens: 65_536,
-      config: {
-        temperature: true,
-        topP: true,
-        topK: true,
-      },
-    },
-  },
-  "google/gemini-2.0-flash": {
-    displayName: "Gemini 2.0 Flash",
-    provider: "google",
-    capabilities: {
-      webSearch: true,
-      reasoning: false,
-      vision: true,
-      maxTokens: 8_192,
-      config: {
-        temperature: true,
-        topP: true,
-        topK: true,
-        presencePenalty: true,
-        frequencyPenalty: true,
-      },
-    },
-  },
-  "google/gemini-2.0-flash-lite": {
-    displayName: "Gemini 2.0 Flash Lite",
-    provider: "google",
-    capabilities: {
-      webSearch: false,
-      reasoning: false,
-      vision: true,
-      maxTokens: 8_192,
-      config: {
-        temperature: true,
-        topP: true,
-        topK: true,
-        presencePenalty: true,
-        frequencyPenalty: true,
-      },
+      config: { temperature: true, topP: true, topK: true },
     },
   },
 
