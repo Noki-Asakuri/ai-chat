@@ -47,8 +47,8 @@ const inputSchema = z.object({
 
 const modelValidator = z
   .enum(AllModelIds)
-  .default("google/gemini-2.5-flash-preview-05-20")
-  .catch("google/gemini-2.5-flash-preview-05-20");
+  .default("google/gemini-2.5-flash")
+  .catch("google/gemini-2.5-flash");
 
 const safetySettings = [
   { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_HARASSMENT" },

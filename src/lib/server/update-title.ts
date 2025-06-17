@@ -15,7 +15,7 @@ export async function updateTitle(
   console.debug("[Server] Updating thread title", threadId);
 
   const { text } = await generateText({
-    model: registry.languageModel("google/gemini-2.5-flash-preview-05-20"),
+    model: registry.languageModel("google/gemini-2.5-flash"),
     providerOptions: {
       google: { thinkingConfig: { thinkingBudget: 0 } } satisfies GoogleGenerativeAIProviderOptions,
     },
@@ -29,7 +29,7 @@ export async function updateTitle(
         role: "user",
         content: `User: ${messages[0].content}
 
-Please summarize the above conversation into a title of 10 words or less, without punctuation or special characters and in English.`,
+Please summarize the above conversation into a title of 10 words or less, without punctuation, prefix or any special characters and must be in English.`,
       },
       {
         role: "assistant",
