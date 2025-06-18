@@ -40,9 +40,7 @@ export function ThreadSidebar() {
     setThreadId(fromUUID(threadId));
 
     const thread = threads?.find((thread) => thread._id === fromUUID(threadId));
-    if (!thread) return;
-
-    document.title = `${thread.title} - ${DEFAULT_TITLE}`;
+    document.title = threadId && thread ? `${thread.title} - ${DEFAULT_TITLE}` : DEFAULT_TITLE;
   }, [threadId, threads, setThreadId]);
 
   return (
