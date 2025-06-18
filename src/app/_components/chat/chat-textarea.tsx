@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 
 import { ScrollButton } from "../scroll-button";
 import { Textarea } from "../ui/textarea";
@@ -12,10 +13,13 @@ import { ChatSendButton } from "./chat-send-button";
 
 import { submitChatMessage } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
+import { cn } from "@/lib/utils";
 
 export function ChatTextarea() {
   const parentRef = useRef<HTMLDivElement>(null);
+
   const setTextareaHeight = useChatStore((state) => state.setTextareaHeight);
+  const isDragOver = useChatStore((state) => state.isDragOver);
 
   const onResize = useCallback(
     (entries: ResizeObserverEntry[]) => {
@@ -45,11 +49,20 @@ export function ChatTextarea() {
 
       <div
         ref={parentRef}
-        className="bg-muted/40 border-border mx-auto max-w-4xl space-y-2 rounded-[calc(var(--spacing)*2+calc(var(--radius)-2px))] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150"
+        className={cn([
+          "mx-auto max-w-4xl space-y-2 rounded-[calc(var(--spacing)*2+calc(var(--radius)-2px))] rounded-b-none border border-b-0 p-2 pb-0",
+          "bg-muted/40 backdrop-blur-md backdrop-saturate-150",
+        ])}
       >
         <ChatAttachmentDisplay />
 
-        <div className="bg-muted/60 border-border rounded-md rounded-b-none border border-b-0 p-2.5 pb-0">
+        <div
+          data-dragover={isDragOver}
+          className={cn(
+            "bg-muted/60 border-border rounded-md rounded-b-none border border-b-0 p-2.5 pb-0",
+            "data-[dragover=true]:bg-primary/20 data-[dragover=true]:border-primary/40",
+          )}
+        >
           <InputTextArea />
 
           <div className="flex items-end justify-between py-2">
@@ -69,6 +82,8 @@ function InputTextArea() {
   const setChatInput = useChatStore((state) => state.setChatInput);
   const addAttachment = useChatStore((state) => state.addAttachment);
 
+  const setIsDragOver = useChatStore((state) => state.setIsDragOver);
+
   return (
     <div className="flex flex-grow flex-row items-start">
       <Textarea
@@ -84,8 +99,39 @@ function InputTextArea() {
         value={input}
         onChange={(event) => setChatInput(event.target.value)}
         className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
+        onDrop={(event) => {
+          event.preventDefault();
+          setIsDragOver(false);
+          const { files } = event.dataTransfer;
+          const acceptedFiles = Array.from(files).filter(
+            (file) => file.type.includes("image") || file.type.includes("pdf"),
+          );
+
+          if (acceptedFiles.length > 0) {
+            const attachments = acceptedFiles.map((file) => {
+              let type: "image" | "pdf" = "image";
+              if (file.type.includes("pdf")) {
+                type = "pdf";
+              }
+              return { id: crypto.randomUUID(), name: file.name, size: file.size, file, type };
+            });
+            addAttachment(attachments);
+          } else {
+            toast.error("File type not supported", {
+              description: "Please upload an image or PDF file.",
+            });
+          }
+        }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setIsDragOver(true);
+        }}
+        onDragLeave={() => {
+          setIsDragOver(false);
+        }}
         onPaste={(event) => {
           const { items } = event.clipboardData;
+          const hasFiles = Array.from(items).some((item) => item.kind === "file");
           const acceptedFiles = Array.from(items).filter(
             (item) => item.type.includes("image") || item.type.includes("pdf"),
           );
@@ -104,6 +150,11 @@ function InputTextArea() {
               return { id: crypto.randomUUID(), name: file.name, size: file.size, file, type };
             });
             addAttachment(files);
+          } else if (hasFiles) {
+            event.preventDefault();
+            toast.error("File type not supported", {
+              description: "Please paste an image or PDF file.",
+            });
           }
         }}
         onKeyDown={(event) => {

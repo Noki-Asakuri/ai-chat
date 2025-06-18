@@ -66,6 +66,9 @@ export interface ChatState {
   editMessage: { _id: Id<"messages">; content: string } | null;
   setEditMessage: (message: { _id: Id<"messages">; content: string } | null) => void;
 
+  isDragOver: boolean;
+  setIsDragOver: (isDragOver: boolean) => void;
+
   isStreaming: boolean;
   setIsStreaming: (isResuming: boolean) => void;
 
@@ -193,6 +196,9 @@ export const useChatStore = create<ChatState>((set) => ({
 
   editMessage: null,
   setEditMessage: (editMessage) => set({ editMessage }),
+
+  isDragOver: false,
+  setIsDragOver: (isDragOver) => set({ isDragOver }),
 
   abortController: new AbortController(),
   setAbortController: (abortController) => set({ abortController }),
