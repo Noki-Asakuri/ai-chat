@@ -1,7 +1,7 @@
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 
 import PostHogIdentify from "@/components/posthog-identify";
 import { ConvexClientProvider } from "@/components/provider/convex-client";
@@ -36,6 +36,8 @@ export default function App() {
             <Route path="api-keys/*" element={<div>API Keys</div>} />
             <Route path="contact/*" element={<div>Contact</div>} />
           </Route>
+
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>
 

@@ -1,5 +1,5 @@
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
-import { useNavigate } from "react-router";
+import { Navigate } from "react-router";
 
 import { Chat } from "./chat";
 
@@ -28,13 +28,8 @@ export default function Home() {
       </AuthLoading>
 
       <Unauthenticated>
-        <RedirectToSignIn />
+        <Navigate to="/auth/login" />
       </Unauthenticated>
     </>
   );
-}
-
-function RedirectToSignIn() {
-  const navigate = useNavigate();
-  return void navigate("/auth/login");
 }
