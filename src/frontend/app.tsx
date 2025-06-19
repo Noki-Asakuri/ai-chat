@@ -10,8 +10,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { LoginPage } from "@/frontend/auth/login";
 import { WaitlistPage } from "@/frontend/auth/waitlist";
 
-import { AuthLayout } from "./auth/settings/auth-layout";
 import { AccountPage } from "./auth/settings/account";
+import { AuthLayout } from "./auth/settings/auth-layout";
 
 import Home from "./home";
 
