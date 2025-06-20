@@ -17,7 +17,7 @@ export function MessageFooter({ index, message, renderMessage }: MessageFooterPr
   return (
     <div
       className={cn(
-        "pointer-events-none absolute -bottom-12 flex gap-2 transition-opacity select-none sm:opacity-0",
+        "pointer-events-none absolute -bottom-12 flex w-full flex-wrap gap-2 transition-opacity select-none sm:opacity-0",
         {
           "pointer-events-auto group-hover:opacity-100":
             message.status === "error" || message.status === "complete",

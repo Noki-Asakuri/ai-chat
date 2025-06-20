@@ -34,7 +34,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
   }
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex grow-0 items-center gap-0.5">
       <ButtonWithTip
         variant="ghost"
         className="size-10"
