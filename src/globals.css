@@ -186,4 +186,5 @@
 
 .appearance-none {
   -moz-appearance: textfield;
+  appearance: none;
 }

@@ -29,6 +29,7 @@ export default function App() {
           <Route path="/auth/waitlist/*" element={<WaitlistPage />} />
 
           <Route path="/auth/settings" element={<AuthLayout />}>
+            <Route index element={<Navigate to="account" replace />} />
             <Route path="account/*" element={<AccountPage />} />
             <Route path="usage/*" element={<div>Usage</div>} />
             <Route path="customize/*" element={<div>Customize</div>} />

@@ -34,14 +34,14 @@ const paths = [
 
 export function UserNavbar() {
   return (
-    <div className="bg-primary/30 border-primary/50 w-max space-x-2 rounded-md border p-2">
+    <div className="bg-primary/10 w-max space-x-2 rounded-md p-1">
       {paths.map(({ path, name }) => (
         <NavLink
           key={path}
           to={path}
           className={({ isActive }) =>
-            cn(buttonVariants({ variant: "ghost" }), "h-max px-2 py-1 text-base", {
-              "bg-primary text-primary-foreground": isActive,
+            cn(buttonVariants({ variant: "ghost" }), "h-max px-3 py-1.5 text-base font-semibold", {
+              "bg-background text-primary hover:bg-background/80": isActive,
             })
           }
         >
