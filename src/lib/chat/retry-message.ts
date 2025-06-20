@@ -12,11 +12,12 @@ const convexClient = getConvexReactClient();
 
 export async function retryMessage(
   index: number,
+  threadId?: Id<"threads">,
   editedUserMessage?: { _id: Id<"messages">; content: string },
 ) {
-  const state = chatStore.getState();
-  const threadId = state.threadId!;
+  if (!threadId) return;
 
+  const state = chatStore.getState();
   state.setEditMessage(null);
 
   const userMessageIndex = index % 2 === 0 ? index : index - 1;

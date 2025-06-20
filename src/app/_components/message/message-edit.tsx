@@ -2,7 +2,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { Textarea } from "../ui/textarea";
 
-import { retryMessage } from "@/lib/chat/retry-message";
+import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 
 type MessageEditProps = {
@@ -14,6 +14,8 @@ type MessageEditProps = {
 export function MessageEdit({ id, content, index }: MessageEditProps) {
   const editedUserMessage = useChatStore((state) => state.editMessage);
   const setEditMessage = useChatStore((state) => state.setEditMessage);
+
+  const { retryMessage } = useChatRequest();
 
   return (
     <Textarea

@@ -11,7 +11,7 @@ import { ChatActionButtons } from "./chat-action-buttons";
 import { ChatAttachmentDisplay } from "./chat-attachment-display";
 import { ChatSendButton } from "./chat-send-button";
 
-import { submitChatMessage } from "@/lib/chat/send-chat-request";
+import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";
 
@@ -76,12 +76,11 @@ export function ChatTextarea() {
 }
 
 function InputTextArea() {
-  const navigate = useNavigate();
-
   const input = useChatStore((state) => state.chatInput);
+  const { submitChatMessage } = useChatRequest();
+
   const setChatInput = useChatStore((state) => state.setChatInput);
   const addAttachment = useChatStore((state) => state.addAttachment);
-
   const setIsDragOver = useChatStore((state) => state.setIsDragOver);
 
   return (
@@ -160,7 +159,7 @@ function InputTextArea() {
         onKeyDown={(event) => {
           if (event.key === "Enter" && (!event.shiftKey || event.metaKey || event.ctrlKey)) {
             event.preventDefault();
-            void submitChatMessage({ navigate });
+            void submitChatMessage();
           }
         }}
       />

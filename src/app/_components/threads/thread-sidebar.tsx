@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex-helpers/react/cache";
 
+import Head from "next/head";
 import { useEffect } from "react";
 import { NavLink, useParams } from "react-router";
 
@@ -22,7 +23,6 @@ export function ThreadSidebar() {
 
   const threads = useQuery(api.threads.getAllThreads);
   const setThreads = useChatStore((state) => state.setThreads);
-  const setThreadId = useChatStore((state) => state.setThreadId);
 
   const localThreads = JSON.parse(
     localStorage.getItem(THREAD_LOCAL_STORAGE_KEY) ?? "[]",
@@ -36,15 +36,17 @@ export function ThreadSidebar() {
     }
   }, [threads, setThreads]);
 
-  useEffect(() => {
-    setThreadId(fromUUID(threadId));
-
-    const thread = threads?.find((thread) => thread._id === fromUUID(threadId));
-    document.title = threadId && thread ? `${thread.title} - ${DEFAULT_TITLE}` : DEFAULT_TITLE;
-  }, [threadId, threads, setThreadId]);
+  // useEffect(() => {
+  //   const thread = threads?.find((thread) => thread._id === fromUUID(threadId));
+  //   document.title = threadId && thread ? `${thread.title} - ${DEFAULT_TITLE}` : DEFAULT_TITLE;
+  // }, [threadId, threads]);
 
   return (
     <Sidebar variant="inset">
+      <Head>
+        <title>{}</title>
+      </Head>
+
       <SidebarHeader>
         <span className="text-center text-xl">AI Chat</span>
       </SidebarHeader>

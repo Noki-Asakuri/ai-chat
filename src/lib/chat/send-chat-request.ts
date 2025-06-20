@@ -1,17 +1,19 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import type { useNavigate } from "react-router";
+import { useCallback } from "react";
+import { useNavigate, useParams } from "react-router";
 import { v4 as uuidv4 } from "uuid";
 
 import { getConvexReactClient } from "../convex/client";
 import { uploadFile } from "../convex/uploadFiles";
 
 import { processChatStream } from "./process-stream";
+import { retryMessage } from "./retry-message";
 import { chatStore } from "./store";
 
 import type { ChatMessage, ChatRequest } from "../types";
-import { toUUID } from "../utils";
+import { fromUUID, toUUID } from "../utils";
 
 const convexClient = getConvexReactClient();
 
@@ -79,9 +81,10 @@ export async function sendChatRequest(
 
 type SubmitChatMessageParams = {
   navigate: ReturnType<typeof useNavigate>;
+  threadId?: Id<"threads">;
 };
 
-export async function submitChatMessage({ navigate }: SubmitChatMessageParams) {
+export async function submitChatMessage({ navigate, threadId }: SubmitChatMessageParams) {
   const state = chatStore.getState();
   const chatInput = state.chatInput.trim();
 
@@ -91,11 +94,8 @@ export async function submitChatMessage({ navigate }: SubmitChatMessageParams) {
   state.setAttachment([]);
   state.setEditMessage(null);
 
-  let threadId: Id<"threads"> = state.threadId!;
-  if (!state.threadId) {
+  if (!threadId) {
     threadId = await convexClient.mutation(api.threads.createThread, { title: "New Chat" });
-    state.setThreadId(threadId);
-
     await navigate(`/chat/${toUUID(threadId)}`);
   }
 
@@ -199,4 +199,29 @@ export async function abortChatRequest() {
     messageId: state.messages.at(-1)!._id,
     error: "User have aborted the request.",
   });
+}
+
+export function useChatRequest() {
+  const navigate = useNavigate();
+  const { threadId } = useParams<{ threadId: string }>();
+
+  const retryMessageCallback = useCallback(
+    async (index: number, editedUserMessage?: { _id: Id<"messages">; content: string }) => {
+      await retryMessage(index, fromUUID<Id<"threads">>(threadId), editedUserMessage);
+    },
+    [threadId],
+  );
+
+  const submitChatMessageCallback = useCallback(
+    () => submitChatMessage({ navigate, threadId: fromUUID<Id<"threads">>(threadId) }),
+    [navigate, threadId],
+  );
+
+  const abortChatRequestCallback = useCallback(() => abortChatRequest(), []);
+
+  return {
+    retryMessage: retryMessageCallback,
+    abortChatRequest: abortChatRequestCallback,
+    submitChatMessage: submitChatMessageCallback,
+  };
 }

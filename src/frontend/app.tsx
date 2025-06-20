@@ -37,7 +37,7 @@ export default function App() {
             <Route path="contact/*" element={<div>Contact</div>} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
 

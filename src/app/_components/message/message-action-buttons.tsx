@@ -1,11 +1,10 @@
 import { PencilIcon, RefreshCcwIcon, SaveIcon, SplitIcon, XIcon } from "lucide-react";
-import { useNavigate } from "react-router";
 
 import { CopyButton } from "../copy-button";
 import { ButtonWithTip } from "../ui/button";
 
 import { handleBranchOff } from "@/lib/chat/action-branch-off";
-import { retryMessage } from "@/lib/chat/retry-message";
+import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -19,7 +18,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
   const setEditMessage = useChatStore((state) => state.setEditMessage);
   const editMessage = useChatStore((state) => state.editMessage);
 
-  const navigate = useNavigate();
+  const { retryMessage } = useChatRequest();
 
   async function handleEditMessage() {
     if (message.role === "assistant") return;

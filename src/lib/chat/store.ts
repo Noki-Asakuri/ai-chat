@@ -60,9 +60,6 @@ export interface ChatState {
   setStatus: (status: "pending" | "complete" | "streaming" | "error") => void;
   removeAttachment: (attachmentId: string) => void;
 
-  threadId?: Id<"threads">;
-  setThreadId: (threadId?: Id<"threads">) => void;
-
   editMessage: { _id: Id<"messages">; content: string } | null;
   setEditMessage: (message: { _id: Id<"messages">; content: string } | null) => void;
 
@@ -115,7 +112,6 @@ export interface ChatState {
   setDataFromConvex: (
     messages: ChatMessage[],
     status: "pending" | "complete" | "streaming" | "error" | undefined,
-    threadId: Id<"threads">,
   ) => void;
 }
 
@@ -136,9 +132,6 @@ export const useChatStore = create<ChatState>((set) => ({
   assistantMessage: { id: "", content: "", reasoning: "", metadata: undefined },
   setAssistantMessage: (message) =>
     set((state) => ({ assistantMessage: { ...state.assistantMessage, ...message } })),
-
-  threadId: undefined,
-  setThreadId: (threadId) => set({ threadId }),
 
   isStreaming: false,
   setIsStreaming: (isStreaming) => set({ isStreaming }),
@@ -212,7 +205,7 @@ export const useChatStore = create<ChatState>((set) => ({
   textareaHeight: 140,
   setTextareaHeight: (height) => set({ textareaHeight: Math.max(height, 140) }),
 
-  setDataFromConvex: (messages, status, threadId) => set({ messages, status, threadId }),
+  setDataFromConvex: (messages, status) => set({ messages, status }),
   resetState: () =>
     set(() => ({
       messages: [],

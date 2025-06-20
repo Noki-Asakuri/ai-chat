@@ -1,7 +1,6 @@
-"use client";
-
 import { useUser } from "@clerk/react-router";
 import { BookOpenIcon, CodeIcon, CompassIcon, SparklesIcon } from "lucide-react";
+import { useParams } from "react-router";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
@@ -50,8 +49,8 @@ const categories: CategoryButton[] = [
 
 export function WelcomeScreen() {
   const { user } = useUser();
+  const { threadId } = useParams<{ threadId: string }>();
 
-  const threadId = useChatStore((state) => state.threadId);
   const chatInput = useChatStore((state) => state.chatInput.length);
   const textareaHeight = useChatStore((state) => state.textareaHeight);
 

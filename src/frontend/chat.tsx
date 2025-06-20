@@ -3,18 +3,19 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
 
 import { useEffect, useRef } from "react";
+import { useParams } from "react-router";
 
 import { ChatTextarea } from "@/components/chat/chat-textarea";
 import { ChatMessages } from "@/components/message/message";
 
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
-import { chatStore, useChatStore } from "@/lib/chat/store";
+import { chatStore } from "@/lib/chat/store";
 import { cn, fromUUID } from "@/lib/utils";
 
 export function Chat() {
   const resumeRef = useRef<boolean>(false);
+  const { threadId } = useParams<{ threadId: string }>();
 
-  const threadId = useChatStore((state) => state.threadId);
   const data = useQuery(api.messages.getAllMessagesFromThread, {
     threadId: fromUUID<Id<"threads">>(threadId),
   });
