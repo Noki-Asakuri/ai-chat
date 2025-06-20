@@ -48,6 +48,10 @@ function getChatConfigFromLS() {
   }
 }
 
+function getInitialChatInput() {
+  return window.localStorage.getItem("chatInput") ?? "";
+}
+
 export interface ChatState {
   messages: ChatMessage[];
   setMessages: (messages: ChatMessage[]) => void;
@@ -196,8 +200,11 @@ export const useChatStore = create<ChatState>((set) => ({
   abortController: new AbortController(),
   setAbortController: (abortController) => set({ abortController }),
 
-  chatInput: "",
-  setChatInput: (input) => set({ chatInput: input }),
+  chatInput: getInitialChatInput(),
+  setChatInput: (input) => {
+    window.localStorage.setItem("chatInput", input);
+    set({ chatInput: input });
+  },
 
   scrollPosition: null,
   setScrollPosition: (value) => set({ scrollPosition: value }),

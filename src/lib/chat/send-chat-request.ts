@@ -92,6 +92,7 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
   if (!chatInput || state.status === "streaming" || state.status === "pending") return;
 
   state.setChatInput("");
+  window.localStorage.removeItem("chatInput");
   state.setAttachment([]);
   state.setEditMessage(null);
 
