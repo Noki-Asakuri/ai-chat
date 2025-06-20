@@ -8,7 +8,7 @@ import { toUUID } from "../utils";
 
 const convexClient = getConvexReactClient();
 
-export async function handleBranchOff(
+export async function branchOffThreadMessage(
   message: ChatMessage,
   navigate: ReturnType<typeof useNavigate>,
 ) {

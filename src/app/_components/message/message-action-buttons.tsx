@@ -3,7 +3,6 @@ import { PencilIcon, RefreshCcwIcon, SaveIcon, SplitIcon, XIcon } from "lucide-r
 import { CopyButton } from "../copy-button";
 import { ButtonWithTip } from "../ui/button";
 
-import { handleBranchOff } from "@/lib/chat/action-branch-off";
 import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
@@ -18,7 +17,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
   const setEditMessage = useChatStore((state) => state.setEditMessage);
   const editMessage = useChatStore((state) => state.editMessage);
 
-  const { retryMessage } = useChatRequest();
+  const { retryMessage, branchOffThreadMessage } = useChatRequest();
 
   async function handleEditMessage() {
     if (message.role === "assistant") return;
@@ -49,7 +48,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
         <ButtonWithTip
           variant="ghost"
           className="size-10"
-          onMouseDown={() => handleBranchOff(message, navigate)}
+          onMouseDown={() => branchOffThreadMessage(message)}
           title="Branch Off"
           disabled={message.status === "pending" || message.status === "streaming"}
         >

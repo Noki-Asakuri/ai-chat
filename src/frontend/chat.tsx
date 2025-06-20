@@ -14,10 +14,10 @@ import { cn, fromUUID } from "@/lib/utils";
 
 export function Chat() {
   const resumeRef = useRef<boolean>(false);
-  const { threadId } = useParams<{ threadId: string }>();
+  const { threadId } = useParams<{ threadId: Id<"threads"> }>();
 
   const data = useQuery(api.messages.getAllMessagesFromThread, {
-    threadId: fromUUID<Id<"threads">>(threadId),
+    threadId: fromUUID(threadId),
   });
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export function Chat() {
     const threadId = lastMessage.threadId;
 
     console.debug("[Convex] Syncing messages from Convex", { data, threadId });
-    state.setDataFromConvex(data, lastMessage.status ?? "complete", lastMessage.threadId);
+    state.setDataFromConvex(data, lastMessage.status ?? "complete");
 
     if (
       lastMessage?.resumableStreamId &&

@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getConvexReactClient } from "../convex/client";
 import { uploadFile } from "../convex/uploadFiles";
 
+import { branchOffThreadMessage } from "./action-branch-off";
 import { processChatStream } from "./process-stream";
 import { retryMessage } from "./retry-message";
 import { chatStore } from "./store";
@@ -219,9 +220,15 @@ export function useChatRequest() {
 
   const abortChatRequestCallback = useCallback(() => abortChatRequest(), []);
 
+  const branchOffThreadMessageCallBack = useCallback(
+    (message: ChatMessage) => branchOffThreadMessage(message, navigate),
+    [navigate],
+  );
+
   return {
     retryMessage: retryMessageCallback,
     abortChatRequest: abortChatRequestCallback,
     submitChatMessage: submitChatMessageCallback,
+    branchOffThreadMessage: branchOffThreadMessageCallBack,
   };
 }
