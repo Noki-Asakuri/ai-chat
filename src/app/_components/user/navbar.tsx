@@ -1,9 +1,10 @@
 "use client";
 
-import { NavLink } from "react-router";
+import { NavLink, useLocation } from "react-router";
 
 import { buttonVariants } from "../ui/button";
 import { cn } from "@/lib/utils";
+import { useDocumentTitle } from "@uidotdev/usehooks";
 
 const paths = [
   {
@@ -33,6 +34,11 @@ const paths = [
 ];
 
 export function UserNavbar() {
+  const location = useLocation();
+  const activeTitle = paths.find((path) => path.path === location.pathname)?.name;
+
+  useDocumentTitle(activeTitle ? `${activeTitle} - AI Chat` : "Account - AI Chat");
+
   return (
     <div className="bg-primary/10 w-max space-x-2 rounded-md p-1">
       {paths.map(({ path, name }) => (
