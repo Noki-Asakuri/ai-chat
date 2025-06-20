@@ -24,6 +24,8 @@ export function ThreadSidebar() {
   const threads = useQuery(api.threads.getAllThreads);
   const setThreads = useChatStore((state) => state.setThreads);
 
+  const activeThread = threads?.find((thread) => thread._id === fromUUID(threadId));
+
   const localThreads = JSON.parse(
     localStorage.getItem(THREAD_LOCAL_STORAGE_KEY) ?? "[]",
   ) as typeof threads;
@@ -36,15 +38,10 @@ export function ThreadSidebar() {
     }
   }, [threads, setThreads]);
 
-  // useEffect(() => {
-  //   const thread = threads?.find((thread) => thread._id === fromUUID(threadId));
-  //   document.title = threadId && thread ? `${thread.title} - ${DEFAULT_TITLE}` : DEFAULT_TITLE;
-  // }, [threadId, threads]);
-
   return (
     <Sidebar variant="inset">
       <Head>
-        <title>{}</title>
+        <title>{activeThread ? `${activeThread.title} - ${DEFAULT_TITLE}` : DEFAULT_TITLE}</title>
       </Head>
 
       <SidebarHeader>
