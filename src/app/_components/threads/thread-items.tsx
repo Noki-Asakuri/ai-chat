@@ -15,17 +15,6 @@ const convexClient = getConvexReactClient();
 export function ThreadItem({ thread }: { thread: Thread }) {
   const navigate = useNavigate();
 
-  function pinThread(event: React.MouseEvent<HTMLButtonElement>) {
-    event.stopPropagation();
-    event.preventDefault();
-
-    console.debug("[Thread] Pin thread", thread);
-    void convexClient.mutation(api.threads.pinThread, {
-      threadId: thread._id,
-      pinned: !thread.pinned,
-    });
-  }
-
   async function goToParentThread(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
     event.preventDefault();
@@ -60,23 +49,40 @@ export function ThreadItem({ thread }: { thread: Thread }) {
         <span className="line-clamp-1 text-sm">{thread.title}</span>
       </div>
 
-      <div className="absolute top-0 -right-[91px] flex items-center transition-[right] group-hover/thread:right-0">
-        <div className="h-8 w-6 bg-gradient-to-r from-transparent to-[#2c1a49]"></div>
-
-        <div className="flex items-center gap-0.75 bg-[#2c1a49]">
-          <ButtonWithTip
-            title={thread.pinned ? "Unpin Thread" : "Pin Thread"}
-            variant="none"
-            className="size-8"
-            onClick={pinThread}
-          >
-            {thread.pinned ? <PinOffIcon size={10} /> : <PinIcon size={10} />}
-            <span className="sr-only">{thread.pinned ? "Unpin Thread" : "Pin Thread"}</span>
-          </ButtonWithTip>
-
-          <ThreadDeleteDialog thread={thread} />
-        </div>
-      </div>
+      <ThreadActions thread={thread} />
     </NavLink>
+  );
+}
+
+function ThreadActions({ thread }: { thread: Thread }) {
+  function pinThread(event: React.MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    event.preventDefault();
+
+    console.debug("[Thread] Pin thread", thread);
+    void convexClient.mutation(api.threads.pinThread, {
+      threadId: thread._id,
+      pinned: !thread.pinned,
+    });
+  }
+
+  return (
+    <div className="absolute top-0 -right-[91px] flex items-center transition-[right] group-hover/thread:right-0">
+      <div className="h-8 w-6 bg-gradient-to-r from-transparent to-[#2c1a49]"></div>
+
+      <div className="flex items-center gap-0.75 bg-[#2c1a49]">
+        <ButtonWithTip
+          title={thread.pinned ? "Unpin Thread" : "Pin Thread"}
+          variant="none"
+          className="size-8"
+          onClick={pinThread}
+        >
+          {thread.pinned ? <PinOffIcon size={10} /> : <PinIcon size={10} />}
+          <span className="sr-only">{thread.pinned ? "Unpin Thread" : "Pin Thread"}</span>
+        </ButtonWithTip>
+
+        <ThreadDeleteDialog threadId={thread._id} title={thread.title} />
+      </div>
+    </div>
   );
 }

@@ -1,25 +1,27 @@
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex-helpers/react/cache";
 
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useDocumentTitle } from "@uidotdev/usehooks";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { NavLink, useParams } from "react-router";
 
-import { ThreadGroup } from "./thread-group";
+import { ThreadItem } from "./thread-items";
 import { ThreadUserProfile } from "./thread-user-profile";
 
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
+import { TypographyP } from "@/components/ui/typography";
 
 import { useChatStore } from "@/lib/chat/store";
 import { groupByDate } from "@/lib/threads/group-by-date";
 import { fromUUID } from "@/lib/utils";
 
 const THREAD_LOCAL_STORAGE_KEY = "threads";
-
 const DEFAULT_TITLE = "AI Chat";
 
 export function ThreadSidebar() {
   const { threadId } = useParams<{ threadId?: string }>();
+  const parentRef = useRef<HTMLDivElement>(null);
 
   const threads = useQuery(api.threads.getAllThreads);
   const setThreads = useChatStore((state) => state.setThreads);
@@ -30,6 +32,46 @@ export function ThreadSidebar() {
     localStorage.getItem(THREAD_LOCAL_STORAGE_KEY) ?? "[]",
   ) as typeof threads;
   const groupedThreads = groupByDate(threads ?? localThreads ?? []);
+
+  const virtualizedThreads = useMemo(() => {
+    const allThreads = [];
+    if (groupedThreads.pinned.length > 0) {
+      allThreads.push({ type: "header", title: "Pinned" });
+      allThreads.push(...groupedThreads.pinned.map((thread) => ({ type: "thread", data: thread })));
+    }
+    if (groupedThreads.today.length > 0) {
+      allThreads.push({ type: "header", title: "Today" });
+      allThreads.push(...groupedThreads.today.map((thread) => ({ type: "thread", data: thread })));
+    }
+    if (groupedThreads.yesterday.length > 0) {
+      allThreads.push({ type: "header", title: "Yesterday" });
+      allThreads.push(
+        ...groupedThreads.yesterday.map((thread) => ({ type: "thread", data: thread })),
+      );
+    }
+    if (groupedThreads.sevenDaysAgo.length > 0) {
+      allThreads.push({ type: "header", title: "Last 7 days" });
+      allThreads.push(
+        ...groupedThreads.sevenDaysAgo.map((thread) => ({ type: "thread", data: thread })),
+      );
+    }
+    if (groupedThreads.older.length > 0) {
+      allThreads.push({ type: "header", title: "Older" });
+      allThreads.push(...groupedThreads.older.map((thread) => ({ type: "thread", data: thread })));
+    }
+    return allThreads;
+  }, [groupedThreads]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: virtualizedThreads.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: (index) => {
+      const item = virtualizedThreads[index];
+      if (!item) return 0;
+      return item.type === "header" ? 32 : 40;
+    },
+    overscan: 5,
+  });
 
   useEffect(() => {
     if (threads) {
@@ -54,12 +96,40 @@ export function ThreadSidebar() {
           <span className="line-clamp-1 w-full">Create new thread</span>
         </NavLink>
 
-        <div className="custom-scroll space-y-2 overflow-y-auto pr-1">
-          <ThreadGroup threads={groupedThreads.pinned} title="Pinned" />
-          <ThreadGroup threads={groupedThreads.today} title="Today" />
-          <ThreadGroup threads={groupedThreads.yesterday} title="Yesterday" />
-          <ThreadGroup threads={groupedThreads.sevenDaysAgo} title="Last 7 days" />
-          <ThreadGroup threads={groupedThreads.older} title="Older" />
+        <div ref={parentRef} className="custom-scroll max-h-full space-y-2 overflow-y-auto pr-1">
+          <div
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+              const item = virtualizedThreads[virtualItem.index];
+              if (!item) return null;
+
+              return (
+                <div
+                  key={virtualItem.key}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  {item.type === "header" && "title" in item ? (
+                    <TypographyP className="px-3 py-1.5 text-sm font-semibold">
+                      {item.title}
+                    </TypographyP>
+                  ) : (
+                    item.type === "thread" && "data" in item && <ThreadItem thread={item.data} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </SidebarContent>
 
