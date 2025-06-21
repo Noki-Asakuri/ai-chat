@@ -13,17 +13,16 @@ type MessageFooterProps = {
 
 export function MessageFooter({ index, message, renderMessage }: MessageFooterProps) {
   const editMessage = useChatStore((state) => state.editMessage);
+  const isFinished = message.status === "complete" || message.status === "error";
 
   return (
     <div
       className={cn(
-        "pointer-events-none absolute -bottom-12 flex w-full flex-wrap gap-2 transition-opacity select-none sm:opacity-0",
+        "pointer-events-none absolute -bottom-12 hidden w-full flex-wrap gap-2 transition-opacity select-none sm:opacity-0",
         {
-          "pointer-events-auto group-hover:opacity-100":
-            message.status === "error" || message.status === "complete",
-          hidden: message.status === "pending" || message.status === "streaming",
-          "right-0": message.role === "user",
+          "right-0 w-max": message.role === "user",
           "opacity-100": editMessage?._id === message._id,
+          "pointer-events-auto flex group-hover:opacity-100": isFinished,
         },
       )}
     >
