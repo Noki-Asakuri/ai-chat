@@ -127,4 +127,4 @@ const sentryOptions = {
   automaticVercelMonitors: true,
 };
 
-export default nextConfig;
+export default withSentry(withSerwist(nextConfig), sentryOptions);

@@ -71,7 +71,7 @@ export function ThreadDeleteDialog({ threadId, title }: ThreadDeleteDialogProps)
 
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onMouseDown={deleteThread} disabled={pending}>
+          <AlertDialogAction onClick={deleteThread} disabled={pending}>
             {pending ? "Deleting..." : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
