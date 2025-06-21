@@ -28,9 +28,9 @@ export function ThreadItem({ thread }: { thread: Thread }) {
       title={thread.title}
       className={({ isActive }) =>
         cn(
-          "group/thread relative isolate flex overflow-hidden px-3 py-1.5",
-          "text-sidebar-primary-foreground hover:bg-sidebar-primary/20 rounded-none border-l-2 border-transparent transition-colors",
-          { "border-sidebar-ring bg-sidebar-primary/20": isActive },
+          "group/thread relative isolate flex overflow-hidden rounded-md px-3 py-1.5",
+          "text-sidebar-primary-foreground hover:bg-sidebar-primary/20 transition-colors",
+          { "bg-sidebar-primary/20": isActive },
         )
       }
     >
@@ -68,7 +68,7 @@ function ThreadActions({ thread }: { thread: Thread }) {
 
   return (
     <div className="absolute top-0 -right-[91px] flex items-center transition-[right] group-hover/thread:right-0">
-      <div className="h-8 w-6 bg-gradient-to-r from-transparent to-[#2c1a49]"></div>
+      <div className="pointer-events-none h-8 w-6 bg-gradient-to-r from-transparent to-[#2c1a49]"></div>
 
       <div className="flex items-center gap-0.75 bg-[#2c1a49]">
         <ButtonWithTip
