@@ -61,7 +61,7 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
         <span className="w-max">{data.displayName}</span>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <CapabilityIcon
           variant="webSearch"
           disable={data.capabilities.webSearch}

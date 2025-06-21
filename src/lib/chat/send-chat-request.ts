@@ -208,8 +208,14 @@ export function useChatRequest() {
   const { threadId } = useParams<{ threadId: string }>();
 
   const retryMessageCallback = useCallback(
-    async (index: number, editedUserMessage?: { _id: Id<"messages">; content: string }) => {
-      await retryMessage(index, fromUUID<Id<"threads">>(threadId), editedUserMessage);
+    async (
+      index: number,
+      options?: {
+        editedUserMessage?: { _id: Id<"messages">; content: string };
+        modelId?: string;
+      },
+    ) => {
+      await retryMessage(index, fromUUID<Id<"threads">>(threadId), options);
     },
     [threadId],
   );
