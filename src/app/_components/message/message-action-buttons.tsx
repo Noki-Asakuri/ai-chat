@@ -51,8 +51,6 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
         </ButtonWithTip>
       )}
 
-      <RetryModelPopup index={index} message={message} />
-
       {message.role === "user" && (
         <>
           <ButtonWithTip
@@ -60,6 +58,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
             disabled={message.status === "pending"}
             onMouseDown={() => setEditMessage(null)}
             className={cn("hidden size-10", { flex: editMessage?._id === message._id })}
+            title="Cancel Edit"
           >
             <XIcon className="size-5" />
             <span className="sr-only">Cancel Edit</span>
@@ -70,6 +69,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
             className="size-10"
             onMouseDown={handleEditMessage}
             disabled={message.status === "pending"}
+            title={editMessage?._id === message._id ? "Save Message" : "Edit Message"}
           >
             {editMessage?._id === message._id ? (
               <SaveIcon className="size-5" />
@@ -82,6 +82,8 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
           </ButtonWithTip>
         </>
       )}
+
+      <RetryModelPopup index={index} message={message} />
     </div>
   );
 }
