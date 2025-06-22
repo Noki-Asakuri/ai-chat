@@ -30,7 +30,9 @@ export function MessageEdit({ id, content, index }: MessageEditProps) {
 
           setEditMessage(null);
           if (editedUserMessage?.content && editedUserMessage.content !== content) {
-            void retryMessage(index, { _id: id, content: editedUserMessage.content });
+            await retryMessage(index, {
+              editedUserMessage: { _id: id, content: editedUserMessage.content },
+            });
           }
         }
       }}

@@ -13,12 +13,17 @@ const convexClient = getConvexReactClient();
 export async function retryMessage(
   index: number,
   threadId?: Id<"threads">,
-  editedUserMessage?: { _id: Id<"messages">; content: string },
+  options?: {
+    editedUserMessage?: { _id: Id<"messages">; content: string };
+    modelId?: string;
+  },
 ) {
   if (!threadId) return;
 
   const state = chatStore.getState();
   state.setEditMessage(null);
+
+  const editedUserMessage = options?.editedUserMessage;
 
   const userMessageIndex = index % 2 === 0 ? index : index - 1;
   const assistantMessage = state.messages[userMessageIndex + 1]!;
@@ -43,11 +48,16 @@ export async function retryMessage(
     allMessages.at(-1)!.content = editedUserMessage.content;
   }
 
+  const config = {
+    ...state.chatConfig,
+    model: options?.modelId ?? state.chatConfig.model,
+  };
+
   const body: ChatRequest = {
     threadId,
     assistantMessageId: assistantMessage._id,
     messages: allMessages,
-    config: state.chatConfig,
+    config,
   };
 
   await sendChatRequest(
