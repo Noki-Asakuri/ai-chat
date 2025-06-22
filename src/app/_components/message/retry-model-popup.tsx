@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 import { AllModelIds, ModelsData, type ModelData, type Provider } from "@/lib/chat/models";
 import { useChatRequest } from "@/lib/chat/send-chat-request";
+import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +51,9 @@ function CapabilityIcon({ children, variant, disable, title }: CapabilityIconPro
 
 export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
   const { retryMessage } = useChatRequest();
-  const [isOpen, setIsOpen] = React.useState(false);
+
+  const isPopupOpen = useChatStore((state) => state.isRetryPopupOpen);
+  const setPopupOpen = useChatStore((state) => state.setRetryPopupOpen);
 
   const modelsByProvider = AllModelIds.reduce<GroupedModels>((acc, modelId) => {
     const model = ModelsData[modelId];
@@ -61,7 +64,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
   }, {});
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover defaultOpen={isPopupOpen} onOpenChange={setPopupOpen}>
       <PopoverTrigger asChild>
         <ButtonWithTip
           title="Retry Message"
@@ -79,7 +82,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
             variant="ghost"
             className="w-full justify-start"
             onMouseDown={() => {
-              setIsOpen(false);
+              setPopupOpen(false);
               void retryMessage(index);
             }}
           >
@@ -113,7 +116,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
                         model={model}
                         index={index}
                         retryMessage={async () => {
-                          setIsOpen(false);
+                          setPopupOpen(false);
                           await retryMessage(index, { modelId: model.id });
                         }}
                       />

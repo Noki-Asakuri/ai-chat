@@ -73,6 +73,10 @@ export interface ChatState {
   isStreaming: boolean;
   setIsStreaming: (isResuming: boolean) => void;
 
+  isRetryPopupOpen: boolean;
+  setRetryPopupOpen: (isOpen: boolean) => void;
+  toggleRetryPopupOpen: () => void;
+
   assistantMessage: {
     id: string;
     content: string;
@@ -139,6 +143,10 @@ export const useChatStore = create<ChatState>((set) => ({
 
   isStreaming: false,
   setIsStreaming: (isStreaming) => set({ isStreaming }),
+
+  isRetryPopupOpen: false,
+  setRetryPopupOpen: (isOpen) => set({ isRetryPopupOpen: isOpen }),
+  toggleRetryPopupOpen: () => set((state) => ({ isRetryPopupOpen: !state.isRetryPopupOpen })),
 
   threads: [],
   setThreads: (threads) => set({ threads }),

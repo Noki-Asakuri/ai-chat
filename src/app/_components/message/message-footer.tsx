@@ -13,12 +13,16 @@ type MessageFooterProps = {
 
 export function MessageFooter({ index, message, renderMessage }: MessageFooterProps) {
   const editMessage = useChatStore((state) => state.editMessage);
+  const isRetryPopupOpen = useChatStore((state) => state.isRetryPopupOpen);
+
   const isFinished = message.status === "complete" || message.status === "error";
 
   return (
     <div
+      data-open={isRetryPopupOpen}
       className={cn(
         "pointer-events-none absolute -bottom-12 hidden w-full flex-wrap gap-2 transition-opacity select-none sm:opacity-0",
+        "data-[open=true]:opacity-100",
         {
           "right-0 w-max": message.role === "user",
           "opacity-100": editMessage?._id === message._id,
