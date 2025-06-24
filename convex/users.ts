@@ -3,7 +3,7 @@ import { Webhook } from "svix";
 
 import { v, type Validator } from "convex/values";
 import { internal } from "./_generated/api";
-import { httpAction, internalMutation, type QueryCtx } from "./_generated/server";
+import { httpAction, internalMutation, mutation, query, type QueryCtx } from "./_generated/server";
 
 export const deleteFromClerk = internalMutation({
   args: { userId: v.string() },
@@ -59,7 +59,10 @@ export const upsertFromClerk = internalMutation({
 
     const user = await userByExternalId(ctx, data.id);
     if (user === null) {
-      await ctx.db.insert("users", userAttributes);
+      await ctx.db.insert("users", {
+        ...userAttributes,
+        customization: { name: data.username!, systemInstruction: "You are a helpful assistant." },
+      });
     } else {
       await ctx.db.patch(user._id, userAttributes);
     }
@@ -109,3 +112,36 @@ async function validateRequest(req: Request): Promise<WebhookEvent | null> {
     return null;
   }
 }
+
+export const updateUserCustomization = mutation({
+  args: {
+    data: v.object({
+      name: v.optional(v.string()),
+      occupation: v.optional(v.string()),
+      traits: v.optional(v.array(v.string())),
+      systemInstruction: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, { data }) => {
+    const userId = await ctx.auth.getUserIdentity();
+    if (!userId) throw new Error("Not authenticated");
+
+    const user = await userByExternalId(ctx, userId.subject);
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(user._id, { customization: { ...user.customization, ...data } });
+  },
+});
+
+export const currentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await ctx.auth.getUserIdentity();
+    if (!userId) return null;
+
+    const user = await userByExternalId(ctx, userId.subject);
+    if (!user) return null;
+
+    return user;
+  },
+});

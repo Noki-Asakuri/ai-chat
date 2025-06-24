@@ -94,5 +94,14 @@ export default defineSchema({
 
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
+
+    customization: v.optional(
+      v.object({
+        name: v.optional(v.string()),
+        occupation: v.optional(v.string()),
+        traits: v.optional(v.array(v.string())),
+        systemInstruction: v.optional(v.string()),
+      }),
+    ),
   }).index("by_userId", ["userId"]),
 });
