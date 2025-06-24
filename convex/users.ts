@@ -129,7 +129,7 @@ export const updateUserCustomization = mutation({
     const user = await userByExternalId(ctx, userId.subject);
     if (!user) throw new Error("User not found");
 
-    await ctx.db.patch(user._id, { customization: { ...user.customization, ...data } });
+    await ctx.db.patch(user._id, { customization: { ...(user.customization ?? {}), ...data } });
   },
 });
 
