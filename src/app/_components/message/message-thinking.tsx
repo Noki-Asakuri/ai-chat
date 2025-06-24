@@ -25,7 +25,12 @@ export function ThinkingToggle({
   if (!reasoning || status === "error") return null;
 
   return (
-    <Accordion type="single" collapsible className="my-4 w-full space-y-2">
+    <Accordion
+      type="single"
+      collapsible
+      className="my-4 w-full space-y-2"
+      defaultValue={status === "streaming" ? `${messageId}-thinking` : undefined}
+    >
       <AccordionItem
         value={messageId + "-thinking"}
         className="bg-secondary rounded-md border-none"
