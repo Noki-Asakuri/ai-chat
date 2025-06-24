@@ -56,6 +56,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: { message: error.message } }, { status: 400 });
   }
 
+  const dataCustomization = await serverConvexClient.query(api.users.currentUser);
+  let systemInstruction = `## System Instruction: \n\n${dataCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}`;
+
+  if (dataCustomization?.customization?.traits?.length) {
+    systemInstruction =
+      `You should have these traits: ${dataCustomization.customization.traits.join(", ")}.\n\n` +
+      systemInstruction;
+  }
+
+  if (dataCustomization?.customization?.occupation) {
+    systemInstruction =
+      `The user's occupation is ${dataCustomization.customization.occupation}.\n\n` +
+      systemInstruction;
+  }
+
+  if (dataCustomization?.customization?.name) {
+    systemInstruction =
+      `The user's name is ${dataCustomization.customization.name}.\n\n` + systemInstruction;
+  }
+
   const {
     messages,
     transformedMessages,
@@ -77,7 +97,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: registry.languageModel(model),
-    system: "You are a helpful assistant.",
+    system: systemInstruction,
     messages: transformedMessages,
     providerOptions,
     abortSignal: req.signal,

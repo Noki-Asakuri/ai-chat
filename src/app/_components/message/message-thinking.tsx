@@ -7,28 +7,29 @@ import { Accordion, AccordionItem } from "../ui/accordion";
 import type { ChatMessage } from "@/lib/types";
 import { cn, format } from "@/lib/utils";
 
+type ThinkingToggleProps = {
+  messageId: string;
+  reasoning?: string;
+  finished: boolean;
+  status: ChatMessage["status"];
+  tokens?: number;
+};
+
 export function ThinkingToggle({
   messageId,
   reasoning,
   finished,
   status,
   tokens,
-}: {
-  messageId: string;
-  reasoning?: string;
-  finished: boolean;
-  status: ChatMessage["status"];
-  tokens?: number;
-}) {
+}: ThinkingToggleProps) {
   if (!reasoning || status === "error") return null;
-  const defaultValue = status === "streaming" ? `${messageId}-thinking` : undefined;
 
   return (
     <Accordion
       type="single"
       collapsible
-      defaultValue={defaultValue}
       className="my-4 w-full space-y-2"
+      defaultValue={status === "streaming" ? `${messageId}-thinking` : undefined}
     >
       <AccordionItem
         value={messageId + "-thinking"}
