@@ -13,13 +13,13 @@ type MessageFooterProps = {
 
 export function MessageFooter({ index, message, renderMessage }: MessageFooterProps) {
   const editMessage = useChatStore((state) => state.editMessage);
-  const isRetryPopupOpen = useChatStore((state) => state.isRetryPopupOpen);
+  const popupRetryMessageId = useChatStore((state) => state.popupRetryMessageId);
 
   const isFinished = message.status === "complete" || message.status === "error";
 
   return (
     <div
-      data-open={isRetryPopupOpen}
+      data-open={popupRetryMessageId === message._id}
       className={cn(
         "pointer-events-none absolute -bottom-12 hidden w-full flex-wrap gap-2 transition-opacity select-none sm:opacity-0",
         "data-[open=true]:opacity-100",

@@ -53,7 +53,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
   const { retryMessage } = useChatRequest();
   const [open, setOpen] = React.useState(false);
 
-  const setRetryPopupOpen = useChatStore((state) => state.setRetryPopupOpen);
+  const setPopupRetryMessageId = useChatStore((state) => state.setPopupRetryMessageId);
 
   const modelsByProvider = AllModelIds.reduce<GroupedModels>((acc, modelId) => {
     const model = ModelsData[modelId];
@@ -64,7 +64,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
   }, {});
 
   function setPopupOpen(open: boolean) {
-    setRetryPopupOpen(open);
+    setPopupRetryMessageId(open ? message._id : "");
     setOpen(open);
   }
 
