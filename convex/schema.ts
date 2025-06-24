@@ -82,4 +82,17 @@ export default defineSchema({
     .index("by_userId_threadId", ["userId", "threadId"])
     .index("by_threadId", ["threadId"])
     .index("by_messageId", ["messageId"]),
+
+  users: defineTable({
+    userId: v.string(),
+
+    username: v.union(v.string(), v.null()),
+    emailAddress: v.union(v.string(), v.null()),
+    imageUrl: v.union(v.string(), v.null()),
+
+    isBanned: v.optional(v.boolean()),
+
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
+  }).index("by_userId", ["userId"]),
 });

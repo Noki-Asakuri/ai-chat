@@ -46,7 +46,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/api/vercel/:path*",
-        destination: `${host}/_vercel/:path*`,
+        destination: `/_vercel/:path*`,
       },
       {
         // 👇 matches all routes except /api
