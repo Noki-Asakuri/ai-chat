@@ -51,9 +51,9 @@ function CapabilityIcon({ children, variant, disable, title }: CapabilityIconPro
 
 export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
   const { retryMessage } = useChatRequest();
+  const [open, setOpen] = React.useState(false);
 
-  const isPopupOpen = useChatStore((state) => state.isRetryPopupOpen);
-  const setPopupOpen = useChatStore((state) => state.setRetryPopupOpen);
+  const setRetryPopupOpen = useChatStore((state) => state.setRetryPopupOpen);
 
   const modelsByProvider = AllModelIds.reduce<GroupedModels>((acc, modelId) => {
     const model = ModelsData[modelId];
@@ -63,8 +63,13 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
     return acc;
   }, {});
 
+  function setPopupOpen(open: boolean) {
+    setRetryPopupOpen(open);
+    setOpen(open);
+  }
+
   return (
-    <Popover defaultOpen={isPopupOpen} onOpenChange={setPopupOpen}>
+    <Popover open={open} onOpenChange={setPopupOpen}>
       <PopoverTrigger asChild>
         <ButtonWithTip
           title="Retry Message"
@@ -81,9 +86,9 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
           <Button
             variant="ghost"
             className="w-full justify-start"
-            onMouseDown={() => {
+            onMouseDown={async () => {
               setPopupOpen(false);
-              void retryMessage(index);
+              await retryMessage(index);
             }}
           >
             <RefreshCcwIcon className="mr-2 size-4" />
