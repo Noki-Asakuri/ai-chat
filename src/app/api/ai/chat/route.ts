@@ -7,7 +7,7 @@ import { Redis } from "ioredis";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 
-import { generateId, streamText, type AISDKError } from "ai";
+import { createUIMessageStream, generateId, streamText, type AISDKError } from "ai";
 
 import { getRequestBody } from "@/lib/server/get-request-body";
 import { registry } from "@/lib/server/model-registry";
@@ -129,56 +129,42 @@ export async function POST(req: Request) {
     // providerOptions?: { openai: Record<string, JSONValue>; google: GoogleGenerativeAIProviderMetadata };
   };
 
-  const reader = result
-    .toUIMessageStream({
-      sendFinish: true,
-      sendReasoning: true,
-      sendSources: true,
-      sendStart: true,
-      messageMetadata({ part }): Partial<typeof metadata> | undefined {
-        if (part.type === "finish-step") {
-          metadata.model = part.response.modelId;
-          metadata.duration = Date.now() - startTime;
-          metadata.finishReason = part.finishReason;
-          // metadata.providerOptions = part.providerMetadata as (typeof metadata)["providerOptions"];
-        }
+  waitUntil(updateTitle(messages, threadId));
+  waitUntil(result.consumeStream());
 
-        if (part.type === "finish") {
-          metadata.totalTokens = part.totalUsage.outputTokens ?? 0;
-          metadata.thinkingTokens = part.totalUsage.reasoningTokens ?? 0;
+  const chatStream = createUIMessageStream({
+    execute: async ({ writer }) => {
+      let content = "";
+      let reasoning = "";
 
-          return metadata;
-        }
-      },
-    })
-    .getReader();
+      writer.merge(
+        result.toUIMessageStream({
+          sendFinish: true,
+          sendReasoning: true,
+          sendSources: true,
+          sendStart: true,
+        }),
+      );
 
-  let content = "";
-  let reasoning = "";
-  const sources: { id: string; title?: string; url: string }[] = [];
-
-  const readableStream = new ReadableStream<string>({
-    async start(controller) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done || req.signal.aborted) break;
-        controller.enqueue("data: " + JSON.stringify(value) + "\n\n");
-
-        switch (value.type) {
-          case "text":
-            content += value.text;
-            break;
-
+      for await (const stream of result.fullStream) {
+        switch (stream.type) {
           case "reasoning":
-            reasoning += value.text;
+            reasoning += stream.text;
             break;
 
-          case "source-url":
-            sources.push({ id: value.sourceId, title: value.title, url: value.url });
+          case "text":
+            content += stream.text;
             break;
 
-          default:
-            console.log(value);
+          case "finish-step":
+            metadata.model = stream.response.modelId;
+            metadata.duration = Date.now() - startTime;
+            metadata.finishReason = stream.finishReason;
+            break;
+
+          case "finish":
+            metadata.totalTokens = stream.totalUsage.outputTokens ?? 0;
+            metadata.thinkingTokens = stream.totalUsage.reasoningTokens ?? 0;
             break;
         }
       }
@@ -193,12 +179,28 @@ export async function POST(req: Request) {
       };
 
       if (!req.signal.aborted) {
-        await serverConvexClient.mutation(api.messages.updateMessageById, {
+        const promise = serverConvexClient.mutation(api.messages.updateMessageById, {
           messageId: assistantMessageId,
           threadId,
           updates,
         });
 
+        waitUntil(promise);
+      }
+    },
+  });
+
+  const reader = chatStream.getReader();
+
+  const readableStream = new ReadableStream<string>({
+    async start(controller) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done || req.signal.aborted) break;
+        controller.enqueue("data: " + JSON.stringify(value) + "\n\n");
+      }
+
+      if (!req.signal.aborted) {
         controller.enqueue("data: [DONE]\n\n");
       }
 
@@ -206,8 +208,10 @@ export async function POST(req: Request) {
     },
   });
 
-  const resumeableStream = await streamContext.resumableStream(streamId, () => readableStream);
-  waitUntil(updateTitle(messages, threadId));
+  const resumeableStream = await streamContext.createNewResumableStream(
+    streamId,
+    () => readableStream,
+  );
 
   req.signal.onabort = async () => {
     console.log("[Chat] Chat request aborted");
@@ -216,7 +220,7 @@ export async function POST(req: Request) {
       event: "chat_aborted",
       properties: { model, streamId, userId: user.userId },
     });
-    await reader.cancel(new Error("Request aborted"));
+    await chatStream.cancel(new Error("Request aborted"));
   };
 
   return new Response(resumeableStream, {
