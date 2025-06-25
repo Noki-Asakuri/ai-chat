@@ -173,7 +173,7 @@ function CalendarTooltip({ day, value, color }: CalendarTooltipProps) {
       <CardContent className="flex items-center justify-center gap-2">
         <div className="size-4 shrink-0" style={{ backgroundColor: color }} />
         <span className="w-max">
-          {day}: {value} Message
+          {day}: {value} {Number(value) === 1 ? "Message" : "Messages"}
         </span>
       </CardContent>
     </Card>
