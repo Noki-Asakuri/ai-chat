@@ -34,24 +34,30 @@ export const getStatistics = query({
       {} as Record<string, number>,
     );
 
+    const threadMessageCounts = messages.reduce(
+      (acc: Record<string, number>, m: Doc<"messages">) => {
+        acc[m.threadId] = (acc[m.threadId] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
     const threadRank = threads.map((t) => ({
       id: t._id,
       name: t.title,
-      value: messages.filter((m) => m.threadId === t._id).length,
+      value: threadMessageCounts[t._id] || 0,
     }));
 
-    const activity = messages.reduce(
-      (acc: { day: string; value: number }[], m: Doc<"messages">) => {
+    const activityMap = messages.reduce(
+      (acc: Record<string, number>, m: Doc<"messages">) => {
         const date = new Date(m._creationTime).toISOString().split("T")[0];
-        const existing = acc.find((d) => d.day === date);
-
-        if (existing) existing.value += 1;
-        else acc.push({ day: date, value: 1 });
-
+        acc[date] = (acc[date] || 0) + 1;
         return acc;
       },
-      [],
+      {} as Record<string, number>,
     );
+
+    const activity = Object.entries(activityMap).map(([day, value]) => ({ day, value }));
 
     return {
       stats: {

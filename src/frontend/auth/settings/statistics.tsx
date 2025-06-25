@@ -105,7 +105,7 @@ export function StatisticsPage() {
             colors={["#0e4429", "#006d32", "#26a641", "#39d353"]}
             emptyColor="#151b23"
             daySpacing={2}
-            tooltip={CalenderTooltip}
+            tooltip={CalendarTooltip}
           />
         </div>
 
@@ -167,7 +167,7 @@ export function StatisticsPage() {
   );
 }
 
-function CalenderTooltip({ day, value, color }: CalendarTooltipProps) {
+function CalendarTooltip({ day, value, color }: CalendarTooltipProps) {
   return (
     <Card className="rounded-md p-1 px-0 text-sm">
       <CardContent className="flex items-center justify-center gap-2">
