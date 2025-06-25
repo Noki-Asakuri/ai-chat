@@ -1,6 +1,8 @@
 import { type QueryCtx, query } from "./_generated/server";
 import { type Doc } from "./_generated/dataModel";
 
+import { getModelData } from "../src/lib/chat/models";
+
 export const getStatistics = query({
   handler: async (ctx: QueryCtx) => {
     const user = await ctx.auth.getUserIdentity();
@@ -24,7 +26,8 @@ export const getStatistics = query({
     const modelRank = messages.reduce(
       (acc: Record<string, number>, m: Doc<"messages">) => {
         if (m.role === "assistant" && m.model) {
-          acc[m.model] = (acc[m.model] || 0) + 1;
+          const id = getModelData(m.model).id;
+          acc[id] = (acc[id] || 0) + 1;
         }
         return acc;
       },
@@ -37,6 +40,19 @@ export const getStatistics = query({
       value: messages.filter((m) => m.threadId === t._id).length,
     }));
 
+    const activity = messages.reduce(
+      (acc: { day: string; value: number }[], m: Doc<"messages">) => {
+        const date = new Date(m._creationTime).toISOString().split("T")[0];
+        const existing = acc.find((d) => d.day === date);
+
+        if (existing) existing.value += 1;
+        else acc.push({ day: date, value: 1 });
+
+        return acc;
+      },
+      [],
+    );
+
     return {
       stats: [
         { name: "Threads", value: threads.length },
@@ -47,6 +63,7 @@ export const getStatistics = query({
         .sort(([, a], [, b]) => b - a)
         .map(([name, value]) => ({ name, value })),
       threadRank: threadRank.sort((a, b) => b.value - a.value),
+      activity,
     };
   },
 });
