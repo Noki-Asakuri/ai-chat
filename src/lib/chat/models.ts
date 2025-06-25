@@ -10,6 +10,19 @@ export function getModelData(modelId: AllModelIds | (string & {})): ModelData {
   throw new Error(`Unknown model: ${modelId}`);
 }
 
+export function prettifyProviderName(provider: Provider | (string & {})) {
+  switch (provider) {
+    case "google":
+      return "Gemini";
+    case "openai":
+      return "OpenAI";
+    case "deepseek":
+      return "DeepSeek";
+    default:
+      return "Unknown";
+  }
+}
+
 type Capability = {
   webSearch: boolean;
   reasoning: "budget" | "effort" | "always" | false;

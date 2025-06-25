@@ -7,7 +7,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-import { AllModelIds, ModelsData, type ModelData, type Provider } from "@/lib/chat/models";
+import {
+  AllModelIds,
+  ModelsData,
+  prettifyProviderName,
+  type ModelData,
+  type Provider,
+} from "@/lib/chat/models";
 import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
@@ -107,7 +113,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
                 <PopoverTrigger asChild>
                   <Button variant="ghost" className="w-full justify-start">
                     <Icons.provider provider={provider as Provider} />
-                    {provider.charAt(0).toUpperCase() + provider.slice(1)}
+                    <span>{prettifyProviderName(provider)}</span>
                     <ChevronRightIcon className="ml-auto size-4" />
                   </Button>
                 </PopoverTrigger>
