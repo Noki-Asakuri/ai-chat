@@ -6,7 +6,7 @@ import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import type { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import type { ModelMessage, UserContent } from "ai";
 
-import { AllModelIds } from "../chat/models";
+import { AllModelIds, getModelData } from "../chat/models";
 
 const inputSchema = z.object({
   messages: z.array(
@@ -48,7 +48,10 @@ const inputSchema = z.object({
 const modelValidator = z
   .enum(AllModelIds)
   .default("google/gemini-2.5-flash")
-  .catch("google/gemini-2.5-flash");
+  .catch("google/gemini-2.5-flash")
+  .transform((model) => {
+    return { id: getModelData(model).id, model };
+  });
 
 const safetySettings = [
   { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_HARASSMENT" },
@@ -65,7 +68,7 @@ export async function getRequestBody(req: Request, userId: string) {
   }
 
   const { messages, assistantMessageId, threadId, config } = data;
-  const model = modelValidator.parse(config?.model);
+  const { id, model } = modelValidator.parse(config?.model);
 
   const providerOptions = {
     google: { safetySettings } as GoogleGenerativeAIProviderOptions,
@@ -73,9 +76,11 @@ export async function getRequestBody(req: Request, userId: string) {
   };
 
   if (config?.thinkingBudget || config?.reasoningEffort) {
+    const isThinkingModel = model.includes("-thinking");
+
     providerOptions.google.thinkingConfig = {
-      includeThoughts: true,
-      thinkingBudget: config.thinkingBudget,
+      includeThoughts: isThinkingModel,
+      thinkingBudget: isThinkingModel ? config.thinkingBudget : 0,
     };
 
     providerOptions.openai = { reasoningEffort: config.reasoningEffort };
@@ -93,7 +98,7 @@ export async function getRequestBody(req: Request, userId: string) {
     assistantMessageId,
     threadId,
     config,
-    model,
+    model: id,
     providerOptions,
   };
 }

@@ -57,7 +57,17 @@ export async function POST(req: Request) {
   }
 
   const dataCustomization = await serverConvexClient.query(api.users.currentUser);
-  let systemInstruction = `## System Instruction: \n\n${dataCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}`;
+  let systemInstruction = "";
+
+  if (dataCustomization?.customization?.name) {
+    systemInstruction = `The user's name is ${dataCustomization.customization.name}`;
+
+    if (dataCustomization.customization.occupation) {
+      systemInstruction += ` and they are a ${dataCustomization.customization.occupation}. Avoid mentioning their occupation but keep it in mind.`;
+    }
+
+    systemInstruction += "\n\n";
+  }
 
   if (dataCustomization?.customization?.traits?.length) {
     systemInstruction =
@@ -65,16 +75,7 @@ export async function POST(req: Request) {
       systemInstruction;
   }
 
-  if (dataCustomization?.customization?.occupation) {
-    systemInstruction =
-      `The user's occupation is ${dataCustomization.customization.occupation}.\n\n` +
-      systemInstruction;
-  }
-
-  if (dataCustomization?.customization?.name) {
-    systemInstruction =
-      `The user's name is ${dataCustomization.customization.name}.\n\n` + systemInstruction;
-  }
+  systemInstruction += `## System Instruction:\n\n${dataCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}`;
 
   const {
     messages,
@@ -85,6 +86,8 @@ export async function POST(req: Request) {
     providerOptions,
     config,
   } = data;
+
+  console.dir(data, { depth: null });
 
   const streamId = generateId();
   const startTime = Date.now();

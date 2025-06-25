@@ -18,7 +18,7 @@ type RetryModelPopupProps = {
   message: ChatMessage;
 };
 
-type ModelWithId = ModelData & { id: string };
+type ModelWithId = ModelData & { modelId: string };
 type GroupedModels = Partial<Record<Provider, ModelWithId[]>>;
 
 type CapabilityIconProps = {
@@ -58,7 +58,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
   const modelsByProvider = AllModelIds.reduce<GroupedModels>((acc, modelId) => {
     const model = ModelsData[modelId];
     const provider = model.provider;
-    (acc[provider] ??= []).push({ id: modelId, ...model });
+    (acc[provider] ??= []).push({ modelId, ...model });
 
     return acc;
   }, {});
@@ -112,17 +112,22 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
                   </Button>
                 </PopoverTrigger>
 
-                <PopoverContent side="right" align="start" className="w-82 p-2" sideOffset={16}>
+                <PopoverContent
+                  side="right"
+                  align="start"
+                  className="w-min min-w-82 p-2"
+                  sideOffset={16}
+                >
                   <div className="space-y-1">
                     {models?.map((model) => (
                       <ModelProviderPicker
-                        key={model.id}
+                        key={model.modelId}
                         provider={model.provider}
                         model={model}
                         index={index}
                         retryMessage={async () => {
                           setPopupOpen(false);
-                          await retryMessage(index, { modelId: model.id });
+                          await retryMessage(index, { modelId: model.modelId });
                         }}
                       />
                     ))}

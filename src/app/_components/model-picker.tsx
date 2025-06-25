@@ -34,7 +34,7 @@ export function ModelPicker() {
 
       <PopoverContent align="start" className="w-[370px] min-w-max p-2">
         <ScrollArea className="h-[600px] max-w-full">
-          <div className="grid grid-cols-1 gap-2 pr-4">
+          <div className="grid grid-cols-1 gap-2 pr-3">
             {AllModelIds.sort().map((modelId) => (
               <ModelItem key={modelId} modelId={modelId} currentModel={model} />
             ))}
@@ -53,12 +53,12 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
     <button
       data-model={modelId}
       data-active={modelId === currentModel}
-      className="hover:bg-primary/10 data-[active=true]:border-primary/70 data-[active=true]:bg-primary/20 text-foreground flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-2"
+      className="hover:bg-primary/10 data-[active=true]:border-primary/70 data-[active=true]:bg-primary/20 text-foreground flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-1.5"
       onMouseDown={() => setActiveModel({ model: modelId })}
     >
       <div className="flex items-center justify-center gap-2">
         <Icons.provider provider={data.provider} className="size-4" />
-        <span className="w-max">{data.displayName}</span>
+        <span className="w-max text-sm">{data.displayName}</span>
       </div>
 
       <div className="flex items-center gap-1">
@@ -67,7 +67,7 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
           disable={data.capabilities.webSearch}
           title="This model supports web search."
         >
-          <RssIcon size={16} />
+          <RssIcon size={14} />
         </CapabilityIcon>
 
         <CapabilityIcon
@@ -75,7 +75,7 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
           disable={data.capabilities.reasoning !== false}
           title="This model supports reasoning."
         >
-          <BrainIcon size={16} />
+          <BrainIcon size={14} />
         </CapabilityIcon>
 
         <CapabilityIcon
@@ -83,7 +83,7 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
           disable={data.capabilities.vision}
           title="This model supports vision."
         >
-          <EyeIcon size={16} />
+          <EyeIcon size={14} />
         </CapabilityIcon>
       </div>
     </button>
@@ -105,7 +105,7 @@ function CapabilityIcon({
     <Tooltip delayDuration={150}>
       <TooltipTrigger asChild>
         <div
-          className={cn("flex size-7 items-center justify-center rounded-md border", {
+          className={cn("flex size-6.5 items-center justify-center rounded-md border", {
             "bg-[#25252e] *:stroke-[#94b8dc]": variant === "webSearch",
             "bg-[#252030] *:stroke-[#6a6aa2]": variant === "reasoning",
             "bg-[#252b2b] *:stroke-[#79afa3]": variant === "vision",

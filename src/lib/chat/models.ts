@@ -4,26 +4,10 @@ export function getModelData(modelId: AllModelIds | (string & {})): ModelData {
 
   for (const id of AllModelIds) {
     const data = ModelsData[id] as ModelData;
-    if (data.modelIds?.includes(modelId)) return data;
+    if (data.altModelIds?.some((id) => id === modelId)) return data;
   }
 
-  return {
-    displayName: modelId,
-    provider: "unknown",
-    capabilities: {
-      config: {
-        temperature: true,
-        topP: true,
-        topK: true,
-        presencePenalty: true,
-        frequencyPenalty: true,
-      },
-      webSearch: false,
-      reasoning: false,
-      vision: false,
-      maxTokens: 4096,
-    },
-  };
+  throw new Error(`Unknown model: ${modelId}`);
 }
 
 type Capability = {
@@ -41,10 +25,11 @@ type Capability = {
   vision: boolean;
   maxTokens: number;
 };
-export type Provider = "google" | "openai" | "deepseek" | "unknown";
+export type Provider = "google" | "openai" | "deepseek";
 export type ModelData = {
   displayName: string;
-  modelIds?: string[];
+  id: ModelIdKey;
+  altModelIds?: string[];
   provider: Provider;
   capabilities: Capability;
 };
@@ -53,8 +38,23 @@ export type AllModelIds = keyof typeof ModelsData;
 export type ModelIdKey = `${Provider}/${string}`;
 
 export const ModelsData = {
-  "google/gemini-2.5-flash-lite-preview-06-17": {
+  "google/gemini-2.5-flash-lite": {
     displayName: "Gemini 2.5 Flash Lite",
+    id: "google/gemini-2.5-flash-lite-preview-06-17",
+    altModelIds: ["google/gemini-2.5-flash-lite-preview-06-17"],
+    provider: "google",
+    capabilities: {
+      vision: true,
+      webSearch: true,
+      reasoning: false,
+      maxTokens: 64_000,
+      config: { temperature: true, topP: true, topK: true },
+    },
+  },
+  "google/gemini-2.5-flash-lite-thinking": {
+    displayName: "Gemini 2.5 Flash Lite (Thinking)",
+    id: "google/gemini-2.5-flash-lite-preview-06-17",
+    altModelIds: ["google/gemini-2.5-flash-lite-preview-06-17"],
     provider: "google",
     capabilities: {
       vision: true,
@@ -67,7 +67,21 @@ export const ModelsData = {
   },
   "google/gemini-2.5-flash": {
     displayName: "Gemini 2.5 Flash",
-    modelIds: ["google/gemini-2.5-flash-preview-05-20"],
+    id: "google/gemini-2.5-flash",
+    altModelIds: ["google/gemini-2.5-flash-preview-05-20"],
+    provider: "google",
+    capabilities: {
+      vision: true,
+      webSearch: true,
+      reasoning: false,
+      maxTokens: 65_536,
+      config: { temperature: true, topP: true, topK: true },
+    },
+  },
+  "google/gemini-2.5-flash-thinking": {
+    displayName: "Gemini 2.5 Flash (Thinking)",
+    id: "google/gemini-2.5-flash",
+    altModelIds: ["google/gemini-2.5-flash-preview-05-20"],
     provider: "google",
     capabilities: {
       vision: true,
@@ -80,7 +94,8 @@ export const ModelsData = {
   },
   "google/gemini-2.5-pro": {
     displayName: "Gemini 2.5 Pro",
-    modelIds: ["google/gemini-2.5-pro-preview-05-06", "google/gemini-2.5-pro-preview-06-05"],
+    id: "google/gemini-2.5-pro",
+    altModelIds: ["google/gemini-2.5-pro-preview-05-06", "google/gemini-2.5-pro-preview-06-05"],
     provider: "google",
     capabilities: {
       vision: true,
@@ -94,6 +109,7 @@ export const ModelsData = {
 
   "deepseek/deepseek-chat": {
     displayName: "DeepSeek V3",
+    id: "deepseek/deepseek-chat",
     provider: "deepseek",
     capabilities: {
       webSearch: false,
@@ -111,6 +127,7 @@ export const ModelsData = {
   },
   "deepseek/deepseek-reasoner": {
     displayName: "DeepSeek R1",
+    id: "deepseek/deepseek-reasoner",
     provider: "deepseek",
     capabilities: {
       webSearch: false,
@@ -123,6 +140,7 @@ export const ModelsData = {
 
   "openai/gpt-4.1": {
     displayName: "GPT-4.1",
+    id: "openai/gpt-4.1",
     provider: "openai",
     capabilities: {
       webSearch: false,
@@ -139,6 +157,7 @@ export const ModelsData = {
   },
   "openai/gpt-4.1-mini": {
     displayName: "GPT-4.1 Mini",
+    id: "openai/gpt-4.1-mini",
     provider: "openai",
     capabilities: {
       webSearch: false,
@@ -155,6 +174,7 @@ export const ModelsData = {
   },
   "openai/chatgpt-4o": {
     displayName: "ChatGPT 4o",
+    id: "openai/chatgpt-4o",
     provider: "openai",
     capabilities: {
       webSearch: false,
@@ -171,6 +191,7 @@ export const ModelsData = {
   },
   "openai/gpt-4o": {
     displayName: "GPT-4o",
+    id: "openai/gpt-4o",
     provider: "openai",
     capabilities: {
       webSearch: false,
@@ -187,6 +208,7 @@ export const ModelsData = {
   },
   "openai/gpt-4o-mini": {
     displayName: "GPT-4o Mini",
+    id: "openai/gpt-4o-mini",
     provider: "openai",
     capabilities: {
       webSearch: false,
@@ -203,6 +225,7 @@ export const ModelsData = {
   },
   "openai/o3": {
     displayName: "o3",
+    id: "openai/o3",
     provider: "openai",
     capabilities: {
       webSearch: false,
@@ -220,6 +243,7 @@ export const ModelsData = {
 
   "openai/o3-mini": {
     displayName: "o3 Mini",
+    id: "openai/o3-mini",
     provider: "openai",
     capabilities: {
       webSearch: false,
@@ -236,6 +260,7 @@ export const ModelsData = {
   },
   "openai/o4-mini": {
     displayName: "o4 Mini",
+    id: "openai/o4-mini",
     provider: "openai",
     capabilities: {
       webSearch: false,
@@ -253,6 +278,7 @@ export const ModelsData = {
 
   "openai/gpt-4.5-preview": {
     displayName: "GPT-4.5 Preview",
+    id: "openai/gpt-4.5-preview",
     provider: "openai",
     capabilities: {
       webSearch: false,
