@@ -1,7 +1,7 @@
-import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
-import { api } from "convex/_generated/api";
+import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
 
+import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
 import { NavLink } from "react-router";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
