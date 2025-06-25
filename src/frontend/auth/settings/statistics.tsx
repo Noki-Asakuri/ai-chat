@@ -1,73 +1,92 @@
 "use client";
 
+import { api } from "convex/_generated/api";
+import { useQuery } from "convex/react";
+
+import { NavLink } from "react-router";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Icons } from "@/components/ui/icons";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const stats = [
-  {
-    name: "Assistants",
-    value: "12",
-    change: "+9.1%",
-    previous: "11 Last Month",
-  },
-  {
-    name: "Topics",
-    value: "399",
-    change: "+3.1%",
-    previous: "387 Last Month",
-  },
-  {
-    name: "Messages",
-    value: "1,741",
-    change: "+1.8%",
-    previous: "1,710 Last Month",
-  },
-  {
-    name: "Total Words",
-    value: "2.8M",
-    change: "+4.6%",
-    previous: "2.6M Last Month",
-  },
-];
+import { getModelData } from "@/lib/chat/models";
+import { format, toUUID } from "@/lib/utils";
 
-const modelRank = [
-  { name: "chagpt-4o-latest", value: 242 },
-  { name: "qpt-4o", value: 172 },
-  { name: "o1-preview", value: 69 },
-  { name: "qpt-4.1", value: 59 },
-  { name: "o4-mini", value: 49 },
-];
+type StatItem = {
+  name: string;
+  value: number;
+};
 
-const assistantRank = [
-  { name: "Just Chat", value: 215 },
-  { name: "O3 Mini High", value: 37 },
-  { name: "Gemini", value: 35 },
-  { name: "OpenAI GPT", value: 28 },
-  { name: "Writing Assistant", value: 27 },
-];
+type RankItem = {
+  id: string;
+  name: string;
+  value: number;
+};
 
-const topicRank = [
-  { name: "UUID based AES encrypti...", value: 36 },
-  { name: "Handling template literal...", value: 28 },
-  { name: "Check substring in char a...", value: 24 },
-  { name: "Lazily load and read file i...", value: 20 },
-  { name: "Sorting SQL by article co...", value: 20 },
-];
+type StatisticsData = {
+  stats: StatItem[];
+  modelRank: RankItem[];
+  threadRank: RankItem[];
+};
 
 export function StatisticsPage() {
+  const statistics = useQuery(api.statistics.getStatistics) as StatisticsData | undefined;
+
+  if (!statistics) {
+    return (
+      <main className="space-y-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-12" />
+              </CardHeader>
+
+              <CardContent>
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="mt-1 h-4 w-24" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-1 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i}>
+              <Skeleton className="h-6 w-40" />
+              <div className="mt-4 flex text-gray-500">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-1/3" />
+              </div>
+              <div className="mt-2 space-y-2">
+                {Array.from({ length: 5 }).map((_, j) => (
+                  <div key={j} className="flex justify-between">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/4" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
+    );
+  }
+
+  const { stats, modelRank, threadRank } = statistics;
+
   return (
     <main className="space-y-8">
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {stats.map((item) => (
           <Card key={item.name}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-normal text-gray-400">{item.name}</CardTitle>
-              <div className="rounded-md bg-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-400">
-                {item.change}
-              </div>
             </CardHeader>
+
             <CardContent>
-              <div className="text-3xl font-bold">{item.value}</div>
-              <p className="text-xs text-gray-500">{item.previous}</p>
+              <div className="text-3xl font-bold">{format.number(item.value)}</div>
             </CardContent>
           </Card>
         ))}
@@ -124,7 +143,7 @@ export function StatisticsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 sm:grid-cols-1 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-8 sm:grid-cols-1 lg:grid-cols-2">
         <div>
           <h2 className="text-xl font-semibold">Model Usage Rank</h2>
           <div className="mt-4 flex text-gray-500">
@@ -132,45 +151,50 @@ export function StatisticsPage() {
             <p className="w-1/3 text-right">Messages</p>
           </div>
           <div className="mt-2 space-y-2">
-            {modelRank.map((item) => (
-              <div key={item.name} className="flex justify-between">
-                <p>{item.name}</p>
-                <p>{item.value}</p>
-              </div>
+            {modelRank.slice(0, 5).map((item) => (
+              <ModelRank key={item.name} model={item} />
             ))}
           </div>
         </div>
+
         <div>
-          <h2 className="text-xl font-semibold">Assistant Usage Rank</h2>
+          <h2 className="text-xl font-semibold">Thread Content Rank</h2>
           <div className="mt-4 flex text-gray-500">
-            <p className="w-2/3">Assistant</p>
-            <p className="w-1/3 text-right">Topics</p>
-          </div>
-          <div className="mt-2 space-y-2">
-            {assistantRank.map((item) => (
-              <div key={item.name} className="flex justify-between">
-                <p>{item.name}</p>
-                <p>{item.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold">Topic Content Rank</h2>
-          <div className="mt-4 flex text-gray-500">
-            <p className="w-2/d">Topic</p>
+            <p className="w-2/3">Thread</p>
             <p className="w-1/3 text-right">Messages</p>
           </div>
+
           <div className="mt-2 space-y-2">
-            {topicRank.map((item) => (
-              <div key={item.name} className="flex justify-between">
-                <p className="truncate">{item.name}</p>
-                <p>{item.value}</p>
-              </div>
+            {threadRank.slice(0, 5).map((item) => (
+              <NavLink to={`/chat/${toUUID(item.id)}`} key={item.id}>
+                <div className="flex justify-between gap-4 rounded-md px-4 py-2 hover:bg-gray-800/50">
+                  <p className="truncate">{item.name}</p>
+
+                  <span>{item.value}</span>
+                </div>
+              </NavLink>
             ))}
           </div>
         </div>
       </div>
     </main>
+  );
+}
+
+function ModelRank({ model }: { model: RankItem }) {
+  const modelData = getModelData(model.name);
+
+  return (
+    <div className="flex justify-between gap-4 rounded-md px-4 py-2 hover:bg-gray-800/50">
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <Icons.provider provider={modelData.provider} />
+          <p>{modelData.displayName}</p>
+        </div>
+        <span className="text-xs">{model.name}</span>
+      </div>
+
+      <p>{model.value}</p>
+    </div>
   );
 }
