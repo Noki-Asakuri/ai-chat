@@ -101,7 +101,7 @@ export function StatisticsPage() {
           <ResponsiveCalendar
             data={activity}
             from={new Date(thisYear.getFullYear(), 0, 1).toISOString()}
-            to={thisYear}
+            to={thisYear.toISOString()}
             colors={["#0e4429", "#006d32", "#26a641", "#39d353"]}
             emptyColor="#151b23"
             daySpacing={2}
