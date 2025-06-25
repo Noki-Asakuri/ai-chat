@@ -92,7 +92,7 @@ export const ModelsData = {
       config: { temperature: true, topP: true, topK: true },
     },
   },
-  "google/gemini-2.5-pro": {
+  "google/gemini-2.5-pro-thinking": {
     displayName: "Gemini 2.5 Pro",
     id: "google/gemini-2.5-pro",
     altModelIds: ["google/gemini-2.5-pro-preview-05-06", "google/gemini-2.5-pro-preview-06-05"],
