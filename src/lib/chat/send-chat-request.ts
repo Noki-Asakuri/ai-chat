@@ -43,12 +43,12 @@ export async function sendChatRequest(
       fetch: fetch(url, { ...init, signal: abortController.signal }),
       handler: async (stream) => {
         switch (stream.type) {
-          case "text":
-            content += stream.text;
+          case "text-delta":
+            content += stream.delta;
             break;
 
-          case "reasoning":
-            reasoning += stream.text;
+          case "reasoning-delta":
+            reasoning += stream.delta;
             break;
 
           case "finish":
