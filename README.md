@@ -40,10 +40,16 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 - [x] Support send Image/PDF/etc
 - [x] Support branching
 - [x] Use shadcn/ui side-bar for threads
+- [x] Custom system prompts
+- [x] Add support to change model params
+- [x] Drag and drop files
 - [ ] Better UI
 - [ ] Add Settings page
-- [ ] Custom system prompts
+  - [x] Account
+  - [ ] Usage
+  - [x] Customize
+  - [ ] Models
+  - [ ] API Keys
+  - [ ] Contact
 - [ ] Agents selection
-- [x] Add support to change model params
-- [ ] Drag and drop files
 - [ ] Remove attachments on messages.
