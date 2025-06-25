@@ -193,7 +193,7 @@ function ModelRank({
   return (
     <div className="hover:bg-card relative flex h-10 justify-between gap-4 overflow-hidden rounded-md border px-4 py-2">
       <div
-        className="bg-chart-1/70 absolute top-0 left-0 h-full rounded-md"
+        className="bg-sidebar-primary/60 absolute top-0 left-0 h-full rounded-md"
         style={{ width: `${percentage}%` }}
       />
 
