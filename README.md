@@ -46,7 +46,7 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 - [ ] Better UI
 - [ ] Add Settings page
   - [x] Account
-  - [ ] Usage
+  - [x] Statistics
   - [x] Customize
   - [ ] Models
   - [ ] API Keys
