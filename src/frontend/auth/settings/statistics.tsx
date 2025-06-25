@@ -100,7 +100,7 @@ export function StatisticsPage() {
         <div className="mt-4 h-42">
           <ResponsiveCalendar
             data={activity}
-            from={new Date(thisYear.setFullYear(thisYear.getFullYear())).toISOString()}
+            from={new Date(thisYear.getFullYear(), 0, 1).toISOString()}
             to={thisYear}
             colors={["#0e4429", "#006d32", "#26a641", "#39d353"]}
             emptyColor="#151b23"
