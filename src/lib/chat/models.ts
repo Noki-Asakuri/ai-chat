@@ -68,7 +68,7 @@ export const ModelsData = {
   "google/gemini-2.5-flash": {
     displayName: "Gemini 2.5 Flash",
     id: "google/gemini-2.5-flash",
-    altModelIds: ["google/gemini-2.5-flash-preview-05-20"],
+    altModelIds: ["google/gemini-2.5-flash-preview-05-20", "google/gemini-2.5-flash"],
     provider: "google",
     capabilities: {
       vision: true,
@@ -81,7 +81,7 @@ export const ModelsData = {
   "google/gemini-2.5-flash-thinking": {
     displayName: "Gemini 2.5 Flash (Thinking)",
     id: "google/gemini-2.5-flash",
-    altModelIds: ["google/gemini-2.5-flash-preview-05-20"],
+    altModelIds: ["google/gemini-2.5-flash-preview-05-20", "google/gemini-2.5-flash"],
     provider: "google",
     capabilities: {
       vision: true,
@@ -95,7 +95,11 @@ export const ModelsData = {
   "google/gemini-2.5-pro-thinking": {
     displayName: "Gemini 2.5 Pro",
     id: "google/gemini-2.5-pro",
-    altModelIds: ["google/gemini-2.5-pro-preview-05-06", "google/gemini-2.5-pro-preview-06-05"],
+    altModelIds: [
+      "google/gemini-2.5-pro-preview-05-06",
+      "google/gemini-2.5-pro-preview-06-05",
+      "google/gemini-2.5-pro",
+    ],
     provider: "google",
     capabilities: {
       vision: true,

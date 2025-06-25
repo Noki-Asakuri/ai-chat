@@ -270,8 +270,6 @@ export const Icons = {
         return Icons.openai(props);
       case "deepseek":
         return Icons.deepseek(props);
-      case "unknown":
-        return Icons.unknown(props);
       default:
         return null;
     }
