@@ -19,7 +19,7 @@ export const getStatistics = query({
       .collect();
 
     const totalWords = messages.reduce(
-      (acc: number, m: Doc<"messages">) => acc + m.content.split(" ").length,
+      (acc: number, m: Doc<"messages">) => acc + m.content.trim().split(/\s+/).length,
       0,
     );
 
