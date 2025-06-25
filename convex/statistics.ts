@@ -54,11 +54,14 @@ export const getStatistics = query({
     );
 
     return {
-      stats: [
-        { name: "Threads", value: threads.length },
-        { name: "Messages", value: messages.length },
-        { name: "Total Words", value: totalWords },
-      ],
+      stats: {
+        threads: threads.length,
+        words: totalWords,
+        messages: {
+          assistant: messages.filter((m) => m.role === "assistant").length,
+          user: messages.filter((m) => m.role === "user").length,
+        },
+      },
       modelRank: Object.entries(modelRank)
         .sort(([, a], [, b]) => b - a)
         .map(([name, value]) => ({ name, value })),

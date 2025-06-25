@@ -11,31 +11,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getModelData } from "@/lib/chat/models";
 import { format, toUUID } from "@/lib/utils";
 
-type StatisticsData = {
-  stats: { name: string; value: number }[];
-  modelRank: { name: string; value: number }[];
-  threadRank: { id: string; name: string; value: number }[];
-  activity: { day: string; value: number }[];
-};
-
 export function StatisticsPage() {
-  const statistics = useQuery(api.statistics.getStatistics) as StatisticsData | undefined;
+  const statistics = useQuery(api.statistics.getStatistics);
   const thisYear = new Date(Date.now());
 
   if (!statistics) {
     return (
       <main className="space-y-8">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2">
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <Skeleton className="h-4 w-20" />
                 <Skeleton className="h-4 w-12" />
               </CardHeader>
 
               <CardContent>
                 <Skeleton className="h-8 w-16" />
-                <Skeleton className="mt-1 h-4 w-24" />
               </CardContent>
             </Card>
           ))}
@@ -65,22 +57,40 @@ export function StatisticsPage() {
   }
 
   const { stats, modelRank, threadRank, activity } = statistics;
-  const totalMessages = stats.find((s) => s.name === "Messages")?.value ?? 0;
+  const totalMessages = stats.messages.assistant + stats.messages.user;
 
   return (
     <main className="space-y-8">
       <div className="grid grid-cols-3 gap-2">
-        {stats.map((item) => (
-          <Card key={item.name} className="rounded-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-normal text-gray-400">{item.name}</CardTitle>
-            </CardHeader>
+        <Card className="rounded-md">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-normal text-gray-400">Threads</CardTitle>
+          </CardHeader>
 
-            <CardContent>
-              <div className="text-3xl font-bold">{format.number(item.value)}</div>
-            </CardContent>
-          </Card>
-        ))}
+          <CardContent>
+            <div className="text-3xl font-bold">{format.number(stats.threads)}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-md">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-normal text-gray-400">Messages</CardTitle>
+          </CardHeader>
+
+          <CardContent>
+            <div className="text-3xl font-bold">{format.number(totalMessages)}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-md">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-normal text-gray-400">Words</CardTitle>
+          </CardHeader>
+
+          <CardContent>
+            <div className="text-3xl font-bold">{format.number(stats.words)}</div>
+          </CardContent>
+        </Card>
       </div>
 
       <div>
@@ -122,9 +132,14 @@ export function StatisticsPage() {
             <p className="w-2/3">Model</p>
             <p className="w-1/3 text-right">Messages</p>
           </div>
+
           <div className="mt-2 space-y-2">
             {modelRank.slice(0, 5).map((item) => (
-              <ModelRank key={item.name} model={item} />
+              <ModelRank
+                key={item.name}
+                model={item}
+                assistantMessages={stats.messages.assistant}
+              />
             ))}
           </div>
         </div>
@@ -136,10 +151,10 @@ export function StatisticsPage() {
             <p className="w-1/3 text-right">Messages</p>
           </div>
 
-          <div className="mt-2 space-y-2">
+          <div className="mt-2 flex flex-col gap-2">
             {threadRank.slice(0, 5).map((item) => (
               <NavLink to={`/chat/${toUUID(item.id)}`} key={item.id}>
-                <div className="hover:bg-card flex justify-between gap-4 rounded-md px-4 py-2">
+                <div className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2">
                   <p className="truncate">{item.name}</p>
                   <span>{item.value}</span>
                 </div>
@@ -165,12 +180,24 @@ function CalenderTooltip({ day, value, color }: CalendarTooltipProps) {
   );
 }
 
-function ModelRank({ model }: { model: { name: string; value: number } }) {
+function ModelRank({
+  model,
+  assistantMessages,
+}: {
+  model: { name: string; value: number };
+  assistantMessages: number;
+}) {
   const modelData = getModelData(model.name);
+  const percentage = (model.value / assistantMessages) * 100;
 
   return (
-    <div className="hover:bg-card flex justify-between gap-4 rounded-md px-4 py-2">
-      <div className="flex items-center gap-2">
+    <div className="hover:bg-card relative flex h-10 justify-between gap-4 overflow-hidden rounded-md border px-4 py-2">
+      <div
+        className="bg-chart-1/70 absolute top-0 left-0 h-full rounded-md"
+        style={{ width: `${percentage}%` }}
+      />
+
+      <div className="z-10 flex items-center gap-2">
         <Icons.provider provider={modelData.provider} />
         <p>{modelData.displayName}</p>
       </div>
