@@ -12,8 +12,8 @@ const paths = [
     path: "/auth/settings/account",
   },
   {
-    name: "Usage",
-    path: "/auth/settings/usage",
+    name: "Statistics",
+    path: "/auth/settings/statistics",
   },
   {
     name: "Customize",

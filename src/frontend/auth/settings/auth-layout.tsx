@@ -34,13 +34,13 @@ export function AuthLayout() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 overflow-y-auto p-4">
-        <div className="grid w-full gap-8 md:grid-cols-[300px_1fr]">
+      <main className="mx-auto w-full max-w-7xl flex-1 overflow-hidden p-4">
+        <div className="grid h-full w-full gap-8 md:grid-cols-[300px_1fr]">
           <SettingsSidebar />
 
-          <div>
+          <div className="flex h-full flex-col overflow-hidden">
             <UserNavbar />
-            <div className="mt-6 w-full">
+            <div className="custom-scroll mt-6 flex-1 overflow-y-auto pr-4">
               <Outlet />
             </div>
           </div>

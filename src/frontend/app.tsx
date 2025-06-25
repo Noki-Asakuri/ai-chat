@@ -13,6 +13,7 @@ import { WaitlistPage } from "@/frontend/auth/waitlist";
 import { AccountPage } from "./auth/settings/account";
 import { AuthLayout } from "./auth/settings/auth-layout";
 import { CustomizePage } from "./auth/settings/customize";
+import { StatisticsPage } from "./auth/settings/statistics";
 
 import Home from "./home";
 
@@ -32,7 +33,7 @@ export default function App() {
           <Route path="/auth/settings" element={<AuthLayout />}>
             <Route index element={<Navigate to="account" replace />} />
             <Route path="account/*" element={<AccountPage />} />
-            <Route path="usage/*" element={<div>Usage</div>} />
+            <Route path="statistics/*" element={<StatisticsPage />} />
             <Route path="customize/*" element={<CustomizePage />} />
             <Route path="models/*" element={<div>Models</div>} />
             <Route path="api-keys/*" element={<div>API Keys</div>} />
