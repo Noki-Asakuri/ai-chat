@@ -13,17 +13,17 @@ export const getStatistics = query({
       .withIndex("by_userId", (q) => q.eq("userId", user.subject))
       .collect();
 
-    const messages = await ctx.db
+    const messagesFromDatabase = await ctx.db
       .query("messages")
       .withIndex("by_userId_threadId", (q) => q.eq("userId", user.subject))
       .collect();
 
-    const totalWords = messages.reduce(
+    const totalWords = messagesFromDatabase.reduce(
       (acc: number, m: Doc<"messages">) => acc + m.content.trim().split(/\s+/).length,
       0,
     );
 
-    const modelRank = messages.reduce(
+    const modelRank = messagesFromDatabase.reduce(
       (acc: Record<string, number>, m: Doc<"messages">) => {
         if (m.role === "assistant" && m.model) {
           const id = getModelData(m.model).id;
@@ -34,7 +34,7 @@ export const getStatistics = query({
       {} as Record<string, number>,
     );
 
-    const threadMessageCounts = messages.reduce(
+    const threadMessageCounts = messagesFromDatabase.reduce(
       (acc: Record<string, number>, m: Doc<"messages">) => {
         acc[m.threadId] = (acc[m.threadId] || 0) + 1;
         return acc;
@@ -48,7 +48,7 @@ export const getStatistics = query({
       value: threadMessageCounts[t._id] || 0,
     }));
 
-    const activityMap = messages.reduce(
+    const activityMap = messagesFromDatabase.reduce(
       (acc: Record<string, number>, m: Doc<"messages">) => {
         const date = new Date(m._creationTime).toISOString().split("T")[0];
         acc[date] = (acc[date] || 0) + 1;
@@ -59,14 +59,20 @@ export const getStatistics = query({
 
     const activity = Object.entries(activityMap).map(([day, value]) => ({ day, value }));
 
+    const messages = messagesFromDatabase.reduce(
+      (acc: { assistant: number; user: number }, m: Doc<"messages">) => {
+        if (m.role === "assistant") acc.assistant++;
+        if (m.role === "user") acc.user++;
+        return acc;
+      },
+      { assistant: 0, user: 0 },
+    );
+
     return {
       stats: {
         threads: threads.length,
         words: totalWords,
-        messages: {
-          assistant: messages.filter((m) => m.role === "assistant").length,
-          user: messages.filter((m) => m.role === "user").length,
-        },
+        messages,
       },
       modelRank: Object.entries(modelRank)
         .sort(([, a], [, b]) => b - a)
