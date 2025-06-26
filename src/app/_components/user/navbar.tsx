@@ -20,6 +20,10 @@ const paths = [
     path: "/auth/settings/customize",
   },
   {
+    name: "Attachments",
+    path: "/auth/settings/attachments",
+  },
+  {
     name: "Models",
     path: "/auth/settings/models",
   },

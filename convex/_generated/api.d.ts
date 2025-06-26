@@ -11,6 +11,7 @@
 import type * as attachments from "../attachments.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
+import type * as index from "../index.js";
 import type * as messages from "../messages.js";
 import type * as statistics from "../statistics.js";
 import type * as threads from "../threads.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   attachments: typeof attachments;
   files: typeof files;
   http: typeof http;
+  index: typeof index;
   messages: typeof messages;
   statistics: typeof statistics;
   threads: typeof threads;

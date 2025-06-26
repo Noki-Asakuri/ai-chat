@@ -18,6 +18,7 @@ import { StatisticsPage } from "./auth/settings/statistics";
 
 import Home from "./home";
 import { LoadingPage } from "@/components/loading-page";
+import { AttachmentsPage } from "./auth/settings/attachments";
 
 export default function App() {
   return (
@@ -46,6 +47,7 @@ export default function App() {
               <Route path="account/*" element={<AccountPage />} />
               <Route path="statistics/*" element={<StatisticsPage />} />
               <Route path="customize/*" element={<CustomizePage />} />
+              <Route path="attachments/*" element={<AttachmentsPage />} />
               <Route path="models/*" element={<div>Models</div>} />
               <Route path="api-keys/*" element={<div>API Keys</div>} />
               <Route path="contact/*" element={<div>Contact</div>} />
