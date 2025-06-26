@@ -60,18 +60,23 @@ function Button({
 function ButtonWithTip({
   children,
   title,
-  side,
+  side = "top",
   ...props
-}: React.ComponentProps<typeof Button> & { side?: "left" | "right" | "top" | "bottom" }) {
+}: React.ComponentProps<typeof Button> & {
+  side?: "top" | "bottom" | "left" | "right" | "inline-end" | "inline-start";
+}) {
   return (
-    <Tooltip delayDuration={300}>
-      <TooltipTrigger asChild>
-        <Button {...props} aria-label={title}>
-          {children}
-        </Button>
-      </TooltipTrigger>
+    <Tooltip>
+      <TooltipTrigger
+        {...props}
+        render={(triggerProps, state) => (
+          <Button {...triggerProps} aria-label={title} data-state={state}>
+            {children}
+          </Button>
+        )}
+      />
 
-      <TooltipContent side={side ?? "bottom"}>{title}</TooltipContent>
+      <TooltipContent side={side}>{title}</TooltipContent>
     </Tooltip>
   );
 }

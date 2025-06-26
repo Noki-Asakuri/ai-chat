@@ -47,7 +47,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         )}
       </head>
 
-      <body className="dark">{children}</body>
+      <body className="dark isolate">{children}</body>
     </html>
   );
 }

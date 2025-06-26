@@ -20,6 +20,7 @@
     "@ai-sdk/google": "^2.0.0-beta.1",
     "@ai-sdk/openai": "^2.0.0-beta.1",
     "@ai-sdk/react": "^2.0.0-beta.1",
+    "@base-ui-components/react": "^1.0.0-beta.0",
     "@clerk/nextjs": "^6.23.0",
     "@clerk/react-router": "^1.6.1",
     "@clerk/themes": "^2.2.51",
