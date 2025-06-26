@@ -3,6 +3,7 @@ import "katex/dist/katex.min.css";
 
 import { type Metadata } from "next";
 import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
+import { BotIdClient } from "botid/client";
 
 import { env } from "@/env";
 
@@ -29,10 +30,18 @@ const codeFont = JetBrains_Mono({
   variable: "--font-codeblock",
 });
 
+const protectedRoutes = [
+  {
+    path: "/api/ai/chat",
+    method: "POST",
+  },
+];
+
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${mainFont.variable} ${codeFont.variable} antialiased`}>
       <head>
+        <BotIdClient protect={protectedRoutes} />
         {env.NODE_ENV === "development" && (
           <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
         )}

@@ -7,6 +7,7 @@ import type { NextConfig } from "next";
 
 import withSerwistInit from "@serwist/next";
 import { withSentryConfig } from "@sentry/nextjs";
+import { withBotId } from "botid/next/config";
 
 function noWrapper(config: NextConfig, ..._args: unknown[]) {
   return config;
@@ -127,4 +128,4 @@ const sentryOptions = {
   automaticVercelMonitors: true,
 };
 
-export default withSentry(withSerwist(nextConfig), sentryOptions);
+export default withBotId(withSentry(withSerwist(nextConfig), sentryOptions));
