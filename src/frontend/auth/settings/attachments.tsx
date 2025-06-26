@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { format, toUUID } from "@/lib/utils";
 
 export function AttachmentsPage() {
-  const attachments = useQuery(api.attachments.getAllAtttachments);
+  const attachments = useQuery(api.attachments.getAllAttachments);
 
   if (!attachments) return <Loading />;
   if (attachments.length === 0) return <Loading text="No attachments" />;
@@ -133,7 +133,7 @@ function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachme
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={onDelete} disabled={pending}>
-            {pending ? "Deleteing..." : "Continue"}
+            {pending ? "Deleting..." : "Continue"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
