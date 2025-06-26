@@ -33,7 +33,7 @@ export function AttachmentsPage() {
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
       {attachments.map((attachment) => (
         <div
-          key={attachment.id}
+          key={attachment._id}
           className="hover:bg-card/80 flex flex-col overflow-hidden rounded-md border transition-colors"
         >
           <div className="relative size-full">
@@ -107,14 +107,12 @@ function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachme
   const deleteAttachment = useMutation(api.attachments.deleteAttachment);
 
   function onDelete() {
-    startTransition(async () => {
-      await toast
-        .promise(deleteAttachment({ attachmentId }), {
-          loading: "Deleting file...",
-          success: "File deleted",
-          error: "Failed to delete file",
-        })
-        .unwrap();
+    startTransition(() => {
+      toast.promise(deleteAttachment({ attachmentId }), {
+        loading: "Deleting file...",
+        success: "File deleted",
+        error: "Failed to delete file",
+      });
     });
   }
 
