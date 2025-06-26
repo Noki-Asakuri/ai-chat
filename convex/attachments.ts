@@ -1,9 +1,7 @@
-import { R2 } from "@convex-dev/r2";
 import { v } from "convex/values";
-import { components } from "./_generated/api";
-import { mutation, query } from "./_generated/server";
 
-const r2 = new R2(components.r2);
+import { r2 } from ".";
+import { mutation, query } from "./_generated/server";
 
 export const createAttachment = mutation({
   args: {
@@ -52,10 +50,8 @@ export const deleteAttachment = mutation({
     if (!attachment) throw new Error("Attachment not found");
     if (attachment.userId !== user.subject) throw new Error("Not authorized");
 
-    await ctx.db.delete(args.attachmentId);
-    return await r2.deleteObject(
-      ctx,
-      `${user.subject}/${attachment.threadId}/${args.attachmentId}`,
-    );
+    await r2
+      .deleteObject(ctx, `${attachment.userId}/${attachment.threadId}/${args.attachmentId}`)
+      .then(() => ctx.db.delete(args.attachmentId));
   },
 });

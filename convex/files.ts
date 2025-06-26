@@ -1,11 +1,11 @@
-import { R2, type R2Callbacks } from "@convex-dev/r2";
+import { type R2Callbacks } from "@convex-dev/r2";
 import { v } from "convex/values";
 
-import { components, internal } from "./_generated/api";
+import { r2 } from ".";
+import { internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import { mutation } from "./_generated/server";
 
-export const r2 = new R2(components.r2);
 const callbacks: R2Callbacks = internal.files;
 
 export const { syncMetadata, getMetadata, listMetadata, deleteObject, onSyncMetadata } =
