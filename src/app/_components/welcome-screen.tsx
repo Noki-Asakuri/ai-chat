@@ -2,7 +2,7 @@ import { useUser } from "@clerk/react-router";
 import { BookOpenIcon, CodeIcon, CompassIcon, SparklesIcon } from "lucide-react";
 import { useParams } from "react-router";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Tab, Tabs, TabsList, TabsPanel } from "./ui/tabs";
 
 import { useChatStore } from "@/lib/chat/store";
 
@@ -41,10 +41,10 @@ const learnPrompts = [
 ];
 
 const categories: CategoryButton[] = [
-  { icon: SparklesIcon, topic: "Create", prompts: createPrompts },
-  { icon: CompassIcon, topic: "Explore", prompts: explorePrompts },
-  { icon: CodeIcon, topic: "Code", prompts: codePrompts },
-  { icon: BookOpenIcon, topic: "Learn", prompts: learnPrompts },
+  { icon: SparklesIcon, topic: "create", prompts: createPrompts },
+  { icon: CompassIcon, topic: "explore", prompts: explorePrompts },
+  { icon: CodeIcon, topic: "code", prompts: codePrompts },
+  { icon: BookOpenIcon, topic: "learn", prompts: learnPrompts },
 ];
 
 export function WelcomeScreen() {
@@ -78,32 +78,34 @@ export function WelcomeScreen() {
           How can I help you, <span className="capitalize">{user?.username}</span>?
         </h1>
 
-        <Tabs defaultValue="Create" className="w-full px-4 md:min-w-[650px]">
-          <TabsList className="w-full">
-            {categories.map((category) => (
-              <TabsTrigger key={category.topic} value={category.topic} className="cursor-pointer">
-                <category.icon className="size-4" />
-                <span>{category.topic}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <div className="w-full px-4 md:min-w-[650px]">
+          <Tabs defaultValue="create">
+            <TabsList className="w-full">
+              {categories.map((category) => (
+                <Tab key={category.topic} value={category.topic}>
+                  <category.icon className="size-4" />
+                  <span className="capitalize">{category.topic}</span>
+                </Tab>
+              ))}
+            </TabsList>
 
-          {categories.map((category) => (
-            <TabsContent key={category.topic} value={category.topic}>
-              <div className="grid grid-cols-1 gap-2 pt-4">
-                {category.prompts.map((prompt, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handlePromptClick(prompt)}
-                    className="hover:bg-muted/40 flex cursor-pointer items-center justify-center rounded-md px-4 py-2 text-sm text-pretty transition-colors md:min-w-max md:justify-start md:text-base"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+            {categories.map((category) => (
+              <TabsPanel key={category.topic} value={category.topic}>
+                <div className="grid grid-cols-1 gap-1">
+                  {category.prompts.map((prompt, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handlePromptClick(prompt)}
+                      className="hover:bg-muted/40 flex cursor-pointer items-center justify-center rounded-md px-4 py-2 text-sm text-pretty transition-colors md:min-w-max md:justify-start md:text-base"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              </TabsPanel>
+            ))}
+          </Tabs>
+        </div>
       </div>
     </div>
   );

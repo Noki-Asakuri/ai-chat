@@ -5,7 +5,8 @@ import { Button, ButtonWithTip } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+import { CapabilityIcon } from "@/components/capability-icon";
 
 import {
   AllModelIds,
@@ -17,7 +18,6 @@ import {
 import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 type RetryModelPopupProps = {
   index: number;
@@ -26,34 +26,6 @@ type RetryModelPopupProps = {
 
 type ModelWithId = ModelData & { modelId: string };
 type GroupedModels = Partial<Record<Provider, ModelWithId[]>>;
-
-type CapabilityIconProps = {
-  children: React.ReactNode;
-  variant: "webSearch" | "reasoning" | "vision";
-  disable: boolean;
-  title: string;
-};
-
-function CapabilityIcon({ children, variant, disable, title }: CapabilityIconProps) {
-  return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <div
-          className={cn("flex size-7 items-center justify-center rounded-md border", {
-            "bg-[#25252e] *:stroke-[#94b8dc]": variant === "webSearch",
-            "bg-[#252030] *:stroke-[#6a6aa2]": variant === "reasoning",
-            "bg-[#252b2b] *:stroke-[#79afa3]": variant === "vision",
-            hidden: !disable,
-          })}
-        >
-          {children}
-        </div>
-      </TooltipTrigger>
-
-      <TooltipContent side="top">{title}</TooltipContent>
-    </Tooltip>
-  );
-}
 
 export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
   const { retryMessage } = useChatRequest();

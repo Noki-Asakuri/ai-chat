@@ -1,15 +1,14 @@
 import { BrainIcon, ChevronDownIcon, EyeIcon, RssIcon } from "lucide-react";
-import type React from "react";
 
 import { Button } from "./ui/button";
 import { Icons } from "./ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { ScrollArea } from "./ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+
+import { CapabilityIcon } from "./capability-icon";
 
 import { AllModelIds, getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
-import { cn } from "@/lib/utils";
 
 export function ModelPicker() {
   const { model } = useChatStore((state) => state.chatConfig);
@@ -87,36 +86,5 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
         </CapabilityIcon>
       </div>
     </button>
-  );
-}
-
-function CapabilityIcon({
-  children,
-  variant,
-  disable,
-  title,
-}: {
-  children: React.ReactNode;
-  variant: "reasoning" | "webSearch" | "vision";
-  disable: boolean;
-  title: string;
-}) {
-  return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <div
-          className={cn("flex size-6.5 items-center justify-center rounded-md border", {
-            "bg-[#25252e] *:stroke-[#94b8dc]": variant === "webSearch",
-            "bg-[#252030] *:stroke-[#6a6aa2]": variant === "reasoning",
-            "bg-[#252b2b] *:stroke-[#79afa3]": variant === "vision",
-            hidden: !disable,
-          })}
-        >
-          {children}
-        </div>
-      </TooltipTrigger>
-
-      <TooltipContent side="top">{title}</TooltipContent>
-    </Tooltip>
   );
 }
