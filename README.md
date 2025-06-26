@@ -1,32 +1,68 @@
-# Create T3 App
+# AI Chat
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-## What's next? How do I make an app with this?
+An advanced AI chat application built with the T3 stack, featuring a modern UI and a rich feature set.
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+![Desktop Screenshot](public/screenshots/desktop-screenshot-1.png)
+![Mobile Screenshot](public.screenshots/mobile-screenshot-1.png)
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+## Features
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+- **Real-time Chat:** Instantaneous message streaming and updates.
+- **Thread Management:** Organize conversations with threads.
+- **Message History:** View, edit, and delete messages.
+- **Model Switching:** Change the AI model on the fly.
+- **File Attachments:** Send and receive images, PDFs, and other files.
+- **Conversation Branching:** Create different branches of a conversation.
+- **Customizable UI:** Light and dark modes, and customizable system prompts.
+- **And much more...**
 
-## Learn More
+## Tech Stack
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+- **Framework:** [Next.js](https://nextjs.org/)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+- **UI Components:** [shadcn/ui](https://ui.shadcn.com/)
+- **State Management:** [Zustand](https://github.com/pmndrs/zustand)
+- **Database:** [Convex](https://www.convex.dev/)
+- **Authentication:** [Clerk](https://clerk.com/)
+- **AI SDK:** [Vercel AI SDK](https://sdk.vercel.ai/docs)
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+## Getting Started
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+To get a local copy up and running, follow these simple steps.
 
-## How do I deploy this?
+### Prerequisites
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+- Node.js (v18 or later)
+- npm, yarn, or bun
+
+### Installation
+
+1.  Clone the repo
+    ```sh
+    git clone https://github.com/noki-asakuri/ai-chat.git
+    ```
+2.  Install NPM packages
+    ```sh
+    npm install
+    ```
+3.  Set up your environment variables. Create a `.env.local` file in the root of your project and add the following:
+
+    ```
+    NEXT_PUBLIC_CONVEX_URL=
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+    NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+    NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+    NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
+    NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
+    CLERK_SECRET_KEY=
+    ```
+
+4.  Run the development server
+    ```sh
+    npm run dev
+    ```
 
 ## Roadmap
 
@@ -54,3 +90,15 @@ Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
   - [ ] Contact
 - [ ] Agents selection
 - [ ] Remove attachments on messages.
+
+## License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+## Acknowledgments
+
+- [T3 Stack](https://create.t3.gg/)
+- [shadcn/ui](https://ui.shadcn.com/)
+- [Vercel](https://vercel.com/)
+- [Convex](https://www.convex.dev/)
+- [Clerk](https://clerk.com/)
