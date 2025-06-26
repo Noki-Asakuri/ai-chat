@@ -50,7 +50,8 @@ export const deleteAttachment = mutation({
     if (!attachment) throw new Error("Attachment not found");
     if (attachment.userId !== user.subject) throw new Error("Not authorized");
 
-    const key = `${attachment.userId}/${attachment.threadId}/${attachment.id}`;
+    const key = `${attachment.userId}/${attachment.threadId}/${attachment._id}`;
+
     await r2.deleteObject(ctx, key);
     await ctx.db.delete(args.attachmentId);
   },
