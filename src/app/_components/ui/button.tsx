@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
   {
     variants: {
       variant: {
@@ -60,18 +60,23 @@ function Button({
 function ButtonWithTip({
   children,
   title,
-  side,
+  side = "top",
   ...props
-}: React.ComponentProps<typeof Button> & { side?: "left" | "right" | "top" | "bottom" }) {
+}: React.ComponentProps<typeof Button> & {
+  side?: "top" | "bottom" | "left" | "right" | "inline-end" | "inline-start";
+}) {
   return (
-    <Tooltip delayDuration={300}>
-      <TooltipTrigger asChild>
-        <Button {...props} aria-label={title}>
-          {children}
-        </Button>
-      </TooltipTrigger>
+    <Tooltip>
+      <TooltipTrigger
+        {...props}
+        render={(triggerProps, state) => (
+          <Button {...triggerProps} aria-label={title} data-state={state}>
+            {children}
+          </Button>
+        )}
+      />
 
-      <TooltipContent side={side ?? "bottom"}>{title}</TooltipContent>
+      <TooltipContent side={side}>{title}</TooltipContent>
     </Tooltip>
   );
 }

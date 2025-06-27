@@ -123,17 +123,13 @@ export function MessageHistory() {
 
   return (
     <ScrollArea
+      ref={scrollContainerRef}
       onScroll={handleOnScroll}
-      className="h-full w-full"
-      viewportClassName="*:!contents"
-      viewportId="messages-scrollarea"
+      className="h-full max-w-full py-10"
+      viewport={{ id: "messages-scrollarea" }}
+      style={{ paddingBottom: `${textareaHeight + 20}px`, fontVariantLigatures: "none" }}
     >
-      <div
-        className="max-w-full py-10"
-        id="messages-container"
-        ref={scrollContainerRef}
-        style={{ paddingBottom: `${textareaHeight + 20}px`, fontVariantLigatures: "none" }}
-      >
+      <div className="content">
         {messages.map((message, index) => (
           <Message
             key={message.messageId}

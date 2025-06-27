@@ -1,10 +1,9 @@
 "use client";
 
+import { useDocumentTitle } from "@uidotdev/usehooks";
 import { NavLink, useLocation } from "react-router";
 
-import { buttonVariants } from "../ui/button";
-import { cn } from "@/lib/utils";
-import { useDocumentTitle } from "@uidotdev/usehooks";
+import { Tab, Tabs, TabsList } from "@/components/ui/tabs";
 
 const paths = [
   {
@@ -44,20 +43,16 @@ export function UserNavbar() {
   useDocumentTitle(activeTitle ? `${activeTitle} - AI Chat` : "Account - AI Chat");
 
   return (
-    <div className="bg-primary/10 w-max space-x-2 rounded-md p-1">
-      {paths.map(({ path, name }) => (
-        <NavLink
-          key={path}
-          to={path}
-          className={({ isActive }) =>
-            cn(buttonVariants({ variant: "ghost" }), "h-max px-3 py-1.5 text-base font-semibold", {
-              "bg-background text-primary hover:bg-background/80": isActive,
-            })
-          }
-        >
-          {name}
-        </NavLink>
-      ))}
-    </div>
+    <Tabs value={"tab-" + activeTitle} onValueChange={() => null}>
+      <TabsList>
+        {paths.map(({ path, name }) => (
+          <Tab key={path} value={"tab-" + name} className="h-10 px-0">
+            <NavLink to={path} className="flex h-full w-full items-center justify-center px-2">
+              {name}
+            </NavLink>
+          </Tab>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }

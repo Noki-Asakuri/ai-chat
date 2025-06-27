@@ -1,11 +1,11 @@
 import { BrainIcon, ChevronRightIcon, EyeIcon, RefreshCcwIcon, RssIcon } from "lucide-react";
 import * as React from "react";
 
-import { Button, ButtonWithTip } from "@/components/ui/button";
+import { CapabilityIcon } from "@/components/capability-icon";
+import { Button, buttonVariants, ButtonWithTip } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Menu, MenuArrow } from "@/components/ui/menu";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import {
   AllModelIds,
@@ -27,34 +27,6 @@ type RetryModelPopupProps = {
 type ModelWithId = ModelData & { modelId: string };
 type GroupedModels = Partial<Record<Provider, ModelWithId[]>>;
 
-type CapabilityIconProps = {
-  children: React.ReactNode;
-  variant: "webSearch" | "reasoning" | "vision";
-  disable: boolean;
-  title: string;
-};
-
-function CapabilityIcon({ children, variant, disable, title }: CapabilityIconProps) {
-  return (
-    <Tooltip delayDuration={150}>
-      <TooltipTrigger asChild>
-        <div
-          className={cn("flex size-7 items-center justify-center rounded-md border", {
-            "bg-[#25252e] *:stroke-[#94b8dc]": variant === "webSearch",
-            "bg-[#252030] *:stroke-[#6a6aa2]": variant === "reasoning",
-            "bg-[#252b2b] *:stroke-[#79afa3]": variant === "vision",
-            hidden: !disable,
-          })}
-        >
-          {children}
-        </div>
-      </TooltipTrigger>
-
-      <TooltipContent side="top">{title}</TooltipContent>
-    </Tooltip>
-  );
-}
-
 export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
   const { retryMessage } = useChatRequest();
   const [open, setOpen] = React.useState(false);
@@ -75,76 +47,82 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
   }
 
   return (
-    <Popover open={open} onOpenChange={setPopupOpen}>
-      <PopoverTrigger asChild>
-        <ButtonWithTip
-          title="Retry Message"
-          variant="ghost"
-          className="size-10"
-          disabled={message.status === "pending"}
-        >
-          <RefreshCcwIcon className="size-5" />
-        </ButtonWithTip>
-      </PopoverTrigger>
+    <Menu.Root open={open} onOpenChange={setPopupOpen}>
+      <Menu.Trigger
+        render={ButtonWithTip}
+        // @ts-expect-error BaseUI doesn't forward props correctly
+        side="bottom"
+        variant="ghost"
+        title="Retry Message"
+        className="size-10"
+        disabled={message.status === "pending"}
+      >
+        <RefreshCcwIcon className="size-5" />
+      </Menu.Trigger>
 
-      <PopoverContent className="w-64 p-2">
-        <div className="space-y-2">
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onMouseDown={async () => {
-              setPopupOpen(false);
-              await retryMessage(index);
-            }}
-          >
-            <RefreshCcwIcon className="mr-2 size-4" />
-            Retry same
-          </Button>
+      <Menu.Portal>
+        <Menu.Positioner className="outline-none" sideOffset={8} align="center" side="top">
+          <Menu.Popup className="bg-popover text-popover-foreground flex w-50 origin-[var(--transform-origin)] flex-col gap-1 rounded-md border p-1 transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
+            <MenuArrow className="fill-popover" />
 
-          <div className="flex items-center justify-center gap-2 overflow-hidden">
-            <Separator />
-            <div className="shrink-0 text-center text-sm">or switch model</div>
-            <Separator />
-          </div>
+            <Menu.Item
+              className={cn(buttonVariants({ variant: "ghost" }), "w-full justify-start")}
+              onClick={async () => {
+                setPopupOpen(false);
+                await retryMessage(index);
+              }}
+            >
+              <RefreshCcwIcon className="size-4" />
+              Retry same
+            </Menu.Item>
 
-          {Object.entries(modelsByProvider).map(([provider, models]) => {
-            return (
-              <Popover key={provider}>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start">
+            <div className="flex items-center justify-center gap-2 overflow-hidden">
+              <Separator />
+              <div className="shrink-0 text-center text-sm">or switch model</div>
+              <Separator />
+            </div>
+
+            {Object.entries(modelsByProvider).map(([provider, models]) => {
+              return (
+                <Menu.Root key={provider}>
+                  <Menu.SubmenuTrigger
+                    className={cn(
+                      buttonVariants({ variant: "ghost" }),
+                      "flex w-full justify-start",
+                    )}
+                  >
                     <Icons.provider provider={provider as Provider} />
                     <span>{prettifyProviderName(provider)}</span>
                     <ChevronRightIcon className="ml-auto size-4" />
-                  </Button>
-                </PopoverTrigger>
+                  </Menu.SubmenuTrigger>
 
-                <PopoverContent
-                  side="right"
-                  align="start"
-                  className="w-min min-w-82 p-2"
-                  sideOffset={16}
-                >
-                  <div className="space-y-1">
-                    {models?.map((model) => (
-                      <ModelProviderPicker
-                        key={model.modelId}
-                        provider={model.provider}
-                        model={model}
-                        index={index}
-                        retryMessage={async () => {
-                          setPopupOpen(false);
-                          await retryMessage(index, { modelId: model.modelId });
-                        }}
-                      />
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            );
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
+                  <Menu.Portal>
+                    <Menu.Positioner side="right" align="center" className="p-1" sideOffset={12}>
+                      <Menu.Popup className="bg-popover text-popover-foreground flex origin-[var(--transform-origin)] flex-col gap-1 rounded-md border p-1 data-[ending-style]:opacity-0 data-[ending-style]:transition-opacity data-[instant]:transition-none">
+                        <MenuArrow className="fill-popover" />
+
+                        {models?.map((model) => (
+                          <ModelProviderPicker
+                            key={model.modelId}
+                            provider={model.provider}
+                            model={model}
+                            index={index}
+                            retryMessage={async () => {
+                              setPopupOpen(false);
+                              await retryMessage(index, { modelId: model.modelId });
+                            }}
+                          />
+                        ))}
+                      </Menu.Popup>
+                    </Menu.Positioner>
+                  </Menu.Portal>
+                </Menu.Root>
+              );
+            })}
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   );
 }
 
@@ -158,22 +136,22 @@ type ModelProviderPickerProps = {
 
 function ModelProviderPicker(props: ModelProviderPickerProps) {
   return (
-    <Button
-      variant="ghost"
-      className="w-full items-center justify-between gap-2 px-3"
-      onMouseDown={async () => {
-        await props.retryMessage();
-      }}
+    <Menu.Item
+      className={cn(
+        buttonVariants({ variant: "ghost" }),
+        "w-full items-center justify-between gap-4 p-2",
+      )}
+      onClick={async () => await props.retryMessage()}
     >
-      <div className="flex items-center gap-2">
+      <div className="pointer-events-none flex items-center gap-2">
         <Icons.provider provider={props.model.provider} />
-        <span className="truncate">{props.model.displayName}</span>
+        <span className="w-max">{props.model.displayName}</span>
       </div>
 
       <div className="flex items-center gap-1">
         <CapabilityIcon
           variant="webSearch"
-          disable={props.model.capabilities.webSearch}
+          enabled={props.model.capabilities.webSearch}
           title="This model supports web search."
         >
           <RssIcon size={16} />
@@ -181,7 +159,7 @@ function ModelProviderPicker(props: ModelProviderPickerProps) {
 
         <CapabilityIcon
           variant="reasoning"
-          disable={props.model.capabilities.reasoning !== false}
+          enabled={props.model.capabilities.reasoning !== false}
           title="This model supports reasoning."
         >
           <BrainIcon size={16} />
@@ -189,12 +167,12 @@ function ModelProviderPicker(props: ModelProviderPickerProps) {
 
         <CapabilityIcon
           variant="vision"
-          disable={props.model.capabilities.vision}
+          enabled={props.model.capabilities.vision}
           title="This model supports vision."
         >
           <EyeIcon size={16} />
         </CapabilityIcon>
       </div>
-    </Button>
+    </Menu.Item>
   );
 }

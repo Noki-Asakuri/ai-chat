@@ -6,7 +6,6 @@ import { waitUntil } from "@vercel/functions";
 import { Redis } from "ioredis";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
-import { checkBotId } from "botid/server";
 
 import { createUIMessageStream, generateId, streamText, type AISDKError } from "ai";
 
@@ -28,12 +27,6 @@ const streamContext = createResumableStreamContext({
 });
 
 export async function POST(req: Request) {
-  const verification = await checkBotId();
-
-  if (verification.isBot) {
-    return NextResponse.json({ error: "Access denied" }, { status: 403 });
-  }
-
   const user = await auth();
 
   const posthog = PostHogClient();
