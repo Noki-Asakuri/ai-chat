@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 
-import { ScrollArea } from "../ui/scroll-area";
+import { ScrollAreaPrimitive, ScrollBar } from "../ui/scroll-area";
 
 import { Message } from "./message";
 
@@ -122,23 +122,28 @@ export function MessageHistory() {
   }
 
   return (
-    <ScrollArea
-      ref={scrollContainerRef}
-      onScroll={handleOnScroll}
-      className="h-full max-w-full py-10"
-      viewport={{ id: "messages-scrollarea" }}
-      style={{ paddingBottom: `${textareaHeight + 20}px`, fontVariantLigatures: "none" }}
-    >
-      <div className="content">
-        {messages.map((message, index) => (
-          <Message
-            key={message.messageId}
-            message={message}
-            index={index}
-            isLast={index === messages.length - 1}
-          />
-        ))}
-      </div>
-    </ScrollArea>
+    <ScrollAreaPrimitive.Root className="h-full max-w-full">
+      <ScrollAreaPrimitive.Viewport
+        ref={scrollContainerRef}
+        onScroll={handleOnScroll}
+        id="messages-scrollarea"
+        className="h-full overscroll-contain py-10"
+        style={{ paddingBottom: `${textareaHeight + 20}px`, fontVariantLigatures: "none" }}
+      >
+        <div className="content">
+          {messages.map((message, index) => (
+            <Message
+              key={message.messageId}
+              message={message}
+              index={index}
+              isLast={index === messages.length - 1}
+            />
+          ))}
+        </div>
+      </ScrollAreaPrimitive.Viewport>
+
+      <ScrollBar fade />
+      <ScrollAreaPrimitive.Corner />
+    </ScrollAreaPrimitive.Root>
   );
 }
