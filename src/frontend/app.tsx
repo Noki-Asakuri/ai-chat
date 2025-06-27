@@ -1,8 +1,8 @@
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
-import { AuthLoading } from "convex/react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { Authenticated, AuthLoading } from "convex/react";
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
 
 import PostHogIdentify from "@/components/posthog-identify";
 import { ConvexClientProvider } from "@/components/provider/convex-client";
@@ -29,23 +29,25 @@ export default function App() {
 
       <BrowserRouter>
         <Routes>
-          <Route element={<Home />}>
-            <Route index element={null} />
-            <Route path="/chat/:threadId" element={null} />
-          </Route>
-
           <Route path="/auth/login" element={<LoginPage />} />
           <Route path="/auth/waitlist" element={<WaitlistPage />} />
 
-          <Route path="/auth/settings" element={<AuthLayout />}>
-            <Route index element={<Navigate to="account" replace />} />
-            <Route path="account/*" element={<AccountPage />} />
-            <Route path="statistics/*" element={<StatisticsPage />} />
-            <Route path="customize/*" element={<CustomizePage />} />
-            <Route path="attachments/*" element={<AttachmentsPage />} />
-            <Route path="models/*" element={<div>Models</div>} />
-            <Route path="api-keys/*" element={<div>API Keys</div>} />
-            <Route path="contact/*" element={<div>Contact</div>} />
+          <Route path="/" element={<Root />}>
+            <Route element={<Home />}>
+              <Route index element={null} />
+              <Route path="/chat/:threadId" element={null} />
+            </Route>
+
+            <Route path="/auth/settings" element={<AuthLayout />}>
+              <Route index element={<Navigate to="account" replace />} />
+              <Route path="account/*" element={<AccountPage />} />
+              <Route path="statistics/*" element={<StatisticsPage />} />
+              <Route path="customize/*" element={<CustomizePage />} />
+              <Route path="attachments/*" element={<AttachmentsPage />} />
+              <Route path="models/*" element={<div>Models</div>} />
+              <Route path="api-keys/*" element={<div>API Keys</div>} />
+              <Route path="contact/*" element={<div>Contact</div>} />
+            </Route>
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -58,5 +60,13 @@ export default function App() {
       <Analytics basePath="/api/vercel" />
       <SpeedInsights basePath="/api/vercel" />
     </ConvexClientProvider>
+  );
+}
+
+function Root() {
+  return (
+    <Authenticated>
+      <Outlet />
+    </Authenticated>
   );
 }

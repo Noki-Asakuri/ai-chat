@@ -1,4 +1,4 @@
-import { UserProfile } from "@clerk/react-router";
+import { UserProfile } from "@clerk/clerk-react";
 import { dark } from "@clerk/themes";
 
 export function AccountPage() {

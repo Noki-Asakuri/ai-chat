@@ -1,6 +1,6 @@
 "use client";
 
-import { ClerkProvider, useAuth } from "@clerk/clerk-react";
+import { ClerkProvider, useAuth } from "@clerk/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { ConvexQueryClient } from "@convex-dev/react-query";
