@@ -1,7 +1,7 @@
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
-import { Authenticated, AuthLoading, useConvexAuth } from "convex/react";
+import { Authenticated, AuthLoading } from "convex/react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
 
 import PostHogIdentify from "@/components/posthog-identify";
@@ -23,7 +23,32 @@ import Home from "./home";
 export default function App() {
   return (
     <ConvexClientProvider>
-      <Routers />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/auth/login" element={<LoginPage />} />
+          <Route path="/auth/waitlist" element={<WaitlistPage />} />
+
+          <Route path="/" element={<RootLayout />}>
+            <Route element={<Home />}>
+              <Route index element={null} />
+              <Route path="/chat/:threadId" element={null} />
+            </Route>
+
+            <Route path="/auth/settings" element={<AuthLayout />}>
+              <Route index element={<Navigate to="account" replace />} />
+              <Route path="account/*" element={<AccountPage />} />
+              <Route path="statistics/*" element={<StatisticsPage />} />
+              <Route path="customize/*" element={<CustomizePage />} />
+              <Route path="attachments/*" element={<AttachmentsPage />} />
+              <Route path="models/*" element={<div>Models</div>} />
+              <Route path="api-keys/*" element={<div>API Keys</div>} />
+              <Route path="contact/*" element={<div>Contact</div>} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
 
       <Toaster />
       <PostHogIdentify />
@@ -34,34 +59,16 @@ export default function App() {
   );
 }
 
-function Routers() {
-  const { isLoading } = useConvexAuth();
-  if (isLoading) return <LoadingPage />;
-
+function RootLayout() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/auth/login" element={<LoginPage />} />
-        <Route path="/auth/waitlist" element={<WaitlistPage />} />
+    <>
+      <AuthLoading>
+        <LoadingPage />
+      </AuthLoading>
 
-        <Route element={<Home />}>
-          <Route index element={null} />
-          <Route path="/chat/:threadId" element={null} />
-        </Route>
-
-        <Route path="/auth/settings" element={<AuthLayout />}>
-          <Route index element={<Navigate to="account" replace />} />
-          <Route path="account/*" element={<AccountPage />} />
-          <Route path="statistics/*" element={<StatisticsPage />} />
-          <Route path="customize/*" element={<CustomizePage />} />
-          <Route path="attachments/*" element={<AttachmentsPage />} />
-          <Route path="models/*" element={<div>Models</div>} />
-          <Route path="api-keys/*" element={<div>API Keys</div>} />
-          <Route path="contact/*" element={<div>Contact</div>} />
-        </Route>
-
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+      <Authenticated>
+        <Outlet />
+      </Authenticated>
+    </>
   );
 }
