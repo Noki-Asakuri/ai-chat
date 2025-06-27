@@ -11,55 +11,67 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getModelData } from "@/lib/chat/models";
 import { format, toUUID } from "@/lib/utils";
 
+function LoadingShekeleton() {
+  return (
+    <main className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold">Statistics</h2>
+        <p className="text-muted-foreground">View your chat statistics and activity.</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i} className="rounded-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <Skeleton className="h-5 w-20" />
+            </CardHeader>
+
+            <CardContent>
+              <Skeleton className="h-9 w-16" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div>
+        <Skeleton className="h-7 w-40" />
+        <Skeleton className="mt-4 h-42" />
+
+        <div className="mt-2 flex h-5 items-center justify-between">
+          <Skeleton className="h-4 w-64" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-8 sm:grid-cols-1 lg:grid-cols-2">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i}>
+            <Skeleton className="h-7 w-40" />
+
+            <div className="mt-4 flex items-center justify-between text-gray-500">
+              <Skeleton className="h-6 w-20" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+
+            <div className="mt-2 flex flex-col gap-2">
+              {Array.from({ length: 5 }).map((_, j) => (
+                <div key={j} className="flex h-10 justify-between">
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </main>
+  );
+}
+
 export function StatisticsPage() {
   const statistics = useQuery(api.statistics.getStatistics);
   const thisYear = new Date(Date.now());
 
-  if (!statistics) {
-    return (
-      <main className="space-y-8">
-        <div>
-          <h2 className="text-2xl font-bold">Statistics</h2>
-          <p className="text-muted-foreground">View your chat statistics and activity.</p>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-12" />
-              </CardHeader>
-
-              <CardContent>
-                <Skeleton className="h-8 w-16" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-1 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i}>
-              <Skeleton className="h-6 w-40" />
-              <div className="mt-4 flex text-gray-500">
-                <Skeleton className="h-4 w-2/3" />
-                <Skeleton className="h-4 w-1/3" />
-              </div>
-              <div className="mt-2 space-y-2">
-                {Array.from({ length: 5 }).map((_, j) => (
-                  <div key={j} className="flex justify-between">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-4 w-1/4" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </main>
-    );
-  }
+  if (!statistics) return <LoadingShekeleton />;
 
   const { stats, modelRank, threadRank, activity } = statistics;
   const totalMessages = stats.messages.assistant + stats.messages.user;
@@ -107,6 +119,7 @@ export function StatisticsPage() {
         <div className="flex justify-between">
           <h2 className="text-xl font-semibold">Activity in the {thisYear.getFullYear()}</h2>
         </div>
+
         <div className="mt-4 h-42">
           <ResponsiveCalendar
             data={activity}

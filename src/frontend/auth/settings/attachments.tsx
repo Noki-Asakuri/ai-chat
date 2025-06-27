@@ -20,14 +20,42 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { format, toUUID } from "@/lib/utils";
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold">Attachments</h2>
+        <p className="text-muted-foreground">View and manage your attachments.</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex w-full flex-col rounded-md border">
+            <Skeleton className="relative aspect-square size-full rounded-none" />
+
+            <div className="flex flex-col gap-1 border-t p-2">
+              <div className="flex items-center justify-between gap-2">
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-5 w-14" />
+              </div>
+
+              <Skeleton className="h-5 w-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function AttachmentsPage() {
   const attachments = useQuery(api.attachments.getAllAttachments);
 
-  if (!attachments) return <Loading />;
-  if (attachments.length === 0) return <Loading text="No attachments" />;
+  if (!attachments) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-8">
@@ -37,6 +65,12 @@ export function AttachmentsPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {attachments.length === 0 && (
+          <div className="col-span-full flex flex-col items-center justify-center gap-2 rounded-md border p-8 text-center">
+            <p className="text-muted-foreground">No attachments found</p>
+          </div>
+        )}
+
         {attachments.map((attachment) => (
           <div
             key={attachment._id}
@@ -139,8 +173,4 @@ function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachme
       </AlertDialogContent>
     </AlertDialog>
   );
-}
-
-function Loading({ text = "Loading..." }: { text?: string }) {
-  return <div className="flex h-full w-full flex-1 items-center justify-center">{text}</div>;
 }

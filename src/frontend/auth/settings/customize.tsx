@@ -9,6 +9,43 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold">Customize AI</h2>
+        <p className="text-muted-foreground">
+          Customize the assistant's personality to your liking.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-2 px-2">
+          <Label>What should AI call you?</Label>
+          <Input disabled className="bg-input/30" />
+        </div>
+
+        <div className="space-y-2 px-2">
+          <Label>What do you do?</Label>
+          <Input disabled className="bg-input/30" />
+        </div>
+
+        <div className="space-y-2 px-2">
+          <Label>What traits should AI have?</Label>
+          <Input disabled className="bg-input/30" />
+        </div>
+
+        <div className="space-y-2 px-2">
+          <Label>System instruction (Global)</Label>
+          <Textarea disabled className="bg-input/30 min-h-[200px]" />
+        </div>
+
+        <Button disabled>Save Preferences</Button>
+      </div>
+    </div>
+  );
+}
+
 export function CustomizePage() {
   const data = useQuery(api.users.currentUser);
   const update = useMutation(api.users.updateUserCustomization);
@@ -32,17 +69,15 @@ export function CustomizePage() {
         systemInstruction,
       };
 
-      await toast
-        .promise(update({ data: updates }), {
-          loading: "Saving preferences...",
-          success: "Preferences saved",
-          error: "Failed to save preferences",
-        })
-        .unwrap();
+      toast.promise(update({ data: updates }), {
+        loading: "Saving preferences...",
+        success: "Preferences saved",
+        error: "Failed to save preferences",
+      });
     });
   }
 
-  if (!data) return <Loading />;
+  if (!data) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-8">
@@ -111,8 +146,4 @@ export function CustomizePage() {
       </form>
     </div>
   );
-}
-
-function Loading() {
-  return <div className="flex h-full w-full flex-1 items-center justify-center">Loading...</div>;
 }
