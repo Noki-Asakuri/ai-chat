@@ -1,7 +1,9 @@
 import { api } from "@/convex/_generated/api";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 
-import { useTransition } from "react";
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
+import React, { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -47,7 +49,7 @@ function LoadingSkeleton() {
 }
 
 export function CustomizePage() {
-  const data = useQuery(api.users.currentUser);
+  const { data, isPending } = useQuery(convexQuery(api.users.currentUser, {}));
   const update = useMutation(api.users.updateUserCustomization);
 
   const [pending, startTransition] = useTransition();
@@ -77,7 +79,7 @@ export function CustomizePage() {
     });
   }
 
-  if (!data) return <LoadingSkeleton />;
+  if (isPending) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-8">
@@ -91,7 +93,7 @@ export function CustomizePage() {
       <form className="space-y-4" onSubmit={updateUserCustomization}>
         <div className="space-y-2 px-2">
           <Label htmlFor="name">What should AI call you?</Label>
-          <Input
+          <ControlledInput
             id="name"
             name="name"
             autoComplete="off"
@@ -104,7 +106,7 @@ export function CustomizePage() {
 
         <div className="space-y-2 px-2">
           <Label htmlFor="occupation">What do you do?</Label>
-          <Input
+          <ControlledInput
             id="occupation"
             name="occupation"
             autoComplete="off"
@@ -117,7 +119,7 @@ export function CustomizePage() {
 
         <div className="space-y-2 px-2">
           <Label htmlFor="traits">What traits should AI have?</Label>
-          <Input
+          <ControlledInput
             id="traits"
             name="traits"
             autoComplete="off"
@@ -130,7 +132,7 @@ export function CustomizePage() {
 
         <div className="space-y-2 px-2">
           <Label htmlFor="system-instruction">System instruction (Global)</Label>
-          <Textarea
+          <ControlledTextarea
             autoComplete="off"
             id="system-instruction"
             name="system-instruction"
@@ -146,4 +148,34 @@ export function CustomizePage() {
       </form>
     </div>
   );
+}
+
+function ControlledInput({ defaultValue, ...props }: React.ComponentPropsWithoutRef<typeof Input>) {
+  const [value, setValue] = useState(defaultValue);
+
+  useEffect(() => {
+    setValue(defaultValue);
+  }, [defaultValue]);
+
+  return (
+    <Input
+      type="text"
+      value={value}
+      onValueChange={(value) => setValue(value as string)}
+      {...props}
+    />
+  );
+}
+
+function ControlledTextarea({
+  defaultValue,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof Textarea>) {
+  const [value, setValue] = useState(defaultValue);
+
+  useEffect(() => {
+    setValue(defaultValue);
+  }, [defaultValue]);
+
+  return <Textarea value={value} onChange={(event) => setValue(event.target.value)} {...props} />;
 }

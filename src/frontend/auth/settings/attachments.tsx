@@ -1,7 +1,9 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { FileTextIcon, TrashIcon } from "lucide-react";
 import { useTransition } from "react";
 import { NavLink } from "react-router";
@@ -53,9 +55,8 @@ function LoadingSkeleton() {
 }
 
 export function AttachmentsPage() {
-  const attachments = useQuery(api.attachments.getAllAttachments);
-
-  if (!attachments) return <LoadingSkeleton />;
+  const { data, isPending } = useQuery(convexQuery(api.attachments.getAllAttachments, {}));
+  if (isPending) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-8">
@@ -65,13 +66,13 @@ export function AttachmentsPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {attachments.length === 0 && (
+        {data?.length === 0 && (
           <div className="col-span-full flex flex-col items-center justify-center gap-2 rounded-md border p-8 text-center">
             <p className="text-muted-foreground">No attachments found</p>
           </div>
         )}
 
-        {attachments.map((attachment) => (
+        {data?.map((attachment) => (
           <div
             key={attachment._id}
             className="hover:bg-card/80 flex flex-col overflow-hidden rounded-md border transition-colors"

@@ -1,7 +1,8 @@
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
 
+import { convexQuery } from "@convex-dev/react-query";
 import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
+import { useQuery } from "@tanstack/react-query";
 import { NavLink } from "react-router";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,12 +69,12 @@ function LoadingSkeleton() {
 }
 
 export function StatisticsPage() {
-  const statistics = useQuery(api.statistics.getStatistics);
+  const { data, isPending } = useQuery(convexQuery(api.statistics.getStatistics, {}));
   const thisYear = new Date(Date.now());
 
-  if (!statistics) return <LoadingSkeleton />;
+  if (isPending) return <LoadingSkeleton />;
 
-  const { stats, modelRank, threadRank, activity } = statistics;
+  const { stats, modelRank, threadRank, activity } = data!;
   const totalMessages = stats.messages.assistant + stats.messages.user;
 
   return (

@@ -3,7 +3,7 @@ import { Input as InputPrimitive } from "@base-ui-components/react/input";
 
 import { cn } from "@/lib/utils";
 
-export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
+export type InputProps = React.ComponentPropsWithoutRef<typeof InputPrimitive>;
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, ...props }, ref) => {
