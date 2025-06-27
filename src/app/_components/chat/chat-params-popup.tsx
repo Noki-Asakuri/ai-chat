@@ -122,7 +122,7 @@ function ParameterSlider({ label, value, min, max, step, hidden, onChange }: Par
           min={min}
           step={step}
           onValueChange={(rawValue) => {
-            if (!rawValue) return;
+            if (rawValue == null) return;
 
             const value = Math.max(min, Math.min(max, rawValue));
             setInputValue(value);
@@ -167,7 +167,7 @@ function SliderReasoning({ min, max }: { min: number; max: number }) {
           max={max}
           min={min}
           onValueChange={(rawValue) => {
-            if (!rawValue) return;
+            if (rawValue == null) return;
 
             const value = Math.max(min, Math.min(max, rawValue));
             setBudget(value);

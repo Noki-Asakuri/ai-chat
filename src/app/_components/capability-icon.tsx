@@ -5,11 +5,11 @@ import { cn } from "@/lib/utils";
 type CapabilityIconProps = {
   children: React.ReactNode;
   variant: "webSearch" | "reasoning" | "vision";
-  disable: boolean;
+  enabled: boolean;
   title: string;
 };
 
-export function CapabilityIcon({ children, variant, disable, title }: CapabilityIconProps) {
+export function CapabilityIcon({ children, variant, enabled, title }: CapabilityIconProps) {
   return (
     <Tooltip delay={150}>
       <TooltipTrigger
@@ -19,7 +19,7 @@ export function CapabilityIcon({ children, variant, disable, title }: Capability
               "bg-[#25252e] *:stroke-[#94b8dc]": variant === "webSearch",
               "bg-[#252030] *:stroke-[#6a6aa2]": variant === "reasoning",
               "bg-[#252b2b] *:stroke-[#79afa3]": variant === "vision",
-              hidden: !disable,
+              hidden: !enabled,
             })}
           >
             {children}

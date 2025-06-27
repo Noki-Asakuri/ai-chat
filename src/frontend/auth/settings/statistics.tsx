@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getModelData } from "@/lib/chat/models";
 import { format, toUUID } from "@/lib/utils";
 
-function LoadingShekeleton() {
+function LoadingSkeleton() {
   return (
     <main className="space-y-8">
       <div>
@@ -71,7 +71,7 @@ export function StatisticsPage() {
   const statistics = useQuery(api.statistics.getStatistics);
   const thisYear = new Date(Date.now());
 
-  if (!statistics) return <LoadingShekeleton />;
+  if (!statistics) return <LoadingSkeleton />;
 
   const { stats, modelRank, threadRank, activity } = statistics;
   const totalMessages = stats.messages.assistant + stats.messages.user;

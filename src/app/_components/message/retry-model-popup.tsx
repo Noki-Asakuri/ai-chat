@@ -151,7 +151,7 @@ function ModelProviderPicker(props: ModelProviderPickerProps) {
       <div className="flex items-center gap-1">
         <CapabilityIcon
           variant="webSearch"
-          disable={props.model.capabilities.webSearch}
+          enabled={props.model.capabilities.webSearch}
           title="This model supports web search."
         >
           <RssIcon size={16} />
@@ -159,7 +159,7 @@ function ModelProviderPicker(props: ModelProviderPickerProps) {
 
         <CapabilityIcon
           variant="reasoning"
-          disable={props.model.capabilities.reasoning !== false}
+          enabled={props.model.capabilities.reasoning !== false}
           title="This model supports reasoning."
         >
           <BrainIcon size={16} />
@@ -167,7 +167,7 @@ function ModelProviderPicker(props: ModelProviderPickerProps) {
 
         <CapabilityIcon
           variant="vision"
-          disable={props.model.capabilities.vision}
+          enabled={props.model.capabilities.vision}
           title="This model supports vision."
         >
           <EyeIcon size={16} />

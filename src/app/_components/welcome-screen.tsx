@@ -71,7 +71,7 @@ export function WelcomeScreen() {
     <div
       id="welcome-screen"
       style={{ height: `calc(100% - ${textareaHeight}px)` }}
-      className="absolute z-40 flex w-full flex-col items-center justify-center transition-opacity"
+      className="pointer-events-none absolute flex w-full flex-col items-center justify-center transition-opacity"
     >
       <div className="mx-auto max-w-2xl space-y-4 text-center">
         <h1 className="text-foreground text-4xl font-light">
@@ -80,7 +80,7 @@ export function WelcomeScreen() {
 
         <div className="w-full px-4 md:min-w-[650px]">
           <Tabs defaultValue="create">
-            <TabsList className="w-full">
+            <TabsList className="pointer-events-auto z-10 w-full">
               {categories.map((category) => (
                 <Tab key={category.topic} value={category.topic} className="h-10">
                   <category.icon className="size-4" />
@@ -90,13 +90,13 @@ export function WelcomeScreen() {
             </TabsList>
 
             {categories.map((category) => (
-              <TabsPanel key={category.topic} value={category.topic}>
+              <TabsPanel key={category.topic} value={category.topic} className="z-10">
                 <div className="grid grid-cols-1 gap-1">
                   {category.prompts.map((prompt, index) => (
                     <button
                       key={index}
                       onClick={() => handlePromptClick(prompt)}
-                      className="hover:bg-muted/40 flex cursor-pointer items-center justify-center rounded-md px-4 py-2 text-sm text-pretty transition-colors md:min-w-max md:justify-start md:text-base"
+                      className="hover:bg-muted/40 pointer-events-auto flex items-center justify-center rounded-md px-4 py-2 text-sm text-pretty transition-colors md:min-w-max md:justify-start md:text-base"
                     >
                       {prompt}
                     </button>
