@@ -82,7 +82,7 @@ export function WelcomeScreen() {
           <Tabs defaultValue="create">
             <TabsList className="w-full">
               {categories.map((category) => (
-                <Tab key={category.topic} value={category.topic}>
+                <Tab key={category.topic} value={category.topic} className="h-10">
                   <category.icon className="size-4" />
                   <span className="capitalize">{category.topic}</span>
                 </Tab>

@@ -22,15 +22,13 @@ export function ChatMessages() {
   );
 }
 
-export function Message({
-  message,
-  index,
-  isLast,
-}: {
+type MessageProps = {
   message: ChatMessage;
   index: number;
   isLast: boolean;
-}) {
+};
+
+export function Message({ message, index, isLast }: MessageProps) {
   const assistantMessage = useChatStore((state) => state.assistantMessage);
   const editMessage = useChatStore((state) => state.editMessage);
 

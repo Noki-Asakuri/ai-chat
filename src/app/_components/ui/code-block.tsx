@@ -66,7 +66,7 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
         </AccordionPrimitive.Header>
 
         <AccordionContent className="py-0">
-          <ScrollArea className="whitespace-nowrap" viewportClassName="max-w-full">
+          <ScrollArea className="whitespace-nowrap" viewport={{ className: "max-w-full" }}>
             <div
               className={cn("contents font-mono *:overflow-x-auto *:p-3", {
                 "*:text-wrap *:wrap-anywhere": wrapline,

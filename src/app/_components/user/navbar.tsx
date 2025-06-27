@@ -46,7 +46,7 @@ export function UserNavbar() {
     <Tabs value={"tab-" + activeTitle} onValueChange={() => null}>
       <TabsList>
         {paths.map(({ path, name }) => (
-          <Tab key={path} value={"tab-" + name} className="px-0">
+          <Tab key={path} value={"tab-" + name} className="h-10 px-0">
             <NavLink to={path} className="flex h-full w-full items-center justify-center px-2">
               {name}
             </NavLink>

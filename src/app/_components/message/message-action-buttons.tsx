@@ -37,11 +37,12 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
 
   return (
     <div className="flex grow-0 items-center gap-0.5">
-      <CopyButton className="size-10" content={message.content} />
+      <CopyButton className="size-10" side="bottom" content={message.content} />
 
       {message.role === "assistant" && (
         <ButtonWithTip
           variant="ghost"
+          side="bottom"
           className="size-10"
           onMouseDown={() => branchOffThreadMessage(message)}
           title="Branch off at this message"
@@ -55,6 +56,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
         <>
           <ButtonWithTip
             variant="ghost"
+            side="bottom"
             disabled={message.status === "pending"}
             onMouseDown={() => setEditMessage(null)}
             className={cn("hidden size-10", { flex: editMessage?._id === message._id })}
@@ -66,6 +68,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
 
           <ButtonWithTip
             variant="ghost"
+            side="bottom"
             className="size-10"
             onMouseDown={handleEditMessage}
             disabled={message.status === "pending"}

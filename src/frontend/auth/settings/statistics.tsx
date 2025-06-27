@@ -18,6 +18,11 @@ export function StatisticsPage() {
   if (!statistics) {
     return (
       <main className="space-y-8">
+        <div>
+          <h2 className="text-2xl font-bold">Statistics</h2>
+          <p className="text-muted-foreground">View your chat statistics and activity.</p>
+        </div>
+
         <div className="grid grid-cols-3 gap-2">
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i}>
@@ -61,6 +66,11 @@ export function StatisticsPage() {
 
   return (
     <main className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold">Statistics</h2>
+        <p className="text-muted-foreground">View your chat statistics and activity.</p>
+      </div>
+
       <div className="grid grid-cols-3 gap-2">
         <Card className="rounded-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -103,8 +113,14 @@ export function StatisticsPage() {
             from={new Date(thisYear.getFullYear(), 0, 1).toISOString()}
             to={thisYear.toISOString()}
             colors={["#0e4429", "#006d32", "#26a641", "#39d353"]}
-            emptyColor="#151b23"
+            emptyColor="var(--border)"
+            monthBorderWidth={0}
             daySpacing={2}
+            dayBorderColor="transparent"
+            theme={{
+              background: "var(--background)",
+              text: { fill: "var(--foreground)" },
+            }}
             tooltip={CalendarTooltip}
           />
         </div>
@@ -113,9 +129,9 @@ export function StatisticsPage() {
           <p className="text-sm">
             A total of {format.number(totalMessages)} messages sent in the {thisYear.getFullYear()}
           </p>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className="text-foreground/70 flex items-center gap-2 text-xs">
             <p>Inactive</p>
-            <div className="size-4 rounded-xs" style={{ backgroundColor: "#151b23" }} />
+            <div className="size-4 rounded-xs" style={{ backgroundColor: "var(--border)" }} />
             <div className="size-4 rounded-xs" style={{ backgroundColor: "#0e4429" }} />
             <div className="size-4 rounded-xs" style={{ backgroundColor: "#006d32" }} />
             <div className="size-4 rounded-xs" style={{ backgroundColor: "#26a641" }} />

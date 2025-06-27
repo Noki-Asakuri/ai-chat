@@ -7,6 +7,7 @@ import { Slider } from "../ui/slider";
 
 import { getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
+import { NumberInput } from "../ui/number-input";
 
 export function ChatParamsPopup() {
   const config = useChatStore((state) => state.chatConfig);
@@ -16,20 +17,20 @@ export function ChatParamsPopup() {
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <ButtonWithTip
-          type="button"
-          variant="secondary"
-          className="group size-9 border px-2 py-1.5 text-xs"
-          title="Adjust Parameters"
-        >
-          <SettingsIcon className="transition-colors" />
-          <span className="sr-only">Adjust Parameters</span>
-        </ButtonWithTip>
+      <PopoverTrigger
+        render={ButtonWithTip}
+        type="button"
+        // @ts-expect-error BaseUI doesn't forward props correctly
+        variant="secondary"
+        className="group size-9 border px-2 py-1.5 text-xs"
+        title="Adjust Parameters"
+      >
+        <SettingsIcon className="transition-colors" />
+        <span className="sr-only">Adjust Parameters</span>
       </PopoverTrigger>
 
-      <PopoverContent align="center" className="min-w-max p-2">
-        <div className="flex flex-col gap-4 px-4 py-2">
+      <PopoverContent align="center" sideOffset={10} className="w-80 px-4 pt-3 pb-5">
+        <div className="flex flex-col gap-4">
           <ParameterSlider
             label="Temperature"
             value={config.temperature}
@@ -80,7 +81,7 @@ export function ChatParamsPopup() {
             value={config.maxTokens}
             min={1024}
             max={modelConfig.capabilities.maxTokens}
-            step={256}
+            step={128}
             onChange={(value) => setChatConfig({ maxTokens: value })}
           />
 
@@ -111,24 +112,22 @@ function ParameterSlider({ label, value, min, max, step, hidden, onChange }: Par
   const [inputValue, setInputValue] = useState(value);
 
   return (
-    <div hidden={hidden} className="space-y-2">
-      <div className="mb-2 flex items-center justify-between gap-2">
+    <div hidden={hidden} className="space-y-3">
+      <div className="flex items-end justify-between gap-4">
         <span className="text-sm font-medium">{label}</span>
-        <input
-          type="number"
-          className="w-18 appearance-none rounded-md border px-2 py-1 text-xs outline-none"
+
+        <NumberInput
           value={inputValue}
-          min={min}
           max={max}
+          min={min}
           step={step}
-          onChange={(e) => {
-            const rawValue = Number(e.target.value);
-            if (isNaN(rawValue)) return;
+          onValueChange={(rawValue) => {
+            if (!rawValue) return;
 
             const value = Math.max(min, Math.min(max, rawValue));
             setInputValue(value);
+            onChange(value);
           }}
-          onBlur={() => onChange(inputValue)}
         />
       </div>
 
@@ -162,20 +161,21 @@ function SliderReasoning({ min, max }: { min: number; max: number }) {
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">Thinking Budget</span>
-        <input
-          type="number"
-          className="w-18 appearance-none rounded-md border px-2 py-1 text-xs outline-none"
+
+        <NumberInput
           value={localBudget}
-          onChange={(event) => {
-            const rawValue = Number(event.target.value);
-            if (isNaN(rawValue)) return;
+          max={max}
+          min={min}
+          onValueChange={(rawValue) => {
+            if (!rawValue) return;
 
             const value = Math.max(min, Math.min(max, rawValue));
             setBudget(value);
+            setChatConfig({ thinkingBudget: value });
           }}
-          onBlur={() => setChatConfig({ thinkingBudget: localBudget })}
         />
       </div>
+
       <Slider
         min={min}
         max={max}
@@ -189,7 +189,7 @@ function SliderReasoning({ min, max }: { min: number; max: number }) {
         onValueCommit={([value]) => setChatConfig({ thinkingBudget: value! })}
       />
 
-      <p className="text-muted-foreground text-xs">
+      <p className="text-muted-foreground text-center text-xs text-balance">
         Thinking budget can not exceed 80% of max tokens.
       </p>
     </div>

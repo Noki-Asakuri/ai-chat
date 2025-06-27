@@ -4,7 +4,11 @@ import { useTransition } from "react";
 
 import { ButtonWithTip } from "./ui/button";
 
-export function CopyButton({ content, className }: { content: string; className?: string }) {
+type CopyButtonProps = React.ComponentProps<typeof ButtonWithTip> & {
+  content: string;
+};
+
+export function CopyButton({ content, className, ...props }: CopyButtonProps) {
   const [pedding, startTransition] = useTransition();
   const [, copyToClipboard] = useCopyToClipboard();
 
@@ -22,6 +26,7 @@ export function CopyButton({ content, className }: { content: string; className?
       onMouseDown={() => copeMessageContent(content)}
       title="Copy Message"
       disabled={pedding}
+      {...props}
     >
       {pedding ? <CopyCheckIcon className="size-5" /> : <CopyIcon className="size-5" />}
     </ButtonWithTip>

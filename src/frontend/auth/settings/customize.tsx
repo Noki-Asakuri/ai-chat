@@ -54,11 +54,12 @@ export function CustomizePage() {
       </div>
 
       <form className="space-y-4" onSubmit={updateUserCustomization}>
-        <div className="space-y-2">
+        <div className="space-y-2 px-2">
           <Label htmlFor="name">What should AI call you?</Label>
           <Input
             id="name"
             name="name"
+            autoComplete="off"
             placeholder="Enter your name"
             className="bg-input/30"
             disabled={pending}
@@ -66,11 +67,12 @@ export function CustomizePage() {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 px-2">
           <Label htmlFor="occupation">What do you do?</Label>
           <Input
             id="occupation"
             name="occupation"
+            autoComplete="off"
             placeholder="Engineer, student, etc."
             className="bg-input/30"
             disabled={pending}
@@ -78,11 +80,12 @@ export function CustomizePage() {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 px-2">
           <Label htmlFor="traits">What traits should AI have?</Label>
           <Input
             id="traits"
             name="traits"
+            autoComplete="off"
             placeholder="Type a trait and press Enter or Tab..."
             className="bg-input/30"
             disabled={pending}
@@ -90,9 +93,10 @@ export function CustomizePage() {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 px-2">
           <Label htmlFor="system-instruction">System instruction (Global)</Label>
           <Textarea
+            autoComplete="off"
             id="system-instruction"
             name="system-instruction"
             className="min-h-[200px]"

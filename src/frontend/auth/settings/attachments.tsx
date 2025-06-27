@@ -30,68 +30,70 @@ export function AttachmentsPage() {
   if (attachments.length === 0) return <Loading text="No attachments" />;
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-      {attachments.map((attachment) => (
-        <div
-          key={attachment._id}
-          className="hover:bg-card/80 flex flex-col overflow-hidden rounded-md border transition-colors"
-        >
-          <div className="relative size-full">
-            <a
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block size-full"
-              href={`https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`}
-            >
-              {attachment.type === "image" ? (
-                <img
-                  alt={attachment.name}
-                  className="aspect-square size-full object-cover"
-                  src={`https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`}
-                />
-              ) : (
-                <div className="flex size-full items-center justify-center p-2">
-                  <FileTextIcon size={64} />
-                </div>
-              )}
-            </a>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold">Attachments</h2>
+        <p className="text-muted-foreground">View and manage your attachments.</p>
+      </div>
 
-            <div className="pointer-events-none absolute top-0 left-0 flex size-full items-start justify-between gap-2 p-2">
-              <Badge>{format.size(attachment.size)}</Badge>
-
-              <DeleteAttachmentDialog attachmentId={attachment._id} name={attachment.name}>
-                <Button
-                  variant="secondary"
-                  className="hover:bg-destructive pointer-events-auto size-7 transition-colors"
-                >
-                  <TrashIcon />
-                  <span className="sr-only">Delete {attachment.name}</span>
-                </Button>
-              </DeleteAttachmentDialog>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {attachments.map((attachment) => (
+          <div
+            key={attachment._id}
+            className="hover:bg-card/80 flex flex-col overflow-hidden rounded-md border transition-colors"
+          >
+            <div className="relative size-full">
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block size-full"
+                href={`https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`}
+              >
+                {attachment.type === "image" ? (
+                  <img
+                    alt={attachment.name}
+                    className="aspect-square size-full object-cover"
+                    src={`https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`}
+                  />
+                ) : (
+                  <div className="flex aspect-square size-full items-center justify-center p-2">
+                    <FileTextIcon size={64} />
+                  </div>
+                )}
+              </a>
+              <div className="pointer-events-none absolute top-0 left-0 flex size-full items-start justify-between gap-2 p-2">
+                <Badge>{format.size(attachment.size)}</Badge>
+                <DeleteAttachmentDialog attachmentId={attachment._id} name={attachment.name}>
+                  <Button
+                    variant="secondary"
+                    className="hover:bg-destructive pointer-events-auto size-7 transition-colors"
+                  >
+                    <TrashIcon />
+                    <span className="sr-only">Delete {attachment.name}</span>
+                  </Button>
+                </DeleteAttachmentDialog>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1 border-t p-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="truncate" title={attachment.name}>
+                  {attachment.name}
+                </p>
+                <span className="text-muted-foreground shrink-0 text-sm">
+                  {format.date(attachment._creationTime)}
+                </span>
+              </div>
+              <NavLink
+                to={`/chat/${toUUID(attachment.threadId)}`}
+                className="line-clamp-1 w-fit text-sm underline-offset-4 hover:underline"
+                title={attachment.thread?.title}
+              >
+                Thread: {attachment.thread?.title}
+              </NavLink>
             </div>
           </div>
-
-          <div className="flex flex-col gap-1 border-t p-2">
-            <div className="flex items-center justify-between gap-2">
-              <p className="truncate" title={attachment.name}>
-                {attachment.name}
-              </p>
-
-              <span className="text-muted-foreground shrink-0 text-sm">
-                {format.date(attachment._creationTime)}
-              </span>
-            </div>
-
-            <NavLink
-              to={`/chat/${toUUID(attachment.threadId)}`}
-              className="line-clamp-1 w-fit text-sm underline-offset-4 hover:underline"
-              title={attachment.thread?.title}
-            >
-              Thread: {attachment.thread?.title}
-            </NavLink>
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
