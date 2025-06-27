@@ -21,10 +21,10 @@ export function MessageFooter({ index, message, renderMessage }: MessageFooterPr
     <div
       data-open={popupRetryMessageId === message._id}
       className={cn(
-        "pointer-events-none absolute -bottom-12 hidden w-full flex-wrap gap-2 transition-opacity select-none sm:opacity-0",
+        "pointer-events-none mt-2 hidden w-full items-center gap-2 transition-opacity select-none sm:opacity-0",
         "data-[open=true]:opacity-100",
         {
-          "right-0 w-max": message.role === "user",
+          "justify-end": message.role === "user",
           "opacity-100": editMessage?._id === message._id,
           "pointer-events-auto flex group-hover:opacity-100": isFinished,
         },

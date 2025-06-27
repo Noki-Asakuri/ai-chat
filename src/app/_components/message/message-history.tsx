@@ -19,38 +19,41 @@ export function MessageHistory() {
 
   const onResize = useCallback(
     (entries: ResizeObserverEntry[]) => {
-      const entry = entries[0];
-      if (!entry) return;
+      const element = entries[0]?.target.parentElement;
+      if (!element) return;
 
-      const parentElement = entry.target.parentElement!.parentElement!;
-
-      if (
-        parentElement.scrollHeight === parentElement.clientHeight &&
-        parentElement.scrollTop === 0
-      ) {
+      if (element.scrollHeight === element.clientHeight && element.scrollTop === 0) {
         setScrollPosition(null);
-      } else if (parentElement.scrollTop === 0) {
+      } else if (element.scrollTop === 0) {
         setScrollPosition("top");
-      } else if (
-        parentElement.scrollTop + parentElement.clientHeight ===
-        parentElement.scrollHeight
-      ) {
+      } else if (element.scrollTop + element.clientHeight === element.scrollHeight) {
         setScrollPosition("bottom");
       } else {
         setScrollPosition("middle");
       }
 
-      if (parentElement.scrollHeight === parentElement.clientHeight) {
+      if (element.scrollHeight === element.clientHeight) {
         prevScrollTopRef.current = -1;
-        autoScroll.current = true;
       }
 
       if (autoScroll.current) {
-        parentElement.scrollTo({ top: parentElement.scrollHeight, behavior: "smooth" });
+        element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
       }
     },
     [setScrollPosition],
   );
+
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+
+    const resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(scrollContainerRef.current);
+
+    // Cleanup function
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [onResize]);
 
   useEffect(() => {
     const controller = abortController.current;
@@ -77,18 +80,6 @@ export function MessageHistory() {
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (!scrollContainerRef.current) return;
-
-    const resizeObserver = new ResizeObserver(onResize);
-    resizeObserver.observe(scrollContainerRef.current);
-
-    // Cleanup function
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [onResize]);
 
   function handleOnScroll(event: React.UIEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -124,13 +115,12 @@ export function MessageHistory() {
   return (
     <ScrollAreaPrimitive.Root className="h-full max-w-full">
       <ScrollAreaPrimitive.Viewport
-        ref={scrollContainerRef}
         onScroll={handleOnScroll}
         id="messages-scrollarea"
         className="h-full overscroll-contain py-10"
         style={{ paddingBottom: `${textareaHeight + 20}px`, fontVariantLigatures: "none" }}
       >
-        <div className="content">
+        <div ref={scrollContainerRef} className="space-y-4">
           {messages.map((message, index) => (
             <Message
               key={message.messageId}

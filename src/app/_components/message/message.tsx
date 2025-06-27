@@ -41,10 +41,7 @@ export function Message({ message, index, isLast }: MessageProps) {
 
   return (
     <div
-      className={cn(
-        "group mx-auto flex max-w-[calc(896px+32px)] items-start gap-2 px-4",
-        "[&:not(:first-child)]:mt-14 [&[data-streaming='false']:last-child]:mb-14",
-      )}
+      className={cn("mx-auto flex max-w-[calc(896px+32px)] items-start gap-2 px-4")}
       id={message.messageId}
       data-role={message.role}
       data-status={message.status}
@@ -61,7 +58,7 @@ export function Message({ message, index, isLast }: MessageProps) {
         )}
 
       <div
-        className={cn("relative flex w-full flex-col", {
+        className={cn("group relative flex w-full flex-col", {
           hidden: message.status === "pending",
           "mx-0 ml-auto w-auto gap-1": message.role === "user",
         })}

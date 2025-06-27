@@ -33,7 +33,7 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
       type="single"
       collapsible
       defaultValue={`${language}-code-block`}
-      className="code-block not-prose border-border my-4 overflow-hidden rounded-md border bg-transparent"
+      className="code-block overflow-hidden rounded-md border bg-transparent"
     >
       <AccordionItem value={`${language}-code-block`}>
         <AccordionPrimitive.Header className="relative">
