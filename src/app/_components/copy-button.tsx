@@ -9,7 +9,7 @@ type CopyButtonProps = React.ComponentProps<typeof ButtonWithTip> & {
 };
 
 export function CopyButton({ content, className, ...props }: CopyButtonProps) {
-  const [pedding, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
   const [, copyToClipboard] = useCopyToClipboard();
 
   function copeMessageContent(content: string) {
@@ -25,10 +25,10 @@ export function CopyButton({ content, className, ...props }: CopyButtonProps) {
       className={className}
       onMouseDown={() => copeMessageContent(content)}
       title="Copy Message"
-      disabled={pedding}
+      disabled={pending}
       {...props}
     >
-      {pedding ? <CopyCheckIcon className="size-5" /> : <CopyIcon className="size-5" />}
+      {pending ? <CopyCheckIcon className="size-5" /> : <CopyIcon className="size-5" />}
     </ButtonWithTip>
   );
 }
