@@ -41,7 +41,10 @@ export function AuthLayout() {
           <div className="flex h-full flex-col overflow-hidden">
             <UserNavbar />
 
-            <div className="custom-scroll mt-6 w-full flex-1 lg:overflow-y-auto lg:pr-2">
+            <div
+              className="custom-scroll mt-6 w-full flex-1 px-2 lg:overflow-y-auto"
+              style={{ scrollbarGutter: "stable both-edges" }}
+            >
               <Outlet />
             </div>
           </div>

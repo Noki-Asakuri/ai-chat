@@ -24,6 +24,7 @@ export function ConvexClientProvider({ children }: { children: React.ReactNode }
     <ClerkProvider
       publishableKey={env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
       waitlistUrl="/auth/waitlist"
+      appearance={{ cssLayerName: "clerk" }}
     >
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <ConvexQueryCacheProvider>

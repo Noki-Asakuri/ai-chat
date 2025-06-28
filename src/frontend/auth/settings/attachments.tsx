@@ -28,7 +28,7 @@ import { format, toUUID } from "@/lib/utils";
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-bold">Attachments</h2>
         <p className="text-muted-foreground">View and manage your attachments.</p>
@@ -59,7 +59,7 @@ export function AttachmentsPage() {
   if (isPending) return <LoadingSkeleton />;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-bold">Attachments</h2>
         <p className="text-muted-foreground">View and manage your attachments.</p>

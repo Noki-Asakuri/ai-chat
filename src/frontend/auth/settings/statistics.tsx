@@ -14,7 +14,7 @@ import { format, toUUID } from "@/lib/utils";
 
 function LoadingSkeleton() {
   return (
-    <main className="space-y-8">
+    <main className="space-y-4">
       <div>
         <h2 className="text-2xl font-bold">Statistics</h2>
         <p className="text-muted-foreground">View your chat statistics and activity.</p>
@@ -78,7 +78,7 @@ export function StatisticsPage() {
   const totalMessages = stats.messages.assistant + stats.messages.user;
 
   return (
-    <main className="space-y-8">
+    <main className="space-y-4">
       <div>
         <h2 className="text-2xl font-bold">Statistics</h2>
         <p className="text-muted-foreground">View your chat statistics and activity.</p>

@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-bold">Customize AI</h2>
         <p className="text-muted-foreground">
@@ -22,22 +22,22 @@ function LoadingSkeleton() {
       </div>
 
       <div className="space-y-4">
-        <div className="space-y-2 px-2">
+        <div className="space-y-2">
           <Label>What should AI call you?</Label>
           <Input disabled className="bg-input/30" />
         </div>
 
-        <div className="space-y-2 px-2">
+        <div className="space-y-2">
           <Label>What do you do?</Label>
           <Input disabled className="bg-input/30" />
         </div>
 
-        <div className="space-y-2 px-2">
+        <div className="space-y-2">
           <Label>What traits should AI have?</Label>
           <Input disabled className="bg-input/30" />
         </div>
 
-        <div className="space-y-2 px-2">
+        <div className="space-y-2">
           <Label>System instruction (Global)</Label>
           <Textarea disabled className="bg-input/30 min-h-[200px]" />
         </div>
@@ -82,7 +82,7 @@ export function CustomizePage() {
   if (isPending) return <LoadingSkeleton />;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-bold">Customize AI</h2>
         <p className="text-muted-foreground">
@@ -91,7 +91,7 @@ export function CustomizePage() {
       </div>
 
       <form className="space-y-4" onSubmit={updateUserCustomization}>
-        <div className="space-y-2 px-2">
+        <div className="space-y-2">
           <Label htmlFor="name">What should AI call you?</Label>
           <ControlledInput
             id="name"
@@ -104,7 +104,7 @@ export function CustomizePage() {
           />
         </div>
 
-        <div className="space-y-2 px-2">
+        <div className="space-y-2">
           <Label htmlFor="occupation">What do you do?</Label>
           <ControlledInput
             id="occupation"
@@ -117,7 +117,7 @@ export function CustomizePage() {
           />
         </div>
 
-        <div className="space-y-2 px-2">
+        <div className="space-y-2">
           <Label htmlFor="traits">What traits should AI have?</Label>
           <ControlledInput
             id="traits"
@@ -130,7 +130,7 @@ export function CustomizePage() {
           />
         </div>
 
-        <div className="space-y-2 px-2">
+        <div className="space-y-2">
           <Label htmlFor="system-instruction">System instruction (Global)</Label>
           <ControlledTextarea
             autoComplete="off"
