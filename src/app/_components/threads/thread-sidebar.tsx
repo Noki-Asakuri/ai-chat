@@ -44,7 +44,7 @@ export function ThreadSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        <hr />
+        <hr className="border-sidebar-accent" />
         <ThreadUserProfile />
       </SidebarFooter>
     </Sidebar>

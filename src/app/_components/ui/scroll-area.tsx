@@ -11,9 +11,10 @@ type Props = React.ComponentProps<typeof ScrollAreaPrimitive.Root> & {
     className?: string;
     style?: React.CSSProperties;
   };
+  orientation?: "vertical" | "horizontal";
 };
 
-function ScrollArea({ className, viewport, children, onScroll, ...props }: Props) {
+function ScrollArea({ className, viewport, children, onScroll, orientation, ...props }: Props) {
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
@@ -32,7 +33,8 @@ function ScrollArea({ className, viewport, children, onScroll, ...props }: Props
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
-      <ScrollBar />
+
+      <ScrollBar orientation={orientation} />
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
   );

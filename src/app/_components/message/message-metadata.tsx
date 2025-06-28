@@ -1,7 +1,7 @@
 import { ClockIcon, CogIcon, InfoIcon, ZapIcon, SparkleIcon } from "lucide-react";
 
 import { Icons } from "@/components/ui/icons";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { getModelData } from "@/lib/chat/models";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
@@ -24,18 +24,18 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
 
   if (isMobile) {
     return (
-      <div className="text-muted-foreground/90 flex flex-1 flex-wrap items-center justify-between gap-2 text-sm select-none">
+      <div className="text-muted-foreground/90 flex h-full flex-1 flex-wrap items-center justify-between gap-2 text-sm select-none">
         <div className="flex items-center justify-center gap-2">
           <Icons.provider provider={modelData?.provider} />
           <span>{modelData?.displayName}</span>
         </div>
 
-        <Tooltip>
-          <TooltipTrigger className="shrink-0 pr-4">
+        <Popover>
+          <PopoverTrigger className="flex h-10 w-10 shrink-0 items-center justify-center">
             <InfoIcon className="size-4" />
-          </TooltipTrigger>
+          </PopoverTrigger>
 
-          <TooltipContent>
+          <PopoverContent className="w-max p-4 text-sm" align="end">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2">
               <div className="flex items-center gap-2">
                 <ZapIcon className="size-4" />
@@ -62,8 +62,8 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
                 </div>
               )}
             </div>
-          </TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       </div>
     );
   }

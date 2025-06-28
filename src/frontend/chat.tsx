@@ -8,7 +8,9 @@ import { useEffect, useRef } from "react";
 import { useParams } from "react-router";
 
 import { ChatTextarea } from "@/components/chat/chat-textarea";
-import { ChatMessages } from "@/components/message/message";
+import { MessageHistory } from "@/components/message/message-history";
+import { useSidebar } from "@/components/ui/sidebar";
+import { WelcomeScreen } from "@/components/welcome-screen";
 
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore } from "@/lib/chat/store";
@@ -53,15 +55,37 @@ export function Chat() {
   }, [data]);
 
   return (
-    <main
-      className={cn(
-        "bg-background relative flex h-dvh w-screen flex-1 flex-col transition-[margin-top,border-radius,height]",
-        "peer-data-[state=collapsed]:mt-0 peer-data-[state=collapsed]:h-dvh peer-data-[state=collapsed]:rounded-none",
-        "md:mt-3 md:h-[calc(100dvh-12px)] md:rounded-tl-2xl",
-      )}
-    >
-      <ChatMessages />
+    <main className="relative inset-0 h-dvh w-screen overflow-hidden">
+      <SidebarPushdown />
+
+      <WelcomeScreen />
+      <MessageHistory />
       <ChatTextarea />
     </main>
+  );
+}
+
+function SidebarPushdown() {
+  const { state, isMobile } = useSidebar();
+
+  return (
+    <>
+      <div
+        className={cn(
+          "absolute z-50 flex h-3 w-full items-center justify-between bg-[rgba(32,32,32,0.7)] backdrop-blur-lg backdrop-saturate-200 transition-[height]",
+          { "h-0": state === "collapsed" || isMobile },
+        )}
+      >
+        <div className="h-full w-24 bg-gradient-to-r from-[#1f1f1f] via-[rgba(32,32,32,0.7)] to-transparent" />
+        <div className="h-full w-24 bg-gradient-to-l from-[#1f1f1f] via-[rgba(32,32,32,0.7)] to-transparent" />
+      </div>
+
+      <div
+        className={cn(
+          "bg-background border-sidebar-accent absolute inset-0 mt-3 rounded-tl-3xl border-t border-l bg-fixed transition-[margin-top,border-radius,border-color] will-change-[margin-top,border-radius,border-color]",
+          { "mt-0 rounded-none border-transparent": state === "collapsed" || isMobile },
+        )}
+      />
+    </>
   );
 }

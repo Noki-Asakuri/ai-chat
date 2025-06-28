@@ -18,16 +18,18 @@ function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
+  side = "top",
   children,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Popup> & {
   align?: "center" | "start" | "end";
+  side?: "top" | "right" | "bottom" | "left";
   sideOffset?: number;
 }) {
   return (
     <PopoverPrimitive.Portal data-slot="popover-portal">
-      <PopoverPrimitive.Backdrop />
-      <PopoverPrimitive.Positioner align={align} sideOffset={sideOffset}>
+      <PopoverPrimitive.Backdrop data-slot="popover-backdrop" />
+      <PopoverPrimitive.Positioner align={align} sideOffset={sideOffset} side={side}>
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
@@ -36,7 +38,7 @@ function PopoverContent({
           )}
           {...props}
         >
-          <PopoverPrimitive.Arrow className="data-[side=bottom]:top-[-8px] data-[side=left]:right-[-13px] data-[side=left]:rotate-90 data-[side=right]:left-[-13px] data-[side=right]:-rotate-90 data-[side=top]:bottom-[-8px] data-[side=top]:rotate-180">
+          <PopoverPrimitive.Arrow className="data-[side=bottom]:top-[-8px] data-[side=left]:right-[-13px] data-[side=left]:rotate-90 data-[side=right]:left-[-13px] data-[side=right]:-rotate-90 data-[side=top]:bottom-[-9px] data-[side=top]:rotate-180">
             <Icons.arrow className="fill-popover" />
           </PopoverPrimitive.Arrow>
 

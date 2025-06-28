@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
 
-import { ScrollAreaPrimitive, ScrollBar } from "../ui/scroll-area";
-
 import { Message } from "./message";
 
 import { useChatStore } from "@/lib/chat/store";
@@ -26,7 +24,7 @@ export function MessageHistory() {
         setScrollPosition(null);
       } else if (element.scrollTop === 0) {
         setScrollPosition("top");
-      } else if (element.scrollTop + element.clientHeight === element.scrollHeight) {
+      } else if (element.scrollHeight - element.scrollTop - element.clientHeight < 1) {
         setScrollPosition("bottom");
       } else {
         setScrollPosition("middle");
@@ -105,7 +103,7 @@ export function MessageHistory() {
       setScrollPosition(null);
     } else if (element.scrollTop === 0 && element.scrollHeight > element.clientHeight) {
       setScrollPosition("top");
-    } else if (element.scrollTop + element.clientHeight === element.scrollHeight) {
+    } else if (element.scrollHeight - element.scrollTop - element.clientHeight < 1) {
       setScrollPosition("bottom");
     } else {
       setScrollPosition("middle");
@@ -113,27 +111,27 @@ export function MessageHistory() {
   }
 
   return (
-    <ScrollAreaPrimitive.Root className="h-full max-w-full">
-      <ScrollAreaPrimitive.Viewport
-        onScroll={handleOnScroll}
-        id="messages-scrollarea"
-        className="h-full overscroll-contain py-10"
-        style={{ paddingBottom: `${textareaHeight + 20}px`, fontVariantLigatures: "none" }}
+    <div
+      id="messages-scrollarea"
+      onScroll={handleOnScroll}
+      className="custom-scroll absolute inset-0 overflow-y-scroll"
+      style={{ scrollbarGutter: "stable both-edges" }}
+    >
+      <div
+        data-slot="message-history"
+        className="mx-auto max-w-4xl space-y-4 px-4 py-10"
+        ref={scrollContainerRef}
+        style={{ paddingBottom: `${textareaHeight + 20}px` }}
       >
-        <div ref={scrollContainerRef} className="space-y-4">
-          {messages.map((message, index) => (
-            <Message
-              key={message.messageId}
-              message={message}
-              index={index}
-              isLast={index === messages.length - 1}
-            />
-          ))}
-        </div>
-      </ScrollAreaPrimitive.Viewport>
-
-      <ScrollBar fade />
-      <ScrollAreaPrimitive.Corner />
-    </ScrollAreaPrimitive.Root>
+        {messages.map((message, index) => (
+          <Message
+            key={message.messageId}
+            message={message}
+            index={index}
+            isLast={index === messages.length - 1}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

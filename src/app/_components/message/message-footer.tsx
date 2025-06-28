@@ -1,7 +1,6 @@
 import { MessageActionButtons } from "./message-action-buttons";
 import { MessageMetadata } from "./message-metadata";
 
-import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -12,22 +11,16 @@ type MessageFooterProps = {
 };
 
 export function MessageFooter({ index, message, renderMessage }: MessageFooterProps) {
-  const editMessage = useChatStore((state) => state.editMessage);
-  const popupRetryMessageId = useChatStore((state) => state.popupRetryMessageId);
-
   const isFinished = message.status === "complete" || message.status === "error";
+  if (!isFinished) return null;
 
   return (
     <div
-      data-open={popupRetryMessageId === message._id}
       className={cn(
-        "pointer-events-none mt-2 hidden w-full items-center gap-2 transition-opacity select-none sm:opacity-0",
-        "data-[open=true]:opacity-100",
-        {
-          "justify-end": message.role === "user",
-          "opacity-100": editMessage?._id === message._id,
-          "pointer-events-auto flex group-hover:opacity-100": isFinished,
-        },
+        "mt-2 flex w-full items-center gap-2 transition-opacity sm:pointer-events-none sm:opacity-0",
+        "group-hover:pointer-events-auto group-hover:opacity-100",
+        "group-data-[open=true]:pointer-events-auto group-data-[open=true]:opacity-100",
+        { "justify-end": message.role === "user" },
       )}
     >
       <MessageActionButtons index={index} message={message} />

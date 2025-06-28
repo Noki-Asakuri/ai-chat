@@ -44,34 +44,35 @@ export function ChatTextarea() {
   }, [onResize]);
 
   return (
-    <form className="absolute bottom-0 w-full px-4">
+    <div className="pointer-events-none absolute top-0 bottom-0 w-full">
       <ScrollButton />
 
-      <div
-        ref={parentRef}
-        className={cn([
-          "mx-auto max-w-4xl space-y-2 rounded-[calc(var(--spacing)*2+calc(var(--radius)-2px))] rounded-b-none border border-b-0 p-2 pb-0",
-          "bg-muted/40 backdrop-blur-md backdrop-saturate-150",
-        ])}
-      >
-        <ChatAttachmentDisplay />
+      <div className="absolute bottom-0 w-full px-4">
+        <form className="mx-auto">
+          <div
+            ref={parentRef}
+            className="bg-muted/60 pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-[calc(var(--spacing)*2+calc(var(--radius)-2px))] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150"
+          >
+            <ChatAttachmentDisplay />
 
-        <div
-          data-dragover={isDragOver}
-          className={cn(
-            "bg-muted/60 border-border rounded-md rounded-b-none border border-b-0 p-2.5 pb-0",
-            "data-[dragover=true]:bg-primary/20 data-[dragover=true]:border-primary/40",
-          )}
-        >
-          <InputTextArea />
+            <div
+              data-dragover={isDragOver}
+              className={cn(
+                "bg-muted/60 border-border z-50 rounded-md rounded-b-none border border-b-0 p-2.5 pb-0",
+                "data-[dragover=true]:bg-primary/20 data-[dragover=true]:border-primary/40",
+              )}
+            >
+              <InputTextArea />
 
-          <div className="flex items-end justify-between py-2">
-            <ChatActionButtons />
-            <ChatSendButton />
+              <div className="flex items-end justify-between py-2">
+                <ChatActionButtons />
+                <ChatSendButton />
+              </div>
+            </div>
           </div>
-        </div>
+        </form>
       </div>
-    </form>
+    </div>
   );
 }
 

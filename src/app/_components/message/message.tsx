@@ -1,7 +1,5 @@
 import { Loader2Icon } from "lucide-react";
 
-import { WelcomeScreen } from "../welcome-screen";
-
 import { MessageContent } from "./message-content";
 import { MessageEdit } from "./message-edit";
 import { MessageFooter } from "./message-footer";
@@ -11,16 +9,6 @@ import { UserAvatar } from "./user-avatar";
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { MessageHistory } from "./message-history";
-
-export function ChatMessages() {
-  return (
-    <>
-      <WelcomeScreen />
-      <MessageHistory />
-    </>
-  );
-}
 
 type MessageProps = {
   message: ChatMessage;
@@ -28,9 +16,10 @@ type MessageProps = {
   isLast: boolean;
 };
 
-export function Message({ message, index, isLast }: MessageProps) {
+export function Message({ message, index }: MessageProps) {
   const assistantMessage = useChatStore((state) => state.assistantMessage);
   const editMessage = useChatStore((state) => state.editMessage);
+  const popupRetryMessageId = useChatStore((state) => state.popupRetryMessageId);
 
   const renderMessage =
     message.role === "assistant" &&
@@ -39,28 +28,33 @@ export function Message({ message, index, isLast }: MessageProps) {
       ? assistantMessage
       : message;
 
+  const isLoading =
+    (message.status === "streaming" || message.status === "pending") &&
+    !renderMessage.content &&
+    !renderMessage.reasoning;
+
+  if (isLoading) {
+    return (
+      <div className="flex h-11 shrink-0 items-center">
+        <Loader2Icon className="size-6 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div
-      className={cn("mx-auto flex max-w-[calc(896px+32px)] items-start gap-2 px-4")}
-      id={message.messageId}
-      data-role={message.role}
-      data-status={message.status}
+      className="group flex gap-2"
       data-index={index}
+      data-role={message.role}
+      data-id={message.messageId}
+      data-status={message.status}
       data-streaming={message.status === "streaming" || message.status === "pending"}
-      data-is-last={isLast}
+      data-open={popupRetryMessageId === message._id || editMessage?._id === message._id}
     >
-      {message.role === "assistant" &&
-        message.status !== "error" &&
-        (message.status === "pending" || (!renderMessage.content && !renderMessage.reasoning)) && (
-          <div className="flex h-11 shrink-0 items-center">
-            <Loader2Icon className="size-6 animate-spin" />
-          </div>
-        )}
-
       <div
-        className={cn("group relative flex w-full flex-col", {
+        className={cn("relative flex w-full flex-col", {
           hidden: message.status === "pending",
-          "mx-0 ml-auto w-auto gap-1": message.role === "user",
+          "mx-0 ml-auto w-auto gap-1": message.role === "user" && !editMessage,
         })}
       >
         <ThinkingToggle

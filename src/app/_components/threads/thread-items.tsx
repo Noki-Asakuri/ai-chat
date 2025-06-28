@@ -35,18 +35,20 @@ export function ThreadItem({ thread }: { thread: Thread }) {
       }
     >
       <div className="flex items-center justify-center gap-2">
-        {thread.branchedFrom && (
-          <ButtonWithTip
-            variant="none"
-            size="none"
-            title="Go to parent thread"
-            onClick={goToParentThread}
-          >
-            <GitBranchIcon className="size-4 rotate-180" />
-            <span className="sr-only">Go to parent thread</span>
-          </ButtonWithTip>
-        )}
-        <span className="line-clamp-1 text-sm">{thread.title}</span>
+        <ButtonWithTip
+          variant="none"
+          onClick={goToParentThread}
+          title="Go to parent thread"
+          className="absolute top-0 left-0 size-8"
+          hidden={!thread.branchedFrom}
+        >
+          <GitBranchIcon className="size-4 rotate-180" />
+          <span className="sr-only">Go to parent thread</span>
+        </ButtonWithTip>
+
+        <span className={cn("line-clamp-1 text-sm", { "ml-4": thread.branchedFrom })}>
+          {thread.title}
+        </span>
       </div>
 
       <ThreadActions thread={thread} />

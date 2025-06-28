@@ -73,7 +73,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
               }}
             >
               <RefreshCcwIcon className="size-4" />
-              Retry same
+              <span className="pointer-events-none">Retry same</span>
             </Menu.Item>
 
             <div className="flex items-center justify-center gap-2 overflow-hidden">
@@ -92,7 +92,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
                     )}
                   >
                     <Icons.provider provider={provider as Provider} />
-                    <span>{prettifyProviderName(provider)}</span>
+                    <span className="pointer-events-none">{prettifyProviderName(provider)}</span>
                     <ChevronRightIcon className="ml-auto size-4" />
                   </Menu.SubmenuTrigger>
 

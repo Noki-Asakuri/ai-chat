@@ -44,29 +44,6 @@ export type UserAttachment = {
   type: "image" | "pdf";
 };
 
-export type ChatMessage = {
-  _id: Id<"messages">;
-  _creationTime: number;
-
-  threadId: Id<"threads">;
-  messageId: string;
-  userId: string;
-  content: string;
-  reasoning?: string;
-  sources?: { id: string; title?: string; url: string }[];
-  error?: string;
-  role: "assistant" | "user" | "system";
-  status: "pending" | "complete" | "streaming" | "error";
-  model: string;
-  resumableStreamId?: string | null;
-  createdAt: number;
-  updatedAt: number;
+export type ChatMessage = Omit<Doc<"messages">, "attachments"> & {
   attachments: Doc<"attachments">[];
-
-  metadata?: {
-    duration: number;
-    finishReason: string;
-    totalTokens: number;
-    thinkingTokens: number;
-  };
 };

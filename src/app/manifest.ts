@@ -4,8 +4,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "AI Chat",
     short_name: "AI Chat",
-    theme_color: "#09090b",
-    background_color: "#09090b",
+    theme_color: "#1a1a1a",
+    background_color: "#1a1a1a",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
