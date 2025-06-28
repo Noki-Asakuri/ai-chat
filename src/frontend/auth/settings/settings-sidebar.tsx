@@ -48,7 +48,7 @@ export function SettingsSidebar() {
 
             <li className="flex justify-between">
               <span>New Chat</span>
-              <kbd className="bg-muted rounded-md border px-2 py-1 text-xs">Ctrl Shift N</kbd>
+              <kbd className="bg-muted rounded-md border px-2 py-1 text-xs">Ctrl Shift O</kbd>
             </li>
           </ul>
         </CardContent>

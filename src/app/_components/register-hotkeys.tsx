@@ -5,7 +5,7 @@ import { abortChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
-const NEW_THREAD_KEYBOARD_SHORTCUT = "n";
+const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
 
 export function RegisterHotkeys() {
   const navigate = useNavigate();
