@@ -54,7 +54,7 @@ export function Message({ message, index }: MessageProps) {
       <div
         className={cn("relative flex w-full flex-col", {
           hidden: message.status === "pending",
-          "mx-0 ml-auto w-auto gap-1": message.role === "user" && !editMessage,
+          "mx-0 gap-1 md:ml-auto md:w-auto": message.role === "user" && !editMessage,
         })}
       >
         <ThinkingToggle
