@@ -72,7 +72,7 @@ function SidebarPushdown() {
     <>
       <div
         className={cn(
-          "absolute z-50 flex h-3 w-full items-center justify-between bg-[rgba(32,32,32,0.7)] backdrop-blur-lg backdrop-saturate-200 transition-[height]",
+          "absolute z-10 flex h-3 w-full items-center justify-between bg-[rgba(32,32,32,0.7)] backdrop-blur-lg backdrop-saturate-200 transition-[height]",
           { "h-0": state === "collapsed" || isMobile },
         )}
       >
