@@ -1,7 +1,7 @@
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
-import { Authenticated, AuthLoading } from "convex/react";
+import { useConvexAuth } from "convex/react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
 
 import PostHogIdentify from "@/components/posthog-identify";
@@ -60,15 +60,8 @@ export default function App() {
 }
 
 function RootLayout() {
-  return (
-    <>
-      <AuthLoading>
-        <LoadingPage />
-      </AuthLoading>
+  const { isLoading } = useConvexAuth();
 
-      <Authenticated>
-        <Outlet />
-      </Authenticated>
-    </>
-  );
+  if (isLoading) return <LoadingPage key="loading-page" text="Loading authentication..." />;
+  return <Outlet />;
 }

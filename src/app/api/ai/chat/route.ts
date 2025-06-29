@@ -28,29 +28,17 @@ const streamContext = createResumableStreamContext({
 
 export async function POST(req: Request) {
   const user = await auth();
+  const identifier = req.headers.get("X-Rate-Limit-Identifier");
 
   const posthog = PostHogClient();
   const distinctId = getDistinctId(req);
 
-  if (!user.userId) {
+  if (!identifier) {
     posthog.capture({ distinctId, event: "chat_error", properties: { error: "Unauthenticated" } });
     return NextResponse.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
   }
-  const authToken = await user.getToken({ template: "convex" });
-  if (!authToken) {
-    posthog.capture({
-      distinctId,
-      event: "chat_error",
-      properties: { error: "Missing Convex auth token", userId: user.userId },
-    });
-    return NextResponse.json(
-      { error: { message: "Error: Missing Convex auth token!" } },
-      { status: 401 },
-    );
-  }
-  serverConvexClient.setAuth(authToken);
 
-  const [data, error] = await tryCatch(() => getRequestBody(req, user.userId));
+  const [data, error] = await tryCatch(() => getRequestBody(req, identifier));
   if (error) {
     posthog.capture({ distinctId, event: "chat_error", properties: { error: error.message } });
     return NextResponse.json({ error: { message: error.message } }, { status: 400 });

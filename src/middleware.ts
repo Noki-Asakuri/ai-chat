@@ -1,9 +1,35 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-
-const isPublicRoute = createRouteMatcher(["/auth/login(.*)", "/auth/waitlist(.*)"]);
+import { clerkMiddleware } from "@clerk/nextjs/server";
+import { getCookie, setCookie } from "cookies-next";
+import { NextResponse } from "next/server";
 
 export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) await auth.protect();
+  const { userId } = await auth();
+
+  let identifier: string | null = null;
+  if (userId) {
+    identifier = userId;
+  } else {
+    const anonId = await getCookie("anon_session_id", { req });
+    if (anonId) {
+      identifier = anonId;
+    } else {
+      identifier = `anon_${crypto.randomUUID()}`;
+
+      const response = NextResponse.next();
+      await setCookie("anon_session_id", identifier, {
+        req: req,
+        res: response,
+        httpOnly: true,
+        maxAge: 60 * 60 * 24 * 365,
+      });
+
+      req.headers.set("X-Rate-Limit-Identifier", identifier);
+      return response;
+    }
+  }
+
+  req.headers.set("X-Rate-Limit-Identifier", identifier);
+  return NextResponse.next({ request: { headers: req.headers } });
 });
 
 export const config = {
