@@ -27,6 +27,8 @@ const nextConfig: NextConfig = {
   experimental: { reactCompiler: true },
 
   skipTrailingSlashRedirect: true,
+
+  env: { NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA },
   async rewrites() {
     const host =
       process.env.NODE_ENV === "production" ? "https://chat.asakuri.me" : "http://localhost:3000";

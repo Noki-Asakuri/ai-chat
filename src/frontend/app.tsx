@@ -2,8 +2,13 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { Authenticated, AuthLoading } from "convex/react";
+import { useEffect } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
+import { toast } from "sonner";
 
+import Home from "./home";
+
+import { LoadingPage } from "@/components/loading-page";
 import PostHogIdentify from "@/components/posthog-identify";
 import { ConvexClientProvider } from "@/components/provider/convex-client";
 import { Toaster } from "@/components/ui/sonner";
@@ -12,13 +17,12 @@ import { LoginPage } from "@/frontend/auth/login";
 import { WaitlistPage } from "@/frontend/auth/waitlist";
 
 import { AccountPage } from "./auth/settings/account";
+import { AttachmentsPage } from "./auth/settings/attachments";
 import { AuthLayout } from "./auth/settings/auth-layout";
 import { CustomizePage } from "./auth/settings/customize";
 import { StatisticsPage } from "./auth/settings/statistics";
 
-import { LoadingPage } from "@/components/loading-page";
-import { AttachmentsPage } from "./auth/settings/attachments";
-import Home from "./home";
+import { useVersionWatcher } from "@/lib/hooks/useVersionWatcher";
 
 export default function App() {
   return (
@@ -60,6 +64,14 @@ export default function App() {
 }
 
 function RootLayout() {
+  const isNewVersionAvailable = useVersionWatcher();
+
+  useEffect(() => {
+    if (isNewVersionAvailable) {
+      toast(NewVersionToast, { id: "new-version", duration: Infinity, position: "bottom-right" });
+    }
+  }, [isNewVersionAvailable]);
+
   return (
     <>
       <AuthLoading>
@@ -70,5 +82,31 @@ function RootLayout() {
         <Outlet />
       </Authenticated>
     </>
+  );
+}
+
+function NewVersionToast() {
+  return (
+    <div className="flex flex-col gap-2">
+      <span>
+        A new version is available! Please save your work and refresh to get the latest updates.
+      </span>
+
+      <div className="flex w-full gap-2 *:flex-1">
+        <button
+          className="flex items-center justify-center rounded-md border p-1.5 text-sm hover:underline"
+          onClick={() => toast.dismiss("new-version")}
+        >
+          Dismiss for now
+        </button>
+
+        <button
+          className="bg-destructive/50 text-destructive-foreground border-destructive flex cursor-pointer items-center justify-center rounded-md border p-1.5 text-sm hover:underline"
+          onClick={() => window.location.reload()}
+        >
+          Refresh Now
+        </button>
+      </div>
+    </div>
   );
 }
