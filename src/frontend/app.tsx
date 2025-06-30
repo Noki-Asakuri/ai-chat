@@ -22,7 +22,7 @@ import { AuthLayout } from "./auth/settings/auth-layout";
 import { CustomizePage } from "./auth/settings/customize";
 import { StatisticsPage } from "./auth/settings/statistics";
 
-import { useVersionWatcher } from "@/lib/hooks/useVersionWatcher";
+import { useVersionWatcher } from "@/lib/hooks/use-version-watcher";
 
 export default function App() {
   return (
