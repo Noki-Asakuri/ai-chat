@@ -1,12 +1,10 @@
 import { ChevronDownIcon, TextIcon, WrapTextIcon } from "lucide-react";
 
-import * as AccordionPrimitive from "@radix-ui/react-accordion";
+import { Collapsible } from "@base-ui-components/react/collapsible";
 import { useShikiHighlighter } from "react-shiki";
 
 import { CopyButton } from "../copy-button";
-import { Accordion, AccordionContent, AccordionItem } from "./accordion";
-import { Button, ButtonWithTip } from "./button";
-import { ScrollArea, ScrollBar } from "./scroll-area";
+import { ButtonWithTip } from "./button";
 
 import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";
@@ -29,60 +27,44 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
   );
 
   return (
-    <Accordion
-      type="single"
-      collapsible
-      defaultValue={`${language}-code-block`}
-      className="code-block overflow-hidden rounded-md border bg-transparent"
-    >
-      <AccordionItem value={`${language}-code-block`}>
-        <AccordionPrimitive.Header className="relative">
-          <div className="bg-muted/50 flex w-full items-center justify-between gap-2 px-2 py-1.5">
-            <AccordionPrimitive.Trigger asChild title="Toggle Code Block">
-              <Button
-                variant="ghost"
-                className="size-8 cursor-pointer [&[data-state=open]>svg]:-rotate-180"
-              >
-                <ChevronDownIcon className="size-4 transition-transform" />
-              </Button>
-            </AccordionPrimitive.Trigger>
+    <Collapsible.Root defaultOpen className="group/code-block overflow-hidden rounded-md border">
+      <div className="bg-muted/50 flex w-full items-center justify-between gap-2 rounded-md border-b px-2 py-1.5 transition-[border-color] duration-300 group-data-[closed]/code-block:border-transparent">
+        <Collapsible.Trigger
+          render={ButtonWithTip}
+          title="Collapse Code Block"
+          className="hover:bg-accent/50 pointer-events-auto flex items-center gap-2 bg-transparent text-white"
+        >
+          <ChevronDownIcon className="size-5 -rotate-180 transition-transform group-data-[closed]/code-block:rotate-0" />
+        </Collapsible.Trigger>
 
-            <span className="font-semibold select-none">{language}</span>
+        <span className="font-semibold select-none">{language}</span>
 
-            <div className="space-x-2">
-              <ButtonWithTip
-                title="Wrap Line"
-                side="top"
-                variant="ghost"
-                className="size-8 cursor-pointer"
-                onMouseDown={toggleWrapline}
-              >
-                {wrapline ? <TextIcon className="size-4" /> : <WrapTextIcon className="size-4" />}
-              </ButtonWithTip>
-
-              <CopyButton content={code} />
-            </div>
-          </div>
-        </AccordionPrimitive.Header>
-
-        <AccordionContent className="py-0">
-          <ScrollArea
-            orientation="horizontal"
-            className="whitespace-nowrap"
-            viewport={{ className: "max-w-full" }}
+        <div className="space-x-2">
+          <ButtonWithTip
+            title="Wrap Line"
+            side="top"
+            variant="ghost"
+            className="size-8"
+            onMouseDown={toggleWrapline}
           >
-            <div
-              className={cn("contents font-mono *:overflow-x-auto *:p-3", {
-                "*:text-wrap *:wrap-anywhere": wrapline,
-              })}
-            >
-              {highlightedCode}
-            </div>
+            {wrapline ? <TextIcon className="size-5" /> : <WrapTextIcon className="size-5" />}
+          </ButtonWithTip>
 
-            {!wrapline && <ScrollBar orientation="horizontal" />}
-          </ScrollArea>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
+          <CopyButton content={code} />
+        </div>
+      </div>
+
+      <Collapsible.Panel className="flex overflow-hidden text-sm">
+        <div
+          style={{ scrollbarGutter: "stable both-edges" }}
+          className={cn(
+            "custom-scroll w-full overflow-x-auto bg-[#282c34] p-3 font-mono text-sm *:!bg-transparent",
+            { "*:text-wrap *:wrap-anywhere": wrapline },
+          )}
+        >
+          {highlightedCode ?? <pre>{code}</pre>}
+        </div>
+      </Collapsible.Panel>
+    </Collapsible.Root>
   );
 }
