@@ -1,4 +1,4 @@
-import { ChevronDownIcon, TextIcon, WrapTextIcon } from "lucide-react";
+import { ChevronUpIcon, TextIcon, WrapTextIcon } from "lucide-react";
 
 import { Collapsible } from "@base-ui-components/react/collapsible";
 import { useShikiHighlighter } from "react-shiki";
@@ -34,19 +34,13 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
           title="Collapse Code Block"
           className="hover:bg-accent/50 pointer-events-auto flex items-center gap-2 bg-transparent text-white"
         >
-          <ChevronDownIcon className="size-5 -rotate-180 transition-transform group-data-[closed]/code-block:rotate-0" />
+          <ChevronUpIcon className="size-5 transition-transform group-data-[closed]/code-block:rotate-180" />
         </Collapsible.Trigger>
 
         <span className="font-semibold select-none">{language}</span>
 
         <div className="space-x-2">
-          <ButtonWithTip
-            title="Wrap Line"
-            side="top"
-            variant="ghost"
-            className="size-8"
-            onMouseDown={toggleWrapline}
-          >
+          <ButtonWithTip title="Wrap Line" side="top" variant="ghost" onMouseDown={toggleWrapline}>
             {wrapline ? <TextIcon className="size-5" /> : <WrapTextIcon className="size-5" />}
           </ButtonWithTip>
 
