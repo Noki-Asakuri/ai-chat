@@ -8,6 +8,10 @@ export default defineSchema({
     updatedAt: v.number(),
     pinned: v.optional(v.boolean()),
     branchedFrom: v.optional(v.id("threads")),
+
+    status: v.optional(
+      v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
+    ),
   }).index("by_userId", ["userId"]),
 
   attachments: defineTable({

@@ -87,8 +87,6 @@ export async function POST(req: Request) {
     config,
   } = data;
 
-  console.dir(data, { depth: null });
-
   const streamId = generateId();
   const startTime = Date.now();
 

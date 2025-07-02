@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 
-import { GitBranchIcon, PinIcon, PinOffIcon } from "lucide-react";
+import { GitBranchIcon, Loader2Icon, PinIcon, PinOffIcon } from "lucide-react";
 import { NavLink, useNavigate } from "react-router";
 
 import { ButtonWithTip } from "../ui/button";
@@ -34,7 +34,7 @@ export function ThreadItem({ thread }: { thread: Thread }) {
         )
       }
     >
-      <div className="flex items-center justify-center gap-2">
+      <div className="flex w-full items-center justify-center gap-2">
         <ButtonWithTip
           variant="none"
           onClick={goToParentThread}
@@ -46,9 +46,20 @@ export function ThreadItem({ thread }: { thread: Thread }) {
           <span className="sr-only">Go to parent thread</span>
         </ButtonWithTip>
 
-        <span className={cn("line-clamp-1 text-sm", { "ml-4": thread.branchedFrom })}>
-          {thread.title}
-        </span>
+        <div
+          className={cn("flex w-full items-center justify-between", {
+            "ml-4": thread.branchedFrom,
+          })}
+        >
+          <span className="line-clamp-1 text-sm">{thread.title}</span>
+
+          {thread.status && thread.status !== "complete" && (
+            <div className="inline-block">
+              <Loader2Icon className="size-4 animate-spin" />
+              <span className="sr-only">Streaming...</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <ThreadActions thread={thread} />
