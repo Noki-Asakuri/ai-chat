@@ -168,7 +168,10 @@ export const updateMessageById = mutation({
 
     await ctx.db.patch(args.messageId, { ...args.updates, updatedAt: Date.now() });
     if (args.threadId) {
-      await ctx.db.patch(args.threadId, { updatedAt: Date.now(), status: args.updates.status });
+      await ctx.db.patch(args.threadId, {
+        updatedAt: Date.now(),
+        ...(args.updates.status !== undefined ? { status: args.updates.status } : {}),
+      });
     }
   },
 });

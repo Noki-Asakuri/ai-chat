@@ -23,7 +23,6 @@ export function ImagePreviewDialog({
 
   useEffect(() => {
     if (!file) {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
       return setObjectUrl(null);
     }
 

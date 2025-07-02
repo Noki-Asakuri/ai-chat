@@ -1,6 +1,8 @@
 import { api } from "@/convex/_generated/api";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { ImagePlusIcon, TrashIcon } from "lucide-react";
 import React, { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -58,7 +60,7 @@ function getFormValue<T extends File | string>(key: string, formData: FormData):
 }
 
 export function CustomizePage() {
-  const data = useQuery(api.users.currentUser, {});
+  const { data } = useQuery(convexQuery(api.users.currentUser, {}));
   const update = useMutation(api.users.updateUserCustomization);
 
   const { uploadFile, deleteFile } = useStorage();
@@ -101,7 +103,7 @@ export function CustomizePage() {
         backgroundId: undefined as string | undefined,
       };
 
-      if (backgroundImage) {
+      if (backgroundImage instanceof File && backgroundImage.size > 0) {
         if (data?.customization?.backgroundId) {
           await deleteFile(data.customization.backgroundId);
         }
@@ -239,7 +241,7 @@ export function CustomizePage() {
             className="hidden"
             accept="image/*"
             onChange={(event) => {
-              const file = event.target.files![0];
+              const file = event.target.files?.[0];
               if (!file) return;
 
               setBackgroundImage(file);
