@@ -28,7 +28,7 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
 
   return (
     <Collapsible.Root defaultOpen className="group/code-block overflow-hidden rounded-md border">
-      <div className="bg-muted/50 flex w-full items-center justify-between gap-2 rounded-md border-b px-2 py-1.5 transition-[border-color] duration-300 group-data-[closed]/code-block:border-transparent">
+      <div className="bg-muted/70 flex w-full items-center justify-between gap-2 rounded-md border-b px-2 py-1.5 backdrop-blur-md transition-[border-color] duration-300 group-data-[closed]/code-block:border-transparent">
         <Collapsible.Trigger
           render={ButtonWithTip}
           title="Collapse Code Block"
@@ -48,7 +48,7 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
         </div>
       </div>
 
-      <Collapsible.Panel className="flex overflow-hidden text-sm">
+      <Collapsible.Panel className="flex h-[var(--collapsible-panel-height)] flex-col justify-end overflow-hidden text-sm transition-all ease-out data-[ending-style]:h-0 data-[starting-style]:h-0">
         <div
           style={{ scrollbarGutter: "stable both-edges" }}
           className={cn(

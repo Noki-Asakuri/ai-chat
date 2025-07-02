@@ -1,11 +1,10 @@
-import * as AccordionPrimitive from "@radix-ui/react-accordion";
+import { Collapsible } from "@base-ui-components/react/collapsible";
 import { Loader2Icon, PlusIcon, SparkleIcon } from "lucide-react";
 
 import { MemoizedMarkdown } from "../markdown";
-import { Accordion, AccordionItem } from "../ui/accordion";
 
 import type { ChatMessage } from "@/lib/types";
-import { cn, format } from "@/lib/utils";
+import { format } from "@/lib/utils";
 
 type ThinkingToggleProps = {
   messageId: string;
@@ -25,48 +24,26 @@ export function ThinkingToggle({
   if (!reasoning || status === "error") return null;
 
   return (
-    <Accordion
-      type="single"
-      collapsible
-      className="my-4 w-full space-y-2"
-      defaultValue={status === "streaming" ? `${messageId}-thinking` : undefined}
-    >
-      <AccordionItem
-        value={messageId + "-thinking"}
-        className="bg-secondary rounded-md border-none"
-      >
-        <AccordionPrimitive.Header className="flex">
-          <AccordionPrimitive.Trigger
-            className={cn(
-              "flex w-max flex-1 cursor-pointer items-center justify-between px-4 py-4 font-medium transition-all outline-none",
-              { "[&[data-state=open]>svg]:rotate-45": status !== "streaming" },
-            )}
-          >
-            <div className="group flex items-center gap-2">
-              <SparkleIcon className="size-5" />
-              <p>
-                Thinking{" "}
-                {tokens && (
-                  <span className="text-sm">- {format.number(tokens)} Thinking Tokens</span>
-                )}
-              </p>
-            </div>
+    <Collapsible.Root className="my-4 w-full space-y-2" defaultOpen={false}>
+      <Collapsible.Trigger className="group bg-background/80 flex w-full items-center justify-between rounded-md border px-4 py-2 font-medium backdrop-blur-md backdrop-saturate-150 outline-none">
+        <div className="group flex items-center gap-2">
+          <SparkleIcon className="size-5" />
+          <p>
+            Thinking{" "}
+            {tokens && <span className="text-sm">- {format.number(tokens)} Thinking Tokens</span>}
+          </p>
+        </div>
 
-            {status === "streaming" && !finished ? (
-              <Loader2Icon className="text-muted-foreground size-5 shrink-0 animate-spin" />
-            ) : (
-              <PlusIcon className="text-muted-foreground size-5 shrink-0 transition-transform duration-200" />
-            )}
-          </AccordionPrimitive.Trigger>
-        </AccordionPrimitive.Header>
+        {status === "streaming" && !finished ? (
+          <Loader2Icon className="text-muted-foreground size-5 shrink-0 animate-spin" />
+        ) : (
+          <PlusIcon className="text-muted-foreground size-5 shrink-0 transition-transform duration-200 ease-out group-data-[panel-open]:rotate-45" />
+        )}
+      </Collapsible.Trigger>
 
-        <AccordionPrimitive.AccordionContent>
-          <hr />
-          <div className="prose dark:prose-invert max-w-none space-y-2 px-4 py-4">
-            <MemoizedMarkdown id={messageId + "-thinking"} content={reasoning} />
-          </div>
-        </AccordionPrimitive.AccordionContent>
-      </AccordionItem>
-    </Accordion>
+      <Collapsible.Panel className="bg-background/80 h-[var(--collapsible-panel-height)] space-y-4 rounded-md border px-4 py-2 backdrop-blur-md backdrop-saturate-150 transition-[height] ease-out data-[ending-style]:h-0 data-[starting-style]:h-0">
+        <MemoizedMarkdown id={messageId + "-thinking"} content={reasoning} />
+      </Collapsible.Panel>
+    </Collapsible.Root>
   );
 }

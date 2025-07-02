@@ -5,6 +5,7 @@ import { ImagePlusIcon, TrashIcon } from "lucide-react";
 import React, { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { ImagePreviewDialog } from "@/components/image-preview-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,10 +60,27 @@ function getFormValue<T extends File | string>(key: string, formData: FormData):
 export function CustomizePage() {
   const data = useQuery(api.users.currentUser, {});
   const update = useMutation(api.users.updateUserCustomization);
-  const { uploadFile } = useStorage();
+
+  const { uploadFile, deleteFile } = useStorage();
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
+
+  const [backgroundImage, setBackgroundImage] = useState<File | null>(null);
+
+  function handleRemoveBackground() {
+    startTransition(async function () {
+      if (!data?.customization?.backgroundId) return;
+      await deleteFile(data.customization.backgroundId);
+      setBackgroundImage(null);
+
+      toast.promise(update({ data: { backgroundId: null } }), {
+        loading: "Removing background...",
+        success: "Background removed",
+        error: "Failed to remove background",
+      });
+    });
+  }
 
   function updateUserCustomization(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -84,6 +102,10 @@ export function CustomizePage() {
       };
 
       if (backgroundImage) {
+        if (data?.customization?.backgroundId) {
+          await deleteFile(data.customization.backgroundId);
+        }
+
         updates.backgroundId = await uploadFile({ file: backgroundImage });
       }
 
@@ -161,7 +183,7 @@ export function CustomizePage() {
         <div className="space-y-2">
           <Label htmlFor="background-image">Background Image</Label>
 
-          <div className="flex items-center gap-x-2">
+          <div className="flex items-start gap-x-2">
             <Button
               type="button"
               size="icon"
@@ -173,10 +195,40 @@ export function CustomizePage() {
             </Button>
 
             {data?.customization?.backgroundId && (
-              <Button size="icon" variant="destructive" type="button" className="size-12">
+              <Button
+                size="icon"
+                type="button"
+                className="size-12"
+                variant="destructive"
+                onClick={handleRemoveBackground}
+              >
                 <TrashIcon className="size-5" />
               </Button>
             )}
+
+            <ImagePreviewDialog
+              className="aspect-video h-40"
+              file={backgroundImage}
+              image={{
+                alt: "User Background Image",
+                name: "User Background Image",
+                src: data?.customization?.backgroundId
+                  ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization.backgroundId}`
+                  : undefined,
+              }}
+            >
+              {(objectUrl) => (
+                <img
+                  src={
+                    objectUrl ??
+                    `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization!.backgroundId}`
+                  }
+                  alt="User Background Image"
+                  className="h-full w-full object-cover"
+                  hidden={!data?.customization?.backgroundId && !backgroundImage}
+                />
+              )}
+            </ImagePreviewDialog>
           </div>
 
           <input
@@ -186,6 +238,12 @@ export function CustomizePage() {
             ref={imageInputRef}
             className="hidden"
             accept="image/*"
+            onChange={(event) => {
+              const file = event.target.files![0];
+              if (!file) return;
+
+              setBackgroundImage(file);
+            }}
           />
         </div>
 

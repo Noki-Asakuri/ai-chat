@@ -26,5 +26,9 @@ export function useStorage() {
     return key;
   }
 
-  return { uploadFile };
+  async function deleteFile(key: string) {
+    await convexClient.mutation(api.files.deleteObject, { key });
+  }
+
+  return { uploadFile, deleteFile };
 }

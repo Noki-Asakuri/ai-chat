@@ -67,30 +67,35 @@ export function Chat() {
 
 function SidebarPushdown() {
   const { state, isMobile } = useSidebar();
-  const user = useQuery(convexQuery(api.users.currentUser, {}));
 
-  const backgroundImage = user?.data?.customization?.backgroundId
-    ? `url(https://ik.imagekit.io/gmethsnvl/ai-chat/${user.data.customization.backgroundId})`
-    : undefined;
+  const user = useQuery(convexQuery(api.users.currentUser, {}));
+  const hasBackground = typeof user?.data?.customization?.backgroundId === "string";
 
   return (
     <>
       <div
         className={cn(
-          "absolute z-10 flex h-3 w-full items-center justify-between bg-[rgba(32,32,32,0.7)] backdrop-blur-lg backdrop-saturate-200 transition-[height]",
+          "absolute z-10 flex h-3 w-full items-center justify-between backdrop-blur-md backdrop-saturate-150 transition-[height]",
           { "h-0": state === "collapsed" || isMobile },
         )}
       >
-        <div className="h-full w-24 bg-gradient-to-r from-[#1f1f1f] via-[rgba(32,32,32,0.7)] to-transparent" />
-        <div className="h-full w-24 bg-gradient-to-l from-[#1f1f1f] via-[rgba(32,32,32,0.7)] to-transparent" />
+        <div className="from-sidebar/95 h-full w-1/3 bg-gradient-to-r from-20% via-[rgba(32,32,32,0.7)] to-transparent" />
+        <div className="from-sidebar/95 h-full w-1/3 bg-gradient-to-l from-20% via-[rgba(32,32,32,0.7)] to-transparent" />
       </div>
+
+      <div className="bg-sidebar absolute inset-0 backdrop-blur-md backdrop-saturate-150" />
 
       <div
         className={cn(
-          "bg-background border-sidebar-accent absolute inset-0 mt-3 rounded-tl-3xl border-t border-l bg-fixed bg-center transition-[margin-top,border-radius,border-color] will-change-[margin-top,border-radius,border-color]",
+          "bg-background border-sidebar-accent absolute inset-0 mt-3 rounded-tl-3xl border-t border-l bg-cover bg-fixed bg-center bg-no-repeat transition-[margin-top,border-radius,border-color] will-change-[margin-top,border-radius,border-color]",
           { "mt-0 rounded-none border-transparent": state === "collapsed" || isMobile },
+          { "bg-transparent": hasBackground },
         )}
-        style={{ backgroundImage }}
+        style={{
+          backgroundImage: user?.data?.customization?.backgroundId
+            ? `url(https://ik.imagekit.io/gmethsnvl/ai-chat/${user.data.customization.backgroundId})`
+            : undefined,
+        }}
       />
     </>
   );

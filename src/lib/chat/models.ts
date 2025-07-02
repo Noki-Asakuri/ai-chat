@@ -172,23 +172,6 @@ export const ModelsData = {
       },
     },
   },
-  "openai/gpt-4.1-mini": {
-    displayName: "GPT-4.1 Mini",
-    id: "openai/gpt-4.1-mini",
-    provider: "openai",
-    capabilities: {
-      webSearch: false,
-      reasoning: false,
-      vision: true,
-      maxTokens: 32_768,
-      config: {
-        temperature: true,
-        topP: true,
-        presencePenalty: true,
-        frequencyPenalty: true,
-      },
-    },
-  },
   "openai/chatgpt-4o": {
     displayName: "ChatGPT 4o",
     id: "openai/chatgpt-4o",
@@ -223,23 +206,7 @@ export const ModelsData = {
       },
     },
   },
-  "openai/gpt-4o-mini": {
-    displayName: "GPT-4o Mini",
-    id: "openai/gpt-4o-mini",
-    provider: "openai",
-    capabilities: {
-      webSearch: false,
-      reasoning: false,
-      vision: true,
-      maxTokens: 16_384,
-      config: {
-        temperature: true,
-        topP: true,
-        presencePenalty: true,
-        frequencyPenalty: true,
-      },
-    },
-  },
+
   "openai/o3": {
     displayName: "o3",
     id: "openai/o3",
@@ -284,24 +251,6 @@ export const ModelsData = {
       reasoning: "effort",
       vision: true,
       maxTokens: 100_000,
-      config: {
-        temperature: true,
-        topP: true,
-        presencePenalty: true,
-        frequencyPenalty: true,
-      },
-    },
-  },
-
-  "openai/gpt-4.5-preview": {
-    displayName: "GPT-4.5 Preview",
-    id: "openai/gpt-4.5-preview",
-    provider: "openai",
-    capabilities: {
-      webSearch: false,
-      reasoning: false,
-      vision: true,
-      maxTokens: 16_384,
       config: {
         temperature: true,
         topP: true,

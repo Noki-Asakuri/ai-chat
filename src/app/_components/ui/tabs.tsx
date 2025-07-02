@@ -27,7 +27,8 @@ function TabsList({
       {...props}
     >
       {children}
-      <TabsPrimitive.Indicator className="bg-muted absolute top-1 left-0 z-[-1] h-[calc(var(--active-tab-height)-4px*2)] w-[var(--active-tab-width)] translate-x-[var(--active-tab-left)] rounded-sm transition-all duration-200 ease-in-out" />
+
+      <TabsPrimitive.Indicator className="bg-muted/90 absolute top-1 left-0 z-[-1] h-[calc(var(--active-tab-height)-4px*2)] w-[var(--active-tab-width)] translate-x-[var(--active-tab-left)] rounded-md border transition-all duration-200 ease-in-out" />
     </TabsPrimitive.List>
   );
 }

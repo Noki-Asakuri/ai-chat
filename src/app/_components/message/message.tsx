@@ -35,8 +35,9 @@ export function Message({ message, index }: MessageProps) {
 
   if (isLoading) {
     return (
-      <div className="flex h-11 shrink-0 items-center">
+      <div className="bg-background/80 flex h-11 w-full shrink-0 items-center gap-2 rounded-md px-4 py-2 backdrop-blur-md backdrop-saturate-150">
         <Loader2Icon className="size-6 animate-spin" />
+        <span>Waiting for response...</span>
       </div>
     );
   }
