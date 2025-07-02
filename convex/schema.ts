@@ -105,6 +105,7 @@ export default defineSchema({
         occupation: v.optional(v.string()),
         traits: v.optional(v.array(v.string())),
         systemInstruction: v.optional(v.string()),
+        backgroundId: v.optional(v.string()),
       }),
     ),
   }).index("by_userId", ["userId"]),

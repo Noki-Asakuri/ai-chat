@@ -67,6 +67,11 @@ export function Chat() {
 
 function SidebarPushdown() {
   const { state, isMobile } = useSidebar();
+  const user = useQuery(convexQuery(api.users.currentUser, {}));
+
+  const backgroundImage = user?.data?.customization?.backgroundId
+    ? `url(https://ik.imagekit.io/gmethsnvl/ai-chat/${user.data.customization.backgroundId})`
+    : undefined;
 
   return (
     <>
@@ -82,9 +87,10 @@ function SidebarPushdown() {
 
       <div
         className={cn(
-          "bg-background border-sidebar-accent absolute inset-0 mt-3 rounded-tl-3xl border-t border-l bg-fixed transition-[margin-top,border-radius,border-color] will-change-[margin-top,border-radius,border-color]",
+          "bg-background border-sidebar-accent absolute inset-0 mt-3 rounded-tl-3xl border-t border-l bg-fixed bg-center transition-[margin-top,border-radius,border-color] will-change-[margin-top,border-radius,border-color]",
           { "mt-0 rounded-none border-transparent": state === "collapsed" || isMobile },
         )}
+        style={{ backgroundImage }}
       />
     </>
   );

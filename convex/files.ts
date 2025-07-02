@@ -17,7 +17,7 @@ export const { syncMetadata, getMetadata, listMetadata, deleteObject, onSyncMeta
     },
   });
 
-export const generateUploadUrl = mutation({
+export const generateAttachmentUploadUrl = mutation({
   args: { threadId: v.id("threads"), fileId: v.string() },
   handler: async (ctx, args) => {
     const currentUser = await ctx.auth.getUserIdentity();
@@ -28,6 +28,17 @@ export const generateUploadUrl = mutation({
     if (thread.userId !== currentUser.subject) throw new Error("Not authorized");
 
     const key = `${currentUser.subject}/${thread._id}/${args.fileId}`;
+    return r2.generateUploadUrl(key);
+  },
+});
+
+export const generateUserUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await ctx.auth.getUserIdentity();
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const key = `${currentUser.subject}/customization/${crypto.randomUUID()}`;
     return r2.generateUploadUrl(key);
   },
 });

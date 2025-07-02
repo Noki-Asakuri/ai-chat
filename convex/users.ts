@@ -120,6 +120,7 @@ export const updateUserCustomization = mutation({
       occupation: v.optional(v.string()),
       traits: v.optional(v.array(v.string())),
       systemInstruction: v.optional(v.string()),
+      backgroundId: v.optional(v.string()),
     }),
   },
   handler: async (ctx, { data }) => {
