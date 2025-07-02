@@ -86,7 +86,7 @@ const nextConfig: NextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self'; connect-src 'self' https://clerk.chat.asakuri.me https://img.clerk.com https://files.chat.asakuri.me;",
+              "default-src 'self'; script-src 'self'; connect-src 'self' https://clerk.chat.asakuri.me https://img.clerk.com https://files.chat.asakuri.me https://ik.imagekit.io;",
           },
         ],
       },

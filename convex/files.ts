@@ -51,8 +51,9 @@ export const deleteFile = mutation({
     const currentUser = await ctx.auth.getUserIdentity();
     if (!currentUser) throw new Error("Not authenticated");
 
-    const keyParts = args.key.split("/");
-    if (keyParts[0] !== currentUser.subject) throw new Error("Not authorized");
+    if (!args.key.startsWith(`${currentUser.subject}/`)) {
+      throw new Error("Not authorized");
+    }
 
     await r2.deleteObject(ctx, args.key);
   },
