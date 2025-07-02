@@ -24,7 +24,7 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
 
   if (isMobile) {
     return (
-      <div className="text-muted-foreground/90 flex h-full flex-1 flex-wrap items-center justify-between gap-2 text-sm select-none">
+      <div className="bg-background/80 flex h-full flex-1 flex-wrap items-center justify-between gap-2 rounded-md px-4 text-sm backdrop-blur-md backdrop-saturate-150 select-none">
         <div className="flex items-center justify-center gap-2">
           <Icons.provider provider={modelData?.provider} />
           <span>{modelData?.displayName}</span>
@@ -71,7 +71,7 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
   return (
     <div
       className={cn(
-        "text-muted-foreground/90 flex flex-wrap items-center text-sm select-none",
+        "bg-background/80 flex h-full flex-wrap items-center rounded-md px-4 py-2 text-sm backdrop-blur-md backdrop-saturate-150 select-none",
         "[&>*:not(:first-child)]:before:px-1.5 [&>*:not(:first-child)]:before:content-['-']",
       )}
     >

@@ -8,7 +8,9 @@ import { mutation } from "./_generated/server";
 
 const callbacks: R2Callbacks = internal.files;
 
-export const { syncMetadata, getMetadata, listMetadata, deleteObject, onSyncMetadata } =
+export { syncMetadata, getMetadata, listMetadata, onSyncMetadata };
+
+const { syncMetadata, getMetadata, listMetadata, onSyncMetadata, generateUploadUrl } =
   r2.clientApi<DataModel>({
     callbacks,
     async checkUpload(ctx) {
@@ -17,7 +19,7 @@ export const { syncMetadata, getMetadata, listMetadata, deleteObject, onSyncMeta
     },
   });
 
-export const generateUploadUrl = mutation({
+export const generateAttachmentUploadUrl = mutation({
   args: { threadId: v.id("threads"), fileId: v.string() },
   handler: async (ctx, args) => {
     const currentUser = await ctx.auth.getUserIdentity();
@@ -29,5 +31,30 @@ export const generateUploadUrl = mutation({
 
     const key = `${currentUser.subject}/${thread._id}/${args.fileId}`;
     return r2.generateUploadUrl(key);
+  },
+});
+
+export const generateUserUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const currentUser = await ctx.auth.getUserIdentity();
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const key = `${currentUser.subject}/customization/${crypto.randomUUID()}`;
+    return r2.generateUploadUrl(key);
+  },
+});
+
+export const deleteFile = mutation({
+  args: { key: v.string() },
+  handler: async (ctx, args) => {
+    const currentUser = await ctx.auth.getUserIdentity();
+    if (!currentUser) throw new Error("Not authenticated");
+
+    if (!args.key.startsWith(`${currentUser.subject}/`)) {
+      throw new Error("Not authorized");
+    }
+
+    await r2.deleteObject(ctx, args.key);
   },
 });

@@ -80,7 +80,7 @@ export function WelcomeScreen() {
 
         <div className="w-full px-4 md:min-w-[650px]">
           <Tabs defaultValue="create">
-            <TabsList className="pointer-events-auto z-10 w-full">
+            <TabsList className="bg-muted/70 pointer-events-auto z-10 w-full backdrop-blur-md backdrop-saturate-150">
               {categories.map((category) => (
                 <Tab key={category.topic} value={category.topic} className="h-10">
                   <category.icon className="size-4" />
@@ -96,7 +96,7 @@ export function WelcomeScreen() {
                     <button
                       key={index}
                       onClick={() => handlePromptClick(prompt)}
-                      className="hover:bg-muted/40 pointer-events-auto flex items-center justify-center rounded-md px-4 py-2 text-sm text-pretty transition-colors md:min-w-max md:justify-start md:text-base"
+                      className="hover:bg-muted/40 bg-muted/70 pointer-events-auto flex items-center justify-center rounded-md px-4 py-2 text-sm text-pretty backdrop-blur-md backdrop-saturate-150 transition-colors md:min-w-max md:justify-start md:text-base"
                     >
                       {prompt}
                     </button>

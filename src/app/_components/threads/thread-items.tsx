@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 
-import { GitBranchIcon, PinIcon, PinOffIcon } from "lucide-react";
+import { GitBranchIcon, Loader2Icon, PinIcon, PinOffIcon } from "lucide-react";
 import { NavLink, useNavigate } from "react-router";
 
 import { ButtonWithTip } from "../ui/button";
@@ -29,12 +29,12 @@ export function ThreadItem({ thread }: { thread: Thread }) {
       className={({ isActive }) =>
         cn(
           "group/thread relative isolate flex overflow-hidden rounded-md px-3 py-1.5",
-          "text-sidebar-foreground hover:bg-sidebar-primary/20 transition-colors",
-          { "bg-sidebar-primary/20": isActive },
+          "text-sidebar-foreground transition-colors hover:bg-[#393939]",
+          { "bg-[#393939]": isActive },
         )
       }
     >
-      <div className="flex items-center justify-center gap-2">
+      <div className="flex w-full items-center justify-center gap-2">
         <ButtonWithTip
           variant="none"
           onClick={goToParentThread}
@@ -46,9 +46,20 @@ export function ThreadItem({ thread }: { thread: Thread }) {
           <span className="sr-only">Go to parent thread</span>
         </ButtonWithTip>
 
-        <span className={cn("line-clamp-1 text-sm", { "ml-4": thread.branchedFrom })}>
-          {thread.title}
-        </span>
+        <div
+          className={cn("flex w-full items-center justify-between", {
+            "ml-4": thread.branchedFrom,
+          })}
+        >
+          <span className="line-clamp-1 text-sm">{thread.title}</span>
+
+          {thread.status && thread.status !== "complete" && (
+            <div className="inline-block">
+              <Loader2Icon className="size-4 animate-spin" />
+              <span className="sr-only">Streaming...</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <ThreadActions thread={thread} />
@@ -72,7 +83,7 @@ function ThreadActions({ thread }: { thread: Thread }) {
     <div className="absolute top-0 -right-[91px] flex items-center transition-[right] group-hover/thread:right-0">
       <div className="pointer-events-none h-8 w-6 bg-gradient-to-r from-transparent to-[#393939]"></div>
 
-      <div className="flex items-center gap-0.75 bg-[#393939]">
+      <div className="z-20 flex items-center gap-0.75 bg-[#393939]">
         <ButtonWithTip
           title={thread.pinned ? "Unpin Thread" : "Pin Thread"}
           variant="none"

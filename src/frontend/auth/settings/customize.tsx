@@ -3,13 +3,17 @@ import { useMutation } from "convex/react";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
-import React, { useEffect, useState, useTransition } from "react";
+import { ImagePlusIcon, TrashIcon } from "lucide-react";
+import React, { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { ImagePreviewDialog } from "@/components/image-preview-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
+import { useStorage } from "@/lib/hooks/use-storage";
 
 function LoadingSkeleton() {
   return (
@@ -48,20 +52,52 @@ function LoadingSkeleton() {
   );
 }
 
+function getFormValue<T extends File | string>(key: string, formData: FormData): T {
+  const value = formData.get(key) ?? "";
+
+  if (value instanceof File) return value as T;
+  return value as T;
+}
+
 export function CustomizePage() {
-  const { data, isPending } = useQuery(convexQuery(api.users.currentUser, {}));
+  const { data } = useQuery(convexQuery(api.users.currentUser, {}));
   const update = useMutation(api.users.updateUserCustomization);
 
+  const { uploadFile, deleteFile } = useStorage();
+
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
+
+  const [backgroundImage, setBackgroundImage] = useState<File | null>(null);
+
+  function handleRemoveBackground() {
+    startTransition(async function () {
+      setBackgroundImage(null);
+
+      async function removeBackground() {
+        if (!data?.customization?.backgroundId) return;
+
+        await update({ data: { backgroundId: null } });
+        await deleteFile(data.customization.backgroundId);
+      }
+
+      toast.promise(removeBackground, {
+        loading: "Removing background...",
+        success: "Background removed",
+        error: "Failed to remove background",
+      });
+    });
+  }
 
   function updateUserCustomization(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
-    const name = (formData.get("name") ?? "") as string;
-    const occupation = (formData.get("occupation") ?? "") as string;
-    const traits = (formData.get("traits") ?? "") as string;
-    const systemInstruction = (formData.get("system-instruction") ?? "") as string;
+    const name = getFormValue<string>("name", formData);
+    const occupation = getFormValue<string>("occupation", formData);
+    const traits = getFormValue<string>("traits", formData);
+    const systemInstruction = getFormValue<string>("system-instruction", formData);
+    const backgroundImage = getFormValue<File>("background-image", formData);
 
     startTransition(async function () {
       const updates = {
@@ -69,7 +105,16 @@ export function CustomizePage() {
         occupation,
         traits: traits?.split(",").map((t) => t.trim()),
         systemInstruction,
+        backgroundId: undefined as string | undefined,
       };
+
+      if (backgroundImage instanceof File && backgroundImage.size > 0) {
+        if (data?.customization?.backgroundId) {
+          await deleteFile(data.customization.backgroundId);
+        }
+
+        updates.backgroundId = await uploadFile({ file: backgroundImage });
+      }
 
       toast.promise(update({ data: updates }), {
         loading: "Saving preferences...",
@@ -79,7 +124,7 @@ export function CustomizePage() {
     });
   }
 
-  if (isPending) return <LoadingSkeleton />;
+  if (!data) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-4">
@@ -142,6 +187,73 @@ export function CustomizePage() {
           />
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="background-image">Background Image</Label>
+
+          <div className="flex items-start gap-x-2">
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="size-12"
+              onClick={() => imageInputRef.current?.click()}
+            >
+              <ImagePlusIcon className="size-5" />
+            </Button>
+
+            {data?.customization?.backgroundId && (
+              <Button
+                size="icon"
+                type="button"
+                className="size-12"
+                variant="destructive"
+                onClick={handleRemoveBackground}
+              >
+                <TrashIcon className="size-5" />
+              </Button>
+            )}
+
+            <ImagePreviewDialog
+              className="aspect-video h-40"
+              file={backgroundImage}
+              image={{
+                alt: "User Background Image",
+                name: "User Background Image",
+                src: data?.customization?.backgroundId
+                  ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization.backgroundId}`
+                  : undefined,
+              }}
+            >
+              {(objectUrl) => (
+                <img
+                  src={
+                    objectUrl ??
+                    `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization!.backgroundId}`
+                  }
+                  alt="User Background Image"
+                  className="h-full w-full object-cover"
+                  hidden={!data?.customization?.backgroundId && !backgroundImage}
+                />
+              )}
+            </ImagePreviewDialog>
+          </div>
+
+          <input
+            type="file"
+            name="background-image"
+            id="background-image"
+            ref={imageInputRef}
+            className="hidden"
+            accept="image/*"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+
+              setBackgroundImage(file);
+            }}
+          />
+        </div>
+
         <Button type="submit" disabled={pending}>
           Save Preferences
         </Button>
@@ -157,14 +269,7 @@ function ControlledInput({ defaultValue, ...props }: React.ComponentPropsWithout
     setValue(defaultValue);
   }, [defaultValue]);
 
-  return (
-    <Input
-      type="text"
-      value={value}
-      onValueChange={(value) => setValue(value as string)}
-      {...props}
-    />
-  );
+  return <Input type="text" value={value} onValueChange={(value) => setValue(value)} {...props} />;
 }
 
 function ControlledTextarea({

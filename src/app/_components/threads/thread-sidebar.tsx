@@ -1,5 +1,6 @@
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex-helpers/react/cache";
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useDocumentTitle } from "@uidotdev/usehooks";
@@ -11,7 +12,6 @@ import { ThreadUserProfile } from "./thread-user-profile";
 
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
 import { TypographyP } from "@/components/ui/typography";
-import { ScrollAreaPrimitive, ScrollBar } from "@/components/ui/scroll-area";
 
 import { useChatStore } from "@/lib/chat/store";
 import { groupByDate } from "@/lib/threads/group-by-date";
@@ -27,7 +27,12 @@ type VirtualizedThread =
 
 export function ThreadSidebar() {
   return (
-    <Sidebar variant="inset">
+    <Sidebar variant="inset" className="bg-sidebar/40 backdrop-blur-md backdrop-saturate-150">
+      <div className="pointer-events-none absolute inset-0 -z-5">
+        <div className="from-sidebar h-1/2 w-full bg-gradient-to-b from-5% to-transparent to-80%" />
+        <div className="from-sidebar h-1/2 w-full bg-gradient-to-t from-5% to-transparent to-80%" />
+      </div>
+
       <SidebarHeader>
         <span className="text-center text-xl">AI Chat</span>
       </SidebarHeader>
@@ -55,7 +60,7 @@ function ThreadsContent() {
   const parentRef = useRef<HTMLDivElement>(null);
   const { threadId } = useParams<{ threadId?: string }>();
 
-  const threads = useQuery(api.threads.getAllThreads);
+  const { data: threads } = useQuery(convexQuery(api.threads.getAllThreads, {}));
   const setThreads = useChatStore((state) => state.setThreads);
 
   const threadTitle = threads?.find((thread) => thread._id === fromUUID(threadId))?.title;
@@ -126,34 +131,34 @@ function ThreadsContent() {
   useDocumentTitle(threadTitle ? `${threadTitle} - ${DEFAULT_TITLE}` : DEFAULT_TITLE);
 
   return (
-    <ScrollAreaPrimitive.Root className="ml-2 flex flex-1 overflow-y-auto pr-4">
-      <ScrollAreaPrimitive.Viewport ref={parentRef} className="h-full w-full overscroll-contain">
-        <div className="relative" style={{ height: `${rowVirtualizer.getTotalSize()}px` }}>
-          {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-            const item = virtualizedThreads[virtualItem.index]!;
+    <div
+      ref={parentRef}
+      className="custom-scroll h-full w-full overflow-y-auto px-2"
+      style={{ scrollbarGutter: "stable both-edges" }}
+    >
+      <div className="relative w-full" style={{ height: `${rowVirtualizer.getTotalSize()}px` }}>
+        {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+          const item = virtualizedThreads[virtualItem.index]!;
 
-            return (
-              <div
-                key={virtualItem.key}
-                className="absolute top-0 left-0 w-full"
-                style={{ transform: `translateY(${virtualItem.start}px)` }}
-              >
-                {item.type === "header" ? (
-                  <TypographyP className="text-sidebar-accent-foreground flex items-center justify-between font-semibold">
-                    {item.title}
+          return (
+            <div
+              key={virtualItem.key}
+              className="absolute top-0 left-0 w-full"
+              style={{ transform: `translateY(${virtualItem.start}px)` }}
+            >
+              {item.type === "header" ? (
+                <TypographyP className="text-sidebar-accent-foreground flex items-center justify-between font-semibold">
+                  {item.title}
 
-                    <span className="text-sidebar-accent-foreground/70 text-sm">{item.count}</span>
-                  </TypographyP>
-                ) : (
-                  <ThreadItem thread={item.data} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </ScrollAreaPrimitive.Viewport>
-
-      <ScrollBar fade={false} className="!m-0 mr-1" />
-    </ScrollAreaPrimitive.Root>
+                  <span className="text-sidebar-accent-foreground/70 text-sm">{item.count}</span>
+                </TypographyP>
+              ) : (
+                <ThreadItem thread={item.data} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

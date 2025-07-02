@@ -1,12 +1,6 @@
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
-export type Thread = {
-  _id: Id<"threads">;
-  title: string;
-  updatedAt: number;
-  pinned: boolean;
-  branchedFrom?: Id<"threads">;
-};
+export type Thread = Doc<"threads">;
 
 export type ReasoningEffort = "low" | "medium" | "high";
 export type ThinkingBudget = number;

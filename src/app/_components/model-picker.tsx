@@ -4,7 +4,6 @@ import { CapabilityIcon } from "./capability-icon";
 import { buttonVariants } from "./ui/button";
 import { Icons } from "./ui/icons";
 import { MenuArrow, Menu } from "./ui/menu";
-import { ScrollBar, ScrollAreaPrimitive } from "./ui/scroll-area";
 
 import { AllModelIds, getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
@@ -32,21 +31,19 @@ export function ModelPicker() {
 
       <Menu.Portal>
         <Menu.Positioner className="z-50 outline-none" sideOffset={8} align="start">
-          <Menu.Popup className="bg-popover text-popover-foreground origin-[var(--transform-origin)] rounded-md border py-1 transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
+          <Menu.Popup className="bg-popover/70 text-popover-foreground origin-[var(--transform-origin)] rounded-md border backdrop-blur-md backdrop-saturate-150 transition-[transform,scale,opacity] outline-none data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
             <MenuArrow className="fill-popover" />
 
-            <ScrollAreaPrimitive.Root className="h-[600px] w-96 max-w-[calc(100vw-8rem)] p-2">
-              <ScrollAreaPrimitive.Viewport className="h-full overscroll-contain rounded-md">
-                <div className="flex w-full flex-col gap-2 pr-3">
-                  {AllModelIds.sort().map((modelId) => (
-                    <ModelItem key={modelId} modelId={modelId} currentModel={model} />
-                  ))}
-                </div>
-              </ScrollAreaPrimitive.Viewport>
-
-              <ScrollBar fade={false} />
-              <ScrollAreaPrimitive.Corner />
-            </ScrollAreaPrimitive.Root>
+            <div
+              className="custom-scroll h-[600px] w-96 max-w-[calc(100vw-8rem)] overflow-y-auto px-2 py-4 outline-none"
+              style={{ scrollbarGutter: "stable both-edges" }}
+            >
+              <div className="flex flex-col gap-2">
+                {AllModelIds.sort().map((modelId) => (
+                  <ModelItem key={modelId} modelId={modelId} currentModel={model} />
+                ))}
+              </div>
+            </div>
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>
@@ -62,9 +59,9 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
     <Menu.Item
       data-model={modelId}
       data-active={modelId === currentModel}
-      className="hover:bg-primary/10 data-[active=true]:border-primary/70 data-[active=true]:bg-primary/20 text-foreground flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-sm leading-4 outline-none select-none"
       onClick={() => setActiveModel({ model: modelId })}
       closeOnClick={false}
+      className="data-[highlighted]:border-primary/70 data-[highlighted]:bg-primary/20 data-[active=true]:border-primary/70 data-[active=true]:bg-primary/20 text-foreground flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-sm leading-4 outline-none select-none"
     >
       <div className="flex items-center justify-center gap-2">
         <Icons.provider provider={data.provider} className="size-4" />

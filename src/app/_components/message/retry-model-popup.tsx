@@ -84,7 +84,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
 
             {Object.entries(modelsByProvider).map(([provider, models]) => {
               return (
-                <Menu.Root key={provider}>
+                <Menu.SubmenuRoot key={provider}>
                   <Menu.SubmenuTrigger
                     className={cn(
                       buttonVariants({ variant: "ghost" }),
@@ -98,7 +98,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
 
                   <Menu.Portal>
                     <Menu.Positioner side="right" align="center" className="p-1" sideOffset={12}>
-                      <Menu.Popup className="bg-popover text-popover-foreground flex origin-[var(--transform-origin)] flex-col gap-1 rounded-md border p-1 data-[ending-style]:opacity-0 data-[ending-style]:transition-opacity data-[instant]:transition-none">
+                      <Menu.Popup className="bg-popover text-popover-foreground flex w-max origin-[var(--transform-origin)] flex-col gap-1 rounded-md border p-1 transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
                         <MenuArrow className="fill-popover" />
 
                         {models?.map((model) => (
@@ -116,7 +116,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
                       </Menu.Popup>
                     </Menu.Positioner>
                   </Menu.Portal>
-                </Menu.Root>
+                </Menu.SubmenuRoot>
               );
             })}
           </Menu.Popup>

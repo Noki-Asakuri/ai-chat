@@ -11,9 +11,9 @@ export function useVersionWatcher(intervalInMs = 60000) {
 
   useEffect(() => {
     // Don't run this on the server or in local dev.
-    // if (typeof window === "undefined" || process.env.NODE_ENV !== "production") {
-    //   return;
-    // }
+    if (typeof window === "undefined" || process.env.NODE_ENV !== "production") {
+      return;
+    }
 
     async function checkVersion() {
       if (running.current) return;
