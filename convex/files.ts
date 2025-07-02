@@ -8,7 +8,9 @@ import { mutation } from "./_generated/server";
 
 const callbacks: R2Callbacks = internal.files;
 
-export const { syncMetadata, getMetadata, listMetadata, deleteObject, onSyncMetadata } =
+export { syncMetadata, getMetadata, listMetadata, onSyncMetadata };
+
+const { syncMetadata, getMetadata, listMetadata, onSyncMetadata, generateUploadUrl } =
   r2.clientApi<DataModel>({
     callbacks,
     async checkUpload(ctx) {
@@ -40,5 +42,18 @@ export const generateUserUploadUrl = mutation({
 
     const key = `${currentUser.subject}/customization/${crypto.randomUUID()}`;
     return r2.generateUploadUrl(key);
+  },
+});
+
+export const deleteFile = mutation({
+  args: { key: v.string() },
+  handler: async (ctx, args) => {
+    const currentUser = await ctx.auth.getUserIdentity();
+    if (!currentUser) throw new Error("Not authenticated");
+
+    const keyParts = args.key.split("/");
+    if (keyParts[0] !== currentUser.subject) throw new Error("Not authorized");
+
+    await r2.deleteObject(ctx, args.key);
   },
 });

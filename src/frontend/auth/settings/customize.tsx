@@ -72,11 +72,16 @@ export function CustomizePage() {
 
   function handleRemoveBackground() {
     startTransition(async function () {
-      if (!data?.customization?.backgroundId) return;
-      await deleteFile(data.customization.backgroundId);
       setBackgroundImage(null);
 
-      toast.promise(update({ data: { backgroundId: null } }), {
+      async function removeBackground() {
+        if (!data?.customization?.backgroundId) return;
+
+        await update({ data: { backgroundId: null } });
+        await deleteFile(data.customization.backgroundId);
+      }
+
+      toast.promise(removeBackground, {
         loading: "Removing background...",
         success: "Background removed",
         error: "Failed to remove background",
