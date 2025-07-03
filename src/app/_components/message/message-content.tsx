@@ -18,6 +18,8 @@ export function MessageContent({ message, content }: MessageContentProps) {
     return <MessageError message={error} />;
   }
 
+  if (!content) return null;
+
   return (
     <div className="bg-background/80 space-y-4 rounded-md border p-2 backdrop-blur-md backdrop-saturate-150 md:p-4">
       <MemoizedMarkdown id={message.messageId} content={content} />

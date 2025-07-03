@@ -1,6 +1,5 @@
 import type { Doc } from "@/convex/_generated/dataModel";
 
-import { Dialog } from "@base-ui-components/react/dialog";
 import { FileIcon } from "lucide-react";
 
 import type { ChatMessage } from "@/lib/types";
