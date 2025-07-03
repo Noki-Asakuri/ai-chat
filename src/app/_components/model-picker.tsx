@@ -23,7 +23,7 @@ export function ModelPicker() {
       >
         <div className="flex items-center justify-center gap-2">
           <Icons.provider provider={data?.provider} className="size-4" />
-          <span className="w-max">{data?.displayName}</span>
+          <span className="w-max">{data?.display.unique ?? data?.display.name}</span>
         </div>
 
         <ChevronDownIcon />
@@ -65,7 +65,7 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
     >
       <div className="flex items-center justify-center gap-2">
         <Icons.provider provider={data.provider} className="size-4" />
-        <span className="w-max text-sm">{data.displayName}</span>
+        <span className="w-max text-sm">{data.display.unique ?? data.display.name}</span>
       </div>
 
       <div className="flex items-center gap-1">

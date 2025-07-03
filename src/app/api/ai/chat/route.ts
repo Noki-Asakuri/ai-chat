@@ -97,7 +97,7 @@ export async function POST(req: Request) {
   });
 
   const result = streamText({
-    model: registry.languageModel(model),
+    model: registry.languageModel(model.id),
     system: systemInstruction,
     messages: transformedMessages,
     providerOptions,
@@ -135,7 +135,7 @@ export async function POST(req: Request) {
   });
 
   const metadata = {
-    model,
+    model: model.uniqueId,
     duration: 0,
     finishReason: "",
     totalTokens: 0,
@@ -191,7 +191,7 @@ export async function POST(req: Request) {
       }
 
       const updates = {
-        model,
+        model: model.uniqueId,
         content,
         metadata,
         resumableStreamId: null,

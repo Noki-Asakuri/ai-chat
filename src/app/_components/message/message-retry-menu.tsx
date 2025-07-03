@@ -27,7 +27,7 @@ type RetryModelPopupProps = {
 type ModelWithId = ModelData & { modelId: string };
 type GroupedModels = Partial<Record<Provider, ModelWithId[]>>;
 
-export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
+export function MessageRetryMenu({ index, message }: RetryModelPopupProps) {
   const { retryMessage } = useChatRequest();
   const [open, setOpen] = React.useState(false);
 
@@ -69,7 +69,7 @@ export function RetryModelPopup({ index, message }: RetryModelPopupProps) {
               className={cn(buttonVariants({ variant: "ghost" }), "w-full justify-start")}
               onClick={async () => {
                 setPopupOpen(false);
-                await retryMessage(index);
+                await retryMessage(index, { modelId: message.model });
               }}
             >
               <RefreshCcwIcon className="size-4" />
@@ -145,7 +145,7 @@ function ModelProviderPicker(props: ModelProviderPickerProps) {
     >
       <div className="pointer-events-none flex items-center gap-2">
         <Icons.provider provider={props.model.provider} />
-        <span className="w-max">{props.model.displayName}</span>
+        <span className="w-max">{props.model.display.unique ?? props.model.display.name}</span>
       </div>
 
       <div className="flex items-center gap-1">

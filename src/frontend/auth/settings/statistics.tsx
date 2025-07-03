@@ -229,7 +229,7 @@ function ModelRank({
 
       <div className="z-10 flex items-center gap-2">
         <Icons.provider provider={modelData.provider} />
-        <p>{modelData.displayName}</p>
+        <p>{modelData.display.name}</p>
       </div>
 
       <p>{model.value}</p>

@@ -40,7 +40,7 @@ type Capability = {
 };
 export type Provider = "google" | "openai" | "deepseek";
 export type ModelData = {
-  displayName: string;
+  display: { unique?: string; name: string };
   id: ModelIdKey;
   altModelIds?: string[];
   provider: Provider;
@@ -52,7 +52,7 @@ export type ModelIdKey = `${Provider}/${string}`;
 
 export const ModelsData = {
   "google/gemini-2.5-flash-lite": {
-    displayName: "Gemini 2.5 Flash Lite",
+    display: { name: "Gemini 2.5 Flash Lite" },
     id: "google/gemini-2.5-flash-lite-preview-06-17",
     altModelIds: ["google/gemini-2.5-flash-lite-preview-06-17"],
     provider: "google",
@@ -65,7 +65,7 @@ export const ModelsData = {
     },
   },
   "google/gemini-2.5-flash-lite-thinking": {
-    displayName: "Gemini 2.5 Flash Lite (Thinking)",
+    display: { name: "Gemini 2.5 Flash Lite", unique: "Gemini 2.5 Flash Lite (Thinking)" },
     id: "google/gemini-2.5-flash-lite-preview-06-17",
     altModelIds: ["google/gemini-2.5-flash-lite-preview-06-17"],
     provider: "google",
@@ -79,7 +79,7 @@ export const ModelsData = {
     },
   },
   "google/gemini-2.5-flash": {
-    displayName: "Gemini 2.5 Flash",
+    display: { name: "Gemini 2.5 Flash" },
     id: "google/gemini-2.5-flash",
     altModelIds: ["google/gemini-2.5-flash-preview-05-20", "google/gemini-2.5-flash"],
     provider: "google",
@@ -92,7 +92,7 @@ export const ModelsData = {
     },
   },
   "google/gemini-2.5-flash-thinking": {
-    displayName: "Gemini 2.5 Flash (Thinking)",
+    display: { name: "Gemini 2.5 Flash", unique: "Gemini 2.5 Flash (Thinking)" },
     id: "google/gemini-2.5-flash",
     altModelIds: ["google/gemini-2.5-flash-preview-05-20", "google/gemini-2.5-flash"],
     provider: "google",
@@ -106,7 +106,7 @@ export const ModelsData = {
     },
   },
   "google/gemini-2.5-pro-thinking": {
-    displayName: "Gemini 2.5 Pro",
+    display: { name: "Gemini 2.5 Pro" },
     id: "google/gemini-2.5-pro",
     altModelIds: [
       "google/gemini-2.5-pro-preview-05-06",
@@ -125,7 +125,7 @@ export const ModelsData = {
   },
 
   "deepseek/deepseek-chat": {
-    displayName: "DeepSeek V3",
+    display: { name: "DeepSeek V3" },
     id: "deepseek/deepseek-chat",
     provider: "deepseek",
     capabilities: {
@@ -143,7 +143,7 @@ export const ModelsData = {
     },
   },
   "deepseek/deepseek-reasoner": {
-    displayName: "DeepSeek R1",
+    display: { name: "DeepSeek R1" },
     id: "deepseek/deepseek-reasoner",
     provider: "deepseek",
     capabilities: {
@@ -156,7 +156,7 @@ export const ModelsData = {
   },
 
   "openai/gpt-4.1": {
-    displayName: "GPT-4.1",
+    display: { name: "GPT-4.1" },
     id: "openai/gpt-4.1",
     provider: "openai",
     capabilities: {
@@ -173,7 +173,7 @@ export const ModelsData = {
     },
   },
   "openai/chatgpt-4o": {
-    displayName: "ChatGPT 4o",
+    display: { name: "ChatGPT 4o" },
     id: "openai/chatgpt-4o",
     provider: "openai",
     capabilities: {
@@ -190,7 +190,7 @@ export const ModelsData = {
     },
   },
   "openai/gpt-4o": {
-    displayName: "GPT-4o",
+    display: { name: "GPT-4o" },
     id: "openai/gpt-4o",
     provider: "openai",
     capabilities: {
@@ -208,7 +208,7 @@ export const ModelsData = {
   },
 
   "openai/o3": {
-    displayName: "o3",
+    display: { name: "o3" },
     id: "openai/o3",
     provider: "openai",
     capabilities: {
@@ -226,7 +226,7 @@ export const ModelsData = {
   },
 
   "openai/o3-mini": {
-    displayName: "o3 Mini",
+    display: { name: "o3 Mini" },
     id: "openai/o3-mini",
     provider: "openai",
     capabilities: {
@@ -243,7 +243,7 @@ export const ModelsData = {
     },
   },
   "openai/o4-mini": {
-    displayName: "o4 Mini",
+    display: { name: "o4 Mini" },
     id: "openai/o4-mini",
     provider: "openai",
     capabilities: {

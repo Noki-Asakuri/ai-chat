@@ -2,7 +2,7 @@ import { PencilIcon, SaveIcon, SplitIcon, XIcon } from "lucide-react";
 
 import { CopyButton } from "../copy-button";
 import { ButtonWithTip } from "../ui/button";
-import { RetryModelPopup } from "./retry-model-popup";
+import { MessageRetryMenu } from "./message-retry-menu";
 
 import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
@@ -86,7 +86,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
         </>
       )}
 
-      <RetryModelPopup index={index} message={message} />
+      <MessageRetryMenu index={index} message={message} />
     </div>
   );
 }

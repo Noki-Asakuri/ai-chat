@@ -27,7 +27,7 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
       <div className="bg-background/80 flex h-full flex-1 flex-wrap items-center justify-between gap-2 rounded-md px-4 text-sm backdrop-blur-md backdrop-saturate-150 select-none">
         <div className="flex items-center justify-center gap-2">
           <Icons.provider provider={modelData?.provider} />
-          <span>{modelData?.displayName}</span>
+          <span>{modelData?.display.name}</span>
         </div>
 
         <Popover>
@@ -77,7 +77,7 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
     >
       <div className="flex items-center justify-center gap-2">
         <Icons.provider provider={modelData?.provider} />
-        <span>By {modelData?.displayName}</span>
+        <span>By {modelData?.display.name}</span>
       </div>
 
       <span className="flex items-center gap-1">

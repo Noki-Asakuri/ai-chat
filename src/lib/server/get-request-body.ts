@@ -98,7 +98,7 @@ export async function getRequestBody(req: Request, userId: string) {
     assistantMessageId,
     threadId,
     config,
-    model: id,
+    model: { id, uniqueId: model },
     providerOptions,
   };
 }
