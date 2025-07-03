@@ -23,28 +23,30 @@ export function MessageAttachmentDisplay({ message }: { message: ChatMessage }) 
 }
 
 function AttachmentPreview({ attachment }: { attachment: Doc<"attachments"> }) {
-  const attachmentUrl = `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.userId}/${attachment.threadId}/${attachment._id}`;
-
   if (attachment.type === "image") {
+    const imageUrl = `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.userId}/${attachment.threadId}/${attachment._id}`;
+
     return (
       <ImagePreviewDialog
         className="aspect-square size-40 overflow-hidden rounded-md"
         image={{
-          src: attachmentUrl,
+          src: imageUrl,
           alt: attachment.name,
           name: attachment.name,
           size: attachment.size,
         }}
       >
-        <img alt="Attachment" className="size-full object-cover" src={attachmentUrl} />
+        <img alt="Attachment" className="size-full object-cover" src={imageUrl} />
       </ImagePreviewDialog>
     );
   }
 
   if (attachment.type === "pdf" || attachment.type === "doc") {
+    const fileUrl = `https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`;
+
     return (
       <a
-        href={attachmentUrl}
+        href={fileUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="flex size-40 flex-col items-center justify-center gap-2 rounded-md border p-2"
