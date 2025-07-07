@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
 import { useStorage } from "@/lib/hooks/use-storage";
 
@@ -98,6 +99,7 @@ export function CustomizePage() {
     const traits = getFormValue<string>("traits", formData);
     const systemInstruction = getFormValue<string>("system-instruction", formData);
     const backgroundImage = getFormValue<File>("background-image", formData);
+    const disableBlur = getFormValue<string>("disable-blur", formData) === "on";
 
     startTransition(async function () {
       const updates = {
@@ -106,6 +108,7 @@ export function CustomizePage() {
         traits: traits?.split(",").map((t) => t.trim()),
         systemInstruction,
         backgroundId: undefined as string | undefined,
+        disableBlur,
       };
 
       if (backgroundImage instanceof File && backgroundImage.size > 0) {
@@ -181,7 +184,7 @@ export function CustomizePage() {
             autoComplete="off"
             id="system-instruction"
             name="system-instruction"
-            className="min-h-[200px]"
+            className="min-h-[150px]"
             disabled={pending}
             defaultValue={data?.customization?.systemInstruction ?? "You are a helpful assistant."}
           />
@@ -190,28 +193,40 @@ export function CustomizePage() {
         <div className="space-y-2">
           <Label htmlFor="background-image">Background Image</Label>
 
-          <div className="flex items-start gap-x-2">
-            <Button
-              type="button"
-              size="icon"
-              variant="outline"
-              className="size-12"
-              onClick={() => imageInputRef.current?.click()}
-            >
-              <ImagePlusIcon className="size-5" />
-            </Button>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="disable-blur">Disable Blur</Label>
 
-            {data?.customization?.backgroundId && (
+            <ControlledSwitch
+              id="disable-blur"
+              name="disable-blur"
+              defaultChecked={data?.customization?.disableBlur ?? false}
+            />
+          </div>
+
+          <div className="flex items-start gap-x-2">
+            <div className="flex flex-col items-center justify-center gap-2">
               <Button
-                size="icon"
                 type="button"
+                size="icon"
+                variant="outline"
                 className="size-12"
-                variant="destructive"
-                onClick={handleRemoveBackground}
+                onClick={() => imageInputRef.current?.click()}
               >
-                <TrashIcon className="size-5" />
+                <ImagePlusIcon className="size-5" />
               </Button>
-            )}
+
+              {data?.customization?.backgroundId && (
+                <Button
+                  size="icon"
+                  type="button"
+                  className="size-12"
+                  variant="destructive"
+                  onClick={handleRemoveBackground}
+                >
+                  <TrashIcon className="size-5" />
+                </Button>
+              )}
+            </div>
 
             <ImagePreviewDialog
               className="aspect-video h-40"
@@ -231,7 +246,7 @@ export function CustomizePage() {
                     `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization!.backgroundId}`
                   }
                   alt="User Background Image"
-                  className="h-full w-full object-cover"
+                  className="h-full w-full rounded-md object-cover"
                   hidden={!data?.customization?.backgroundId && !backgroundImage}
                 />
               )}
@@ -283,4 +298,17 @@ function ControlledTextarea({
   }, [defaultValue]);
 
   return <Textarea value={value} onChange={(event) => setValue(event.target.value)} {...props} />;
+}
+
+function ControlledSwitch({
+  defaultChecked,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof Switch>) {
+  const [value, setValue] = useState(defaultChecked);
+
+  useEffect(() => {
+    setValue(defaultChecked);
+  }, [defaultChecked]);
+
+  return <Switch checked={value} onCheckedChange={(value) => setValue(value)} {...props} />;
 }

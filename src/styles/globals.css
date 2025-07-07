@@ -227,3 +227,15 @@
   -moz-appearance: textfield;
   appearance: none;
 }
+
+#sidebar-provider[data-disable-blur="true"] .backdrop-blur-md {
+  @apply !backdrop-blur-none;
+}
+
+#sidebar-provider[data-disable-blur="true"] .backdrop-saturate-150 {
+  @apply !backdrop-saturate-100;
+}
+
+#sidebar-provider[data-disable-blur="true"] .backdrop-blur-md.backdrop-saturate-150 {
+  @apply !backdrop-blur-none !backdrop-saturate-100;
+}

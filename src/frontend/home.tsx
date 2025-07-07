@@ -20,8 +20,10 @@ export default function Home() {
   return (
     <>
       <SidebarProvider
+        id="sidebar-provider"
+        data-disable-blur={user?.data?.customization?.disableBlur ?? !backgroundImage}
         style={{ backgroundImage }}
-        className="bg-sidebar -z-[9999] bg-cover bg-fixed bg-center bg-no-repeat"
+        className="group/sidebar-provider bg-sidebar -z-[9999] bg-cover bg-fixed bg-center bg-no-repeat"
         defaultOpen={defaultOpenSidebar}
       >
         <ThreadSidebar />

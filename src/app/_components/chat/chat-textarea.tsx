@@ -50,7 +50,7 @@ export function ChatTextarea() {
         <form className="mx-auto">
           <div
             ref={parentRef}
-            className="bg-muted/40 pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-[calc(var(--spacing)*2+calc(var(--radius)-2px))] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150"
+            className="bg-muted/40 group-data-[disable-blur=true]/sidebar-provider:bg-muted pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-[calc(var(--spacing)*2+calc(var(--radius)-2px))] rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150"
           >
             <ChatAttachmentDisplay />
 
@@ -59,6 +59,7 @@ export function ChatTextarea() {
               className={cn(
                 "bg-muted/60 z-50 rounded-md rounded-b-none border border-b-0 p-2.5 pb-0 backdrop-blur-md backdrop-saturate-150",
                 "data-[dragover=true]:bg-primary/20 data-[dragover=true]:border-primary/40",
+                "group-data-[disable-blur=true]/sidebar-provider:bg-transparent",
               )}
             >
               <InputTextArea />

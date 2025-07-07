@@ -30,7 +30,7 @@ export function ScrollButton() {
           type="button"
           onMouseDown={() => handleScroll("top")}
           className={cn(
-            "bg-muted/70 text-muted-foreground hover:bg-muted/90 h-max w-38 cursor-pointer border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md transition-opacity",
+            "bg-muted/70 text-muted-foreground hover:bg-muted/90 h-max w-38 cursor-pointer border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md backdrop-saturate-150 transition-opacity",
             {
               "pointer-events-auto opacity-100":
                 scrollPosition === "bottom" || scrollPosition === "middle",
@@ -47,7 +47,7 @@ export function ScrollButton() {
           type="button"
           onMouseDown={() => handleScroll("bottom")}
           className={cn(
-            "bg-muted/70 text-muted-foreground hover:bg-muted/90 h-max w-38 cursor-pointer border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md transition-opacity",
+            "bg-muted/70 text-muted-foreground hover:bg-muted/90 h-max w-38 cursor-pointer border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md backdrop-saturate-150 transition-opacity",
             {
               "pointer-events-auto opacity-100":
                 scrollPosition === "top" || scrollPosition === "middle",

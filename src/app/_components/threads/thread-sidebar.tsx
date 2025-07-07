@@ -27,8 +27,11 @@ type VirtualizedThread =
 
 export function ThreadSidebar() {
   return (
-    <Sidebar variant="inset" className="bg-sidebar/40 backdrop-blur-md backdrop-saturate-150">
-      <div className="pointer-events-none absolute inset-0 -z-5">
+    <Sidebar
+      variant="inset"
+      className="bg-sidebar/40 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar backdrop-blur-md backdrop-saturate-150"
+    >
+      <div className="pointer-events-none absolute inset-0 -z-5 group-data-[disable-blur=true]/sidebar-provider:hidden">
         <div className="from-sidebar h-1/2 w-full bg-gradient-to-b from-5% to-transparent to-80%" />
         <div className="from-sidebar h-1/2 w-full bg-gradient-to-t from-5% to-transparent to-80%" />
       </div>

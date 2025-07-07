@@ -106,6 +106,7 @@ export default defineSchema({
         traits: v.optional(v.array(v.string())),
         systemInstruction: v.optional(v.string()),
         backgroundId: v.optional(v.union(v.string(), v.null())),
+        disableBlur: v.optional(v.boolean()),
       }),
     ),
   }).index("by_userId", ["userId"]),
