@@ -138,6 +138,9 @@ export const updateMessageById = mutation({
           finishReason: v.string(),
           totalTokens: v.number(),
           thinkingTokens: v.number(),
+          durations: v.optional(
+            v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
+          ),
         }),
       ),
       modelParams: v.optional(
@@ -220,6 +223,7 @@ export const retryChatMessage = mutation({
     await Promise.all([
       ctx.db.patch(args.threadId, { updatedAt: Date.now() }),
       ctx.db.patch(args.assistantMessageId, {
+        messageId: crypto.randomUUID(),
         status: "pending",
         content: "",
         reasoning: "",

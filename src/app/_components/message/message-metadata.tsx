@@ -20,7 +20,9 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
 
   const modelData = getModelData(model);
   const tokPerSec =
-    metadata.duration > 0 ? (metadata.totalTokens / (metadata.duration / 1000)).toFixed(2) : 0;
+    (metadata.durations?.text ?? metadata.duration) > 0
+      ? (metadata.totalTokens / ((metadata.durations?.text ?? metadata.duration) / 1000)).toFixed(2)
+      : 0;
 
   if (isMobile) {
     return (
@@ -87,7 +89,7 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
 
       <span className="flex items-center gap-1">
         <ClockIcon className="size-4" />
-        {format.time(metadata.duration / 1000)}
+        {format.time((metadata.durations?.text ?? metadata.duration) / 1000)}
       </span>
 
       <span className="flex items-center gap-1">

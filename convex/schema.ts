@@ -80,6 +80,10 @@ export default defineSchema({
         finishReason: v.string(),
         totalTokens: v.number(),
         thinkingTokens: v.number(),
+
+        durations: v.optional(
+          v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
+        ),
       }),
     ),
   })

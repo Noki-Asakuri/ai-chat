@@ -45,6 +45,7 @@ export function Message({ message, index }: MessageProps) {
   return (
     <div
       className="group flex gap-2"
+      key={message.messageId}
       data-index={index}
       data-role={message.role}
       data-id={message.messageId}
@@ -59,11 +60,9 @@ export function Message({ message, index }: MessageProps) {
         })}
       >
         <ThinkingToggle
-          messageId={message.messageId}
-          finished={renderMessage.content.length > 0}
-          reasoning={renderMessage.reasoning}
           status={message.status}
-          tokens={renderMessage.metadata?.thinkingTokens}
+          messageId={message.messageId}
+          message={renderMessage}
         />
 
         {message.role === "user" && editMessage?._id === message._id ? (

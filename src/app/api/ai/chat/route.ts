@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { serverConvexClient } from "@/lib/convex/server";
 
 import { auth } from "@clerk/nextjs/server";
@@ -135,20 +136,13 @@ export async function POST(req: Request) {
   });
 
   const metadata = {
-    model: model.uniqueId,
+    model: model.uniqueId as string,
     duration: 0,
     finishReason: "",
     totalTokens: 0,
     thinkingTokens: 0,
-    providerOptions: undefined,
-  } as {
-    model: string;
-    duration: number;
-    finishReason: string;
-    totalTokens: number;
-    thinkingTokens: number;
-    // providerOptions?: { openai: Record<string, JSONValue>; google: GoogleGenerativeAIProviderMetadata };
-  };
+    durations: { request: 0, reasoning: 0, text: 0 },
+  } satisfies Doc<"messages">["metadata"];
 
   waitUntil(updateTitle(messages, threadId));
   waitUntil(result.consumeStream());
@@ -157,6 +151,8 @@ export async function POST(req: Request) {
     execute: async ({ writer }) => {
       let content = "";
       let reasoning = "";
+      let reasoningDuration = 0;
+      let textDuration = 0;
 
       writer.merge(
         result.toUIMessageStream({
@@ -169,18 +165,36 @@ export async function POST(req: Request) {
 
       for await (const stream of result.fullStream) {
         switch (stream.type) {
+          case "reasoning-start":
+            reasoningDuration = Date.now();
+            break;
+
           case "reasoning":
             reasoning += stream.text;
+            break;
+
+          case "reasoning-end":
+            metadata.durations.reasoning = Date.now() - reasoningDuration;
+            break;
+
+          case "text-start":
+            textDuration = Date.now();
             break;
 
           case "text":
             content += stream.text;
             break;
 
+          case "text-end":
+            metadata.durations.text = Date.now() - textDuration;
+            break;
+
           case "finish-step":
             metadata.model = stream.response.modelId;
-            metadata.duration = Date.now() - startTime;
             metadata.finishReason = stream.finishReason;
+
+            metadata.duration = Date.now() - startTime;
+            metadata.durations.request = metadata.duration;
             break;
 
           case "finish":
@@ -191,11 +205,12 @@ export async function POST(req: Request) {
       }
 
       const updates = {
-        model: model.uniqueId,
-        content,
         metadata,
+        model: model.uniqueId,
         resumableStreamId: null,
         status: "complete" as const,
+
+        content: content.trim(),
         reasoning: reasoning.length > 0 ? reasoning.trim() : undefined,
       };
 
