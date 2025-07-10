@@ -16,10 +16,21 @@ type MessageProps = {
   isLast: boolean;
 };
 
-export function Message({ message, index }: MessageProps) {
+export function Message({ message, index, isLast }: MessageProps) {
   const assistantMessage = useChatStore((state) => state.assistantMessage);
   const editMessage = useChatStore((state) => state.editMessage);
   const popupRetryMessageId = useChatStore((state) => state.popupRetryMessageId);
+  const textareaHeight = useChatStore((state) => state.textareaHeight);
+
+  const userMessage =
+    message.role === "assistant"
+      ? document.querySelector<HTMLDivElement>(`div[data-index='${index - 1}']`)
+      : null;
+
+  const minHeight = isLast
+    ? // 100vh - (padding top + padding bottom + textarea height + user message height)
+      `calc(100vh - (40px + ${Math.max(textareaHeight, 160)}px + 16px + ${userMessage?.clientHeight}px))`
+    : "auto";
 
   const renderMessage =
     message.role === "assistant" &&
@@ -35,9 +46,11 @@ export function Message({ message, index }: MessageProps) {
 
   if (isLoading) {
     return (
-      <div className="bg-background/80 flex h-11 w-full shrink-0 items-center gap-2 rounded-md px-4 py-2 backdrop-blur-md backdrop-saturate-150">
-        <Loader2Icon className="size-6 animate-spin" />
-        <span>Waiting for response...</span>
+      <div style={{ minHeight }}>
+        <div className="bg-background/80 flex h-11 w-full shrink-0 items-center gap-2 rounded-md px-4 py-2 backdrop-blur-md backdrop-saturate-150">
+          <Loader2Icon className="size-6 animate-spin" />
+          <span>Waiting for response...</span>
+        </div>
       </div>
     );
   }
@@ -52,6 +65,7 @@ export function Message({ message, index }: MessageProps) {
       data-status={message.status}
       data-streaming={message.status === "streaming" || message.status === "pending"}
       data-open={popupRetryMessageId === message._id || editMessage?._id === message._id}
+      style={{ minHeight }}
     >
       <div
         className={cn("relative flex w-full flex-col", {
