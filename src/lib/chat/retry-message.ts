@@ -22,6 +22,7 @@ export async function retryMessage(
 
   const state = chatStore.getState();
   state.setEditMessage(null);
+  state.setAssistantMessage({ id: "", content: "", reasoning: "", metadata: undefined });
 
   const editedUserMessage = options?.editedUserMessage;
 
