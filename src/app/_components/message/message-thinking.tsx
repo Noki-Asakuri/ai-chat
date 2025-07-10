@@ -16,15 +16,13 @@ type ThinkingToggleProps = {
   };
 };
 
-function getLastFiveWordsWithEllipsis(text: string): string {
-  const words = text.split(" ");
+function getLatestHeading(text: string) {
+  const headingRegex = /\*\*(.*?)\*\*/g;
+  const matches = Array.from(text.matchAll(headingRegex));
 
-  if (words.length > 5) {
-    const lastFive = words.slice(-5);
-    return `... ${lastFive.join(" ")}`;
-  } else {
-    return text;
-  }
+  const lastMatch = matches.pop();
+
+  return lastMatch?.[1];
 }
 
 export function ThinkingToggle({ messageId, status, message }: ThinkingToggleProps) {
@@ -51,15 +49,15 @@ export function ThinkingToggle({ messageId, status, message }: ThinkingTogglePro
         </div>
 
         {status === "streaming" && message.content.length === 0 ? (
-          <span className="text-muted-foreground/70 text-sm">
-            {getLastFiveWordsWithEllipsis(message.reasoning)}
+          <span className="text-muted-foreground/70 text-sm font-semibold">
+            {getLatestHeading(message.reasoning)}
           </span>
         ) : (
           <PlusIcon className="text-muted-foreground size-5 shrink-0 transition-transform duration-200 ease-out group-data-[panel-open]:rotate-45" />
         )}
       </Collapsible.Trigger>
 
-      <Collapsible.Panel className="bg-background/80 h-[var(--collapsible-panel-height)] space-y-4 rounded-md border px-4 py-2 backdrop-blur-md backdrop-saturate-150 transition-[height] ease-out data-[ending-style]:h-0 data-[starting-style]:h-0">
+      <Collapsible.Panel className="bg-background/80 h-[var(--collapsible-panel-height)] space-y-4 rounded-md border p-4 backdrop-blur-md backdrop-saturate-150 transition-[height] ease-out data-[ending-style]:h-0 data-[starting-style]:h-0">
         <MemoizedMarkdown id={messageId + "-thinking"} content={message.reasoning} />
       </Collapsible.Panel>
     </Collapsible.Root>
