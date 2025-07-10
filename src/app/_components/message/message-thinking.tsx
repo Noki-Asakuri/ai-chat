@@ -29,7 +29,7 @@ export function ThinkingToggle({ messageId, status, message }: ThinkingTogglePro
   if (!message.reasoning || status === "error") return null;
 
   return (
-    <Collapsible.Root className="my-4 w-full space-y-2" defaultOpen={false}>
+    <Collapsible.Root className="mb-2 w-full space-y-2" defaultOpen={false}>
       <Collapsible.Trigger className="group bg-background/80 flex w-full items-center justify-between rounded-md border px-4 py-2 font-medium backdrop-blur-md backdrop-saturate-150 outline-none">
         <div className="group flex items-center gap-2">
           {status === "streaming" && message.content.length === 0 ? (

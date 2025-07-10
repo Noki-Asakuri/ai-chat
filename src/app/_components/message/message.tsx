@@ -29,7 +29,7 @@ export function Message({ message, index, isLast }: MessageProps) {
 
   const minHeight = isLast
     ? // 100vh - (padding top + padding bottom + textarea height + user message height)
-      `calc(100vh - (40px + ${Math.max(textareaHeight, 160)}px + 16px + ${userMessage?.clientHeight}px))`
+      `calc(100vh - (40px + ${Math.max(textareaHeight, 160)}px + 16px + ${userMessage?.clientHeight ?? 114}px))`
     : "auto";
 
   const renderMessage =
@@ -44,17 +44,6 @@ export function Message({ message, index, isLast }: MessageProps) {
     !renderMessage.content &&
     !renderMessage.reasoning;
 
-  if (isLoading) {
-    return (
-      <div style={{ minHeight }}>
-        <div className="bg-background/80 flex h-11 w-full shrink-0 items-center gap-2 rounded-md px-4 py-2 backdrop-blur-md backdrop-saturate-150">
-          <Loader2Icon className="size-6 animate-spin" />
-          <span>Waiting for response...</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       className="group flex gap-2"
@@ -67,28 +56,57 @@ export function Message({ message, index, isLast }: MessageProps) {
       data-open={popupRetryMessageId === message._id || editMessage?._id === message._id}
       style={{ minHeight }}
     >
-      <div
-        className={cn("relative flex w-full flex-col", {
-          hidden: message.status === "pending",
-          "mx-0 gap-1 md:ml-auto md:w-auto": message.role === "user" && !editMessage,
-        })}
-      >
-        <ThinkingToggle
-          status={message.status}
-          messageId={message.messageId}
-          message={renderMessage}
-        />
-
-        {message.role === "user" && editMessage?._id === message._id ? (
-          <MessageEdit content={message.content} index={index} id={message._id} />
-        ) : (
-          <MessageContent content={renderMessage.content} message={message} />
-        )}
-
-        <MessageFooter message={message} index={index} renderMessage={renderMessage} />
-      </div>
+      {isLoading ? (
+        <MessageLoading />
+      ) : (
+        <MessageInner message={message} index={index} isLast={isLast} />
+      )}
 
       {message.role === "user" && <UserAvatar />}
+    </div>
+  );
+}
+
+function MessageLoading() {
+  return (
+    <div className="bg-background/80 flex h-11 w-full shrink-0 items-center gap-2 rounded-md px-4 py-2 backdrop-blur-md backdrop-saturate-150">
+      <Loader2Icon className="size-6 animate-spin" />
+      <span>Waiting for response...</span>
+    </div>
+  );
+}
+
+function MessageInner({ message, index }: MessageProps) {
+  const editMessage = useChatStore((state) => state.editMessage);
+  const assistantMessage = useChatStore((state) => state.assistantMessage);
+
+  const renderMessage =
+    message.role === "assistant" &&
+    assistantMessage?.id === message._id &&
+    message.status === "streaming"
+      ? assistantMessage
+      : message;
+
+  return (
+    <div
+      className={cn("relative flex w-full flex-col", {
+        hidden: message.status === "pending",
+        "mx-0 gap-1 md:ml-auto md:w-auto": message.role === "user" && !editMessage,
+      })}
+    >
+      <ThinkingToggle
+        status={message.status}
+        messageId={message.messageId}
+        message={renderMessage}
+      />
+
+      {message.role === "user" && editMessage?._id === message._id ? (
+        <MessageEdit content={message.content} index={index} id={message._id} />
+      ) : (
+        <MessageContent content={renderMessage.content} message={message} />
+      )}
+
+      <MessageFooter message={message} index={index} renderMessage={renderMessage} />
     </div>
   );
 }
