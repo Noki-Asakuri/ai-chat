@@ -26,7 +26,7 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
 
   if (isMobile) {
     return (
-      <div className="bg-background/80 flex h-full flex-1 flex-wrap items-center justify-between gap-2 rounded-md px-4 text-sm backdrop-blur-md backdrop-saturate-150 select-none">
+      <div className="bg-background/80 flex h-full w-full flex-wrap items-center justify-between gap-2 rounded-md border px-4 text-sm backdrop-blur-md backdrop-saturate-150 select-none group-data-[disable-blur=true]/sidebar-provider:border-0">
         <div className="flex items-center justify-center gap-2">
           <Icons.provider provider={modelData?.provider} />
           <span>{modelData?.display.name}</span>
@@ -73,7 +73,7 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
   return (
     <div
       className={cn(
-        "bg-background/80 flex h-full flex-wrap items-center rounded-md px-4 py-2 text-sm backdrop-blur-md backdrop-saturate-150 select-none",
+        "bg-background/80 flex h-full w-full flex-wrap items-center rounded-md border px-4 py-2 text-sm backdrop-blur-md backdrop-saturate-150 select-none group-data-[disable-blur=true]/sidebar-provider:border-0",
         "[&>*:not(:first-child)]:before:px-1.5 [&>*:not(:first-child)]:before:content-['-']",
       )}
     >

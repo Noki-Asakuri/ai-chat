@@ -19,18 +19,18 @@ export function ScrollButton() {
 
   return (
     <div
-      className="pointer-events-none absolute top-0 left-0 w-full transition-[width,height]"
+      className="pointer-events-none absolute top-0 left-0 w-full transition-[width]"
       style={{
-        height: `calc(100% - ${textareaHeight === 140 ? 140 : textareaHeight + 10}px)`,
+        height: `calc(100% - ${Math.max(textareaHeight, 160)}px)`,
         width: `${state === "collapsed" || isMobile ? "100vw" : "calc(100vw - var(--sidebar-width))"}`,
       }}
     >
-      <div className="pointer-events-none absolute top-4 left-0 flex w-full items-center justify-center">
+      <div className="pointer-events-none absolute top-8 left-0 flex w-full items-center justify-center">
         <Button
           type="button"
           onMouseDown={() => handleScroll("top")}
           className={cn(
-            "bg-muted/70 text-muted-foreground hover:bg-muted/90 h-max w-38 cursor-pointer border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md backdrop-saturate-150 transition-opacity",
+            "bg-background/70 text-muted-foreground hover:bg-background/90 group-data-[disable-blur=true]/sidebar-provider:bg-background h-max w-38 cursor-pointer border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md backdrop-saturate-150 transition-opacity",
             {
               "pointer-events-auto opacity-100":
                 scrollPosition === "bottom" || scrollPosition === "middle",
@@ -42,12 +42,12 @@ export function ScrollButton() {
         </Button>
       </div>
 
-      <div className="pointer-events-none absolute bottom-4 left-0 flex w-full items-center justify-center">
+      <div className="pointer-events-none absolute bottom-0 left-0 flex w-full items-center justify-center">
         <Button
           type="button"
           onMouseDown={() => handleScroll("bottom")}
           className={cn(
-            "bg-muted/70 text-muted-foreground hover:bg-muted/90 h-max w-38 cursor-pointer border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md backdrop-saturate-150 transition-opacity",
+            "bg-background/70 text-background-foreground hover:bg-background/90 group-data-[disable-blur=true]/sidebar-provider:bg-background h-max w-38 cursor-pointer border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md backdrop-saturate-150 transition-opacity",
             {
               "pointer-events-auto opacity-100":
                 scrollPosition === "top" || scrollPosition === "middle",

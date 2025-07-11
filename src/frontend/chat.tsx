@@ -74,21 +74,30 @@ function SidebarPushdown() {
   return (
     <>
       <div
+        data-slot="sidebar-pushdown"
         className={cn(
-          "absolute z-10 flex h-3 w-full items-center justify-between backdrop-blur-md backdrop-saturate-150 transition-[height]",
+          "group-data-[disable-blur=true]/sidebar-provider:bg-sidebar pointer-events-none absolute z-10 flex h-3 w-full items-center justify-between backdrop-blur-md backdrop-saturate-150 transition-[height]",
           { "h-0": state === "collapsed" || isMobile },
         )}
       >
-        <div className="from-sidebar/95 h-full w-1/3 bg-gradient-to-r from-20% via-[rgba(32,32,32,0.7)] to-transparent" />
-        <div className="from-sidebar/95 h-full w-1/3 bg-gradient-to-l from-20% via-[rgba(32,32,32,0.7)] to-transparent" />
+        <div className="from-sidebar/95 h-full w-1/3 bg-gradient-to-r from-20% via-[rgba(32,32,32,0.7)] to-transparent group-data-[disable-blur=true]/sidebar-provider:hidden" />
+        <div className="from-sidebar/95 h-full w-1/3 bg-gradient-to-l from-20% via-[rgba(32,32,32,0.7)] to-transparent group-data-[disable-blur=true]/sidebar-provider:hidden" />
+
+        <div
+          className={cn(
+            "border-sidebar-accent absolute top-3 h-[calc(100svh-12px)] w-full rounded-tl-3xl border-t border-l transition-[top,border-color] will-change-[top,border-color]",
+            { "top-0 h-svh rounded-none border-transparent": state === "collapsed" || isMobile },
+          )}
+        />
       </div>
 
-      <div className="bg-sidebar absolute inset-0 backdrop-blur-md backdrop-saturate-150" />
+      <div className="bg-sidebar pointer-events-none absolute inset-0 backdrop-blur-md backdrop-saturate-150" />
 
       <div
+        data-slot="sidebar-pushdown-background"
         className={cn(
-          "bg-background border-sidebar-accent absolute inset-0 mt-3 rounded-tl-3xl border-t border-l bg-cover bg-fixed bg-center bg-no-repeat transition-[margin-top,border-radius,border-color] will-change-[margin-top,border-radius,border-color]",
-          { "mt-0 rounded-none border-transparent": state === "collapsed" || isMobile },
+          "bg-background absolute inset-0 mt-3 rounded-tl-3xl bg-cover bg-fixed bg-center bg-no-repeat transition-[margin-top,border-radius,border-color] will-change-[margin-top,border-radius]",
+          { "mt-0 rounded-none": state === "collapsed" || isMobile },
           { "bg-transparent": hasBackground },
         )}
         style={{

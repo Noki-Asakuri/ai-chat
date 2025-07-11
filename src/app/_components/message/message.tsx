@@ -46,7 +46,7 @@ export function Message({ message, index, isLast }: MessageProps) {
 
   return (
     <div
-      className="group flex gap-2"
+      className="message group flex gap-2"
       key={message.messageId}
       data-index={index}
       data-role={message.role}
@@ -69,7 +69,7 @@ export function Message({ message, index, isLast }: MessageProps) {
 
 function MessageLoading() {
   return (
-    <div className="bg-background/80 flex h-11 w-full shrink-0 items-center gap-2 rounded-md px-4 py-2 backdrop-blur-md backdrop-saturate-150">
+    <div className="bg-background/80 flex h-11 w-full shrink-0 items-center gap-2 rounded-md border px-4 py-2 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
       <Loader2Icon className="size-6 animate-spin" />
       <span>Waiting for response...</span>
     </div>
@@ -89,9 +89,11 @@ function MessageInner({ message, index }: MessageProps) {
 
   return (
     <div
-      className={cn("relative flex w-full flex-col", {
+      className={cn("relative flex grow-0 flex-col", {
         hidden: message.status === "pending",
-        "mx-0 gap-1 md:ml-auto md:w-auto": message.role === "user" && !editMessage,
+        "w-full": message.role === "assistant",
+        "mx-0 max-w-[calc(100%-44px-8px)] gap-1 md:ml-auto":
+          message.role === "user" && !editMessage,
       })}
     >
       <ThinkingToggle

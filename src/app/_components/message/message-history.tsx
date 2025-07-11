@@ -119,7 +119,7 @@ export function MessageHistory() {
     >
       <div
         data-slot="message-history"
-        className="mx-auto min-h-full max-w-4xl space-y-4 px-4 py-10"
+        className="mx-auto min-h-full max-w-[calc(896px+32px)] space-y-4 px-4 py-10"
         ref={scrollContainerRef}
         style={{ paddingBottom: `${textareaHeight + 20}px` }}
       >

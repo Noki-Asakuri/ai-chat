@@ -26,13 +26,14 @@ function getLatestHeading(text: string) {
 }
 
 export function ThinkingToggle({ messageId, status, message }: ThinkingToggleProps) {
+  const isGeneratingInitialResponse = status === "streaming" && message.content.length === 0;
   if (!message.reasoning || status === "error") return null;
 
   return (
     <Collapsible.Root className="mb-2 w-full space-y-2" defaultOpen={false}>
       <Collapsible.Trigger className="group bg-background/80 flex w-full items-center justify-between rounded-md border px-4 py-2 font-medium backdrop-blur-md backdrop-saturate-150 outline-none">
         <div className="group flex items-center gap-2">
-          {status === "streaming" && message.content.length === 0 ? (
+          {isGeneratingInitialResponse ? (
             <Loader2Icon className="text-muted-foreground size-5 shrink-0 animate-spin" />
           ) : (
             <SparkleIcon className="size-5" />
@@ -48,7 +49,7 @@ export function ThinkingToggle({ messageId, status, message }: ThinkingTogglePro
           </p>
         </div>
 
-        {status === "streaming" && message.content.length === 0 ? (
+        {isGeneratingInitialResponse ? (
           <span className="text-muted-foreground/70 text-sm font-semibold">
             {getLatestHeading(message.reasoning)}
           </span>

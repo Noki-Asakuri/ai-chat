@@ -36,7 +36,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
   }
 
   return (
-    <div className="bg-background/80 flex grow-0 items-center gap-0.5 rounded-md backdrop-blur-md backdrop-saturate-150">
+    <div className="bg-background/80 flex items-center gap-0.5 rounded-md border backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
       <CopyButton className="size-10" side="bottom" content={message.content} />
 
       {message.role === "assistant" && (

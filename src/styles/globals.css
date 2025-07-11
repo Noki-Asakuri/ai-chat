@@ -228,6 +228,10 @@
   appearance: none;
 }
 
+.message *::selection {
+  @apply bg-accent text-accent-foreground;
+}
+
 #sidebar-provider[data-disable-blur="true"] .backdrop-blur-md {
   @apply !backdrop-blur-none;
 }
