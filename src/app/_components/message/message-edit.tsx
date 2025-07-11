@@ -23,7 +23,7 @@ export function MessageEdit({ id, content, index }: MessageEditProps) {
       name="user-input"
       defaultValue={content}
       onChange={(event) => setEditMessage({ _id: id, content: event.target.value })}
-      className="bg-background/80 min-h-11 w-full p-2 font-sans backdrop-blur-md backdrop-saturate-150 outline-none md:p-4"
+      className="!bg-background/80 min-h-11 w-full rounded-md border p-2 font-sans backdrop-blur-md backdrop-saturate-150 outline-none md:p-4"
       onKeyDown={async (event) => {
         if (event.key === "Enter" && !event.shiftKey) {
           event.preventDefault();

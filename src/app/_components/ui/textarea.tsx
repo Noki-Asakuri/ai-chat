@@ -9,7 +9,7 @@ function Textarea({ value, className, ...props }: React.ComponentProps<"textarea
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = "0px";
-      textarea.style.height = `${textarea.scrollHeight}px`;
+      textarea.style.height = `${textarea.scrollHeight + 10}px`;
     }
   }, [value]);
 

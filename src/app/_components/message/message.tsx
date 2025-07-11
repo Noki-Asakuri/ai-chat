@@ -89,9 +89,9 @@ function MessageInner({ message, index }: MessageProps) {
 
   return (
     <div
-      className={cn("relative flex grow-0 flex-col", {
+      className={cn("relative flex grow-0 flex-col", "[&:has(.codeblock)]:w-full", {
         hidden: message.status === "pending",
-        "w-full": message.role === "assistant",
+        "w-full": message.role === "assistant" || editMessage?._id === message._id,
         "mx-0 max-w-[calc(100%-44px-8px)] gap-1 md:ml-auto":
           message.role === "user" && !editMessage,
       })}

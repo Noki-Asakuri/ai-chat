@@ -27,7 +27,10 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
   );
 
   return (
-    <Collapsible.Root defaultOpen className="group/code-block overflow-hidden rounded-md border">
+    <Collapsible.Root
+      defaultOpen
+      className="codeblock group/code-block overflow-hidden rounded-md border"
+    >
       <div className="bg-muted/70 flex w-full items-center justify-between gap-2 rounded-md border-b px-2 py-1.5 backdrop-blur-md transition-[border-color] duration-300 group-data-[closed]/code-block:border-transparent">
         <Collapsible.Trigger
           render={ButtonWithTip}
