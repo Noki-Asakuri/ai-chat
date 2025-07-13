@@ -14,7 +14,7 @@ import { getRequestBody } from "@/lib/server/get-request-body";
 import { registry } from "@/lib/server/model-registry";
 import { getDistinctId, PostHogClient } from "@/lib/server/posthog";
 import { updateTitle } from "@/lib/server/update-title";
-import { tryCatch } from "@/lib/utils";
+import { fixMarkdownCodeBlocks, tryCatch } from "@/lib/utils";
 
 import { env } from "@/env";
 
@@ -210,7 +210,7 @@ export async function POST(req: Request) {
         resumableStreamId: null,
         status: "complete" as const,
 
-        content: content.trim(),
+        content: fixMarkdownCodeBlocks(content.trim()),
         reasoning: reasoning.length > 0 ? reasoning.trim() : undefined,
       };
 

@@ -14,7 +14,7 @@ import { retryMessage } from "./retry-message";
 import { chatStore } from "./store";
 
 import type { ChatMessage, ChatRequest } from "../types";
-import { fromUUID, toUUID } from "../utils";
+import { fixMarkdownCodeBlocks, fromUUID, toUUID } from "../utils";
 
 const convexClient = getConvexReactClient();
 
@@ -57,6 +57,7 @@ export async function sendChatRequest(
             break;
         }
 
+        content = fixMarkdownCodeBlocks(content.trim());
         state.setAssistantMessage({ id: assistantMessageId, content, reasoning, metadata });
       },
     });
