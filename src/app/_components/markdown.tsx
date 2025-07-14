@@ -1,16 +1,20 @@
 import { marked } from "marked";
 import { memo, useMemo } from "react";
-import ReactMarkdown from "react-markdown";
+import { MarkdownHooks } from "react-markdown";
 
 import { isInlineCode, type Element } from "react-shiki";
 
+import rehypeStringify from "rehype-stringify";
+import rehypeMermaid from "rehype-mermaid";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import remarkParse from "remark-parse";
 
 import { cn } from "@/lib/utils";
 
 import { ShikiCodeBlock } from "./ui/code-block";
+import { MermaidCodeblock } from "./ui/mermaid";
 import {
   TypographyBlockquote,
   TypographyH1,
@@ -57,9 +61,9 @@ function CodeBlock({
 
 const MemoizedMarkdownBlock = memo(
   ({ content }: { content: string }) => (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkMath]}
-      rehypePlugins={[rehypeKatex]}
+    <MarkdownHooks
+      remarkPlugins={[remarkParse, remarkGfm, remarkMath]}
+      rehypePlugins={[rehypeKatex, rehypeStringify, rehypeMermaid]}
       components={{
         h1: TypographyH1,
         h2: TypographyH2,
@@ -76,11 +80,12 @@ const MemoizedMarkdownBlock = memo(
         td: TypographyTableTD,
         table: TypographyTable,
         code: CodeBlock,
+        svg: MermaidCodeblock,
         pre: ({ children }) => children,
       }}
     >
       {content}
-    </ReactMarkdown>
+    </MarkdownHooks>
   ),
   (prevProps, nextProps) => {
     if (prevProps.content !== nextProps.content) return false;

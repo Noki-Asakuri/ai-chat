@@ -23,6 +23,7 @@ export function MessageContent({ message, content }: MessageContentProps) {
 
   return (
     <div
+      data-slot="message-content"
       className={cn(
         "bg-background/80 grow-0 space-y-4 rounded-md border p-2 backdrop-blur-md backdrop-saturate-150 md:p-4",
         {
