@@ -7,6 +7,7 @@ import { ThinkingToggle } from "./message-thinking";
 import { UserAvatar } from "./user-avatar";
 
 import { useChatStore } from "@/lib/chat/store";
+import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -77,6 +78,8 @@ function MessageLoading() {
 }
 
 function MessageInner({ message, index }: MessageProps) {
+  const isMobile = useIsMobile();
+
   const editMessage = useChatStore((state) => state.editMessage);
   const assistantMessage = useChatStore((state) => state.assistantMessage);
 
@@ -91,7 +94,7 @@ function MessageInner({ message, index }: MessageProps) {
     <div
       className={cn("relative flex grow-0 flex-col", "[&:has(.codeblock)]:w-full", {
         hidden: message.status === "pending",
-        "w-full": message.role === "assistant" || editMessage?._id === message._id,
+        "w-full": message.role === "assistant" || editMessage?._id === message._id || isMobile,
         "mx-0 max-w-[calc(100%-44px-8px)] gap-1 md:ml-auto":
           message.role === "user" && !editMessage,
       })}
