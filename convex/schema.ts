@@ -114,4 +114,13 @@ export default defineSchema({
       }),
     ),
   }).index("by_userId", ["userId"]),
+
+  assistants: defineTable({
+    userId: v.string(),
+
+    name: v.string(),
+    imageUrl: v.optional(v.string()),
+
+    systemInstruction: v.string(),
+  }).index("by_userId", ["userId"]),
 });

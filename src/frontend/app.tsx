@@ -17,6 +17,7 @@ import { LoginPage } from "@/frontend/auth/login";
 import { WaitlistPage } from "@/frontend/auth/waitlist";
 
 import { AccountPage } from "./auth/settings/account";
+import { AssistantsPage } from "./auth/settings/assistants";
 import { AttachmentsPage } from "./auth/settings/attachments";
 import { AuthLayout } from "./auth/settings/auth-layout";
 import { CustomizePage } from "./auth/settings/customize";
@@ -44,9 +45,9 @@ export default function App() {
               <Route path="statistics/*" element={<StatisticsPage />} />
               <Route path="customize/*" element={<CustomizePage />} />
               <Route path="attachments/*" element={<AttachmentsPage />} />
+              <Route path="assistants/*" element={<AssistantsPage />} />
               <Route path="models/*" element={<div>Models</div>} />
               <Route path="api-keys/*" element={<div>API Keys</div>} />
-              <Route path="contact/*" element={<div>Contact</div>} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

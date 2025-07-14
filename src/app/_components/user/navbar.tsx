@@ -23,16 +23,16 @@ const paths = [
     path: "/auth/settings/attachments",
   },
   {
+    name: "Assistants",
+    path: "/auth/settings/assistants",
+  },
+  {
     name: "Models",
     path: "/auth/settings/models",
   },
   {
     name: "API Keys",
     path: "/auth/settings/api-keys",
-  },
-  {
-    name: "Contact",
-    path: "/auth/settings/contact",
   },
 ];
 
@@ -44,10 +44,10 @@ export function UserNavbar() {
 
   return (
     <Tabs value={"tab-" + activeTitle} onValueChange={() => null}>
-      <TabsList>
+      <TabsList className="overflow-x-auto">
         {paths.map(({ path, name }) => (
           <Tab key={path} value={"tab-" + name} className="h-10 px-0">
-            <NavLink to={path} className="flex h-full w-full items-center justify-center px-2">
+            <NavLink to={path} className="flex h-full w-max items-center justify-center px-2">
               {name}
             </NavLink>
           </Tab>
