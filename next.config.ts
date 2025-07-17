@@ -6,20 +6,10 @@ import type { NextConfig } from "next";
 import "./src/env.js";
 
 import { withSentryConfig } from "@sentry/nextjs";
-import withSerwistInit from "@serwist/next";
 
 function noWrapper(config: NextConfig, ..._args: unknown[]) {
   return config;
 }
-
-const withSerwist =
-  process.env.NODE_ENV === "production"
-    ? withSerwistInit({
-        cacheOnNavigation: true,
-        swSrc: "src/app/sw.ts",
-        swDest: "public/sw.js",
-      })
-    : noWrapper;
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
@@ -27,6 +17,7 @@ const nextConfig: NextConfig = {
   experimental: { reactCompiler: true },
 
   skipTrailingSlashRedirect: true,
+  turbopack: {},
 
   env: { NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA },
   async rewrites() {
@@ -78,18 +69,6 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         ],
       },
-      {
-        source: "/sw.js",
-        headers: [
-          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
-          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
-          {
-            key: "Content-Security-Policy",
-            value:
-              "default-src 'self'; script-src 'self'; connect-src 'self' https://clerk.chat.asakuri.me https://img.clerk.com https://files.chat.asakuri.me https://ik.imagekit.io;",
-          },
-        ],
-      },
     ];
   },
 };
@@ -129,4 +108,4 @@ const sentryOptions = {
   automaticVercelMonitors: true,
 };
 
-export default withSentry(withSerwist(nextConfig), sentryOptions);
+export default withSentry(nextConfig, sentryOptions);
