@@ -1,7 +1,6 @@
-"use client";
-
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { v4 as uuidv4 } from "uuid";
 
 import { ScrollButton } from "../scroll-button";
 import { Textarea } from "../ui/textarea";
@@ -113,7 +112,7 @@ function InputTextArea() {
               if (file.type.includes("pdf")) {
                 type = "pdf";
               }
-              return { id: crypto.randomUUID(), name: file.name, size: file.size, file, type };
+              return { id: uuidv4(), name: file.name, size: file.size, file, type };
             });
             addAttachment(attachments);
           } else {
@@ -147,7 +146,7 @@ function InputTextArea() {
                 type = "pdf";
               }
 
-              return { id: crypto.randomUUID(), name: file.name, size: file.size, file, type };
+              return { id: uuidv4(), name: file.name, size: file.size, file, type };
             });
             addAttachment(files);
           } else if (hasFiles) {

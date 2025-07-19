@@ -14,7 +14,13 @@ function noWrapper(config: NextConfig, ..._args: unknown[]) {
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
-  experimental: { reactCompiler: true },
+  experimental: {
+    useCache: true,
+    reactCompiler: true,
+    clientSegmentCache: true,
+    browserDebugInfoInTerminal: true,
+    turbopackPersistentCaching: true,
+  },
 
   skipTrailingSlashRedirect: true,
   turbopack: {},
