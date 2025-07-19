@@ -287,7 +287,7 @@ export const Icons = {
       case "deepseek":
         return Icons.deepseek(props);
       default:
-        return null;
+        return Icons.unknown(props);
     }
   },
 };

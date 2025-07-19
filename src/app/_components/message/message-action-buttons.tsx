@@ -36,14 +36,14 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
   }
 
   return (
-    <div className="bg-background/80 flex items-center gap-0.5 rounded-md border backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
-      <CopyButton className="size-10" side="bottom" content={message.content} />
+    <div className="bg-background/80 flex items-center gap-0.5 rounded-md border p-1 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
+      <CopyButton className="size-8" side="bottom" content={message.content} />
 
       {message.role === "assistant" && (
         <ButtonWithTip
           variant="ghost"
           side="bottom"
-          className="size-10"
+          className="size-8"
           onMouseDown={() => branchOffThreadMessage(message)}
           title="Branch off at this message"
           disabled={message.status === "pending" || message.status === "streaming"}
@@ -59,7 +59,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
             side="bottom"
             disabled={message.status === "pending"}
             onMouseDown={() => setEditMessage(null)}
-            className={cn("hidden size-10", { flex: editMessage?._id === message._id })}
+            className={cn("hidden size-8", { flex: editMessage?._id === message._id })}
             title="Cancel Edit"
           >
             <XIcon className="size-5" />
@@ -69,7 +69,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
           <ButtonWithTip
             variant="ghost"
             side="bottom"
-            className="size-10"
+            className="size-8"
             onMouseDown={handleEditMessage}
             disabled={message.status === "pending"}
             title={editMessage?._id === message._id ? "Save Message" : "Edit Message"}
@@ -79,6 +79,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
             ) : (
               <PencilIcon className="size-5" />
             )}
+
             <span className="sr-only">
               {editMessage?._id === message._id ? "Save Message" : "Edit Message"}
             </span>
@@ -86,7 +87,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
         </>
       )}
 
-      <MessageRetryMenu index={index} message={message} />
+      <MessageRetryMenu index={index} message={message} className="size-8" />
     </div>
   );
 }

@@ -8,8 +8,8 @@ import { env } from "@/env";
 
 const providerOptions = { baseURL: env.PROXY_URL, apiKey: env.PROXY_KEY };
 
-const baseOpenai = createOpenAI(providerOptions);
 const deepseek = createDeepSeek(providerOptions);
+const baseOpenai = createOpenAI(providerOptions);
 const baseGoogle = createGoogleGenerativeAI({
   ...providerOptions,
   baseURL: env.PROXY_URL + "/v1beta/",
@@ -26,7 +26,6 @@ const openai = customProvider({
     "o3-mini": baseOpenai.chat("o3-mini"),
     "o4-mini": baseOpenai.chat("o4-mini"),
   },
-  fallbackProvider: baseOpenai,
 });
 
 const google = customProvider({
@@ -39,14 +38,6 @@ const google = customProvider({
 
     "gemini-2.5-pro": baseGoogle.languageModel("gemini-2.5-pro"),
   },
-  fallbackProvider: baseGoogle,
 });
 
-export const registry = createProviderRegistry(
-  {
-    google,
-    openai,
-    deepseek,
-  },
-  { separator: "/" },
-);
+export const registry = createProviderRegistry({ google, openai, deepseek }, { separator: "/" });

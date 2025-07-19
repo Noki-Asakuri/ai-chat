@@ -19,7 +19,7 @@ import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type RetryModelPopupProps = {
+type RetryModelPopupProps = React.ComponentPropsWithoutRef<typeof Button> & {
   index: number;
   message: ChatMessage;
 };
@@ -27,7 +27,7 @@ type RetryModelPopupProps = {
 type ModelWithId = ModelData & { modelId: string };
 type GroupedModels = Partial<Record<Provider, ModelWithId[]>>;
 
-export function MessageRetryMenu({ index, message }: RetryModelPopupProps) {
+export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupProps) {
   const { retryMessage } = useChatRequest();
   const [open, setOpen] = React.useState(false);
 
@@ -54,8 +54,8 @@ export function MessageRetryMenu({ index, message }: RetryModelPopupProps) {
         side="bottom"
         variant="ghost"
         title="Retry Message"
-        className="size-10"
         disabled={message.status === "pending"}
+        {...props}
       >
         <RefreshCcwIcon className="size-5" />
       </Menu.Trigger>
