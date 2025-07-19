@@ -1,6 +1,6 @@
-import type { UIMessageStreamPart } from "ai";
+import type { UIMessageChunk } from "ai";
 
-export type StreamDataHandler = (message: UIMessageStreamPart) => void | Promise<void>;
+export type StreamDataHandler = (message: UIMessageChunk) => void | Promise<void>;
 
 export function tryParseJson<T>(jsonString: string, context: string): T {
   try {
@@ -67,7 +67,7 @@ export async function processChatStream({
           continue;
         }
 
-        const payload = tryParseJson<UIMessageStreamPart>(payloadStr, "stream data");
+        const payload = tryParseJson<UIMessageChunk>(payloadStr, "stream data");
         if (!payload.type) {
           console.warn(`[Stream] Skipping malformed line (no type): ${line}`);
           continue;

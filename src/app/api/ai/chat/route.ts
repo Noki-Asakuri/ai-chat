@@ -86,6 +86,7 @@ export async function POST(req: Request) {
     model,
     providerOptions,
     config,
+    tools,
   } = data;
 
   const streamId = generateId();
@@ -102,6 +103,7 @@ export async function POST(req: Request) {
     system: systemInstruction,
     messages: transformedMessages,
     providerOptions,
+    tools,
     abortSignal: req.signal,
 
     topP: config.topP,

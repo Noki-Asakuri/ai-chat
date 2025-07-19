@@ -2,9 +2,9 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { z } from "zod/v4";
 
-import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
-import type { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
-import type { ModelMessage, UserContent } from "ai";
+import { google, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
+import { type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
+import type { ModelMessage, ToolSet, UserContent } from "ai";
 
 import { AllModelIds, getModelData } from "../chat/models";
 
@@ -86,11 +86,13 @@ export async function getRequestBody(req: Request, userId: string) {
     providerOptions.openai = { reasoningEffort: config.reasoningEffort };
   }
 
-  if (config?.webSearch) {
-    providerOptions.google.useSearchGrounding = true;
-  }
-
+  const tools: ToolSet = {};
   const transformedMessages = transformMessages(messages, userId, threadId);
+
+  if (config?.webSearch) {
+    tools.google_search = google.tools.googleSearch({});
+    tools.url_context = google.tools.urlContext({});
+  }
 
   return {
     messages,
@@ -100,6 +102,7 @@ export async function getRequestBody(req: Request, userId: string) {
     config,
     model: { id, uniqueId: model },
     providerOptions,
+    tools,
   };
 }
 
