@@ -1,13 +1,15 @@
 // src/hooks/useVersionWatcher.ts
 import { useState, useEffect, useRef } from "react";
 
+const INTERVAL_IN_MS = 5 * 60 * 1000;
+
 // The hook's job is simple: return true if a new version is available.
-export function useVersionWatcher(intervalInMs = 60000) {
+export function useVersionWatcher() {
   const [isNewVersionAvailable, setIsNewVersionAvailable] = useState(false);
   const currentVersion = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA;
 
   const running = useRef(false);
-  const intervalId = useRef<number | null>(null);
+  const intervalId = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Don't run this on the server or in local dev.
@@ -40,16 +42,13 @@ export function useVersionWatcher(intervalInMs = 60000) {
     }
 
     void checkVersion();
-
-    intervalId.current = setInterval(() => {
-      void checkVersion();
-    }, intervalInMs) as unknown as number;
+    intervalId.current = setInterval(() => void checkVersion(), INTERVAL_IN_MS);
 
     return () => {
       if (intervalId.current) clearInterval(intervalId.current);
       intervalId.current = null;
     };
-  }, [currentVersion, intervalInMs]);
+  }, [currentVersion]);
 
   return isNewVersionAvailable;
 }
