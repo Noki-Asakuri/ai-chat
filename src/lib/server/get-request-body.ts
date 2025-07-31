@@ -18,6 +18,9 @@ const inputSchema = z.object({
         .array(
           z.object({
             _id: z.string(),
+            id: z.string(),
+            threadId: z.string(),
+
             name: z.string(),
             size: z.number(),
             type: z.enum(["image", "pdf"]),
@@ -87,7 +90,7 @@ export async function getRequestBody(req: Request, userId: string) {
   }
 
   const tools: ToolSet = {};
-  const transformedMessages = transformMessages(messages, userId, threadId);
+  const transformedMessages = transformMessages(messages, userId);
 
   if (config?.webSearch) {
     tools.google_search = google.tools.googleSearch({});
@@ -106,17 +109,13 @@ export async function getRequestBody(req: Request, userId: string) {
   };
 }
 
-function transformMessages(
-  messages: z.infer<typeof inputSchema>["messages"],
-  userId: string,
-  threadId: string,
-) {
+function transformMessages(messages: z.infer<typeof inputSchema>["messages"], userId: string) {
   return messages.map((message): ModelMessage => {
     if (message.role === "assistant") return { role: "assistant", content: message.content };
 
     const attachmentParts = message.attachments
       ? message.attachments.map((attachment): Exclude<UserContent[number], string> => {
-          const url = `https://files.chat.asakuri.me/${userId}/${threadId}/${attachment._id}`;
+          const url = `https://files.chat.asakuri.me/${userId}/${attachment.threadId}/${attachment._id}`;
 
           if (attachment.type === "image") {
             return { type: "image" as const, image: url };
