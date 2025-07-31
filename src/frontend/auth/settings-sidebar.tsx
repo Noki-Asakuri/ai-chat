@@ -1,13 +1,15 @@
-import { useUser } from "@clerk/react-router";
+import { api } from "@/convex/_generated/api";
+import { convexQuery } from "@convex-dev/react-query";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
 
 export function SettingsSidebar() {
-  const { user } = useUser();
+  const { data } = useQuery(convexQuery(api.users.currentUser, {}));
 
-  const fallback = user?.username
+  const fallback = data?.username
     ?.split(" ")
     .map((name) => name[0])
     .join("");
@@ -16,14 +18,17 @@ export function SettingsSidebar() {
     <aside className="space-y-4">
       <div className="space-y-2">
         <Avatar className="mx-auto size-40">
-          <AvatarImage src={user?.imageUrl} alt={`${user?.username} avatar`} />
+          <AvatarImage
+            src={data?.imageUrl as string | undefined}
+            alt={`${data?.username} avatar`}
+          />
           <AvatarFallback>{fallback}</AvatarFallback>
         </Avatar>
 
         <div className="text-center">
-          <h1 className="text-xl font-semibold capitalize">{user?.username}</h1>
-          <p className="text-muted-foreground">{user?.primaryEmailAddress?.emailAddress}</p>
-          <Button variant="ghost" size="sm" className="mt-2">
+          <h1 className="text-xl font-semibold capitalize">{data?.username}</h1>
+          <p className="text-muted-foreground">{data?.emailAddress}</p>
+          <Button variant="ghost" size="sm" className="mt-2 capitalize">
             Free Plan
           </Button>
         </div>

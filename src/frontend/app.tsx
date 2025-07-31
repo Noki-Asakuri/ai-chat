@@ -1,5 +1,6 @@
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { AxiomWebVitals } from "next-axiom";
 
 import { Authenticated, AuthLoading } from "convex/react";
 import { useEffect } from "react";
@@ -16,9 +17,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { LoginPage } from "@/frontend/auth/login";
 import { WaitlistPage } from "@/frontend/auth/waitlist";
 
+import { AuthLayout } from "./auth/layout";
 import { AccountPage } from "./auth/settings/account";
 import { AttachmentsPage } from "./auth/settings/attachments";
-import { AuthLayout } from "./auth/settings/auth-layout";
 import { CustomizePage } from "./auth/settings/customize";
 import { StatisticsPage } from "./auth/settings/statistics";
 
@@ -59,6 +60,7 @@ export default function App() {
 
       <Analytics basePath="/api/vercel" />
       <SpeedInsights basePath="/api/vercel" />
+      <AxiomWebVitals />
     </ConvexClientProvider>
   );
 }

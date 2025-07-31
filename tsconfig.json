@@ -31,14 +31,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.cjs",
-    "**/*.js",
-    ".next/types/**/*.ts",
-    "convex"
-  ],
-  "exclude": ["node_modules", "public"]
+  "exclude": ["node_modules", "public", "convex"],
+  "include": ["next-env.d.ts", "src", ".next/types/**/*.ts"]
 }

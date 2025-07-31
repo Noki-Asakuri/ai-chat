@@ -6,6 +6,7 @@ import type { NextConfig } from "next";
 import "./src/env.js";
 
 import { withSentryConfig } from "@sentry/nextjs";
+import { withAxiom } from "next-axiom";
 
 function noWrapper(config: NextConfig, ..._args: unknown[]) {
   return config;
@@ -81,6 +82,7 @@ const nextConfig: NextConfig = {
 
 // Injected content via Sentry wizard below
 const withSentry = process.env.NODE_ENV === "production" ? withSentryConfig : noWrapper;
+const withAxiomWrapper = process.env.NODE_ENV === "production" ? withAxiom : noWrapper;
 
 const sentryOptions = {
   // For all available options, see:
@@ -114,4 +116,4 @@ const sentryOptions = {
   automaticVercelMonitors: true,
 };
 
-export default withSentry(nextConfig, sentryOptions);
+export default withSentry(withAxiomWrapper(nextConfig), sentryOptions);
