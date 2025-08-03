@@ -30,7 +30,7 @@ export function Message({ message, index, isLast }: MessageProps) {
 
   const minHeight = isLast
     ? // 100vh - (padding top + padding bottom + textarea height + user message height)
-      `calc(100vh - (40px + ${Math.max(textareaHeight, 160)}px + 16px + ${userMessage?.clientHeight ?? 114}px))`
+      `calc(100vh - (40px + ${Math.max(textareaHeight, 165)}px + 16px + ${userMessage?.clientHeight ?? 114}px))`
     : "auto";
 
   const renderMessage =
@@ -46,24 +46,26 @@ export function Message({ message, index, isLast }: MessageProps) {
     !renderMessage.reasoning;
 
   return (
-    <div
-      className="message group flex gap-2"
-      key={message.messageId}
-      data-index={index}
-      data-role={message.role}
-      data-id={message.messageId}
-      data-status={message.status}
-      data-streaming={message.status === "streaming" || message.status === "pending"}
-      data-open={popupRetryMessageId === message._id || editMessage?._id === message._id}
-      style={{ minHeight }}
-    >
-      {isLoading ? (
-        <MessageLoading />
-      ) : (
-        <MessageInner message={message} index={index} isLast={isLast} />
-      )}
+    <div data-slot="message-wrapper" style={{ minHeight }}>
+      <div
+        data-slot="message"
+        className="group flex gap-2"
+        key={message.messageId}
+        data-index={index}
+        data-role={message.role}
+        data-id={message.messageId}
+        data-status={message.status}
+        data-streaming={message.status === "streaming" || message.status === "pending"}
+        data-open={popupRetryMessageId === message._id || editMessage?._id === message._id}
+      >
+        {isLoading ? (
+          <MessageLoading />
+        ) : (
+          <MessageInner message={message} index={index} isLast={isLast} />
+        )}
 
-      {message.role === "user" && <UserAvatar />}
+        {message.role === "user" && <UserAvatar />}
+      </div>
     </div>
   );
 }

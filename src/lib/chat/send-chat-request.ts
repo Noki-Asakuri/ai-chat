@@ -97,6 +97,20 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
   state.setAttachment([]);
   state.setEditMessage(null);
 
+  // Force UI to stick to bottom on user send action
+  try {
+    window.dispatchEvent(new Event("chat:force-scroll-bottom"));
+  } catch {
+    // ignore if window not available
+  }
+
+  // Force UI to stick to bottom on user send action
+  try {
+    window.dispatchEvent(new Event("chat:force-scroll-bottom"));
+  } catch {
+    // ignore if window not available
+  }
+
   if (!threadId) {
     threadId = await convexClient.mutation(api.threads.createThread, { title: "New Chat" });
     await navigate(`/chat/${toUUID(threadId)}`);

@@ -116,7 +116,7 @@ export async function POST(req: Request) {
     presencePenalty: config.presencePenalty,
     frequencyPenalty: config.frequencyPenalty,
 
-    experimental_transform: smoothStream(),
+    experimental_transform: smoothStream({ delayInMs: 20 }),
 
     async onError({ error }) {
       const err = error as AISDKError;

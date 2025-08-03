@@ -85,7 +85,7 @@ To get a local copy up and running, follow these simple steps.
   - [x] Statistics
   - [x] Customize
   - [x] Attachments
-  - [ ] Models
+  - [x] Models
   - [ ] API Keys
   - [ ] Contact
 - [ ] Agents selection

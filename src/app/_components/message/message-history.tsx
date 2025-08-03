@@ -11,51 +11,83 @@ export function MessageHistory() {
 
   const textareaHeight = useChatStore((state) => state.textareaHeight);
 
+  // Outer scrollable container (with overflow-y-scroll)
+  const outerScrollRef = useRef<HTMLDivElement>(null);
+  // Inner content container (observed for size changes)
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const prevScrollTopRef = useRef<number>(-1);
   const autoScroll = useRef<boolean>(true);
 
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const scroller = outerScrollRef.current;
+    if (!scroller) return;
+
+    requestAnimationFrame(() => {
+      scroller.scrollTo({ top: scroller.scrollHeight, behavior });
+    });
+  }, []);
+
+  const recomputeScrollPosition = useCallback(() => {
+    const scroller = outerScrollRef.current;
+    if (!scroller) return;
+
+    if (scroller.scrollHeight === scroller.clientHeight && scroller.scrollTop === 0) {
+      setScrollPosition(null);
+    } else if (scroller.scrollTop === 0 && scroller.scrollHeight > scroller.clientHeight) {
+      setScrollPosition("top");
+    } else if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 50) {
+      setScrollPosition("bottom");
+    } else {
+      setScrollPosition("middle");
+    }
+  }, [setScrollPosition]);
+
+  // Observe inner content size changes to maintain stick-to-bottom when autoScroll is enabled.
   const onResize = useCallback(
-    (entries: ResizeObserverEntry[]) => {
-      const element = entries[0]?.target.parentElement;
-      if (!element) return;
+    function () {
+      const scroller = outerScrollRef.current;
+      if (!scroller) return;
 
-      if (element.scrollHeight === element.clientHeight && element.scrollTop === 0) {
-        setScrollPosition(null);
-      } else if (element.scrollTop === 0) {
-        setScrollPosition("top");
-      } else if (element.scrollHeight - element.scrollTop - element.clientHeight < 1) {
-        setScrollPosition("bottom");
-      } else {
-        setScrollPosition("middle");
-      }
+      recomputeScrollPosition();
 
-      if (element.scrollHeight === element.clientHeight) {
+      if (scroller.scrollHeight === scroller.clientHeight) {
         prevScrollTopRef.current = -1;
       }
 
       if (autoScroll.current) {
-        element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
+        // Smooth during normal updates
+        scroller.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" });
       }
     },
-    [setScrollPosition],
+    [recomputeScrollPosition],
   );
 
+  // Setup resize observer on inner content container
   useEffect(() => {
     if (!scrollContainerRef.current) return;
 
     const resizeObserver = new ResizeObserver(onResize);
     resizeObserver.observe(scrollContainerRef.current);
 
-    // Cleanup function
+    // Initial snap to bottom on mount for better UX
+    scrollToBottom("auto");
+
     return () => {
       resizeObserver.disconnect();
     };
-  }, [onResize]);
+  }, [onResize, scrollToBottom]);
+
+  function handleForceScrollBottom() {
+    autoScroll.current = true;
+    scrollToBottom("smooth");
+  }
 
   useEffect(() => {
     const controller = abortController.current;
     const signal = controller.signal;
+
+    window.addEventListener("chat:force-scroll-bottom", handleForceScrollBottom, { signal });
 
     document.addEventListener(
       "copy",
@@ -77,33 +109,32 @@ export function MessageHistory() {
         abortController.current = new AbortController();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleOnScroll(event: React.UIEvent<HTMLDivElement>) {
-    event.preventDefault();
+    // Allow native scrolling
+    const scroller = event.currentTarget;
 
-    const element = event.currentTarget;
-
-    const currentScrollTop = element.scrollTop;
+    const currentScrollTop = scroller.scrollTop;
     const prevScrollTop = prevScrollTopRef.current;
 
-    // User scrolling up
+    // Disable auto-scroll when user scrolls up
     if (currentScrollTop < prevScrollTop) {
       autoScroll.current = false;
-    }
-
-    // User scrolling near bottom
-    else if (element.scrollHeight - element.scrollTop - element.clientHeight < 100) {
+    } else if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 100) {
+      // Re-enable when near bottom
       autoScroll.current = true;
     }
 
     prevScrollTopRef.current = currentScrollTop;
 
-    if (element.scrollHeight === element.clientHeight && element.scrollTop === 0) {
+    // Update position state
+    if (scroller.scrollHeight === scroller.clientHeight && scroller.scrollTop === 0) {
       setScrollPosition(null);
-    } else if (element.scrollTop === 0 && element.scrollHeight > element.clientHeight) {
+    } else if (scroller.scrollTop === 0 && scroller.scrollHeight > scroller.clientHeight) {
       setScrollPosition("top");
-    } else if (element.scrollHeight - element.scrollTop - element.clientHeight < 1) {
+    } else if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 1) {
       setScrollPosition("bottom");
     } else {
       setScrollPosition("middle");
@@ -116,6 +147,7 @@ export function MessageHistory() {
       onScroll={handleOnScroll}
       className="custom-scroll absolute inset-0 overflow-y-scroll"
       style={{ scrollbarGutter: "stable both-edges" }}
+      ref={outerScrollRef}
     >
       <div
         data-slot="message-history"
