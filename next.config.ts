@@ -18,9 +18,7 @@ const nextConfig: NextConfig = {
   experimental: {
     useCache: true,
     reactCompiler: true,
-    clientSegmentCache: true,
     browserDebugInfoInTerminal: true,
-    turbopackPersistentCaching: true,
   },
 
   skipTrailingSlashRedirect: true,
