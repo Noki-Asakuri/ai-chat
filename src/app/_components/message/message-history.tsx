@@ -160,7 +160,11 @@ export function MessageHistory() {
             key={message.messageId}
             message={message}
             index={index}
-            isLast={index === messages.length - 1}
+            isLast={
+              message.role === "user"
+                ? index === messages.length - 2
+                : index === messages.length - 1
+            }
           />
         ))}
       </div>

@@ -115,6 +115,9 @@ export interface ChatState {
   threadCommandOpen: boolean;
   setThreadCommandOpen: (open: boolean | ((open: boolean) => boolean)) => void;
 
+  lastUserMessageHeight?: number | null;
+  setMessageHeight: (height?: number | null) => void;
+
   resetState: () => void;
   setDataFromConvex: (
     messages: ChatMessage[],
@@ -218,6 +221,9 @@ export const useChatStore = create<ChatState>((set) => ({
   textareaHeight: 140,
   setTextareaHeight: (height) => set({ textareaHeight: Math.max(height, 140) }),
 
+  lastUserMessageHeight: null,
+  setMessageHeight: (height) => set({ lastUserMessageHeight: height }),
+
   setDataFromConvex: (messages, status) => set({ messages, status }),
   resetState: () =>
     set(() => ({
@@ -226,6 +232,9 @@ export const useChatStore = create<ChatState>((set) => ({
       isStreaming: false,
       editMessageId: null,
       scrollPosition: null,
+      messageHeights: {},
+      lastUserMessageId: null,
+      lastUserMessageHeight: null,
     })),
 }));
 

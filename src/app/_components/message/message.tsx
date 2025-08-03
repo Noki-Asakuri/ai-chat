@@ -23,15 +23,14 @@ export function Message({ message, index, isLast }: MessageProps) {
   const popupRetryMessageId = useChatStore((state) => state.popupRetryMessageId);
   const textareaHeight = useChatStore((state) => state.textareaHeight);
 
-  const userMessage =
-    message.role === "assistant"
-      ? document.querySelector<HTMLDivElement>(`div[data-index='${index - 1}']`)
-      : null;
+  const lastUserMessageHeight = useChatStore((state) => state.lastUserMessageHeight) ?? 114;
+  const setMessageHeight = useChatStore((state) => state.setMessageHeight);
 
-  const minHeight = isLast
-    ? // 100vh - (padding top + padding bottom + textarea height + user message height)
-      `calc(100vh - (40px + ${Math.max(textareaHeight, 165)}px + 16px + ${userMessage?.clientHeight ?? 114}px))`
-    : "auto";
+  const minHeight =
+    isLast && message.role === "assistant"
+      ? // 100vh - (padding top + padding bottom + textarea height + last known user message height)
+        `calc(100vh - (40px + ${Math.max(textareaHeight, 165)}px + 16px + ${lastUserMessageHeight}px))`
+      : "auto";
 
   const renderMessage =
     message.role === "assistant" &&
@@ -46,23 +45,27 @@ export function Message({ message, index, isLast }: MessageProps) {
     !renderMessage.reasoning;
 
   return (
-    <div data-slot="message-wrapper" style={{ minHeight }}>
+    <div
+      data-slot="message-wrapper"
+      style={{ minHeight }}
+      ref={(ref) => {
+        if (message.role === "user" && isLast) setMessageHeight(ref?.clientHeight);
+      }}
+      data-height={lastUserMessageHeight}
+    >
       <div
         data-slot="message"
         className="group flex gap-2"
         key={message.messageId}
         data-index={index}
+        data-islast={isLast}
         data-role={message.role}
         data-id={message.messageId}
         data-status={message.status}
         data-streaming={message.status === "streaming" || message.status === "pending"}
         data-open={popupRetryMessageId === message._id || editMessage?._id === message._id}
       >
-        {isLoading ? (
-          <MessageLoading />
-        ) : (
-          <MessageInner message={message} index={index} isLast={isLast} />
-        )}
+        {isLoading ? <MessageLoading /> : <MessageInner message={message} index={index} />}
 
         {message.role === "user" && <UserAvatar />}
       </div>
@@ -79,7 +82,7 @@ function MessageLoading() {
   );
 }
 
-function MessageInner({ message, index }: MessageProps) {
+function MessageInner({ message, index }: Omit<MessageProps, "isLast">) {
   const isMobile = useIsMobile();
 
   const editMessage = useChatStore((state) => state.editMessage);
