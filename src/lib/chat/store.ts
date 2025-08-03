@@ -98,7 +98,7 @@ export interface ChatState {
   setAbortController: (controller: AbortController) => void;
 
   chatInput: string;
-  setChatInput: (input: string) => void;
+  setChatInput: (input: string | ((prev: string) => string)) => void;
 
   wrapline: boolean;
   toggleWrapline: () => void;
@@ -211,8 +211,9 @@ export const useChatStore = create<ChatState>((set) => ({
 
   chatInput: getInitialChatInput(),
   setChatInput: (input) => {
-    window.localStorage.setItem("chatInput", input);
-    set({ chatInput: input });
+    const value = typeof input === "function" ? input(getInitialChatInput()) : input;
+    window.localStorage.setItem("chatInput", value);
+    set({ chatInput: value });
   },
 
   scrollPosition: null,

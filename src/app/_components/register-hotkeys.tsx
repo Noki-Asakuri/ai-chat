@@ -19,33 +19,49 @@ export function RegisterHotkeys() {
 
   const setEditMessage = useChatStore((state) => state.setEditMessage);
   const setThreadCommandOpen = useChatStore((state) => state.setThreadCommandOpen);
-  const addAttachment = useChatStore((s) => s.addAttachment);
+  const addAttachment = useChatStore((state) => state.addAttachment);
+  const setChatInput = useChatStore((state) => state.setChatInput);
 
   useEffect(() => {
     function onPaste(event: ClipboardEvent) {
-      if (event.clipboardData?.files.length === 0) return;
-      const files = Array.from(event.clipboardData?.files ?? []);
+      // Handle pasted files (existing behavior - unchanged)
+      if (event.clipboardData?.files.length) {
+        const files = Array.from(event.clipboardData.files ?? []);
 
-      const acceptFiles = files.filter(
-        (file) => file.type.includes("image") || file.type.includes("pdf"),
-      );
+        const acceptFiles = files.filter(
+          (file) => file.type.includes("image") || file.type.includes("pdf"),
+        );
 
-      if (acceptFiles.length > 0) {
-        const attachments = acceptFiles.map((file) => {
-          let type: "image" | "pdf" = "image";
-          if (file.type.includes("pdf")) type = "pdf";
+        if (acceptFiles.length > 0) {
+          const attachments = acceptFiles.map((file) => {
+            let type: "image" | "pdf" = "image";
+            if (file.type.includes("pdf")) type = "pdf";
 
-          return { id: uuidv4(), name: file.name, size: file.size, file, type };
-        });
+            return { id: uuidv4(), name: file.name, size: file.size, file, type };
+          });
 
-        addAttachment(attachments);
+          addAttachment(attachments);
+        }
+
+        if (acceptFiles.length < files.length) {
+          toast.error("File type not supported", {
+            description: "Please upload an image or PDF file.",
+          });
+        }
+
+        // Do not proceed to text paste when files are present
+        return;
       }
 
-      if (acceptFiles.length < files.length) {
-        toast.error("File type not supported", {
-          description: "Please upload an image or PDF file.",
-        });
-      }
+      // If no files were pasted, handle plain text paste into chat input
+      const text = event.clipboardData?.getData("text") ?? "";
+      if (!text) return;
+
+      const chatInput = document.getElementById("textarea-chat-input");
+      if (!chatInput) return;
+
+      setChatInput((prev) => prev + text);
+      chatInput.focus();
     }
 
     function handleKeyboardShortcut(event: KeyboardEvent) {
@@ -105,6 +121,7 @@ export function RegisterHotkeys() {
     setThreadCommandOpen,
     status,
     addAttachment,
+    setChatInput,
   ]);
 
   return null;
