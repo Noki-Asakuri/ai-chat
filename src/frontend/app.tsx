@@ -21,6 +21,7 @@ import { AuthLayout } from "./auth/layout";
 import { AccountPage } from "./auth/settings/account";
 import { AttachmentsPage } from "./auth/settings/attachments";
 import { CustomizePage } from "./auth/settings/customize";
+import { ModelsPage } from "./auth/settings/models";
 import { StatisticsPage } from "./auth/settings/statistics";
 
 import { useVersionWatcher } from "@/lib/hooks/use-version-watcher";
@@ -45,7 +46,7 @@ export default function App() {
               <Route path="statistics/*" element={<StatisticsPage />} />
               <Route path="customize/*" element={<CustomizePage />} />
               <Route path="attachments/*" element={<AttachmentsPage />} />
-              <Route path="models/*" element={<div>Models</div>} />
+              <Route path="models/*" element={<ModelsPage />} />
               <Route path="api-keys/*" element={<div>API Keys</div>} />
               <Route path="contact/*" element={<div>Contact</div>} />
             </Route>

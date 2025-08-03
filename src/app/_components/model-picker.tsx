@@ -1,5 +1,9 @@
+import { api } from "@/convex/_generated/api";
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
+
 import { BrainIcon, ChevronDownIcon, EyeIcon, RssIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { buttonVariants } from "./ui/button";
 import { Icons } from "./ui/icons";
@@ -16,7 +20,34 @@ export function ModelPicker() {
   const [modelSearchQuery, setModelSearchQuery] = useState("");
 
   const { model } = useChatStore((state) => state.chatConfig);
-  const data = getModelData(model);
+  const setChatConfig = useChatStore((s) => s.setChatConfig);
+
+  const { data } = useQuery(convexQuery(api.users.currentUser, {}));
+  const hidden = useMemo(
+    () => data?.customization?.hiddenModels ?? [],
+    [data?.customization?.hiddenModels],
+  );
+
+  const visibleModels = useMemo(() => {
+    return AllModelIds.slice()
+      .sort()
+      .filter((id) => !hidden.includes(id))
+      .filter((modelId) => {
+        const d = getModelData(modelId);
+        const text =
+          `${d?.display?.unique ?? d?.display?.name ?? ""} ${d?.provider ?? ""}`.toLowerCase();
+        return text.includes(modelSearchQuery.trim().toLowerCase());
+      });
+  }, [hidden, modelSearchQuery]);
+
+  useEffect(() => {
+    if (hidden.includes(model)) {
+      const fallback = AllModelIds.find((id) => !hidden.includes(id));
+      if (fallback) setChatConfig({ model: fallback });
+    }
+  }, [hidden, model, setChatConfig]);
+
+  const dataModel = getModelData(model);
 
   return (
     <Menu.Root>
@@ -27,8 +58,8 @@ export function ModelPicker() {
         )}
       >
         <div className="flex items-center justify-center gap-2">
-          <Icons.provider provider={data?.provider} className="size-4" />
-          <span className="w-max">{data?.display.unique ?? data?.display.name}</span>
+          <Icons.provider provider={dataModel?.provider} className="size-4" />
+          <span className="w-max">{dataModel?.display.unique ?? dataModel?.display.name}</span>
         </div>
 
         <ChevronDownIcon />
@@ -57,16 +88,15 @@ export function ModelPicker() {
                 style={{ scrollbarGutter: "stable both-edges" }}
               >
                 <div className="flex flex-col gap-2">
-                  {AllModelIds.sort()
-                    .filter((modelId) => {
-                      const d = getModelData(modelId);
-                      const text =
-                        `${d?.display?.unique ?? d?.display?.name ?? ""} ${d?.provider ?? ""}`.toLowerCase();
-                      return text.includes(modelSearchQuery.trim().toLowerCase());
-                    })
-                    .map((modelId) => (
-                      <ModelItem key={modelId} modelId={modelId} currentModel={model} />
-                    ))}
+                  {visibleModels.map((modelId) => (
+                    <ModelItem key={modelId} modelId={modelId} currentModel={model} />
+                  ))}
+
+                  {visibleModels.length === 0 && (
+                    <div className="text-muted-foreground px-2 py-1.5 text-xs">
+                      No models available. Enable models in Settings → Models.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

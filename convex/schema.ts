@@ -111,6 +111,7 @@ export default defineSchema({
         systemInstruction: v.optional(v.string()),
         backgroundId: v.optional(v.union(v.string(), v.null())),
         disableBlur: v.optional(v.boolean()),
+        hiddenModels: v.optional(v.array(v.string())),
       }),
     ),
   }).index("by_userId", ["userId"]),

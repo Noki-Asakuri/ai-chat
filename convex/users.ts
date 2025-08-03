@@ -122,6 +122,7 @@ export const updateUserCustomization = mutation({
       systemInstruction: v.optional(v.string()),
       backgroundId: v.optional(v.union(v.string(), v.null())),
       disableBlur: v.optional(v.boolean()),
+      hiddenModels: v.optional(v.array(v.string())),
     }),
   },
   handler: async (ctx, { data }) => {
@@ -144,6 +145,8 @@ export const currentUser = query({
     const user = await userByExternalId(ctx, userId.subject);
     if (!user) return null;
 
-    return user;
+    // Ensure hiddenModels is always defined for clients
+    const hiddenModels = user.customization?.hiddenModels ?? [];
+    return { ...user, customization: { ...(user.customization ?? {}), hiddenModels } };
   },
 });
