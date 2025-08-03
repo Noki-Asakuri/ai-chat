@@ -171,7 +171,7 @@ export async function POST(req: Request) {
             reasoningDuration = Date.now();
             break;
 
-          case "reasoning":
+          case "reasoning-delta":
             reasoning += stream.text;
             break;
 
@@ -183,7 +183,7 @@ export async function POST(req: Request) {
             textDuration = Date.now();
             break;
 
-          case "text":
+          case "text-delta":
             content += stream.text;
             break;
 
@@ -212,8 +212,8 @@ export async function POST(req: Request) {
         resumableStreamId: null,
         status: "complete" as const,
 
-        content: fixMarkdownCodeBlocks(content.trim()),
-        reasoning: reasoning.length > 0 ? reasoning.trim() : undefined,
+        content: fixMarkdownCodeBlocks(content),
+        reasoning: reasoning.length > 0 ? reasoning : undefined,
       };
 
       if (!req.signal.aborted) {
@@ -221,6 +221,12 @@ export async function POST(req: Request) {
           messageId: assistantMessageId,
           threadId,
           updates,
+        });
+
+        posthog.capture({
+          distinctId,
+          event: "token_usage",
+          properties: { model, totalTokens: metadata.totalTokens, userId: user.userId },
         });
 
         waitUntil(promise);

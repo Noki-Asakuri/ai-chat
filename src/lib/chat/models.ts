@@ -53,7 +53,7 @@ export type ModelIdKey = `${Provider}/${string}`;
 export const ModelsData = {
   "google/gemini-2.5-flash-lite": {
     display: { name: "Gemini 2.5 Flash Lite" },
-    id: "google/gemini-2.5-flash-lite-preview-06-17",
+    id: "google/gemini-2.5-flash-lite",
     altModelIds: ["google/gemini-2.5-flash-lite-preview-06-17"],
     provider: "google",
     capabilities: {
@@ -66,8 +66,8 @@ export const ModelsData = {
   },
   "google/gemini-2.5-flash-lite-thinking": {
     display: { name: "Gemini 2.5 Flash Lite", unique: "Gemini 2.5 Flash Lite (Thinking)" },
-    id: "google/gemini-2.5-flash-lite-preview-06-17",
-    altModelIds: ["google/gemini-2.5-flash-lite-preview-06-17"],
+    id: "google/gemini-2.5-flash-lite",
+    altModelIds: ["google/gemini-2.5-flash-lite"],
     provider: "google",
     capabilities: {
       vision: true,

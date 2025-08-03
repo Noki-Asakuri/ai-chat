@@ -133,13 +133,10 @@ export function tryCatchSync<T>(fn: () => T): GoResult<T> {
 }
 
 export function fixMarkdownCodeBlocks(markdownText: string): string {
-  const codeBlockRegex = /```(\w*)\n([\s\S]*?)(.)```/g;
+  const codeBlockRegex = /([\w])```/g;
 
-  return markdownText.replace(codeBlockRegex, (match, language, code, charBeforeEnd) => {
-    if (charBeforeEnd !== "\n") {
-      return `\`\`\`${language}\n${code}${charBeforeEnd}\n\`\`\``;
-    }
-    return match;
+  return markdownText.replace(codeBlockRegex, (match, group1) => {
+    return `${group1}\n\`\`\``;
   });
 }
 

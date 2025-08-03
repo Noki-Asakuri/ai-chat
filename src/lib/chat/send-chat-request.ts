@@ -57,7 +57,7 @@ export async function sendChatRequest(
             break;
         }
 
-        content = fixMarkdownCodeBlocks(content.trim());
+        content = fixMarkdownCodeBlocks(content);
         state.setAssistantMessage({ id: assistantMessageId, content, reasoning, metadata });
       },
     });
