@@ -1,15 +1,20 @@
 import { BrainIcon, ChevronDownIcon, EyeIcon, RssIcon } from "lucide-react";
+import { useState } from "react";
 
-import { CapabilityIcon } from "./capability-icon";
 import { buttonVariants } from "./ui/button";
 import { Icons } from "./ui/icons";
-import { MenuArrow, Menu } from "./ui/menu";
+import { Input } from "./ui/input";
+import { Menu, MenuArrow } from "./ui/menu";
+
+import { CapabilityIcon } from "./capability-icon";
 
 import { AllModelIds, getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";
 
 export function ModelPicker() {
+  const [modelSearchQuery, setModelSearchQuery] = useState("");
+
   const { model } = useChatStore((state) => state.chatConfig);
   const data = getModelData(model);
 
@@ -34,14 +39,35 @@ export function ModelPicker() {
           <Menu.Popup className="bg-popover/70 text-popover-foreground origin-[var(--transform-origin)] rounded-md border backdrop-blur-md backdrop-saturate-150 transition-[transform,scale,opacity] outline-none data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
             <MenuArrow className="fill-popover" />
 
-            <div
-              className="custom-scroll h-[600px] w-96 max-w-[calc(100vw-8rem)] overflow-y-auto px-2 py-4 outline-none"
-              style={{ scrollbarGutter: "stable both-edges" }}
-            >
-              <div className="flex flex-col gap-2">
-                {AllModelIds.sort().map((modelId) => (
-                  <ModelItem key={modelId} modelId={modelId} currentModel={model} />
-                ))}
+            <div className="w-96 max-w-[calc(100vw-8rem)] outline-none">
+              <div className="bg-popover/70 sticky top-0 z-10 p-2 backdrop-blur-md backdrop-saturate-150">
+                <Input
+                  value={modelSearchQuery}
+                  onChange={(e) => setModelSearchQuery(e.target.value)}
+                  placeholder="Search models…"
+                  aria-label="Search models"
+                  className="h-8 text-xs"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
+              </div>
+
+              <div
+                className="custom-scroll h-[400px] overflow-y-auto px-2 py-2"
+                style={{ scrollbarGutter: "stable both-edges" }}
+              >
+                <div className="flex flex-col gap-2">
+                  {AllModelIds.sort()
+                    .filter((modelId) => {
+                      const d = getModelData(modelId);
+                      const text =
+                        `${d?.display?.unique ?? d?.display?.name ?? ""} ${d?.provider ?? ""}`.toLowerCase();
+                      return text.includes(modelSearchQuery.trim().toLowerCase());
+                    })
+                    .map((modelId) => (
+                      <ModelItem key={modelId} modelId={modelId} currentModel={model} />
+                    ))}
+                </div>
               </div>
             </div>
           </Menu.Popup>

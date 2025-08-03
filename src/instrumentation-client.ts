@@ -17,7 +17,6 @@ Sentry.init({
     Sentry.browserTracingIntegration(),
     // Replay may only be enabled for the client-side
     Sentry.replayIntegration(),
-    Sentry.feedbackIntegration({}),
   ],
 
   // Enable logs to be sent to Sentry
