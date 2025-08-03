@@ -8,7 +8,7 @@ import { Redis } from "ioredis";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 
-import { createUIMessageStream, generateId, streamText, type AISDKError } from "ai";
+import { createUIMessageStream, generateId, smoothStream, streamText, type AISDKError } from "ai";
 
 import { getRequestBody } from "@/lib/server/get-request-body";
 import { registry } from "@/lib/server/model-registry";
@@ -64,8 +64,11 @@ export async function POST(req: Request) {
     systemInstruction = `The user's name is ${dataCustomization.customization.name}`;
 
     if (dataCustomization.customization.occupation) {
-      systemInstruction += ` and they are a ${dataCustomization.customization.occupation}. Avoid mentioning their occupation but keep it in mind.`;
+      systemInstruction += ` and they are a ${dataCustomization.customization.occupation}.`;
     }
+
+    systemInstruction +=
+      " Avoid mentioning their name and occupation but keep it in mind and use it when appropriate.";
 
     systemInstruction += "\n\n";
   }
@@ -112,6 +115,8 @@ export async function POST(req: Request) {
     maxOutputTokens: config.maxTokens,
     presencePenalty: config.presencePenalty,
     frequencyPenalty: config.frequencyPenalty,
+
+    experimental_transform: smoothStream(),
 
     async onError({ error }) {
       const err = error as AISDKError;
