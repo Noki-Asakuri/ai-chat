@@ -164,11 +164,11 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     id: userMessage.messageId,
     attachments: userMessage.attachments.map((attachmentId, index) => {
       const attachment = state.attachments[index];
-      if (!attachment) {
-        throw new Error("Attachment not found");
-      }
+      if (!attachment) throw new Error("Attachment not found");
+
       return {
         _id: attachmentId,
+        id: attachment.id,
         name: attachment.name,
         size: attachment.size,
         type: attachment.type,

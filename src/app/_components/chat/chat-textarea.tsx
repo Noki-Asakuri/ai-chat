@@ -83,6 +83,29 @@ function InputTextArea() {
   const addAttachment = useChatStore((state) => state.addAttachment);
   const setIsDragOver = useChatStore((state) => state.setIsDragOver);
 
+  function handleAddAttachments({ files }: { files: File[] }) {
+    const acceptFiles = files.filter(
+      (file) => file.type.includes("image") || file.type.includes("pdf"),
+    );
+
+    if (acceptFiles.length > 0) {
+      const attachments = acceptFiles.map((file) => {
+        let type: "image" | "pdf" = "image";
+        if (file.type.includes("pdf")) type = "pdf";
+
+        return { id: uuidv4(), name: file.name, size: file.size, file, type };
+      });
+
+      addAttachment(attachments);
+    }
+
+    if (acceptFiles.length < files.length) {
+      toast.error("File type not supported", {
+        description: "Please upload an image or PDF file.",
+      });
+    }
+  }
+
   return (
     <div className="flex flex-grow flex-row items-start">
       <Textarea
@@ -101,25 +124,8 @@ function InputTextArea() {
         onDrop={(event) => {
           event.preventDefault();
           setIsDragOver(false);
-          const { files } = event.dataTransfer;
-          const acceptedFiles = Array.from(files).filter(
-            (file) => file.type.includes("image") || file.type.includes("pdf"),
-          );
 
-          if (acceptedFiles.length > 0) {
-            const attachments = acceptedFiles.map((file) => {
-              let type: "image" | "pdf" = "image";
-              if (file.type.includes("pdf")) {
-                type = "pdf";
-              }
-              return { id: uuidv4(), name: file.name, size: file.size, file, type };
-            });
-            addAttachment(attachments);
-          } else {
-            toast.error("File type not supported", {
-              description: "Please upload an image or PDF file.",
-            });
-          }
+          handleAddAttachments({ files: Array.from(event.dataTransfer.files) });
         }}
         onDragOver={(event) => {
           event.preventDefault();
@@ -131,30 +137,15 @@ function InputTextArea() {
         onPaste={(event) => {
           const { items } = event.clipboardData;
           const hasFiles = Array.from(items).some((item) => item.kind === "file");
-          const acceptedFiles = Array.from(items).filter(
-            (item) => item.type.includes("image") || item.type.includes("pdf"),
-          );
 
-          if (acceptedFiles.length > 0) {
-            event.preventDefault();
-            const files = acceptedFiles.map((item) => {
-              const file = item.getAsFile();
-              if (!file) throw new Error("Failed to get file from item");
+          if (!hasFiles) return;
+          event.preventDefault();
 
-              let type: "image" | "pdf" = "image";
-              if (item.type.includes("pdf")) {
-                type = "pdf";
-              }
+          const files = Array.from(items)
+            .filter((item) => item.kind === "file")
+            .map((item) => item.getAsFile()!);
 
-              return { id: uuidv4(), name: file.name, size: file.size, file, type };
-            });
-            addAttachment(files);
-          } else if (hasFiles) {
-            event.preventDefault();
-            toast.error("File type not supported", {
-              description: "Please paste an image or PDF file.",
-            });
-          }
+          handleAddAttachments({ files });
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter" && (!event.shiftKey || event.metaKey || event.ctrlKey)) {
