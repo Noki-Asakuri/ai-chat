@@ -7,56 +7,70 @@ import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";
 
 export function ScrollButton() {
-  const scrollPosition = useChatStore((state) => state.scrollPosition);
   const textareaHeight = useChatStore((state) => state.textareaHeight);
-
   const { state, isMobile } = useSidebar();
 
   function handleScroll(position: "top" | "bottom") {
     const element = document.querySelector("#messages-scrollarea") as HTMLDivElement | undefined;
-    element?.scrollTo({ top: position === "top" ? 0 : element.scrollHeight, behavior: "smooth" });
+    element?.scrollTo({
+      top: position === "top" ? 0 : element.scrollHeight,
+      behavior: "smooth",
+    });
   }
+
+  const containerWidth =
+    state === "collapsed" || isMobile ? "100vw" : "calc(100vw - var(--sidebar-width))";
 
   return (
     <div
       className="pointer-events-none absolute top-0 left-0 w-full transition-[width]"
       style={{
-        height: `calc(100% - ${Math.max(textareaHeight, 160)}px)`,
-        width: `${state === "collapsed" || isMobile ? "100vw" : "calc(100vw - var(--sidebar-width))"}`,
+        height: `calc(100% - ${Math.max(textareaHeight, 140)}px)`,
+        width: containerWidth,
       }}
     >
-      <div className="pointer-events-none absolute top-8 left-0 flex w-full items-center justify-center">
-        <Button
-          type="button"
-          onMouseDown={() => handleScroll("top")}
+      <div
+        className={cn(
+          "pointer-events-none absolute bottom-0 left-0 flex w-full items-center justify-center",
+        )}
+      >
+        <div
           className={cn(
-            "bg-background/70 text-muted-foreground hover:bg-background/90 group-data-[disable-blur=true]/sidebar-provider:bg-background h-max w-38 cursor-pointer border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md backdrop-saturate-150 transition-opacity",
-            {
-              "pointer-events-auto opacity-100":
-                scrollPosition === "bottom" || scrollPosition === "middle",
-            },
+            "bg-muted/40 pointer-events-auto flex rounded-t-[calc(var(--spacing)*2+calc(var(--radius)-2px))] border-x border-t",
+            "group-data-[disable-blur=true]/sidebar-provider:bg-muted",
+            "w-full max-w-4xl backdrop-blur-md backdrop-saturate-150",
           )}
         >
-          Scroll to Top
-          <ChevronUpIcon />
-        </Button>
-      </div>
+          <Button
+            type="button"
+            onMouseDown={() => handleScroll("top")}
+            variant="ghost"
+            className={cn(
+              "h-7 justify-center rounded-none px-3 sm:px-4",
+              "text-muted-foreground hover:text-foreground hover:bg-muted/40",
+              "flex grow gap-2",
+            )}
+          >
+            <ChevronUpIcon className="h-4 w-4 shrink-0" />
+            <span className="hidden text-xs md:inline">Scroll to Top</span>
+          </Button>
 
-      <div className="pointer-events-none absolute bottom-0 left-0 flex w-full items-center justify-center">
-        <Button
-          type="button"
-          onMouseDown={() => handleScroll("bottom")}
-          className={cn(
-            "bg-background/70 text-background-foreground hover:bg-background/90 group-data-[disable-blur=true]/sidebar-provider:bg-background h-max w-38 cursor-pointer border px-1.5 py-1 text-xs opacity-0 backdrop-blur-md backdrop-saturate-150 transition-opacity",
-            {
-              "pointer-events-auto opacity-100":
-                scrollPosition === "top" || scrollPosition === "middle",
-            },
-          )}
-        >
-          Scroll to Bottom
-          <ChevronDownIcon />
-        </Button>
+          <div className="bg-border w-px grow-0" />
+
+          <Button
+            type="button"
+            onMouseDown={() => handleScroll("bottom")}
+            variant="ghost"
+            className={cn(
+              "h-7 justify-center rounded-none px-3 sm:px-4",
+              "text-muted-foreground hover:text-foreground hover:bg-muted/40",
+              "flex grow gap-2",
+            )}
+          >
+            <ChevronDownIcon className="h-4 w-4 shrink-0" />
+            <span className="hidden text-xs md:inline">Scroll to Bottom</span>
+          </Button>
+        </div>
       </div>
     </div>
   );
