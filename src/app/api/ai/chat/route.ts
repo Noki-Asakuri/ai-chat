@@ -116,7 +116,7 @@ export async function POST(req: Request) {
     presencePenalty: config.presencePenalty,
     frequencyPenalty: config.frequencyPenalty,
 
-    experimental_transform: smoothStream({ delayInMs: 20 }),
+    experimental_transform: smoothStream({ delayInMs: 10, chunking: "line" }),
 
     async onError({ error }) {
       const err = error as AISDKError;
@@ -148,6 +148,7 @@ export async function POST(req: Request) {
     finishReason: "",
     totalTokens: 0,
     thinkingTokens: 0,
+    timeToFirstTokenMs: 0,
     durations: { request: 0, reasoning: 0, text: 0 },
   } satisfies Doc<"messages">["metadata"];
 
@@ -186,6 +187,7 @@ export async function POST(req: Request) {
 
           case "text-start":
             textDuration = Date.now();
+            metadata.timeToFirstTokenMs = Date.now() - startTime;
             break;
 
           case "text-delta":

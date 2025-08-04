@@ -1,4 +1,4 @@
-import { ClockIcon, CogIcon, InfoIcon, ZapIcon, SparkleIcon } from "lucide-react";
+import { ClockIcon, HourglassIcon, BoltIcon, InfoIcon, ZapIcon, SparkleIcon } from "lucide-react";
 
 import { Icons } from "@/components/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -45,14 +45,21 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
               </div>
 
               <div className="flex items-center gap-2">
-                <ClockIcon className="size-4" />
-                <span>Took {format.time(metadata.duration / 1000)}</span>
+                <BoltIcon className="size-4" />
+                <span>{format.number(metadata.totalTokens)} Tokens</span>
               </div>
 
               <div className="flex items-center gap-2">
-                <CogIcon className="size-4" />
-                <span>{format.number(metadata.totalTokens)} Tokens</span>
+                <HourglassIcon className="size-4" />
+                <span>Took {format.time(metadata.duration / 1000)}</span>
               </div>
+
+              {metadata.timeToFirstTokenMs && (
+                <div className="flex items-center gap-2">
+                  <ClockIcon className="size-4" />
+                  <span>First token {format.time(metadata.timeToFirstTokenMs / 1000)}</span>
+                </div>
+              )}
 
               {metadata.thinkingTokens > 0 && (
                 <div className="flex items-center gap-2">
@@ -88,12 +95,19 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
       </span>
 
       <span className="flex items-center gap-1">
-        <ClockIcon className="size-4" />
+        <HourglassIcon className="size-4" />
         {format.time((metadata.durations?.text ?? metadata.duration) / 1000)}
       </span>
 
+      {metadata.timeToFirstTokenMs && (
+        <span className="flex items-center gap-1">
+          <ClockIcon className="size-4" />
+          First token {format.time(metadata.timeToFirstTokenMs / 1000)}
+        </span>
+      )}
+
       <span className="flex items-center gap-1">
-        <CogIcon className="size-4" />
+        <BoltIcon className="size-4" />
         {format.number(metadata.totalTokens)} Tokens
       </span>
 
