@@ -4,6 +4,8 @@ import "katex/dist/katex.min.css";
 import { type Metadata, type Viewport } from "next";
 import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
 
+import { WebVitals } from "@/lib/axiom/client";
+
 export const metadata: Metadata = {
   title: "AI Chat",
   description:
@@ -44,6 +46,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
         )}
       </head>
+
+      <WebVitals />
 
       <body className="dark isolate font-sans">{children}</body>
     </html>

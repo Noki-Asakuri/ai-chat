@@ -1,14 +1,19 @@
+import { NextResponse } from "next/server";
+
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { Logger } from "next-axiom";
+
+import { logger } from "@/lib/axiom/server";
+import { transformMiddlewareRequest } from "@axiomhq/nextjs";
 
 const isPublicRoute = createRouteMatcher(["/auth/login(.*)", "/auth/waitlist(.*)"]);
 
 export default clerkMiddleware(async (auth, req, event) => {
-  const logger = new Logger({ source: "middleware" }); // traffic, request
-  logger.middleware(req);
+  logger.info(...transformMiddlewareRequest(req));
 
   event.waitUntil(logger.flush());
   if (!isPublicRoute(req)) await auth.protect();
+
+  return NextResponse.next();
 });
 
 export const config = {

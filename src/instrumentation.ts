@@ -1,4 +1,8 @@
+import type { Instrumentation } from "next";
+
 import * as Sentry from "@sentry/nextjs";
+import { transformOnRequestError } from "@axiomhq/nextjs";
+import { logger } from "@/lib/axiom/server";
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
@@ -10,4 +14,9 @@ export async function register() {
   }
 }
 
-export const onRequestError = Sentry.captureRequestError;
+export const onRequestError: Instrumentation.onRequestError = async (error, request, ctx) => {
+  Sentry.captureRequestError(error, request, ctx);
+  logger.error(...transformOnRequestError(error, request, ctx));
+
+  await logger.flush();
+};

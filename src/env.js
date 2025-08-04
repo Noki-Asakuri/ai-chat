@@ -30,8 +30,12 @@ export const env = createEnv({
    */
   client: {
     NEXT_PUBLIC_CONVEX_URL: z.string(),
+
     NEXT_PUBLIC_POSTHOG_KEY: z.string(),
     NEXT_PUBLIC_POSTHOG_HOST: z.string(),
+
+    NEXT_PUBLIC_AXIOM_TOKEN: z.string(),
+    NEXT_PUBLIC_AXIOM_DATASET: z.string(),
 
     NEXT_PUBLIC_CLERK_ISSUER_URL: z.string(),
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string(),
@@ -42,8 +46,12 @@ export const env = createEnv({
 
   experimental__runtimeEnv: {
     NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL,
+
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+
+    NEXT_PUBLIC_AXIOM_TOKEN: process.env.NEXT_PUBLIC_AXIOM_TOKEN,
+    NEXT_PUBLIC_AXIOM_DATASET: process.env.NEXT_PUBLIC_AXIOM_DATASET,
 
     NEXT_PUBLIC_CLERK_ISSUER_URL: process.env.NEXT_PUBLIC_CLERK_ISSUER_URL,
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
