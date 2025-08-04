@@ -166,6 +166,9 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     content: message.content,
     attachments: message.attachments?.map((attachment) => ({
       _id: attachment._id,
+      id: attachment.id,
+      threadId: attachment.threadId,
+
       name: attachment.name,
       size: attachment.size,
       type: attachment.type,
@@ -183,6 +186,8 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
       return {
         _id: attachmentId,
         id: attachment.id,
+        threadId,
+
         name: attachment.name,
         size: attachment.size,
         type: attachment.type,
