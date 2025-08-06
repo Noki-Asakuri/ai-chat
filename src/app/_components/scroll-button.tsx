@@ -29,11 +29,7 @@ export function ScrollButton() {
         width: containerWidth,
       }}
     >
-      <div
-        className={cn(
-          "pointer-events-none absolute bottom-0 left-0 flex w-full items-center justify-center",
-        )}
-      >
+      <div className="pointer-events-none absolute bottom-0 left-0 flex w-full items-center justify-center px-4">
         <div
           className={cn(
             "bg-muted/40 pointer-events-auto flex rounded-t-[calc(var(--spacing)*2+calc(var(--radius)-2px))] border-x border-t",

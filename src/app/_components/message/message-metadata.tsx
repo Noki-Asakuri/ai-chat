@@ -1,4 +1,4 @@
-import { ClockIcon, HourglassIcon, BoltIcon, InfoIcon, ZapIcon, SparkleIcon } from "lucide-react";
+import { BoltIcon, ClockIcon, HourglassIcon, InfoIcon, SparkleIcon, ZapIcon } from "lucide-react";
 
 import { Icons } from "@/components/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -57,7 +57,7 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
               {metadata.timeToFirstTokenMs && (
                 <div className="flex items-center gap-2">
                   <ClockIcon className="size-4" />
-                  <span>First token {format.time(metadata.timeToFirstTokenMs / 1000)}</span>
+                  <span>Latency {format.time(metadata.timeToFirstTokenMs / 1000)}</span>
                 </div>
               )}
 
@@ -80,7 +80,7 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
   return (
     <div
       className={cn(
-        "bg-background/80 flex h-full w-full flex-wrap items-center rounded-md border px-4 py-2 text-sm backdrop-blur-md backdrop-saturate-150 select-none group-data-[disable-blur=true]/sidebar-provider:border-0",
+        "bg-background/80 flex h-full w-full flex-wrap items-center rounded-md border px-4 py-2 text-xs backdrop-blur-md backdrop-saturate-150 select-none group-data-[disable-blur=true]/sidebar-provider:border-0",
         "[&>*:not(:first-child)]:before:px-1.5 [&>*:not(:first-child)]:before:content-['-']",
       )}
     >
@@ -102,7 +102,7 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
       {metadata.timeToFirstTokenMs && (
         <span className="flex items-center gap-1">
           <ClockIcon className="size-4" />
-          First token {format.time(metadata.timeToFirstTokenMs / 1000)}
+          Latency {format.time(metadata.timeToFirstTokenMs / 1000)}
         </span>
       )}
 
