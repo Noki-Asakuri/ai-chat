@@ -136,14 +136,15 @@ function InputTextArea() {
         }}
         onPaste={(event) => {
           const { items } = event.clipboardData;
-          const hasFiles = Array.from(items).some((item) => item.kind === "file");
-
-          if (!hasFiles) return;
-          event.preventDefault();
-
           const files = Array.from(items)
             .filter((item) => item.kind === "file")
-            .map((item) => item.getAsFile()!);
+            .map((item) => item.getAsFile())
+            .filter((file): file is File => file !== null);
+
+          if (!files) return;
+
+          event.preventDefault();
+          event.stopPropagation();
 
           handleAddAttachments({ files });
         }}
