@@ -14,7 +14,6 @@ export function RegisterHotkeys() {
   const navigate = useNavigate();
 
   const status = useChatStore((state) => state.status);
-  const isStreaming = useChatStore((state) => state.isStreaming);
   const editMessage = useChatStore((state) => state.editMessage);
 
   const setEditMessage = useChatStore((state) => state.setEditMessage);
@@ -80,12 +79,20 @@ export function RegisterHotkeys() {
       }
 
       if (event.key === "Escape") {
-        if (status === "pending" || isStreaming) {
+        if (status === "pending" || status === "streaming") {
           event.preventDefault();
           void abortChatRequest();
         } else if (editMessage) {
           event.preventDefault();
           setEditMessage(null);
+        } else {
+          event.preventDefault();
+
+          const element = document.querySelector("#messages-scrollarea");
+          element?.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
+
+          const chatInput = document.getElementById("textarea-chat-input");
+          if (chatInput) chatInput.focus();
         }
       }
 
@@ -115,7 +122,6 @@ export function RegisterHotkeys() {
     };
   }, [
     editMessage,
-    isStreaming,
     navigate,
     setEditMessage,
     setThreadCommandOpen,

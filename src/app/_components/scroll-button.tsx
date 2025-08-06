@@ -11,7 +11,7 @@ export function ScrollButton() {
   const { state, isMobile } = useSidebar();
 
   function handleScroll(position: "top" | "bottom") {
-    const element = document.querySelector("#messages-scrollarea") as HTMLDivElement | undefined;
+    const element = document.querySelector("#messages-scrollarea");
     element?.scrollTo({
       top: position === "top" ? 0 : element.scrollHeight,
       behavior: "smooth",

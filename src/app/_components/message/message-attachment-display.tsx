@@ -13,7 +13,7 @@ export function MessageAttachmentDisplay({ message }: { message: ChatMessage }) 
     <div
       role="list"
       aria-label="Attachments"
-      className="flex flex-wrap items-center justify-start gap-2"
+      className="flex flex-wrap items-center justify-end gap-2"
     >
       {message.attachments.map((attachment) => (
         <AttachmentPreview key={attachment._id} attachment={attachment} />
