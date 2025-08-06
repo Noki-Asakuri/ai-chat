@@ -173,12 +173,13 @@ button[data-localization-key="userProfile.start.dangerSection.deleteAccountButto
   @apply from-background to-background rounded-b-lg bg-gradient-to-t;
 }
 
-.cl-signIn-start,
-.cl-signUp-start,
+[data-clerk-component="Waitlist"] .cl-card,
+.cl-card.cl-signIn-start,
+.cl-card.cl-signUp-start,
 .cl-signIn-password,
 .cl-signIn-alternativeMethods,
 .cl-signIn-emailCode {
-  @apply rounded-b-none border-b-0;
+  @apply m-0 rounded-b-none border;
 }
 
 .cl-cardBox {
@@ -202,7 +203,7 @@ button[data-localization-key="userProfile.start.dangerSection.deleteAccountButto
 }
 
 .cl-scrollBox {
-  @apply border-input from-background to-background rounded-lg rounded-l-none border bg-gradient-to-t;
+  @apply from-background to-background border-input !m-0 rounded-l-none border bg-gradient-to-t;
 }
 
 h1[data-localization-key="userProfile.navbar.title"] {

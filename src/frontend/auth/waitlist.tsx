@@ -7,7 +7,11 @@ export function WaitlistPage() {
 
   return (
     <div className="grid h-svh w-full items-center justify-center px-4">
-      <Waitlist afterJoinWaitlistUrl="/auth/login" appearance={{ baseTheme: dark }} />
+      <Waitlist
+        signInUrl="/auth/login"
+        afterJoinWaitlistUrl="/auth/login"
+        appearance={{ baseTheme: dark }}
+      />
     </div>
   );
 }

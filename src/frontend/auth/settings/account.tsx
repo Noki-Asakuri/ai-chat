@@ -1,5 +1,3 @@
-import "@/styles/clerk-user-profile.css";
-
 import { UserProfile } from "@clerk/clerk-react";
 import { dark } from "@clerk/themes";
 
