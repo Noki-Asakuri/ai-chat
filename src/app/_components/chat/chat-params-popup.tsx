@@ -56,7 +56,7 @@ export function ChatParamsPopup() {
             max={100}
             step={1}
             onChange={(value) => setChatConfig({ topK: value })}
-            hidden={!modelConfig.capabilities.config.topP}
+            hidden={!modelConfig.capabilities.config.topK}
           />
           <ParameterSlider
             label="Presence Penalty"

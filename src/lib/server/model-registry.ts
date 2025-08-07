@@ -25,6 +25,10 @@ const openai = customProvider({
     o3: baseOpenai.chat("o3"),
     "o3-mini": baseOpenai.chat("o3-mini"),
     "o4-mini": baseOpenai.chat("o4-mini"),
+
+    "gpt-5": baseOpenai.chat("gpt-5"),
+    "gpt-5-mini": baseOpenai.chat("gpt-5-mini"),
+    "gpt-5-chat-latest": baseOpenai.chat("gpt-5-chat-latest"),
   },
 });
 

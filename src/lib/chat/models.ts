@@ -207,6 +207,61 @@ export const ModelsData = {
     },
   },
 
+  "openai/gpt-5": {
+    display: { name: "GPT-5" },
+    id: "openai/gpt-5",
+    provider: "openai",
+    capabilities: {
+      webSearch: false,
+      reasoning: "effort",
+      vision: true,
+      maxTokens: 100_000,
+      config: {
+        temperature: true,
+        topP: true,
+        topK: false,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
+    },
+  },
+  "openai/gpt-5-mini": {
+    display: { name: "GPT-5 Mini" },
+    id: "openai/gpt-5-mini",
+    provider: "openai",
+    capabilities: {
+      webSearch: false,
+      reasoning: "effort",
+      vision: true,
+      maxTokens: 100_000,
+      config: {
+        temperature: true,
+        topP: true,
+        topK: false,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
+    },
+  },
+  "openai/gpt-5-chat": {
+    display: { name: "GPT-5 Chat" },
+    id: "openai/gpt-5-chat-latest",
+    provider: "openai",
+    capabilities: {
+      webSearch: false,
+      reasoning: "effort",
+      vision: true,
+      maxTokens: 100_000,
+      config: {
+        temperature: true,
+        topP: true,
+        topK: false,
+        presencePenalty: true,
+        frequencyPenalty: true,
+      },
+    },
+  },
+
   "openai/o3": {
     display: { name: "o3" },
     id: "openai/o3",

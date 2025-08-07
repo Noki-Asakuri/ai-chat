@@ -25,10 +25,14 @@ export async function processChatStream({
   const response = await fetch;
 
   if (!response.ok) {
+    const textResponse = response.clone();
+
     const error = await response
       .json()
       .then((response: { error: string }) => response.error)
-      .catch(() => "Failed to parse error response.");
+      .catch(() =>
+        textResponse.text().then((text) => text || "Unknown error. Failed to get error message."),
+      );
 
     throw new Error(`Failed to fetch: ${response.status} - ${error}`);
   }
