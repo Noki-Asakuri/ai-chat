@@ -141,7 +141,9 @@ function InputTextArea() {
             .map((item) => item.getAsFile())
             .filter((file): file is File => file !== null);
 
-          if (!files) return;
+          if (files.length === 0) {
+            return;
+          }
 
           event.preventDefault();
           event.stopPropagation();
