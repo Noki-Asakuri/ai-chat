@@ -1,9 +1,11 @@
 import { api } from "@/convex/_generated/api";
+import { useEffect, useRef, useState } from "react";
 
 import { GitBranchIcon, Loader2Icon, PinIcon, PinOffIcon } from "lucide-react";
 import { NavLink, useNavigate } from "react-router";
 
 import { ButtonWithTip } from "../ui/button";
+import { Input } from "../ui/input";
 import { ThreadDeleteDialog } from "./thread-delete-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
@@ -14,6 +16,23 @@ const convexClient = getConvexReactClient();
 
 export function ThreadItem({ thread }: { thread: Thread }) {
   const navigate = useNavigate();
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [title, setTitle] = useState<string>(thread.title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [isEditing]);
+
+  useEffect(() => {
+    // If the thread title updates externally, ensure local state reflects it when not editing
+    if (!isEditing) {
+      setTitle(thread.title);
+    }
+  }, [thread.title, isEditing]);
 
   async function goToParentThread(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
@@ -22,10 +41,65 @@ export function ThreadItem({ thread }: { thread: Thread }) {
     await navigate(`/chat/${toUUID(thread.branchedFrom!)}`);
   }
 
+  function startEdit(event: React.MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    setTitle(thread.title);
+    setIsEditing(true);
+  }
+
+  async function commitEdit() {
+    const next = title.trim();
+    if (next.length > 0 && next !== thread.title) {
+      await convexClient.mutation(api.threads.updateThreadTitle, {
+        threadId: thread._id,
+        title: next,
+      });
+    }
+    setIsEditing(false);
+  }
+
+  function cancelEdit() {
+    setIsEditing(false);
+    setTitle(thread.title);
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void commitEdit();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelEdit();
+    }
+  }
+
+  if (isEditing) {
+    return (
+      <Input
+        ref={inputRef}
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onBlur={() => void commitEdit()}
+        onKeyDown={onKeyDown}
+        onClick={(e) => e.stopPropagation()}
+        aria-label="Rename thread"
+        className="h-6 py-1 text-sm"
+      />
+    );
+  }
+
   return (
     <NavLink
       to={`/chat/${toUUID(thread._id)}`}
       title={thread.title}
+      onDoubleClick={startEdit}
+      onClick={(e) => {
+        if (isEditing) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
       className={({ isActive }) =>
         cn(
           "group/thread relative isolate flex overflow-hidden rounded-md px-3 py-1.5",
@@ -62,7 +136,7 @@ export function ThreadItem({ thread }: { thread: Thread }) {
         </div>
       </div>
 
-      <ThreadActions thread={thread} />
+      {!isEditing && <ThreadActions thread={thread} />}
     </NavLink>
   );
 }

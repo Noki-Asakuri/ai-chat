@@ -57,22 +57,61 @@ export const branchThread = mutation({
 });
 
 export const getAllThreads = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    query: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
     if (!user) return [];
 
-    const data = await ctx.db
-      .query("threads")
-      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
-      .collect();
+    const limit = args.limit ?? 200;
 
-    return data
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .map((thread) => ({
+    // No search query: return all pinned + first N non-pinned ordered by updatedAt desc
+    if (!args.query || args.query.trim() === "") {
+      const pinned = await ctx.db
+        .query("threads")
+        .withIndex("by_userId_pinned_updatedAt", (q) =>
+          q.eq("userId", user.subject).eq("pinned", true),
+        )
+        .order("desc")
+        .collect();
+
+      const nonPinned = await ctx.db
+        .query("threads")
+        .withIndex("by_userId_updatedAt", (q) => q.eq("userId", user.subject))
+        .order("desc")
+        .filter((q) => q.neq(q.field("pinned"), true))
+        .take(limit);
+
+      return [...pinned, ...nonPinned].map((thread) => ({
         ...thread,
         pinned: thread.pinned ?? false,
       }));
+    }
+
+    // With search query: include only pinned that match + up to N non-pinned that match
+    const search = args.query.trim();
+
+    const pinnedMatches = await ctx.db
+      .query("threads")
+      .withSearchIndex("search_title", (q) =>
+        q.search("title", search).eq("userId", user.subject).eq("pinned", true),
+      )
+      .take(1024);
+
+    const nonPinnedMatches = await ctx.db
+      .query("threads")
+      .withSearchIndex("search_title", (q) =>
+        q.search("title", search).eq("userId", user.subject),
+      )
+      .filter((q) => q.neq(q.field("pinned"), true))
+      .take(limit);
+
+    return [...pinnedMatches, ...nonPinnedMatches].map((thread) => ({
+      ...thread,
+      pinned: thread.pinned ?? false,
+    }));
   },
 });
 

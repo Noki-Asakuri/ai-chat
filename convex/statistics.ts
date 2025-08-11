@@ -50,8 +50,12 @@ export const getStatistics = query({
 
     const activityMap = messagesFromDatabase.reduce(
       (acc: Record<string, number>, m: Doc<"messages">) => {
-        const date = new Date(m._creationTime).toISOString().split("T")[0];
-        acc[date] = (acc[date] || 0) + 1;
+        const parts = new Date(m._creationTime).toISOString().split("T");
+        const day = parts[0];
+        if (day) {
+          const prev = acc[day] ?? 0;
+          acc[day] = prev + 1;
+        }
         return acc;
       },
       {} as Record<string, number>,

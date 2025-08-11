@@ -4,12 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useDocumentTitle } from "@uidotdev/usehooks";
-import { useEffect, useMemo, useRef } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useParams } from "react-router";
 
 import { ThreadItem } from "./thread-items";
 import { ThreadUserProfile } from "./thread-user-profile";
 
+import { Input } from "@/components/ui/input";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
 import { TypographyP } from "@/components/ui/typography";
 
@@ -26,6 +27,9 @@ type VirtualizedThread =
   | { type: "thread"; data: Thread };
 
 export function ThreadSidebar() {
+  const [query, setQuery] = useState<string>("");
+  const deferredQuery = useDeferredValue(query);
+
   return (
     <Sidebar
       variant="inset"
@@ -48,7 +52,17 @@ export function ThreadSidebar() {
           <span className="line-clamp-1 w-full">Create new thread</span>
         </NavLink>
 
-        <ThreadsContent />
+        <div className="mx-2">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search threads..."
+            aria-label="Search threads"
+            className="h-8"
+          />
+        </div>
+
+        <ThreadsContent query={deferredQuery} />
       </SidebarContent>
 
       <SidebarFooter>
@@ -59,11 +73,11 @@ export function ThreadSidebar() {
   );
 }
 
-function ThreadsContent() {
+function ThreadsContent({ query }: { query: string }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const { threadId } = useParams<{ threadId?: string }>();
 
-  const { data: threads } = useQuery(convexQuery(api.threads.getAllThreads, {}));
+  const { data: threads } = useQuery(convexQuery(api.threads.getAllThreads, { query }));
   const setThreads = useChatStore((state) => state.setThreads);
 
   const threadTitle = threads?.find((thread) => thread._id === fromUUID(threadId))?.title;
@@ -119,10 +133,13 @@ function ThreadsContent() {
 
   useEffect(() => {
     if (threads) {
-      localStorage.setItem(THREAD_LOCAL_STORAGE_KEY, JSON.stringify(threads));
+      // Persist only the base list (no active search) to avoid polluting cache with filtered results
+      if (!query) {
+        localStorage.setItem(THREAD_LOCAL_STORAGE_KEY, JSON.stringify(threads));
+      }
       setThreads(threads);
     }
-  }, [threads, setThreads]);
+  }, [threads, setThreads, query]);
 
   const rowVirtualizer = useVirtualizer({
     count: virtualizedThreads.length,

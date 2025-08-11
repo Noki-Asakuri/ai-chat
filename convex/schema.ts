@@ -12,7 +12,10 @@ export default defineSchema({
     status: v.optional(
       v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
     ),
-  }).index("by_userId", ["userId"]),
+  }).index("by_userId", ["userId"])
+    .index("by_userId_updatedAt", ["userId", "updatedAt"])
+    .index("by_userId_pinned_updatedAt", ["userId", "pinned", "updatedAt"])
+    .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "pinned"] }),
 
   attachments: defineTable({
     id: v.string(),
