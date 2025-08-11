@@ -23,9 +23,7 @@ export const getAllMessagesFromThread = query({
         const attachmentDocs = await Promise.all(
           (message.attachments ?? []).map((attachmentId) => ctx.db.get(attachmentId)),
         );
-        const attachments = attachmentDocs.filter(
-          (a): a is Doc<"attachments"> => a !== null,
-        );
+        const attachments = attachmentDocs.filter((a): a is Doc<"attachments"> => a !== null);
 
         return { ...message, attachments };
       }),
@@ -101,7 +99,7 @@ export const addMessagesToThread = mutation({
 });
 
 export const updateErrorMessage = mutation({
-  args: { messageId: v.id("messages"), error: v.string() },
+  args: { messageId: v.id("messages"), error: v.string(), model: v.string() },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
     if (!user) throw new Error("Not authenticated");
@@ -113,6 +111,7 @@ export const updateErrorMessage = mutation({
     await ctx.db.patch(args.messageId, {
       status: "error",
       error: args.error,
+      model: args.model,
       resumableStreamId: null,
       updatedAt: Date.now(),
     });

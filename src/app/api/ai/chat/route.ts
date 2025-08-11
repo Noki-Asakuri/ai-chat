@@ -124,8 +124,9 @@ export async function POST(req: Request) {
 
       if (err.name === "AbortError" && req.signal.aborted) return;
       await serverConvexClient.mutation(api.messages.updateErrorMessage, {
-        messageId: assistantMessageId,
         error: err.message,
+        model: model.uniqueId,
+        messageId: assistantMessageId,
       });
 
       posthog.capture({
