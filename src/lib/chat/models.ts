@@ -215,7 +215,7 @@ export const ModelsData = {
       webSearch: false,
       reasoning: "effort",
       vision: true,
-      maxTokens: 100_000,
+      maxTokens: 128_000,
       config: {
         temperature: true,
         topP: true,
@@ -233,7 +233,7 @@ export const ModelsData = {
       webSearch: false,
       reasoning: "effort",
       vision: true,
-      maxTokens: 100_000,
+      maxTokens: 128_000,
       config: {
         temperature: true,
         topP: true,
@@ -246,12 +246,13 @@ export const ModelsData = {
   "openai/gpt-5-chat": {
     display: { name: "GPT-5 Chat" },
     id: "openai/gpt-5-chat-latest",
+    altModelIds: ["openai/gpt-5-chat-latest"],
     provider: "openai",
     capabilities: {
       webSearch: false,
       reasoning: "effort",
       vision: true,
-      maxTokens: 100_000,
+      maxTokens: 128_000,
       config: {
         temperature: true,
         topP: true,
