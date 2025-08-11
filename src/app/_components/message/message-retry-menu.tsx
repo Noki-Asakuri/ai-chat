@@ -46,6 +46,36 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
     setOpen(open);
   }
 
+  // Left click: immediately retry with the same model.
+  function handleMouseDown(event: React.MouseEvent<HTMLButtonElement>) {
+    if (message.status === "pending") return;
+    // 0 = primary/left button
+    if (event.button === 0) {
+      event.preventDefault();
+      event.stopPropagation();
+      void retryMessage(index, { modelId: message.model });
+    }
+  }
+
+  // Right click: show the retry menu (model picker).
+  function handleContextMenu(event: React.MouseEvent<HTMLButtonElement>) {
+    if (message.status === "pending") return;
+    event.preventDefault();
+    event.stopPropagation();
+    setPopupOpen(true);
+  }
+
+  // Prevent BaseUI Menu from opening on left-click; we control open state manually.
+  function handleClickCapture(event: React.MouseEvent<HTMLButtonElement>) {
+    if (message.status === "pending") return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    // 0 = primary/left button
+    if (event.button === 0) setPopupOpen(false);
+  }
+
   return (
     <Menu.Root open={open} onOpenChange={setPopupOpen}>
       <Menu.Trigger
@@ -55,6 +85,9 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
         variant="ghost"
         title="Retry Message"
         disabled={message.status === "pending"}
+        onClickCapture={handleClickCapture}
+        onMouseDown={handleMouseDown}
+        onContextMenu={handleContextMenu}
         {...props}
       >
         <RefreshCcwIcon className="size-5" />

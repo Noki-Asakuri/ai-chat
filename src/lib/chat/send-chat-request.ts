@@ -73,8 +73,9 @@ export async function sendChatRequest(
     console.log("[Chat] Chat error:", error);
 
     void convexClient.mutation(api.messages.updateErrorMessage, {
-      messageId: assistantMessageId,
       error: errorMessage,
+      model: state.chatConfig.model,
+      messageId: assistantMessageId,
     });
   } finally {
     state.setIsStreaming(false);
@@ -218,6 +219,7 @@ export async function abortChatRequest() {
   state.abortController.abort();
 
   await convexClient.mutation(api.messages.updateErrorMessage, {
+    model: state.chatConfig.model,
     messageId: state.messages.at(-1)!._id,
     error: "User have aborted the request.",
   });
