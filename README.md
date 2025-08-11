@@ -89,7 +89,7 @@ To get a local copy up and running, follow these simple steps.
   - [ ] API Keys
   - [ ] Contact
 - [ ] Agents selection
-- [ ] Remove attachments on messages.
+- [x] Remove attachments on messages.
 
 ## License
 

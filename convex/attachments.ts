@@ -50,8 +50,27 @@ export const deleteAttachment = mutation({
     if (!attachment) throw new Error("Attachment not found");
     if (attachment.userId !== user.subject) throw new Error("Not authorized");
 
-    const key = `${attachment.userId}/${attachment.threadId}/${attachment._id}`;
+    // Unlink this attachment from any messages in the same thread for this user
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_userId_threadId", (q) =>
+        q.eq("userId", user.subject).eq("threadId", attachment.threadId),
+      )
+      .collect();
 
+    for (const message of messages) {
+      const current = message.attachments ?? [];
+      if (current.length === 0) continue;
+
+      const filtered = current.filter((id) => id !== args.attachmentId);
+      if (filtered.length !== current.length) {
+        // If nothing left, keep as empty array to be explicit
+        await ctx.db.patch(message._id, { attachments: filtered });
+      }
+    }
+
+    // Delete file from R2 and remove the attachment document
+    const key = `${attachment.userId}/${attachment.threadId}/${attachment._id}`;
     await r2.deleteObject(ctx, key);
     await ctx.db.delete(args.attachmentId);
   },

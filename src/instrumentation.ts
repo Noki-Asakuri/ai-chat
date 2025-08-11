@@ -5,6 +5,9 @@ import { transformOnRequestError } from "@axiomhq/nextjs";
 import { logger } from "@/lib/axiom/server";
 
 export async function register() {
+  // Skip in development
+  if (process.env.NODE_ENV === "development") return;
+
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("../sentry.server.config");
   }

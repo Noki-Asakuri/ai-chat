@@ -20,9 +20,12 @@ export const getAllMessagesFromThread = query({
 
     return await Promise.all(
       messages.map(async (message) => {
-        const attachments = (await Promise.all(
-          message.attachments?.map((attachmentId) => ctx.db.get(attachmentId)) ?? [],
-        )) as Doc<"attachments">[];
+        const attachmentDocs = await Promise.all(
+          (message.attachments ?? []).map((attachmentId) => ctx.db.get(attachmentId)),
+        );
+        const attachments = attachmentDocs.filter(
+          (a): a is Doc<"attachments"> => a !== null,
+        );
 
         return { ...message, attachments };
       }),
