@@ -29,7 +29,7 @@ export function Message({ message, index, isLast }: MessageProps) {
   const minHeight =
     isLast && message.role === "assistant"
       ? // 100vh - (padding top + padding bottom + textarea height + last known user message height)
-        `calc(100vh - (40px + ${Math.max(textareaHeight, 165 + 30)}px + 16px + ${lastUserMessageHeight}px))`
+        `calc(100vh - (40px + ${Math.max(textareaHeight, 165 + 50)}px + 16px + ${lastUserMessageHeight}px))`
       : "auto";
 
   const renderMessage =

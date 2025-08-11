@@ -42,35 +42,32 @@ export function ChatTextarea() {
   }, [onResize]);
 
   return (
-    <div className="pointer-events-none absolute top-0 bottom-0 w-full">
-      <ScrollButton />
+    <div className="pointer-events-none absolute bottom-4 w-full px-4">
+      <form className="mx-auto space-y-2">
+        <ScrollButton />
 
-      <div className="absolute bottom-0 w-full px-4">
-        <form className="mx-auto">
+        <div
+          ref={parentRef}
+          className="bg-muted/40 group-data-[disable-blur=true]/sidebar-provider:bg-muted pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-md border backdrop-blur-md backdrop-saturate-150"
+        >
+          <ChatAttachmentDisplay />
+
           <div
-            ref={parentRef}
-            className="bg-muted/40 group-data-[disable-blur=true]/sidebar-provider:bg-muted pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-b-none border border-b-0 p-2 pb-0 backdrop-blur-md backdrop-saturate-150"
+            data-dragover={isDragOver}
+            className={cn(
+              "data-[dragover=true]:bg-primary/20 data-[dragover=true]:border-primary/40",
+              "group-data-[disable-blur=true]/sidebar-provider:bg-transparent",
+            )}
           >
-            <ChatAttachmentDisplay />
+            <InputTextArea />
 
-            <div
-              data-dragover={isDragOver}
-              className={cn(
-                "bg-muted/60 z-50 rounded-md rounded-b-none border border-b-0 p-2.5 pb-0 backdrop-blur-md backdrop-saturate-150",
-                "data-[dragover=true]:bg-primary/20 data-[dragover=true]:border-primary/40",
-                "group-data-[disable-blur=true]/sidebar-provider:bg-transparent",
-              )}
-            >
-              <InputTextArea />
-
-              <div className="flex items-end justify-between py-2">
-                <ChatActionButtons />
-                <ChatSendButton />
-              </div>
+            <div className="flex items-end justify-between border-t px-2.5 py-2">
+              <ChatActionButtons />
+              <ChatSendButton />
             </div>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }
@@ -107,7 +104,7 @@ function InputTextArea() {
   }
 
   return (
-    <div className="flex flex-grow flex-row items-start">
+    <div className="flex flex-grow flex-row items-start p-2.5">
       <Textarea
         rows={3}
         name="user-input"
@@ -157,6 +154,7 @@ function InputTextArea() {
           }
         }}
       />
+
       <span id="textarea-description" className="sr-only">
         Press enter to send message. Shift + enter or Ctrl + enter to add new line.
       </span>

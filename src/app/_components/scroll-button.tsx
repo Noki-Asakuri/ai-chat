@@ -1,15 +1,10 @@
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 
 import { Button } from "./ui/button";
-import { useSidebar } from "./ui/sidebar";
 
-import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";
 
 export function ScrollButton() {
-  const textareaHeight = useChatStore((state) => state.textareaHeight);
-  const { state, isMobile } = useSidebar();
-
   function handleScroll(position: "top" | "bottom") {
     const element = document.querySelector("#messages-scrollarea");
     element?.scrollTo({
@@ -18,21 +13,12 @@ export function ScrollButton() {
     });
   }
 
-  const containerWidth =
-    state === "collapsed" || isMobile ? "100vw" : "calc(100vw - var(--sidebar-width))";
-
   return (
-    <div
-      className="pointer-events-none absolute top-0 left-0 w-full transition-[width]"
-      style={{
-        height: `calc(100% - ${Math.max(textareaHeight, 140)}px)`,
-        width: containerWidth,
-      }}
-    >
-      <div className="pointer-events-none absolute bottom-0 left-0 flex w-full items-center justify-center px-4">
+    <div className="pointer-events-none w-full" data-slot="scroll-button">
+      <div className="pointer-events-none flex w-full items-center justify-center">
         <div
           className={cn(
-            "bg-muted/40 pointer-events-auto flex rounded-t-[calc(var(--spacing)*2+calc(var(--radius)-2px))] border-x border-t",
+            "bg-muted/40 pointer-events-auto flex rounded-md border",
             "group-data-[disable-blur=true]/sidebar-provider:bg-muted",
             "w-full max-w-4xl backdrop-blur-md backdrop-saturate-150",
           )}
