@@ -5,6 +5,7 @@ import { ButtonWithTip } from "../ui/button";
 
 import { ChatAttachmentButton } from "./chat-attachment-display";
 import { ChatParamsPopup } from "./chat-params-popup";
+import { AiProfileSelectorButton } from "./ai-profile-selector";
 
 import { getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
@@ -17,6 +18,7 @@ export function ChatActionButtons() {
   return (
     <div className="flex items-center justify-center gap-2">
       <ModelPicker />
+      <AiProfileSelectorButton />
       <ChatParamsPopup />
 
       <ButtonWithTip

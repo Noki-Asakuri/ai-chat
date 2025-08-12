@@ -52,6 +52,12 @@ function getInitialChatInput() {
   return window.localStorage.getItem("chatInput") ?? "";
 }
 
+function getSelectedAiProfileFromLS(): string | null {
+  if (typeof window === "undefined" || window.localStorage === undefined) return null;
+  const val = window.localStorage.getItem("selectedAiProfileId");
+  return val ?? null;
+}
+
 export interface ChatState {
   messages: ChatMessage[];
   setMessages: (messages: ChatMessage[]) => void;
@@ -93,6 +99,10 @@ export interface ChatState {
 
   chatConfig: ReturnType<typeof getChatConfigFromLS>;
   setChatConfig: (config: Partial<ReturnType<typeof getChatConfigFromLS>>) => void;
+
+  // Optional selected AI Profile id for requests
+  selectedAiProfileId: Id<"ai_profiles"> | null;
+  setSelectedAiProfileId: (id: Id<"ai_profiles"> | null) => void;
 
   abortController: AbortController;
   setAbortController: (controller: AbortController) => void;
@@ -190,6 +200,16 @@ export const useChatStore = create<ChatState>((set) => ({
 
       localStorage.setItem("chatConfig", JSON.stringify(newConfig));
       return { chatConfig: newConfig };
+    }),
+
+  selectedAiProfileId: getSelectedAiProfileFromLS() as unknown as Id<"ai_profiles"> | null,
+  setSelectedAiProfileId: (id) =>
+    set(() => {
+      if (typeof window !== "undefined" && window.localStorage) {
+        if (id) window.localStorage.setItem("selectedAiProfileId", id as unknown as string);
+        else window.localStorage.removeItem("selectedAiProfileId");
+      }
+      return { selectedAiProfileId: id };
     }),
 
   wrapline:

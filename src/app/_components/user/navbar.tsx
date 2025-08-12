@@ -27,12 +27,8 @@ const paths = [
     path: "/auth/settings/models",
   },
   {
-    name: "API Keys",
-    path: "/auth/settings/api-keys",
-  },
-  {
-    name: "Contact",
-    path: "/auth/settings/contact",
+    name: "AI Profiles",
+    path: "/auth/settings/ai-profiles",
   },
 ];
 

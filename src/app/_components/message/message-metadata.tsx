@@ -8,6 +8,12 @@ import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
 import { cn, format } from "@/lib/utils";
 
+// Convex
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+
 type MessageMetadataProps = {
   metadata: ChatMessage["metadata"];
   model: string;
@@ -16,6 +22,8 @@ type MessageMetadataProps = {
 
 export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMetadataProps) {
   const isMobile = useIsMobile();
+  const aiProfileName = useAiProfileName(metadata?.aiProfileId);
+
   if (!metadata) return null;
 
   const modelData = getModelData(model);
@@ -70,6 +78,13 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
                   </span>
                 </div>
               )}
+
+              {aiProfileName && (
+                <div className="flex items-center gap-2">
+                  <Icons.provider provider="openai" className="size-4" />
+                  <span>Profile: {aiProfileName}</span>
+                </div>
+              )}
             </div>
           </PopoverContent>
         </Popover>
@@ -117,6 +132,25 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
           {format.number(metadata.thinkingTokens)} {hiddenReasoning ? "Hidden" : ""} Thinking
         </span>
       )}
+
+      {aiProfileName && (
+        <span className="flex items-center gap-1">
+          {/* Reuse provider icon for visual consistency */}
+          <Icons.provider provider="openai" className="size-4" />
+          Profile: {aiProfileName}
+        </span>
+      )}
     </div>
   );
+}
+
+function useAiProfileName(aiProfileId?: Id<"ai_profiles">) {
+  const enabled = Boolean(aiProfileId);
+  const { data } = useQuery({
+    ...convexQuery(api.aiProfiles.getProfile, { profileId: aiProfileId }),
+    enabled,
+  });
+
+  if (!enabled) return null;
+  return data?.name ?? null;
 }

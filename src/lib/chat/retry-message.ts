@@ -54,11 +54,28 @@ export async function retryMessage(
     model: options?.modelId ?? state.chatConfig.model,
   };
 
+  // Resolve selected AI profile's system prompt client-side and send as plain text
+  let profileSystemPrompt: string | undefined;
+  const selectedProfileId = state.selectedAiProfileId;
+  if (selectedProfileId) {
+    try {
+      const profile = await convexClient.query(api.aiProfiles.getProfile, {
+        profileId: selectedProfileId,
+      });
+      if (profile?.systemPrompt && profile.systemPrompt.trim().length > 0) {
+        profileSystemPrompt = profile.systemPrompt;
+      }
+    } catch {
+      // Ignore failures to fetch profile; proceed without a profile prompt
+    }
+  }
+
   const body: ChatRequest = {
     threadId,
     assistantMessageId: assistantMessage._id,
     messages: allMessages,
     config,
+    profileSystemPrompt,
   };
 
   await sendChatRequest(

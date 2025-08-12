@@ -74,7 +74,7 @@ export function StatisticsPage() {
 
   if (isPending) return <LoadingSkeleton />;
 
-  const { stats, modelRank, threadRank, activity } = data!;
+  const { stats, modelRank, threadRank, activity, aiProfileRank } = data!;
   const totalMessages = stats.messages.assistant + stats.messages.user;
 
   return (
@@ -191,6 +191,30 @@ export function StatisticsPage() {
               </NavLink>
             ))}
           </div>
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold">AI Profile Usage Rank</h2>
+        <div className="mt-4 flex text-gray-500">
+          <p className="w-2/3">AI Profile</p>
+          <p className="w-1/3 text-right">Assistant Messages</p>
+        </div>
+
+        <div className="mt-2 flex flex-col gap-2">
+          {aiProfileRank?.slice(0, 5)?.map((item) => (
+            <div
+              key={item.name}
+              className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2"
+            >
+              <p className="truncate">{item.name}</p>
+              <span>{item.value}</span>
+            </div>
+          ))}
+
+          {(!aiProfileRank || aiProfileRank.length === 0) && (
+            <div className="text-muted-foreground text-sm">No AI profile usage yet.</div>
+          )}
         </div>
       </div>
     </main>

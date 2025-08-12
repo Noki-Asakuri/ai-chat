@@ -46,6 +46,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: { message: error.message } }, { status: 400 });
   }
 
+  // Extract request data early so we can append profileSystemPrompt to the systemInstruction
+  const {
+    messages,
+    transformedMessages,
+    assistantMessageId,
+    threadId,
+    model,
+    providerOptions,
+    config,
+    tools,
+    profileSystemPrompt,
+  } = data;
+
   const dataCustomization = await serverConvexClient.query(api.users.currentUser);
   let systemInstruction = "";
 
@@ -62,7 +75,10 @@ export async function POST(req: Request) {
     systemInstruction += "\n\n";
   }
 
-  if (dataCustomization?.customization?.traits?.length) {
+  if (
+    dataCustomization?.customization?.traits &&
+    dataCustomization?.customization?.traits.length > 0
+  ) {
     systemInstruction =
       `You should have these traits: ${dataCustomization.customization.traits.join(", ")}.\n\n` +
       systemInstruction;
@@ -70,16 +86,10 @@ export async function POST(req: Request) {
 
   systemInstruction += `## System Instruction:\n\n${dataCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}`;
 
-  const {
-    messages,
-    transformedMessages,
-    assistantMessageId,
-    threadId,
-    model,
-    providerOptions,
-    config,
-    tools,
-  } = data;
+  // Append profile system prompt if provided by client
+  if (profileSystemPrompt && profileSystemPrompt.trim().length > 0) {
+    systemInstruction += `\n\n## AI Profile Instruction:\n\nThis should take precedence over the global system instruction.\n\n${profileSystemPrompt}`;
+  }
 
   const streamId = generateId();
   const startTime = Date.now();

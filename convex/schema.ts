@@ -12,7 +12,8 @@ export default defineSchema({
     status: v.optional(
       v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
     ),
-  }).index("by_userId", ["userId"])
+  })
+    .index("by_userId", ["userId"])
     .index("by_userId_updatedAt", ["userId", "updatedAt"])
     .index("by_userId_pinned_updatedAt", ["userId", "pinned", "updatedAt"])
     .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "pinned"] }),
@@ -45,6 +46,9 @@ export default defineSchema({
     role: v.union(v.literal("assistant"), v.literal("user"), v.literal("system")),
 
     resumableStreamId: v.optional(v.union(v.string(), v.null())),
+
+    // Optional association to an AI Profile used for this message (typically assistant messages)
+    aiProfileId: v.optional(v.id("ai_profiles")),
 
     modelParams: v.optional(
       v.object({
@@ -86,6 +90,9 @@ export default defineSchema({
         // New optional metric: time to first token in milliseconds
         timeToFirstTokenMs: v.optional(v.number()),
 
+        // Reference to AI profile applied when generating this message
+        aiProfileId: v.optional(v.id("ai_profiles")),
+
         durations: v.optional(
           v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
         ),
@@ -95,6 +102,19 @@ export default defineSchema({
     .index("by_userId_threadId", ["userId", "threadId"])
     .index("by_threadId", ["threadId"])
     .index("by_messageId", ["messageId"]),
+
+  ai_profiles: defineTable({
+    userId: v.string(),
+    name: v.string(),
+    systemPrompt: v.string(),
+    imageKey: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_updatedAt", ["userId", "updatedAt"])
+    .index("by_userId_createdAt", ["userId", "createdAt"])
+    .searchIndex("search_name", { searchField: "name", filterFields: ["userId"] }),
 
   users: defineTable({
     userId: v.string(),

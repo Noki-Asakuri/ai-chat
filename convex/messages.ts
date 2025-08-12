@@ -133,6 +133,8 @@ export const updateMessageById = mutation({
       sources: v.optional(
         v.array(v.object({ id: v.string(), title: v.optional(v.string()), url: v.string() })),
       ),
+      // Attach/override AI profile association for this message
+      aiProfileId: v.optional(v.id("ai_profiles")),
       metadata: v.optional(
         v.object({
           model: v.string(),
@@ -141,6 +143,8 @@ export const updateMessageById = mutation({
           totalTokens: v.number(),
           thinkingTokens: v.number(),
           timeToFirstTokenMs: v.optional(v.number()),
+          // Attach AI profile reference in metadata as well
+          aiProfileId: v.optional(v.id("ai_profiles")),
           durations: v.optional(
             v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
           ),

@@ -75,6 +75,13 @@ const router = createBrowserRouter([
                 Component: m.ModelsPage,
               })),
           },
+          {
+            path: "ai-profiles",
+            lazy: () =>
+              import("./auth/settings/ai-profiles").then((m) => ({
+                Component: m.AiProfilesPage,
+              })),
+          },
 
           { index: true, element: <Navigate to="account" replace /> },
           { path: "*", element: <Navigate to="/auth/settings/account" replace /> },

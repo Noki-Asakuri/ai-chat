@@ -9,6 +9,8 @@ export type ChatRequest = {
   threadId: Id<"threads">;
   assistantMessageId: Id<"messages">;
   messages: Omit<InputMessage, "messageId">[];
+  // Optional profile system prompt appended to the end of the main system prompt
+  profileSystemPrompt?: string;
   config: {
     temperature: number;
     topP: number;
