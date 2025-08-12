@@ -72,12 +72,13 @@ export const getStatistics = query({
       { assistant: 0, user: 0 },
     );
 
-    // AI Profile usage rank (assistant messages grouped by aiProfileId, including null)
     const aiProfileCountMap = messagesFromDatabase.reduce(
       (acc: Record<string, number>, m: Doc<"messages">) => {
         if (m.role !== "assistant") return acc;
-        const key = (m as unknown as { aiProfileId?: string | null }).aiProfileId ?? "null";
+
+        const key = m.metadata?.aiProfileId ?? "null";
         acc[key] = (acc[key] ?? 0) + 1;
+
         return acc;
       },
       {} as Record<string, number>,
@@ -88,12 +89,13 @@ export const getStatistics = query({
       .query("ai_profiles")
       .withIndex("by_userId", (q) => q.eq("userId", user.subject))
       .collect();
+
     const idToName: Record<string, string> = {};
     for (const p of profiles) idToName[p._id] = p.name;
 
     const aiProfileRank = Object.entries(aiProfileCountMap)
       .map(([key, value]) => {
-        const name = key === "null" ? "No profile" : idToName[key] ?? "Unknown profile";
+        const name = key === "null" ? "No profile" : (idToName[key] ?? "Unknown profile");
         return { name, value };
       })
       .sort((a, b) => b.value - a.value);

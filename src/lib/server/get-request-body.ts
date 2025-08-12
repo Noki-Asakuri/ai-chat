@@ -31,8 +31,7 @@ const inputSchema = z.object({
   ),
   assistantMessageId: z.custom<Id<"messages">>((data) => z.string().parse(data)),
   threadId: z.custom<Id<"threads">>((data) => z.string().parse(data)),
-  // Optional profile system prompt to append to the main system instruction
-  profileSystemPrompt: z.string().optional(),
+
   config: z
     .object({
       webSearch: z.boolean(),
@@ -46,6 +45,11 @@ const inputSchema = z.object({
       maxTokens: z.number().min(1024).max(65_536),
       presencePenalty: z.number().min(0).max(1),
       frequencyPenalty: z.number().min(0).max(1),
+
+      profile: z.object({
+        id: z.custom<Id<"ai_profiles">>((data) => z.string().parse(data)).nullable(),
+        systemPrompt: z.string(),
+      }),
     })
     .partial(),
 });
@@ -72,7 +76,7 @@ export async function getRequestBody(req: Request, userId: string) {
     throw new Error(z.prettifyError(error));
   }
 
-  const { messages, assistantMessageId, threadId, config, profileSystemPrompt } = data;
+  const { messages, assistantMessageId, threadId, config } = data;
   const { id, model } = modelValidator.parse(config?.model);
 
   const providerOptions = {
@@ -104,7 +108,6 @@ export async function getRequestBody(req: Request, userId: string) {
     transformedMessages,
     assistantMessageId,
     threadId,
-    profileSystemPrompt,
     config,
     model: { id, uniqueId: model },
     providerOptions,

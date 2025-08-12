@@ -1,6 +1,5 @@
-"use client";
-
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 import { BrainIcon, CheckIcon, SearchIcon, XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -14,34 +13,32 @@ import { Input } from "../ui/input";
 
 import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";
-import type { Id } from "@/convex/_generated/dataModel";
 
 export function AiProfileSelectorButton() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const selectedAiProfileId = useChatStore((s) => s.selectedAiProfileId);
-  const setSelectedAiProfileId = useChatStore((s) => s.setSelectedAiProfileId);
+  const chatAIProfile = useChatStore((s) => s.chatConfig.profile);
+  const setChatConfig = useChatStore((s) => s.setChatConfig);
 
   const { data } = useQuery(
     convexQuery(api.aiProfiles.listProfiles, { search, sort: "recently-updated" }),
   );
 
   const currentLabel = useMemo(() => {
-    if (!selectedAiProfileId) return "No Profile";
+    if (!chatAIProfile.id) return "No Profile";
 
-    const p = data?.find((x) => x._id === selectedAiProfileId);
+    const p = data?.find((x) => x._id === chatAIProfile.id);
     return p?.name ?? "Profile";
-  }, [data, selectedAiProfileId]);
+  }, [data, chatAIProfile.id]);
 
   function handleChooseNone() {
-    setSelectedAiProfileId(null);
+    setChatConfig({ profile: { id: null, systemPrompt: "" } });
     setOpen(false);
   }
 
-  function handleChooseProfile(id: Id<"ai_profiles">) {
-    // Casting here because generated types may not include ai_profiles until codegen runs
-    setSelectedAiProfileId(id);
+  function handleChooseProfile(id: Id<"ai_profiles">, systemPrompt: string) {
+    setChatConfig({ profile: { id, systemPrompt } });
     setOpen(false);
   }
 
@@ -84,7 +81,7 @@ export function AiProfileSelectorButton() {
               onClick={handleChooseNone}
               className={cn(
                 "hover:bg-muted flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 text-left text-sm",
-                { "bg-primary/10": !selectedAiProfileId },
+                { "bg-primary/10": !chatAIProfile.id },
               )}
             >
               <span className="flex items-center gap-2">
@@ -92,18 +89,19 @@ export function AiProfileSelectorButton() {
                 No Profile
               </span>
 
-              {!selectedAiProfileId ? <CheckIcon className="size-4" /> : null}
+              {!chatAIProfile.id ? <CheckIcon className="size-4" /> : null}
             </button>
 
             <div className="bg-border my-2 h-px w-full" />
 
             {data?.map((p) => {
-              const isActive = p._id === (selectedAiProfileId as unknown as string);
+              const isActive = p._id === chatAIProfile.id;
+
               return (
                 <button
                   key={p._id}
                   type="button"
-                  onClick={() => handleChooseProfile(p._id)}
+                  onClick={() => handleChooseProfile(p._id, p.systemPrompt)}
                   className={cn(
                     "hover:bg-muted flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 text-left text-sm",
                     { "bg-primary/10": isActive },

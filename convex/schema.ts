@@ -47,9 +47,6 @@ export default defineSchema({
 
     resumableStreamId: v.optional(v.union(v.string(), v.null())),
 
-    // Optional association to an AI Profile used for this message (typically assistant messages)
-    aiProfileId: v.optional(v.id("ai_profiles")),
-
     modelParams: v.optional(
       v.object({
         temperature: v.optional(v.number()),

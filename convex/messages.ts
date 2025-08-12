@@ -133,8 +133,7 @@ export const updateMessageById = mutation({
       sources: v.optional(
         v.array(v.object({ id: v.string(), title: v.optional(v.string()), url: v.string() })),
       ),
-      // Attach/override AI profile association for this message
-      aiProfileId: v.optional(v.id("ai_profiles")),
+
       metadata: v.optional(
         v.object({
           model: v.string(),

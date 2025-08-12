@@ -5,6 +5,7 @@ import { serverConvexClient } from "@/lib/convex/server";
 import { auth } from "@clerk/nextjs/server";
 import { waitUntil } from "@vercel/functions";
 import { Redis } from "ioredis";
+import dedent from "dedent";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 
@@ -56,7 +57,6 @@ export async function POST(req: Request) {
     providerOptions,
     config,
     tools,
-    profileSystemPrompt,
   } = data;
 
   const dataCustomization = await serverConvexClient.query(api.users.currentUser);
@@ -79,16 +79,24 @@ export async function POST(req: Request) {
     dataCustomization?.customization?.traits &&
     dataCustomization?.customization?.traits.length > 0
   ) {
-    systemInstruction =
-      `You should have these traits: ${dataCustomization.customization.traits.join(", ")}.\n\n` +
-      systemInstruction;
+    systemInstruction += `You should have these traits: ${dataCustomization.customization.traits.join(", ")}.\n\n`;
   }
 
-  systemInstruction += `## System Instruction:\n\n${dataCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}`;
+  systemInstruction += dedent`
+	## Global System Instruction:
+	This is the global system instruction. It should be followed unless there is a conflicting instruction in the AI Profile Instruction.
+
+	${dataCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}
+	`;
 
   // Append profile system prompt if provided by client
-  if (profileSystemPrompt && profileSystemPrompt.trim().length > 0) {
-    systemInstruction += `\n\n## AI Profile Instruction:\n\nThis should take precedence over the global system instruction.\n\n${profileSystemPrompt}`;
+  if (config.profile && config.profile.systemPrompt.trim().length > 0) {
+    systemInstruction += dedent`
+		## AI Profile Instruction:
+		This should take precedence over the global system instruction.
+
+		${config.profile.systemPrompt}
+		`;
   }
 
   const streamId = generateId();
@@ -132,6 +140,7 @@ export async function POST(req: Request) {
 
   const metadata = {
     model: model.uniqueId as string,
+    aiProfileId: config.profile?.id ?? undefined,
     duration: 0,
     finishReason: "",
     totalTokens: 0,
@@ -201,7 +210,9 @@ export async function POST(req: Request) {
         }
       }
 
-      const updates = {
+      type Updates = (typeof api.messages.updateMessageById)["_args"]["updates"];
+
+      const updates: Updates = {
         metadata,
         model: model.uniqueId,
         resumableStreamId: null,

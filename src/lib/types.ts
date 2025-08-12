@@ -9,8 +9,7 @@ export type ChatRequest = {
   threadId: Id<"threads">;
   assistantMessageId: Id<"messages">;
   messages: Omit<InputMessage, "messageId">[];
-  // Optional profile system prompt appended to the end of the main system prompt
-  profileSystemPrompt?: string;
+
   config: {
     temperature: number;
     topP: number;
@@ -24,6 +23,8 @@ export type ChatRequest = {
     thinkingBudget: ThinkingBudget;
     model: string;
   };
+
+  profile?: { id: Id<"ai_profiles"> | null; systemPrompt: string };
 };
 
 export type InputMessage = {

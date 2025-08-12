@@ -196,28 +196,15 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     }),
   });
 
-  // Resolve selected AI profile's system prompt client-side and send as plain text
-  let profileSystemPrompt: string | undefined;
-  const selectedProfileId = state.selectedAiProfileId;
-  if (selectedProfileId) {
-    try {
-      const profile = await convexClient.query(api.aiProfiles.getProfile, {
-        profileId: selectedProfileId,
-      });
-      if (profile?.systemPrompt && profile.systemPrompt.trim().length > 0) {
-        profileSystemPrompt = profile.systemPrompt;
-      }
-    } catch {
-      // Ignore failures to fetch profile; proceed without a profile prompt
-    }
-  }
-
   const body: ChatRequest = {
     threadId,
     messages: allMessages,
     config: state.chatConfig,
     assistantMessageId: assistantMessageId!,
-    profileSystemPrompt,
+    profile: {
+      id: state.chatConfig.profile.id as Id<"ai_profiles"> | null,
+      systemPrompt: state.chatConfig.profile.systemPrompt,
+    },
   };
 
   await sendChatRequest(
