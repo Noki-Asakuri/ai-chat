@@ -23,24 +23,15 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   turbopack: {},
 
-  env: { NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA },
+  env: {
+    NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
+    NEXT_PUBLIC_ENV: process.env.NODE_ENV,
+  },
   async rewrites() {
     const host =
       process.env.NODE_ENV === "production" ? "https://chat.asakuri.me" : "http://localhost:3000";
 
     return [
-      {
-        source: "/relay-gTFD/static/:path*",
-        destination: "https://us-assets.i.posthog.com/static/:path*",
-      },
-      {
-        source: "/relay-gTFD/:path*",
-        destination: "https://us.i.posthog.com/:path*",
-      },
-      {
-        source: "/relay-gTFD/flags",
-        destination: "https://us.i.posthog.com/flags",
-      },
       {
         source: "/api/vercel/:path*",
         destination: `${host}/_vercel/:path*`,
@@ -100,7 +91,7 @@ const sentryOptions = {
   // This can increase your server load as well as your hosting bill.
   // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
   // side errors will fail.
-  tunnelRoute: "/monitoring",
+  tunnelRoute: "/relay-sentry",
 
   // Automatically tree-shake Sentry logger statements to reduce bundle size
   disableLogger: true,

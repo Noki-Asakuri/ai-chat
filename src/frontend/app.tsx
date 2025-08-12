@@ -8,7 +8,6 @@ import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-rou
 import { toast } from "sonner";
 
 import { LoadingPage } from "@/components/loading-page";
-import PostHogIdentify from "@/components/posthog-identify";
 import { ConvexClientProvider } from "@/components/provider/convex-client";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -90,13 +89,16 @@ export default function App() {
   return (
     <ConvexClientProvider>
       <RouterProvider router={router} />
-
       <Toaster />
-      <PostHogIdentify />
 
-      <Analytics basePath="/api/vercel" />
-      <SpeedInsights basePath="/api/vercel" />
-      <AxiomWebVitals />
+      {process.env.ENV === "production" && (
+        <>
+          <AxiomWebVitals />
+
+          <Analytics basePath="/api/vercel" />
+          <SpeedInsights basePath="/api/vercel" />
+        </>
+      )}
     </ConvexClientProvider>
   );
 }
