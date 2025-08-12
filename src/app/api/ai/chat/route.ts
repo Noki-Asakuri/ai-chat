@@ -89,13 +89,13 @@ export async function POST(req: Request) {
 	${dataCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}
 	`;
 
-  // Append profile system prompt if provided by client
-  if (config.profile && config.profile.systemPrompt.trim().length > 0) {
+  const profilePrompt = config.profile?.systemPrompt?.trim();
+  if (profilePrompt && profilePrompt.length > 0) {
     systemInstruction += dedent`
 		## AI Profile Instruction:
 		This should take precedence over the global system instruction.
 
-		${config.profile.systemPrompt}
+		${profilePrompt}
 		`;
   }
 
