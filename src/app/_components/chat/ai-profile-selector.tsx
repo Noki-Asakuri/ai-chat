@@ -1,8 +1,9 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { BrainIcon, CheckIcon, SearchIcon, XIcon } from "lucide-react";
+import { BrainIcon, CheckIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
@@ -20,6 +21,7 @@ export function AiProfileSelectorButton() {
 
   const chatAIProfile = useChatStore((s) => s.chatConfig.profile);
   const setChatConfig = useChatStore((s) => s.setChatConfig);
+  const navigate = useNavigate();
 
   const { data } = useQuery(
     convexQuery(api.aiProfiles.listProfiles, { search, sort: "recently-updated" }),
@@ -62,14 +64,31 @@ export function AiProfileSelectorButton() {
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="relative">
-            <SearchIcon className="text-muted-foreground absolute top-1/2 left-2 size-4 -translate-y-1/2" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search AI profiles…"
-              className="pl-8"
-            />
+          <div className="flex items-center justify-between gap-2">
+            <div className="relative flex-1">
+              <SearchIcon className="text-muted-foreground absolute top-1/2 left-2 size-4 -translate-y-1/2" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search AI profiles…"
+                className="h-8 pl-8"
+              />
+            </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              title="Create AI Profile"
+              onMouseDown={async () => {
+                setOpen(false);
+                await navigate("/auth/settings/ai-profiles");
+              }}
+            >
+              <PlusIcon className="size-4" />
+              <span className="sr-only">Create AI Profile</span>
+            </Button>
           </div>
 
           <div
@@ -84,10 +103,15 @@ export function AiProfileSelectorButton() {
                 { "bg-primary/10": !chatAIProfile.id },
               )}
             >
-              <span className="flex items-center gap-2">
-                <XIcon className="size-4" />
-                No Profile
-              </span>
+              <div className="flex min-w-0 flex-col">
+                <span className="flex items-center gap-2">
+                  <XIcon className="size-4" />
+                  <span className="truncate font-medium">No Profile</span>
+                </span>
+                <span className="text-muted-foreground line-clamp-1 text-xs">
+                  Default profile, no system prompts
+                </span>
+              </div>
 
               {!chatAIProfile.id ? <CheckIcon className="size-4" /> : null}
             </button>

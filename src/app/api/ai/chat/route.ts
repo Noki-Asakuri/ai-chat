@@ -47,7 +47,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: { message: error.message } }, { status: 400 });
   }
 
-  // Extract request data early so we can append profileSystemPrompt to the systemInstruction
   const {
     messages,
     transformedMessages,
@@ -63,39 +62,41 @@ export async function POST(req: Request) {
   let systemInstruction = "";
 
   if (dataCustomization?.customization?.name) {
-    systemInstruction = `The user's name is ${dataCustomization.customization.name}`;
+    systemInstruction += dedent`
+		<user>
+		## User Information:
+		User basic information. Avoid mentioning the user's name or occupation during the conversation.
+		Keep it in mind and use it when necessary.
 
-    if (dataCustomization.customization.occupation) {
-      systemInstruction += ` and they are a ${dataCustomization.customization.occupation}.`;
-    }
-
-    systemInstruction +=
-      " Avoid mentioning their name and occupation but keep it in mind and use it when appropriate.";
-
-    systemInstruction += "\n\n";
-  }
-
-  if (
-    dataCustomization?.customization?.traits &&
-    dataCustomization?.customization?.traits.length > 0
-  ) {
-    systemInstruction += `You should have these traits: ${dataCustomization.customization.traits.join(", ")}.\n\n`;
+		Name: ${dataCustomization.customization.name ?? "user"}
+		Occupation: ${dataCustomization.customization.occupation ?? "unknown"}
+		</user>
+		\n`;
   }
 
   systemInstruction += dedent`
+	<global>
 	## Global System Instruction:
 	This is the global system instruction. It should be followed unless there is a conflicting instruction in the AI Profile Instruction.
 
 	${dataCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}
+	</global>
 	`;
 
   const profilePrompt = config.profile?.systemPrompt?.trim();
   if (profilePrompt && profilePrompt.length > 0) {
-    systemInstruction += dedent`
+    systemInstruction += dedent`\n
+		<profile>
 		## AI Profile Instruction:
-		This should take precedence over the global system instruction.
+		User defined instruction. This is the most important instruction. It should take precedence over the global system instruction.
 
 		${profilePrompt}
+
+		<traits>
+		## Traits (Optional):
+		You should have these traits: ${dataCustomization?.customization?.traits?.join(", ") ?? "None"}.
+		</traits>
+		</profile>
 		`;
   }
 
@@ -104,7 +105,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: registry.languageModel(model.id),
-    system: systemInstruction,
+    system: systemInstruction.trim(),
     messages: transformedMessages,
     providerOptions,
     tools,
