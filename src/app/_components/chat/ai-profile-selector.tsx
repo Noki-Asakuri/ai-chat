@@ -65,12 +65,13 @@ export function AiProfileSelectorButton() {
 
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <div className="relative flex-1">
+            <div className="relative flex-1" role="search">
               <SearchIcon className="text-muted-foreground absolute top-1/2 left-2 size-4 -translate-y-1/2" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search AI profiles…"
+                aria-label="Search AI profiles"
                 className="h-8 pl-8"
               />
             </div>
@@ -109,7 +110,7 @@ export function AiProfileSelectorButton() {
                   <span className="truncate font-medium">No Profile</span>
                 </span>
                 <span className="text-muted-foreground line-clamp-1 text-xs">
-                  Default profile, no system prompts
+                  Default profile, no system prompt
                 </span>
               </div>
 
