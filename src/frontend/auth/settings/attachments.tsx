@@ -4,8 +4,8 @@ import { useMutation } from "convex/react";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
-import { FileTextIcon, TrashIcon } from "lucide-react";
-import { useTransition } from "react";
+import { FileTextIcon, SearchIcon, TrashIcon } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
 import { NavLink } from "react-router";
 import { toast } from "sonner";
 
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { format, toUUID } from "@/lib/utils";
@@ -56,6 +57,19 @@ function LoadingSkeleton() {
 
 export function AttachmentsPage() {
   const { data, isPending } = useQuery(convexQuery(api.attachments.getAllAttachments, {}));
+  const [searchText, setSearchText] = useState<string>("");
+
+  const filteredData = useMemo(() => {
+    const q = searchText.trim().toLowerCase();
+    if (!q) return data ?? [];
+
+    return (data ?? []).filter((attachment) => {
+      const name = attachment.name.toLowerCase();
+      const threadTitle = (attachment.thread?.title ?? "").toLowerCase();
+      return name.includes(q) || threadTitle.includes(q);
+    });
+  }, [data, searchText]);
+
   if (isPending) return <LoadingSkeleton />;
 
   return (
@@ -65,14 +79,30 @@ export function AttachmentsPage() {
         <p className="text-muted-foreground">View and manage your attachments.</p>
       </div>
 
+      <div className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 py-2 backdrop-blur">
+        <div className="relative">
+          <SearchIcon
+            size={16}
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+          />
+
+          <Input
+            placeholder="Search attachments..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {data?.length === 0 && (
+        {filteredData.length === 0 && (
           <div className="col-span-full flex flex-col items-center justify-center gap-2 rounded-md border p-8 text-center">
             <p className="text-muted-foreground">No attachments found</p>
           </div>
         )}
 
-        {data?.map((attachment) => (
+        {filteredData.map((attachment) => (
           <div
             key={attachment._id}
             className="hover:bg-card/80 flex flex-col overflow-hidden rounded-md border transition-colors"
