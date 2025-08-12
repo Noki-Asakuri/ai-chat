@@ -89,6 +89,10 @@ To get a local copy up and running, follow these simple steps.
   - [x] AI Profiles
 - [x] Profile selection
 - [x] Remove attachments on messages.
+- [ ] Ratelimit per user
+- [ ] Allow annonymous access (with lower ratelimit)
+- [ ] Switch to use Better-Auth for auth
+- [ ] Add pricing and subscription tier
 
 ## License
 
