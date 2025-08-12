@@ -80,15 +80,14 @@ To get a local copy up and running, follow these simple steps.
 - [x] Add support to change model params
 - [x] Drag and drop files
 - [ ] Better UI
-- [ ] Add Settings page
+- [x] Add Settings page
   - [x] Account
   - [x] Statistics
   - [x] Customize
   - [x] Attachments
   - [x] Models
-  - [ ] API Keys
-  - [ ] Contact
-- [ ] Agents selection
+  - [x] AI Profiles
+- [x] Profile selection
 - [x] Remove attachments on messages.
 
 ## License
