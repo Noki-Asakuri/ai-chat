@@ -92,7 +92,11 @@ export function ChatAttachmentDisplay() {
   if (attachments.length === 0) return null;
 
   return (
-    <div className={cn("flex items-center justify-start gap-4", { hidden: !preview })}>
+    <div
+      className={cn("flex items-center justify-start gap-4 border-b p-2.5", {
+        hidden: !preview,
+      })}
+    >
       {preview?.map((attachment) => (
         <AttachmentPreview key={attachment.id} attachment={attachment} />
       ))}
