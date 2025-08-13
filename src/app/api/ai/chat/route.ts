@@ -124,7 +124,10 @@ export async function POST(req: Request) {
       const err = error as AISDKError;
       console.error("[Chat] Error:", err);
 
+      // Skip proxy-related type validation errors as they are expected during proxy configuration
+      if (err.name === "AI_TypeValidationError" && err.message.includes("proxy-")) return;
       if (err.name === "AbortError" && req.signal.aborted) return;
+
       await serverConvexClient.mutation(api.messages.updateErrorMessage, {
         error: err.message,
         model: model.uniqueId,
@@ -136,7 +139,7 @@ export async function POST(req: Request) {
   await serverConvexClient.mutation(api.messages.updateMessageById, {
     threadId,
     messageId: assistantMessageId,
-    updates: { status: "streaming", resumableStreamId: streamId },
+    updates: { status: "streaming", resumableStreamId: streamId, model: model.uniqueId },
   });
 
   const metadata = {

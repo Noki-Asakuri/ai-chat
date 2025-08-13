@@ -115,6 +115,8 @@ export const updateErrorMessage = mutation({
       resumableStreamId: null,
       updatedAt: Date.now(),
     });
+
+    await ctx.db.patch(message.threadId, { updatedAt: Date.now(), status: "complete" });
   },
 });
 

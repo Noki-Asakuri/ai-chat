@@ -12,7 +12,7 @@ const deepseek = createDeepSeek(providerOptions);
 const baseOpenai = createOpenAI(providerOptions);
 const baseGoogle = createGoogleGenerativeAI({
   ...providerOptions,
-  baseURL: env.PROXY_URL + "/v1beta/",
+  baseURL: providerOptions.baseURL + "/v1beta/",
 });
 
 const openai = customProvider({
@@ -22,13 +22,13 @@ const openai = customProvider({
     "gpt-4o": baseOpenai.chat("gpt-4o"),
     "chatgpt-4o": baseOpenai.chat("chatgpt-4o-latest"),
 
-    o3: baseOpenai.chat("o3"),
-    "o3-mini": baseOpenai.chat("o3-mini"),
-    "o4-mini": baseOpenai.chat("o4-mini"),
+    o3: baseOpenai.languageModel("o3"),
+    "o3-mini": baseOpenai.languageModel("o3-mini"),
+    "o4-mini": baseOpenai.languageModel("o4-mini"),
 
-    "gpt-5": baseOpenai.chat("gpt-5"),
-    "gpt-5-mini": baseOpenai.chat("gpt-5-mini"),
-    "gpt-5-chat-latest": baseOpenai.chat("gpt-5-chat-latest"),
+    "gpt-5": baseOpenai.languageModel("gpt-5"),
+    "gpt-5-mini": baseOpenai.languageModel("gpt-5-mini"),
+    "gpt-5-chat-latest": baseOpenai.languageModel("gpt-5-chat-latest"),
   },
 });
 

@@ -92,7 +92,13 @@ export async function getRequestBody(req: Request, userId: string) {
       thinkingBudget: isThinkingModel ? config.thinkingBudget : 0,
     };
 
-    providerOptions.openai = { reasoningEffort: config.reasoningEffort };
+    providerOptions.openai = {
+      reasoningSummary: "detailed",
+      reasoningEffort: config.reasoningEffort,
+      include: ["reasoning.encrypted_content"],
+
+      store: false,
+    };
   }
 
   const tools: ToolSet = {};
