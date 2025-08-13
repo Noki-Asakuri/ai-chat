@@ -32,6 +32,9 @@ export function RegisterHotkeys() {
         );
 
         if (acceptFiles.length > 0) {
+          event.preventDefault();
+          event.stopPropagation();
+
           const attachments = acceptFiles.map((file) => {
             let type: "image" | "pdf" = "image";
             if (file.type.includes("pdf")) type = "pdf";
@@ -48,7 +51,6 @@ export function RegisterHotkeys() {
           });
         }
 
-        // Do not proceed to text paste when files are present
         return;
       }
 
@@ -56,11 +58,17 @@ export function RegisterHotkeys() {
       const text = event.clipboardData?.getData("text") ?? "";
       if (!text) return;
 
-      const chatInput = document.getElementById("textarea-chat-input");
+      const target = event.target as HTMLElement;
+      if (target.tagName === "TEXTAREA" && target.id === "textarea-chat-input") return;
+
+      const chatInput = document.querySelector<HTMLTextAreaElement>("#textarea-chat-input");
       if (!chatInput) return;
 
-      setChatInput((prev) => prev + text);
+      event.preventDefault();
+      event.stopPropagation();
+
       chatInput.focus();
+      setChatInput((prev) => prev + text);
     }
 
     function handleKeyboardShortcut(event: KeyboardEvent) {
