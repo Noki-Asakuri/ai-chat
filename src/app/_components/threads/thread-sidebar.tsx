@@ -27,9 +27,6 @@ type VirtualizedThread =
   | { type: "thread"; data: Thread };
 
 export function ThreadSidebar() {
-  const [query, setQuery] = useState<string>("");
-  const deferredQuery = useDeferredValue(query);
-
   return (
     <Sidebar
       variant="inset"
@@ -52,17 +49,7 @@ export function ThreadSidebar() {
           <span className="line-clamp-1 w-full">Create new thread</span>
         </NavLink>
 
-        <div className="mx-2">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search threads..."
-            aria-label="Search threads"
-            className="h-8"
-          />
-        </div>
-
-        <ThreadsContent query={deferredQuery} />
+        <ThreadContents />
       </SidebarContent>
 
       <SidebarFooter>
@@ -73,7 +60,28 @@ export function ThreadSidebar() {
   );
 }
 
-function ThreadsContent({ query }: { query: string }) {
+function ThreadContents() {
+  const [query, setQuery] = useState<string>("");
+  const deferredQuery = useDeferredValue(query);
+
+  return (
+    <>
+      <div className="mx-2">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search threads..."
+          aria-label="Search threads"
+          className="h-8"
+        />
+      </div>
+
+      <ThreadList query={deferredQuery} />
+    </>
+  );
+}
+
+function ThreadList({ query }: { query: string }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const { threadId } = useParams<{ threadId?: string }>();
 

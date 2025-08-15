@@ -65,17 +65,15 @@ function ButtonWithTip({
 }: React.ComponentProps<typeof Button> & {
   side?: "top" | "bottom" | "left" | "right" | "inline-end" | "inline-start";
 }) {
+  const trigger = (
+    <Button aria-label={title} {...props}>
+      {children}
+    </Button>
+  );
+
   return (
     <Tooltip>
-      <TooltipTrigger
-        {...props}
-        render={(triggerProps, state) => (
-          <Button {...triggerProps} aria-label={title} data-state={state}>
-            {children}
-          </Button>
-        )}
-      />
-
+      <TooltipTrigger render={trigger} />
       <TooltipContent side={side}>{title}</TooltipContent>
     </Tooltip>
   );
