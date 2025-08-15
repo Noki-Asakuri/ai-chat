@@ -1,8 +1,7 @@
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-import { AxiomWebVitals } from "next-axiom";
 
-import { Authenticated, AuthLoading } from "convex/react";
+import { useConvexAuth } from "convex/react";
 import { useEffect } from "react";
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-router";
 import { toast } from "sonner";
@@ -100,8 +99,6 @@ export default function App() {
 
       {process.env.ENV === "production" && (
         <>
-          <AxiomWebVitals />
-
           <Analytics basePath="/api/vercel" />
           <SpeedInsights basePath="/api/vercel" />
         </>
@@ -112,6 +109,7 @@ export default function App() {
 
 function RootLayout() {
   const isNewVersionAvailable = useVersionWatcher();
+  const { isAuthenticated, isLoading } = useConvexAuth();
 
   useEffect(() => {
     if (isNewVersionAvailable) {
@@ -119,17 +117,10 @@ function RootLayout() {
     }
   }, [isNewVersionAvailable]);
 
-  return (
-    <>
-      <AuthLoading>
-        <LoadingPage />
-      </AuthLoading>
+  if (isLoading) return <LoadingPage />;
+  if (!isAuthenticated) return <Navigate to="/auth/login" replace />;
 
-      <Authenticated>
-        <Outlet />
-      </Authenticated>
-    </>
-  );
+  return <Outlet />;
 }
 
 function NewVersionToast() {
