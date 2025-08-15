@@ -72,7 +72,7 @@ export async function sendChatRequest(
       "Failed to generate response. Please try again later. \nError: " + error.message;
     console.log("[Chat] Chat error:", error);
 
-    void convexClient.mutation(api.messages.updateErrorMessage, {
+    void convexClient.mutation(api.functions.messages.updateErrorMessage, {
       error: errorMessage,
       model: state.chatConfig.model,
       messageId: assistantMessageId,
@@ -113,7 +113,9 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
   }
 
   if (!threadId) {
-    threadId = await convexClient.mutation(api.threads.createThread, { title: "New Chat" });
+    threadId = await convexClient.mutation(api.functions.threads.createThread, {
+      title: "New Chat",
+    });
     await navigate(`/chat/${toUUID(threadId)}`);
   }
 
@@ -142,13 +144,16 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
   if (state.attachments.length) {
     await Promise.all(
       state.attachments.map(async (attachment) => {
-        const attachmentId = await convexClient.mutation(api.attachments.createAttachment, {
-          id: attachment.id,
-          name: attachment.name,
-          size: attachment.size,
-          type: attachment.type,
-          threadId,
-        });
+        const attachmentId = await convexClient.mutation(
+          api.functions.attachments.createAttachment,
+          {
+            id: attachment.id,
+            name: attachment.name,
+            size: attachment.size,
+            type: attachment.type,
+            threadId,
+          },
+        );
 
         await uploadFile(attachment.file, threadId, attachmentId);
         userMessage.attachments.push(attachmentId);
@@ -156,10 +161,13 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     );
   }
 
-  const assistantMessageId = await convexClient.mutation(api.messages.addMessagesToThread, {
-    threadId,
-    messages: [userMessage, assistantMessage],
-  });
+  const assistantMessageId = await convexClient.mutation(
+    api.functions.messages.addMessagesToThread,
+    {
+      threadId,
+      messages: [userMessage, assistantMessage],
+    },
+  );
 
   const allMessages = state.messages.map((message) => ({
     id: message.messageId,
@@ -222,7 +230,7 @@ export async function abortChatRequest() {
   console.log("[Chat] Aborting chat request");
   state.abortController.abort();
 
-  await convexClient.mutation(api.messages.updateErrorMessage, {
+  await convexClient.mutation(api.functions.messages.updateErrorMessage, {
     model: state.chatConfig.model,
     messageId: state.messages.at(-1)!._id,
     error: "User have aborted the request.",

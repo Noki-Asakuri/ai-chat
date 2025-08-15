@@ -14,7 +14,7 @@ export async function branchOffThreadMessage(
 ) {
   console.log("Branch off", message._creationTime);
 
-  const newThreadId = await convexClient.mutation(api.threads.branchThread, {
+  const newThreadId = await convexClient.mutation(api.functions.threads.branchThread, {
     lastMessageCreatedAt: message._creationTime,
     threadId: message.threadId,
   });

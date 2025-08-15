@@ -147,7 +147,7 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
 function useAiProfileName(aiProfileId?: Id<"ai_profiles">) {
   const enabled = Boolean(aiProfileId);
   const { data } = useQuery({
-    ...convexQuery(api.aiProfiles.getProfile, { profileId: aiProfileId }),
+    ...convexQuery(api.functions.aiProfiles.getProfile, { profileId: aiProfileId }),
     enabled,
   });
 

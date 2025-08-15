@@ -56,7 +56,9 @@ function LoadingSkeleton() {
 }
 
 export function AttachmentsPage() {
-  const { data, isPending } = useQuery(convexQuery(api.attachments.getAllAttachments, {}));
+  const { data, isPending } = useQuery(
+    convexQuery(api.functions.attachments.getAllAttachments, {}),
+  );
   const [searchText, setSearchText] = useState<string>("");
 
   const filteredData = useMemo(() => {
@@ -171,7 +173,7 @@ type DeleteAttachmentDialogProps = {
 
 function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachmentDialogProps) {
   const [pending, startTransition] = useTransition();
-  const deleteAttachment = useMutation(api.attachments.deleteAttachment);
+  const deleteAttachment = useMutation(api.functions.attachments.deleteAttachment);
 
   function onDelete() {
     startTransition(() => {

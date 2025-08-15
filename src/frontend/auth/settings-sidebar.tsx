@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function SettingsSidebar() {
-  const { data } = useQuery(convexQuery(api.users.currentUser, {}));
+  const { data } = useQuery(convexQuery(api.functions.users.currentUser, {}));
 
   const fallback = data?.username
     ?.split(" ")

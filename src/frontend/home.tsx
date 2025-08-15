@@ -12,7 +12,7 @@ import { SIDEBAR_COOKIE_NAME, SidebarProvider } from "@/components/ui/sidebar";
 export default function Home() {
   const defaultOpenSidebar = document.cookie.includes(`${SIDEBAR_COOKIE_NAME}=true`);
 
-  const user = useQuery(convexQuery(api.users.currentUser, {}));
+  const user = useQuery(convexQuery(api.functions.users.currentUser, {}));
   const backgroundImage = user?.data?.customization?.backgroundId
     ? `url(https://ik.imagekit.io/gmethsnvl/ai-chat/${user.data.customization.backgroundId})`
     : undefined;

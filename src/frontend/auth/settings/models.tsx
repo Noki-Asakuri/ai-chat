@@ -59,8 +59,8 @@ function LoadingSkeleton() {
 }
 
 export function ModelsPage() {
-  const { data, isPending } = useQuery(convexQuery(api.users.currentUser, {}));
-  const updateCustomization = useMutation(api.users.updateUserCustomization);
+  const { data, isPending } = useQuery(convexQuery(api.functions.users.currentUser, {}));
+  const updateCustomization = useMutation(api.functions.users.updateUserCustomization);
 
   const [pending, startTransition] = useTransition();
   const [query, setQuery] = useState("");

@@ -21,7 +21,7 @@ export function Chat() {
   const { threadId } = useParams<{ threadId: Id<"threads"> }>();
 
   const { data } = useQuery(
-    convexQuery(api.messages.getAllMessagesFromThread, { threadId: fromUUID(threadId) }),
+    convexQuery(api.functions.messages.getAllMessagesFromThread, { threadId: fromUUID(threadId) }),
   );
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export function Chat() {
 function SidebarPushdown() {
   const { state, isMobile } = useSidebar();
 
-  const user = useQuery(convexQuery(api.users.currentUser, {}));
+  const user = useQuery(convexQuery(api.functions.users.currentUser, {}));
   const hasBackground = typeof user?.data?.customization?.backgroundId === "string";
 
   return (

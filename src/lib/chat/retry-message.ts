@@ -36,7 +36,7 @@ export async function retryMessage(
     attachments: message.attachments,
   }));
 
-  await convexClient.mutation(api.messages.retryChatMessage, {
+  await convexClient.mutation(api.functions.messages.retryChatMessage, {
     threadId,
     assistantMessageId: assistantMessage._id,
     userMessage: {

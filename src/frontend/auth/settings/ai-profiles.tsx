@@ -56,7 +56,7 @@ export function AiProfilesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data, isPending, refetch } = useQuery(
-    convexQuery(api.aiProfiles.listProfiles, { search, sort }),
+    convexQuery(api.functions.aiProfiles.listProfiles, { search, sort }),
   );
 
   const profiles = data ?? [];
@@ -82,9 +82,9 @@ export function AiProfilesPage() {
     setDialogOpen(true);
   }
 
-  const createProfile = useMutation(api.aiProfiles.createProfile);
-  const updateProfile = useMutation(api.aiProfiles.updateProfile);
-  const deleteProfile = useMutation(api.aiProfiles.deleteProfile);
+  const createProfile = useMutation(api.functions.aiProfiles.createProfile);
+  const updateProfile = useMutation(api.functions.aiProfiles.updateProfile);
+  const deleteProfile = useMutation(api.functions.aiProfiles.deleteProfile);
 
   async function onSubmit() {
     if (!name.trim() || !systemPrompt.trim()) return;

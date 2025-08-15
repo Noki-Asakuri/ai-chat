@@ -69,7 +69,7 @@ function LoadingSkeleton() {
 }
 
 export function StatisticsPage() {
-  const { data, isPending } = useQuery(convexQuery(api.statistics.getStatistics, {}));
+  const { data, isPending } = useQuery(convexQuery(api.functions.statistics.getStatistics, {}));
   const thisYear = new Date(Date.now());
 
   if (isPending) return <LoadingSkeleton />;

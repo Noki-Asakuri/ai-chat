@@ -51,7 +51,7 @@ export function ThreadItem({ thread }: { thread: Thread }) {
   async function commitEdit() {
     const next = title.trim();
     if (next.length > 0 && next !== thread.title) {
-      await convexClient.mutation(api.threads.updateThreadTitle, {
+      await convexClient.mutation(api.functions.threads.updateThreadTitle, {
         threadId: thread._id,
         title: next,
       });
@@ -147,7 +147,7 @@ function ThreadActions({ thread }: { thread: Thread }) {
     event.preventDefault();
 
     console.debug("[Thread] Pin thread", thread);
-    void convexClient.mutation(api.threads.pinThread, {
+    void convexClient.mutation(api.functions.threads.pinThread, {
       threadId: thread._id,
       pinned: !thread.pinned,
     });

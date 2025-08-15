@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     tools,
   } = data;
 
-  const dataCustomization = await serverConvexClient.query(api.users.currentUser);
+  const dataCustomization = await serverConvexClient.query(api.functions.users.currentUser);
   let systemInstruction = "";
 
   if (dataCustomization?.customization?.name) {
@@ -128,7 +128,7 @@ export async function POST(req: Request) {
       if (err.name === "AI_TypeValidationError" && err.message.includes("proxy-")) return;
       if (err.name === "AbortError" && req.signal.aborted) return;
 
-      await serverConvexClient.mutation(api.messages.updateErrorMessage, {
+      await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
         error: err.message,
         model: model.uniqueId,
         messageId: assistantMessageId,
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
     },
   });
 
-  await serverConvexClient.mutation(api.messages.updateMessageById, {
+  await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
     threadId,
     messageId: assistantMessageId,
     updates: { status: "streaming", resumableStreamId: streamId, model: model.uniqueId },
@@ -214,7 +214,7 @@ export async function POST(req: Request) {
         }
       }
 
-      type Updates = (typeof api.messages.updateMessageById)["_args"]["updates"];
+      type Updates = (typeof api.functions.messages.updateMessageById)["_args"]["updates"];
 
       const updates: Updates = {
         metadata,
@@ -227,7 +227,7 @@ export async function POST(req: Request) {
       };
 
       if (!req.signal.aborted) {
-        const promise = serverConvexClient.mutation(api.messages.updateMessageById, {
+        const promise = serverConvexClient.mutation(api.functions.messages.updateMessageById, {
           messageId: assistantMessageId,
           threadId,
           updates,

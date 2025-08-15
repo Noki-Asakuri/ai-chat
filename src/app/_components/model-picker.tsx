@@ -22,7 +22,7 @@ export function ModelPicker() {
   const { model } = useChatStore((state) => state.chatConfig);
   const setChatConfig = useChatStore((s) => s.setChatConfig);
 
-  const { data } = useQuery(convexQuery(api.users.currentUser, {}));
+  const { data } = useQuery(convexQuery(api.functions.users.currentUser, {}));
   const hidden = useMemo(
     () => data?.customization?.hiddenModels ?? [],
     [data?.customization?.hiddenModels],

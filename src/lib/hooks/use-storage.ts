@@ -6,7 +6,7 @@ const convexClient = getConvexReactClient();
 
 export function useStorage() {
   async function uploadFile({ file }: { file: File }) {
-    const { url, key } = await convexClient.mutation(api.files.generateUserUploadUrl, {});
+    const { url, key } = await convexClient.mutation(api.functions.files.generateUserUploadUrl, {});
 
     try {
       const result = await fetch(url, {
@@ -22,12 +22,12 @@ export function useStorage() {
       throw new Error(`Failed to upload image: ${error}`);
     }
 
-    await convexClient.mutation(api.files.syncMetadata, { key });
+    await convexClient.mutation(api.functions.files.syncMetadata, { key });
     return key;
   }
 
   async function deleteFile(key: string) {
-    await convexClient.mutation(api.files.deleteFile, { key });
+    await convexClient.mutation(api.functions.files.deleteFile, { key });
   }
 
   return { uploadFile, deleteFile };

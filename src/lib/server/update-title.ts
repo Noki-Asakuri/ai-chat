@@ -38,7 +38,7 @@ Please summarize the above conversation into a title of 10 words or less, withou
     ],
   });
 
-  await serverConvexClient.mutation(api.threads.updateThreadTitle, {
+  await serverConvexClient.mutation(api.functions.threads.updateThreadTitle, {
     threadId,
     title: text.trim(),
   });

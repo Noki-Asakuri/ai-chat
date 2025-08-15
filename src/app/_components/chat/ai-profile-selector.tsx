@@ -24,7 +24,7 @@ export function AiProfileSelectorButton() {
   const navigate = useNavigate();
 
   const { data } = useQuery(
-    convexQuery(api.aiProfiles.listProfiles, { search, sort: "recently-updated" }),
+    convexQuery(api.functions.aiProfiles.listProfiles, { search, sort: "recently-updated" }),
   );
 
   const currentLabel = useMemo(() => {

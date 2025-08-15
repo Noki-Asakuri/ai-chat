@@ -6,10 +6,13 @@ import { getConvexReactClient } from "./client";
 const convexClient = getConvexReactClient();
 
 export async function uploadFile(file: File, threadId: Id<"threads">, fileId: string) {
-  const { url, key } = await convexClient.mutation(api.files.generateAttachmentUploadUrl, {
-    threadId,
-    fileId,
-  });
+  const { url, key } = await convexClient.mutation(
+    api.functions.files.generateAttachmentUploadUrl,
+    {
+      threadId,
+      fileId,
+    },
+  );
 
   try {
     const result = await fetch(url, {
@@ -24,7 +27,7 @@ export async function uploadFile(file: File, threadId: Id<"threads">, fileId: st
   } catch (error) {
     throw new Error(`Failed to upload image: ${error}`);
   }
-  await convexClient.mutation(api.files.syncMetadata, { key });
+  await convexClient.mutation(api.functions.files.syncMetadata, { key });
   return key;
 }
 
@@ -34,7 +37,7 @@ export async function uploadFile(file: File, threadId: Id<"threads">, fileId: st
  */
 export async function uploadAiProfileImage(file: File) {
   const { url, key } = await convexClient.mutation(
-    api.aiProfiles.generateAiProfileUploadUrl,
+    api.functions.aiProfiles.generateAiProfileUploadUrl,
     {},
   );
 

@@ -61,8 +61,8 @@ function getFormValue<T extends File | string>(key: string, formData: FormData):
 }
 
 export function CustomizePage() {
-  const { data } = useQuery(convexQuery(api.users.currentUser, {}));
-  const update = useMutation(api.users.updateUserCustomization);
+  const { data } = useQuery(convexQuery(api.functions.users.currentUser, {}));
+  const update = useMutation(api.functions.users.updateUserCustomization);
 
   const { uploadFile, deleteFile } = useStorage();
 

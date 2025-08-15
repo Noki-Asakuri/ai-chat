@@ -77,7 +77,7 @@ function ThreadsContent({ query }: { query: string }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const { threadId } = useParams<{ threadId?: string }>();
 
-  const { data: threads } = useQuery(convexQuery(api.threads.getAllThreads, { query }));
+  const { data: threads } = useQuery(convexQuery(api.functions.threads.getAllThreads, { query }));
   const setThreads = useChatStore((state) => state.setThreads);
 
   const threadTitle = threads?.find((thread) => thread._id === fromUUID(threadId))?.title;

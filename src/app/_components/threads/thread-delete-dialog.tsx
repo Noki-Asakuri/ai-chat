@@ -36,7 +36,7 @@ export function ThreadDeleteDialog({ threadId, title }: ThreadDeleteDialogProps)
     console.debug("[Thread] Delete thread", threadId);
 
     startTransition(async () => {
-      await convexClient.mutation(api.threads.deleteThread, { threadId });
+      await convexClient.mutation(api.functions.threads.deleteThread, { threadId });
       await navigate("/");
     });
   }
