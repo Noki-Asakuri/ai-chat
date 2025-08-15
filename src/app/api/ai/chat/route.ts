@@ -58,6 +58,24 @@ export async function POST(req: Request) {
     tools,
   } = data;
 
+  // Enforce monthly per-user usage limit before processing the request
+  const usage = await serverConvexClient.mutation(api.functions.usages.checkAndIncrement, {
+    amount: 1,
+  });
+
+  if (!usage.allowed) {
+    await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
+      error: `Monthly message limit reached (${usage.used}/${usage.base}).`,
+      model: model.uniqueId,
+      messageId: assistantMessageId,
+    });
+
+    return NextResponse.json(
+      { error: { message: `Monthly message limit reached (${usage.used}/${usage.base}).` } },
+      { status: 429 },
+    );
+  }
+
   const dataCustomization = await serverConvexClient.query(api.functions.users.currentUser);
   let systemInstruction = "";
 
@@ -128,6 +146,7 @@ export async function POST(req: Request) {
       if (err.name === "AI_TypeValidationError" && err.message.includes("proxy-")) return;
       if (err.name === "AbortError" && req.signal.aborted) return;
 
+      await serverConvexClient.mutation(api.functions.usages.refundRequest, { amount: 1 });
       await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
         error: err.message,
         model: model.uniqueId,

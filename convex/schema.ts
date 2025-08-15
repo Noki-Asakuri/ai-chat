@@ -137,4 +137,11 @@ export default defineSchema({
       }),
     ),
   }).index("by_userId", ["userId"]),
+
+  usages: defineTable({
+    userId: v.string(),
+    used: v.number(),
+    base: v.number(),
+    resetAt: v.number(),
+  }).index("by_userId", ["userId"]),
 });

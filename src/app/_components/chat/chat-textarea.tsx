@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
+import { api } from "@/convex/_generated/api";
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
+
 import { ScrollButton } from "../scroll-button";
 import { Textarea } from "../ui/textarea";
 
@@ -47,6 +51,7 @@ export function ChatTextarea() {
         <ScrollButton />
 
         <div className="bg-muted/40 group-data-[disable-blur=true]/sidebar-provider:bg-muted pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-md border backdrop-blur-md backdrop-saturate-150">
+          <UsageBanner />
           <ChatAttachmentDisplay />
 
           <div
@@ -155,6 +160,30 @@ function InputTextArea() {
       <span id="textarea-description" className="sr-only">
         Press enter to send message. Shift + enter or Ctrl + enter to add new line.
       </span>
+    </div>
+  );
+}
+
+function UsageBanner() {
+  const { data, isPending } = useQuery(convexQuery(api.functions.usages.getUsage, {}));
+  if (isPending || !data || data.used < data.base) return null;
+
+  const date = new Date(data.resetAt);
+  const resetStr = date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+
+  return (
+    <div className="border-b text-sm">
+      <div className="px-2.5 py-2">
+        Monthly usage:{" "}
+        <span className="font-medium">
+          {data.used} / {data.base}
+        </span>
+        . Resets on <span className="font-medium">{resetStr}</span>.
+      </div>
     </div>
   );
 }

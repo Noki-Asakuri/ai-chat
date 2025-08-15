@@ -68,9 +68,8 @@ export async function sendChatRequest(
     }
     if (error.name === "AbortError") return;
 
-    const errorMessage =
-      "Failed to generate response. Please try again later. \nError: " + error.message;
     console.log("[Chat] Chat error:", error);
+    const errorMessage = "Failed to generate response. \n\nError: " + error.message;
 
     void convexClient.mutation(api.functions.messages.updateErrorMessage, {
       error: errorMessage,

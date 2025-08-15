@@ -29,7 +29,7 @@ export async function processChatStream({
 
     const error = await response
       .json()
-      .then((response: { error: string }) => response.error)
+      .then((response: { error: { message: string } }) => response.error.message)
       .catch(() =>
         textResponse.text().then((text) => text || "Unknown error. Failed to get error message."),
       );

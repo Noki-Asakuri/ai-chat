@@ -8,12 +8,14 @@
  * @module
  */
 
+import type * as crons from "../crons.js";
 import type * as functions_aiProfiles from "../functions/aiProfiles.js";
 import type * as functions_attachments from "../functions/attachments.js";
 import type * as functions_files from "../functions/files.js";
 import type * as functions_messages from "../functions/messages.js";
 import type * as functions_statistics from "../functions/statistics.js";
 import type * as functions_threads from "../functions/threads.js";
+import type * as functions_usages from "../functions/usages.js";
 import type * as functions_users from "../functions/users.js";
 import type * as http from "../http.js";
 import type * as index from "../index.js";
@@ -33,12 +35,14 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  crons: typeof crons;
   "functions/aiProfiles": typeof functions_aiProfiles;
   "functions/attachments": typeof functions_attachments;
   "functions/files": typeof functions_files;
   "functions/messages": typeof functions_messages;
   "functions/statistics": typeof functions_statistics;
   "functions/threads": typeof functions_threads;
+  "functions/usages": typeof functions_usages;
   "functions/users": typeof functions_users;
   http: typeof http;
   index: typeof index;
