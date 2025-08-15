@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query } from "../_generated/server";
 
 export const createThread = mutation({
   args: { title: v.optional(v.string()) },
@@ -102,9 +102,7 @@ export const getAllThreads = query({
 
     const nonPinnedMatches = await ctx.db
       .query("threads")
-      .withSearchIndex("search_title", (q) =>
-        q.search("title", search).eq("userId", user.subject),
-      )
+      .withSearchIndex("search_title", (q) => q.search("title", search).eq("userId", user.subject))
       .filter((q) => q.neq(q.field("pinned"), true))
       .take(limit);
 

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import type { Doc, Id } from "./_generated/dataModel";
-import { mutation, query } from "./_generated/server";
+import type { Doc, Id } from "../_generated/dataModel";
+import { mutation, query } from "../_generated/server";
 
 export const getAllMessagesFromThread = query({
   args: { threadId: v.optional(v.id("threads")) },

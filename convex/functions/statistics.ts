@@ -1,7 +1,7 @@
-import { type QueryCtx, query } from "./_generated/server";
-import { type Doc } from "./_generated/dataModel";
+import { type QueryCtx, query } from "../_generated/server";
+import { type Doc } from "../_generated/dataModel";
 
-import { getModelData } from "../src/lib/chat/models";
+import { getModelData } from "../../src/lib/chat/models";
 
 export const getStatistics = query({
   handler: async (ctx: QueryCtx) => {

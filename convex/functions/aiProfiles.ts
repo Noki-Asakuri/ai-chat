@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { r2 } from ".";
-import { mutation, query } from "./_generated/server";
+import { r2 } from "..";
+import { mutation, query } from "../_generated/server";
 
 /**
  * List AI Profiles for current user with optional search and sorting.

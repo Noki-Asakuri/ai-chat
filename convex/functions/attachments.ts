@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 
-import { r2 } from ".";
-import { mutation, query } from "./_generated/server";
+import { r2 } from "..";
+import { mutation, query } from "../_generated/server";
 
 export const createAttachment = mutation({
   args: {

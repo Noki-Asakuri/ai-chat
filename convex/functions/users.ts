@@ -2,8 +2,8 @@ import type { UserJSON, WebhookEvent } from "@clerk/backend";
 import { Webhook } from "svix";
 
 import { v, type Validator } from "convex/values";
-import { internal } from "./_generated/api";
-import { httpAction, internalMutation, mutation, query, type QueryCtx } from "./_generated/server";
+import { internal } from "../_generated/api";
+import { httpAction, internalMutation, mutation, query, type QueryCtx } from "../_generated/server";
 
 export const deleteFromClerk = internalMutation({
   args: { userId: v.string() },
@@ -78,14 +78,14 @@ export const clerkWebhook = httpAction(async (ctx, request) => {
   switch (event.type) {
     case "user.created": // intentional fallthrough
     case "user.updated":
-      await ctx.runMutation(internal.users.upsertFromClerk, {
+      await ctx.runMutation(internal.functions.users.upsertFromClerk, {
         data: event.data,
       });
       break;
 
     case "user.deleted": {
       const userId = event.data.id!;
-      await ctx.runMutation(internal.users.deleteFromClerk, { userId });
+      await ctx.runMutation(internal.functions.users.deleteFromClerk, { userId });
       break;
     }
     default:

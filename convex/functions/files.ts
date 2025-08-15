@@ -1,23 +1,22 @@
 import { type R2Callbacks } from "@convex-dev/r2";
 import { v } from "convex/values";
 
-import { r2 } from ".";
-import { internal } from "./_generated/api";
-import type { DataModel } from "./_generated/dataModel";
-import { mutation } from "./_generated/server";
+import { r2 } from "..";
+import { internal } from "../_generated/api";
+import type { DataModel } from "../_generated/dataModel";
+import { mutation } from "../_generated/server";
 
-const callbacks: R2Callbacks = internal.files;
+const callbacks: R2Callbacks = internal.functions.files;
 
 export { syncMetadata, getMetadata, listMetadata, onSyncMetadata };
 
-const { syncMetadata, getMetadata, listMetadata, onSyncMetadata, generateUploadUrl } =
-  r2.clientApi<DataModel>({
-    callbacks,
-    async checkUpload(ctx) {
-      const user = await ctx.auth.getUserIdentity();
-      if (!user) throw new Error("Not authenticated");
-    },
-  });
+const { syncMetadata, getMetadata, listMetadata, onSyncMetadata } = r2.clientApi<DataModel>({
+  callbacks,
+  async checkUpload(ctx) {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+  },
+});
 
 export const generateAttachmentUploadUrl = mutation({
   args: { threadId: v.id("threads"), fileId: v.string() },
