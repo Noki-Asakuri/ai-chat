@@ -4,13 +4,14 @@ import { serverConvexClient } from "@/lib/convex/server";
 
 import { auth } from "@clerk/nextjs/server";
 import { waitUntil } from "@vercel/functions";
-import { Redis } from "ioredis";
 import dedent from "dedent";
+import { Redis } from "ioredis";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 
 import { createUIMessageStream, generateId, smoothStream, streamText, type AISDKError } from "ai";
 
+import { logger } from "@/lib/axiom/server";
 import { getRequestBody } from "@/lib/server/get-request-body";
 import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
@@ -33,8 +34,10 @@ export async function POST(req: Request) {
   if (!user.userId) {
     return NextResponse.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
   }
+
   const authToken = await user.getToken({ template: "convex" });
   if (!authToken) {
+    logger.error("[Chat Error]: Missing Convex auth token!", { user });
     return NextResponse.json(
       { error: { message: "Error: Missing Convex auth token!" } },
       { status: 401 },
@@ -44,6 +47,7 @@ export async function POST(req: Request) {
 
   const [data, error] = await tryCatch(() => getRequestBody(req, user.userId));
   if (error) {
+    logger.error("[Chat Error]: Failed to parse request body!", { error, userId: user.userId });
     return NextResponse.json({ error: { message: error.message } }, { status: 400 });
   }
 
@@ -68,6 +72,12 @@ export async function POST(req: Request) {
       error: `Monthly message limit reached (${usage.used}/${usage.base}).`,
       model: model.uniqueId,
       messageId: assistantMessageId,
+    });
+
+    logger.error("[Chat Error]: Monthly message limit reached!", {
+      userId: user.userId,
+      used: usage.used,
+      base: usage.base,
     });
 
     return NextResponse.json(
@@ -141,6 +151,13 @@ export async function POST(req: Request) {
     async onError({ error }) {
       const err = error as AISDKError;
       console.error("[Chat] Error:", err);
+      logger.error("[Chat Error]: " + err.message, {
+        userId: user.userId,
+        threadId,
+        assistantMessageId,
+        model: model.uniqueId,
+        error: err,
+      });
 
       // Skip proxy-related type validation errors as they are expected during proxy configuration
       if (err.name === "AI_TypeValidationError" && err.message.includes("proxy-")) return;
@@ -245,6 +262,24 @@ export async function POST(req: Request) {
         reasoning: reasoning.length > 0 ? reasoning : undefined,
       };
 
+      logger.info("[Chat] Chat request completed!", {
+        userId: user.userId,
+        threadId,
+        assistantMessageId,
+        model: model.uniqueId,
+        metadata,
+      });
+
+      if (updates.content?.length === 0) {
+        updates.content = "Upstream returned empty content. Please try again.";
+        logger.error("[Chat Error]: Upstream returned empty content!", {
+          userId: user.userId,
+          threadId,
+          assistantMessageId,
+          model: model.uniqueId,
+        });
+      }
+
       if (!req.signal.aborted) {
         const promise = serverConvexClient.mutation(api.functions.messages.updateMessageById, {
           messageId: assistantMessageId,
@@ -282,6 +317,13 @@ export async function POST(req: Request) {
 
   req.signal.onabort = async () => {
     console.log("[Chat] Chat request aborted");
+    logger.error("[Chat Error]: Chat request aborted!", {
+      userId: user.userId,
+      threadId,
+      assistantMessageId,
+      model: model.uniqueId,
+    });
+
     await chatStream.cancel(new Error("Request aborted"));
   };
 
@@ -296,12 +338,22 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: NextRequest) {
+  const user = await auth();
+
+  if (!user.userId) {
+    logger.error("[Chat Error]: Unauthenticated!", { userId: user.userId });
+    return NextResponse.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
+  }
+
   const streamId = req.nextUrl.searchParams.get("streamId");
   const resumeAt = req.nextUrl.searchParams.get("resumeAt");
 
   if (!streamId) {
+    logger.error("[Chat Error]: Missing streamId!", { streamId, resumeAt });
     return Response.json({ error: { message: "Missing streamId" } }, { status: 400 });
   }
+
+  logger.info("[Chat] Resuming chat streaming!", { streamId, resumeAt, userId: user.userId });
 
   const stream = await streamContext.resumeExistingStream(
     streamId,
