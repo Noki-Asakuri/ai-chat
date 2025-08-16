@@ -26,10 +26,13 @@ export function Message({ message, index, isLast }: MessageProps) {
   const lastUserMessageHeight = useChatStore((state) => state.lastUserMessageHeight) ?? 114;
   const setMessageHeight = useChatStore((state) => state.setMessageHeight);
 
+  const userMessageHeight =
+    lastUserMessageHeight > window.innerHeight ? 114 : lastUserMessageHeight;
+
   const minHeight =
     isLast && message.role === "assistant"
       ? // 100vh - (padding top + padding bottom + textarea height + last known user message height)
-        `calc(100vh - (40px + ${Math.max(textareaHeight, 165 + 50)}px + 16px + ${lastUserMessageHeight}px))`
+        `calc(100vh - (40px + ${Math.max(textareaHeight, 165 + 50)}px + 16px + ${userMessageHeight}px))`
       : "auto";
 
   const renderMessage =
