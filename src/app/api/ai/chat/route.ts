@@ -156,7 +156,7 @@ export async function POST(req: Request) {
         threadId,
         assistantMessageId,
         model: model.uniqueId,
-        error: err,
+        errorName: err.name,
       });
 
       // Skip proxy-related type validation errors as they are expected during proxy configuration
@@ -341,7 +341,7 @@ export async function GET(req: NextRequest) {
   const user = await auth();
 
   if (!user.userId) {
-    logger.error("[Chat Error]: Unauthenticated!", { userId: user.userId });
+    logger.error("[Chat Error]: Unauthenticated GET request!");
     return NextResponse.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
   }
 
