@@ -47,6 +47,16 @@ export async function sendChatRequest(
             content += stream.delta;
             break;
 
+          case "reasoning-start":
+            const isStarting =
+              stream.id.endsWith(":0") &&
+              stream.providerMetadata &&
+              "openai" in stream.providerMetadata;
+
+            // OpenAI seperate reasoning part with new 'reasoning-start' event
+            if (!isStarting) reasoning += "\n\n";
+            break;
+
           case "reasoning-delta":
             reasoning += stream.delta;
             break;

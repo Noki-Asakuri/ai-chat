@@ -196,6 +196,7 @@ export async function POST(req: Request) {
     execute: async ({ writer }) => {
       let content = "";
       let reasoning = "";
+
       let reasoningDuration = 0;
       let textDuration = 0;
 
@@ -208,10 +209,23 @@ export async function POST(req: Request) {
         }),
       );
 
+      // OpenAI reasoning return multiple reasoning-start/end events. We only want to count the first one.
+      let hasStartedReasoning = false;
+
       for await (const stream of result.fullStream) {
         switch (stream.type) {
           case "reasoning-start":
+            if (hasStartedReasoning) {
+              // OpenAI seperate reasoning part with new 'reasoning-start' event
+              reasoning += "\n\n";
+              continue;
+            }
+
+            // Start first token time if model return reasoning
+            metadata.timeToFirstTokenMs = Date.now() - startTime;
             reasoningDuration = Date.now();
+
+            hasStartedReasoning = true;
             break;
 
           case "reasoning-delta":
@@ -219,12 +233,16 @@ export async function POST(req: Request) {
             break;
 
           case "reasoning-end":
-            metadata.durations.reasoning = Date.now() - reasoningDuration;
+            if (metadata.durations.reasoning === 0) {
+              metadata.durations.reasoning = Date.now() - reasoningDuration;
+            }
             break;
 
           case "text-start":
             textDuration = Date.now();
-            metadata.timeToFirstTokenMs = Date.now() - startTime;
+            if (metadata.timeToFirstTokenMs === 0) {
+              metadata.timeToFirstTokenMs = Date.now() - startTime;
+            }
             break;
 
           case "text-delta":
