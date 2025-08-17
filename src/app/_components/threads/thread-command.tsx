@@ -71,14 +71,14 @@ function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
           key={"thread-cmd-group-" + thread._id}
           className="!p-0"
           onSelect={() => {
-            void navigate(`/chat/${toUUID(thread._id)}`);
+            void navigate(`/threads/${toUUID(thread._id)}`);
             setThreadCommandOpen(false);
           }}
         >
           <NavLink
             className="px-2 py-1.5"
             onClick={() => setThreadCommandOpen(false)}
-            to={{ pathname: `/chat/${toUUID(thread._id)}` }}
+            to={{ pathname: `/threads/${toUUID(thread._id)}` }}
           >
             {thread.title}
           </NavLink>

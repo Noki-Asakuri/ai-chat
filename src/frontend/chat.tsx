@@ -45,6 +45,7 @@ export function Chat() {
         threadId,
         streamId: lastMessage.resumableStreamId,
       });
+
       void sendChatRequest(
         `/api/ai/chat?streamId=${lastMessage.resumableStreamId}`,
         undefined,

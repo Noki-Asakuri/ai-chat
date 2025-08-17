@@ -5,13 +5,13 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { logger } from "@/lib/axiom/server";
 import { transformMiddlewareRequest } from "@axiomhq/nextjs";
 
-const isPublicRoute = createRouteMatcher(["/auth/login(.*)", "/auth/waitlist(.*)"]);
+const isProtectedRoute = createRouteMatcher(["/settings(.*)"]);
 
 export default clerkMiddleware(async (auth, req, event) => {
   logger.info(...transformMiddlewareRequest(req));
 
   event.waitUntil(logger.flush());
-  if (!isPublicRoute(req)) await auth.protect();
+  if (isProtectedRoute(req)) await auth.protect();
 
   return NextResponse.next();
 });

@@ -1,7 +1,9 @@
-import { UserProfile } from "@clerk/clerk-react";
+import "@/styles/clerk-user-profile.css";
+
+import { UserProfile } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 
-export function AccountPage() {
+export default function AccountPage() {
   return (
     <div className="space-y-4">
       <div>

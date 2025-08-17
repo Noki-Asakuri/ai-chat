@@ -38,7 +38,7 @@ export function ThreadItem({ thread }: { thread: Thread }) {
     event.stopPropagation();
     event.preventDefault();
 
-    await navigate(`/chat/${toUUID(thread.branchedFrom!)}`);
+    await navigate(`/threads/${toUUID(thread.branchedFrom!)}`);
   }
 
   function startEdit(event: React.MouseEvent) {
@@ -91,7 +91,7 @@ export function ThreadItem({ thread }: { thread: Thread }) {
 
   return (
     <NavLink
-      to={`/chat/${toUUID(thread._id)}`}
+      to={`/threads/${toUUID(thread._id)}`}
       title={thread.title}
       onDoubleClick={startEdit}
       onClick={(e) => {

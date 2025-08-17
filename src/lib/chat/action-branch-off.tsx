@@ -19,5 +19,5 @@ export async function branchOffThreadMessage(
     threadId: message.threadId,
   });
 
-  await navigate(`/chat/${toUUID(newThreadId)}`);
+  await navigate(`/threads/${toUUID(newThreadId)}`);
 }

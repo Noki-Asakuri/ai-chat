@@ -1,7 +1,9 @@
 import "server-only";
 
+import type { NextRequest } from "next/server";
+
 import axiomClient from "@/lib/axiom/axiom";
-import { Logger, AxiomJSTransport } from "@axiomhq/logging";
+import { AxiomJSTransport, Logger } from "@axiomhq/logging";
 import { createAxiomRouteHandler, nextJsFormatters } from "@axiomhq/nextjs";
 
 import { env } from "@/env";
@@ -13,4 +15,11 @@ export const logger = new Logger({
   formatters: nextJsFormatters,
 });
 
-export const withAxiom = createAxiomRouteHandler(logger);
+export const withAxiom = createAxiomRouteHandler(logger, {
+  store: (req: NextRequest) => {
+    return {
+      request_id: crypto.randomUUID(),
+      trace_id: req.headers.get("x-trace-id"),
+    };
+  },
+});

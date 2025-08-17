@@ -1,5 +1,5 @@
 import { useUser } from "@clerk/react-router";
-import { NavLink } from "react-router";
+import Link from "next/link";
 
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
@@ -13,8 +13,8 @@ export function ThreadUserProfile() {
     .join("");
 
   return (
-    <NavLink
-      to="/auth/settings"
+    <Link
+      href="/settings"
       className="hover:bg-primary/20 hover:border-primary/30 flex gap-2 rounded-md border border-transparent p-2 transition-colors"
     >
       <Avatar className="size-11 rounded-md">
@@ -28,6 +28,6 @@ export function ThreadUserProfile() {
         <p className="text-sm font-medium capitalize">{user.username}</p>
         <p className="text-muted-foreground text-sm">Settings</p>
       </div>
-    </NavLink>
+    </Link>
   );
 }

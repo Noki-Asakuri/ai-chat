@@ -1,9 +1,11 @@
+"use client";
+
 import { api } from "@/convex/_generated/api";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
 import { useQuery } from "@tanstack/react-query";
-import { NavLink } from "react-router";
+import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icons } from "@/components/ui/icons";
@@ -68,7 +70,7 @@ function LoadingSkeleton() {
   );
 }
 
-export function StatisticsPage() {
+export default function StatisticsPage() {
   const { data, isPending } = useQuery(convexQuery(api.functions.statistics.getStatistics, {}));
   const thisYear = new Date(Date.now());
 
@@ -165,11 +167,7 @@ export function StatisticsPage() {
 
           <div className="mt-2 space-y-2">
             {modelRank.slice(0, 5).map((item) => (
-              <ModelRank
-                key={item.name}
-                model={item}
-                assistantMessages={stats.messages.assistant}
-              />
+              <ModelRank key={item.name} model={item} assistantMessages={stats.messages.assistant} />
             ))}
           </div>
         </div>
@@ -183,12 +181,12 @@ export function StatisticsPage() {
 
           <div className="mt-2 flex flex-col gap-2">
             {threadRank.slice(0, 5).map((item) => (
-              <NavLink to={`/chat/${toUUID(item.id)}`} key={item.id}>
+              <Link href={`/threads/${toUUID(item.id)}`} key={item.id}>
                 <div className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2">
                   <p className="truncate">{item.name}</p>
                   <span>{item.value}</span>
                 </div>
-              </NavLink>
+              </Link>
             ))}
           </div>
         </div>
@@ -203,10 +201,7 @@ export function StatisticsPage() {
 
         <div className="mt-2 flex flex-col gap-2">
           {aiProfileRank?.slice(0, 5)?.map((item) => (
-            <div
-              key={item.name}
-              className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2"
-            >
+            <div key={item.name} className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2">
               <p className="truncate">{item.name}</p>
               <span>{item.value}</span>
             </div>
@@ -246,10 +241,7 @@ function ModelRank({
 
   return (
     <div className="hover:bg-card relative flex h-10 justify-between gap-4 overflow-hidden rounded-md border px-4 py-2">
-      <div
-        className="bg-sidebar-primary/60 absolute top-0 left-0 h-full rounded-md"
-        style={{ width: `${percentage}%` }}
-      />
+      <div className="bg-sidebar-primary/60 absolute top-0 left-0 h-full rounded-md" style={{ width: `${percentage}%` }} />
 
       <div className="z-10 flex items-center gap-2">
         <Icons.provider provider={modelData.provider} />
@@ -260,3 +252,4 @@ function ModelRank({
     </div>
   );
 }
+

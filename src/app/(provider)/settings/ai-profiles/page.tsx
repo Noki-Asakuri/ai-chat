@@ -1,3 +1,5 @@
+"use client";
+
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -43,7 +45,7 @@ import { uploadAiProfileImage } from "@/lib/convex/uploadFiles";
 
 type SortOption = "az" | "za" | "newest" | "oldest" | "recently-updated";
 
-export function AiProfilesPage() {
+export default function AiProfilesPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("recently-updated");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -177,12 +179,7 @@ export function AiProfilesPage() {
       <div className="flex items-center justify-between gap-2">
         <div className="relative w-full max-w-md">
           <SearchIcon className="text-muted-foreground absolute top-1/2 left-2 size-4 -translate-y-1/2" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search profiles…"
-            className="pl-8"
-          />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search profiles…" className="pl-8" />
         </div>
 
         <div className="flex items-center gap-2">
@@ -203,12 +200,7 @@ export function AiProfilesPage() {
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {profiles.map((p) => (
-            <ProfileCard
-              key={p._id}
-              profile={p}
-              onEdit={onEditClicked}
-              onDelete={onConfirmDelete}
-            />
+            <ProfileCard key={p._id} profile={p} onEdit={onEditClicked} onDelete={onConfirmDelete} />
           ))}
         </div>
       )}
@@ -222,34 +214,20 @@ export function AiProfilesPage() {
           <div className="flex flex-col gap-3 py-2">
             <label className="flex flex-col gap-2">
               <span className="text-sm">Name</span>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Helpful Researcher"
-              />
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Helpful Researcher" />
             </label>
 
             <label className="flex flex-col gap-2">
               <span className="text-sm">System Prompt</span>
-              <textarea
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-                rows={6}
-                className="rounded-md border bg-transparent p-2 text-sm outline-none"
-                placeholder="Describe how this AI should behave…"
-              />
+              <textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} rows={6} className="rounded-md border bg-transparent p-2 text-sm outline-none" placeholder="Describe how this AI should behave…" />
             </label>
 
             <label className="flex flex-col gap-2">
               <span className="text-sm">Optional Image</span>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const f = e.target.files?.[0] ?? null;
-                  setFile(f);
-                }}
-              />
+              <Input type="file" accept="image/*" onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                setFile(f);
+              }} />
 
               <span className="text-muted-foreground text-xs">PNG, JPG, or WebP.</span>
             </label>
@@ -257,12 +235,7 @@ export function AiProfilesPage() {
 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isSubmitting || !name.trim() || !systemPrompt.trim()}
-              onClick={() => {
-                void onSubmit();
-              }}
-            >
+            <AlertDialogAction disabled={isSubmitting || !name.trim() || !systemPrompt.trim()} onClick={() => { void onSubmit(); }}>
               {editingId ? "Save" : "Create"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -272,31 +245,10 @@ export function AiProfilesPage() {
   );
 }
 
-function ProfileCard({
-  profile,
-  onEdit,
-  onDelete,
-}: {
-  profile: {
-    _id: Id<"ai_profiles">;
-    name: string;
-    systemPrompt: string;
-    imageKey?: string;
-    createdAt: number;
-    updatedAt: number;
-  };
-  onEdit: (p: { _id: Id<"ai_profiles">; name: string; systemPrompt: string }) => void;
-  onDelete: (id: Id<"ai_profiles">) => void;
-}) {
-  const imageUrl =
-    profile.imageKey && profile.imageKey.length > 0
-      ? `https://files.chat.asakuri.me/${profile.imageKey}`
-      : null;
+function ProfileCard({ profile, onEdit, onDelete }: { profile: { _id: Id<"ai_profiles">; name: string; systemPrompt: string; imageKey?: string; createdAt: number; updatedAt: number; }; onEdit: (p: { _id: Id<"ai_profiles">; name: string; systemPrompt: string }) => void; onDelete: (id: Id<"ai_profiles">) => void; }) {
+  const imageUrl = profile.imageKey && profile.imageKey.length > 0 ? `https://files.chat.asakuri.me/${profile.imageKey}` : null;
 
-  const shortDesc =
-    profile.systemPrompt.length > 140
-      ? profile.systemPrompt.slice(0, 140) + "…"
-      : profile.systemPrompt;
+  const shortDesc = profile.systemPrompt.length > 140 ? profile.systemPrompt.slice(0, 140) + "…" : profile.systemPrompt;
 
   return (
     <Card className="rounded-md">
@@ -304,28 +256,13 @@ function ProfileCard({
         <CardTitle className="text-base font-semibold">{profile.name}</CardTitle>
 
         <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            className="h-8 w-8"
-            onMouseDown={() =>
-              onEdit({ _id: profile._id, name: profile.name, systemPrompt: profile.systemPrompt })
-            }
-            title="Edit"
-          >
+          <Button type="button" variant="secondary" size="icon" className="h-8 w-8" onMouseDown={() => onEdit({ _id: profile._id, name: profile.name, systemPrompt: profile.systemPrompt })} title="Edit">
             <EditIcon className="size-4" />
           </Button>
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="h-8 w-8"
-                title="Delete"
-              >
+              <Button type="button" variant="destructive" size="icon" className="h-8 w-8" title="Delete">
                 <Trash2Icon className="size-4" />
               </Button>
             </AlertDialogTrigger>
@@ -333,16 +270,10 @@ function ProfileCard({
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete “{profile.name}”?</AlertDialogTitle>
               </AlertDialogHeader>
-              <p className="text-muted-foreground text-sm">
-                This action cannot be undone. This will permanently delete this AI profile.
-              </p>
+              <p className="text-muted-foreground text-sm">This action cannot be undone. This will permanently delete this AI profile.</p>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => {
-                    void onDelete(profile._id);
-                  }}
-                >
+                <AlertDialogAction onClick={() => { void onDelete(profile._id); }}>
                   Delete
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -353,11 +284,7 @@ function ProfileCard({
 
       <CardContent className="flex items-start gap-3">
         {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={profile.name}
-            className="h-16 w-16 shrink-0 rounded-md object-cover"
-          />
+          <img src={imageUrl} alt={profile.name} className="h-16 w-16 shrink-0 rounded-md object-cover" />
         ) : (
           <div className="bg-muted h-16 w-16 shrink-0 rounded-md" />
         )}
@@ -367,3 +294,4 @@ function ProfileCard({
     </Card>
   );
 }
+

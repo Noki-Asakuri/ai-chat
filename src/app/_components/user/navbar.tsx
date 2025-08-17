@@ -1,40 +1,44 @@
 "use client";
 
 import { useDocumentTitle } from "@uidotdev/usehooks";
-import { NavLink, useLocation } from "react-router";
+
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 import { Tab, Tabs, TabsList } from "@/components/ui/tabs";
 
 const paths = [
   {
     name: "Account",
-    path: "/auth/settings/account",
+    path: "/settings/account",
   },
   {
     name: "Statistics",
-    path: "/auth/settings/statistics",
+    path: "/settings/statistics",
   },
   {
     name: "Customize",
-    path: "/auth/settings/customize",
+    path: "/settings/customize",
   },
   {
     name: "Attachments",
-    path: "/auth/settings/attachments",
+    path: "/settings/attachments",
   },
   {
     name: "Models",
-    path: "/auth/settings/models",
+    path: "/settings/models",
   },
   {
     name: "AI Profiles",
-    path: "/auth/settings/ai-profiles",
+    path: "/settings/ai-profiles",
   },
 ];
 
 export function UserNavbar() {
-  const location = useLocation();
-  const activeTitle = paths.find((path) => path.path === location.pathname)?.name;
+  const pathname = usePathname();
+  const activeTitle = paths.find(
+    (p) => pathname === p.path || pathname.startsWith(p.path + "/"),
+  )?.name;
 
   useDocumentTitle(activeTitle ? `${activeTitle} - AI Chat` : "Account - AI Chat");
 
@@ -43,9 +47,9 @@ export function UserNavbar() {
       <TabsList>
         {paths.map(({ path, name }) => (
           <Tab key={path} value={"tab-" + name} className="h-10 px-0">
-            <NavLink to={path} className="flex h-full w-full items-center justify-center px-2">
+            <Link href={path} className="flex h-full w-full items-center justify-center px-2">
               {name}
-            </NavLink>
+            </Link>
           </Tab>
         ))}
       </TabsList>

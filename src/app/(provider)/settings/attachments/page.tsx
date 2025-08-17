@@ -1,3 +1,5 @@
+"use client";
+
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useMutation } from "convex/react";
@@ -6,7 +8,7 @@ import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { FileTextIcon, SearchIcon, TrashIcon } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
-import { NavLink } from "react-router";
+import Link from "next/link";
 import { toast } from "sonner";
 
 import {
@@ -55,10 +57,8 @@ function LoadingSkeleton() {
   );
 }
 
-export function AttachmentsPage() {
-  const { data, isPending } = useQuery(
-    convexQuery(api.functions.attachments.getAllAttachments, {}),
-  );
+export default function AttachmentsPage() {
+  const { data, isPending } = useQuery(convexQuery(api.functions.attachments.getAllAttachments, {}));
   const [searchText, setSearchText] = useState<string>("");
 
   const filteredData = useMemo(() => {
@@ -83,17 +83,9 @@ export function AttachmentsPage() {
 
       <div className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 py-2 backdrop-blur">
         <div className="relative">
-          <SearchIcon
-            size={16}
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
-          />
+          <SearchIcon size={16} className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2" />
 
-          <Input
-            placeholder="Search attachments..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder="Search attachments..." value={searchText} onChange={(e) => setSearchText(e.target.value)} className="pl-9" />
         </div>
       </div>
 
@@ -105,23 +97,11 @@ export function AttachmentsPage() {
         )}
 
         {filteredData.map((attachment) => (
-          <div
-            key={attachment._id}
-            className="hover:bg-card/80 flex flex-col overflow-hidden rounded-md border transition-colors"
-          >
+          <div key={attachment._id} className="hover:bg-card/80 flex flex-col overflow-hidden rounded-md border transition-colors">
             <div className="relative size-full">
-              <a
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block size-full"
-                href={`https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`}
-              >
+              <a target="_blank" rel="noopener noreferrer" className="block size-full" href={`https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`}>
                 {attachment.type === "image" ? (
-                  <img
-                    alt={attachment.name}
-                    className="aspect-square size-full object-cover"
-                    src={`https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`}
-                  />
+                  <img alt={attachment.name} className="aspect-square size-full object-cover" src={`https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`} />
                 ) : (
                   <div className="flex aspect-square size-full items-center justify-center p-2">
                     <FileTextIcon size={64} />
@@ -131,10 +111,7 @@ export function AttachmentsPage() {
               <div className="pointer-events-none absolute top-0 left-0 flex size-full items-start justify-between gap-2 p-2">
                 <Badge>{format.size(attachment.size)}</Badge>
                 <DeleteAttachmentDialog attachmentId={attachment._id} name={attachment.name}>
-                  <Button
-                    variant="secondary"
-                    className="hover:bg-destructive pointer-events-auto size-7 transition-colors"
-                  >
+                  <Button variant="secondary" className="hover:bg-destructive pointer-events-auto size-7 transition-colors">
                     <TrashIcon />
                     <span className="sr-only">Delete {attachment.name}</span>
                   </Button>
@@ -146,17 +123,11 @@ export function AttachmentsPage() {
                 <p className="truncate" title={attachment.name}>
                   {attachment.name}
                 </p>
-                <span className="text-muted-foreground shrink-0 text-sm">
-                  {format.date(attachment._creationTime)}
-                </span>
+                <span className="text-muted-foreground shrink-0 text-sm">{format.date(attachment._creationTime)}</span>
               </div>
-              <NavLink
-                to={`/chat/${toUUID(attachment.threadId)}`}
-                className="line-clamp-1 w-fit text-sm underline-offset-4 hover:underline"
-                title={attachment.thread?.title}
-              >
+              <Link href={`/threads/${toUUID(attachment.threadId)}`} className="line-clamp-1 w-fit text-sm underline-offset-4 hover:underline" title={attachment.thread?.title}>
                 Thread: {attachment.thread?.title}
-              </NavLink>
+              </Link>
             </div>
           </div>
         ))}
@@ -192,8 +163,7 @@ function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachme
         <AlertDialogHeader>
           <AlertDialogTitle>Delete file {name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete this file and remove it from
-            our servers and your chats!
+            This action cannot be undone. This will permanently delete this file and remove it from our servers and your chats!
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -207,3 +177,4 @@ function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachme
     </AlertDialog>
   );
 }
+

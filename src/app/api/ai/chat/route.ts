@@ -11,7 +11,7 @@ import { createResumableStreamContext } from "resumable-stream/ioredis";
 
 import { createUIMessageStream, generateId, smoothStream, streamText, type AISDKError } from "ai";
 
-import { logger } from "@/lib/axiom/server";
+import { logger, withAxiom } from "@/lib/axiom/server";
 import { getRequestBody } from "@/lib/server/get-request-body";
 import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
@@ -28,7 +28,7 @@ const streamContext = createResumableStreamContext({
   subscriber: subscriber,
 });
 
-export async function POST(req: Request) {
+export const POST = withAxiom(async (req) => {
   const user = await auth();
 
   if (!user.userId) {
@@ -353,9 +353,9 @@ export async function POST(req: Request) {
       "Content-Type": "text/event-stream",
     },
   });
-}
+});
 
-export async function GET(req: NextRequest) {
+export const GET = withAxiom(async (req: NextRequest) => {
   const user = await auth();
 
   if (!user.userId) {
@@ -385,4 +385,4 @@ export async function GET(req: NextRequest) {
       "Content-Type": "text/event-stream",
     },
   });
-}
+});

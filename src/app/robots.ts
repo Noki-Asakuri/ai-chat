@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       allow: ["/"],
       userAgent: "*",
-      disallow: ["/auth/login", "/auth/settings/*", "/auth/waitlist", "/api/*"],
+      disallow: ["/auth/login", "/auth/wait-list", "/settings/*", "/threads/*", "/api/*"],
     },
     sitemap: "https://chat.asakuri.me/sitemap.xml",
   };

@@ -125,7 +125,8 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     threadId = await convexClient.mutation(api.functions.threads.createThread, {
       title: "New Chat",
     });
-    await navigate(`/chat/${toUUID(threadId)}`);
+
+    await navigate(`/threads/${toUUID(threadId)}`);
   }
 
   const userMessage = {

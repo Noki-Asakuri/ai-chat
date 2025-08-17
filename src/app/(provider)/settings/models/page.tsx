@@ -1,3 +1,5 @@
+"use client";
+
 import { api } from "@/convex/_generated/api";
 import { useMutation } from "convex/react";
 
@@ -21,9 +23,7 @@ function LoadingSkeleton() {
     <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-bold">Models</h2>
-        <p className="text-muted-foreground">
-          Choose which models are visible in the model picker.
-        </p>
+        <p className="text-muted-foreground">Choose which models are visible in the model picker.</p>
       </div>
 
       <div className="space-y-2">
@@ -58,7 +58,7 @@ function LoadingSkeleton() {
   );
 }
 
-export function ModelsPage() {
+export default function ModelsPage() {
   const { data, isPending } = useQuery(convexQuery(api.functions.users.currentUser, {}));
   const updateCustomization = useMutation(api.functions.users.updateUserCustomization);
 
@@ -113,9 +113,7 @@ export function ModelsPage() {
     <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-bold">Models</h2>
-        <p className="text-muted-foreground">
-          Choose which models are visible in the model picker.
-        </p>
+        <p className="text-muted-foreground">Choose which models are visible in the model picker.</p>
       </div>
 
       {/* Sticky header with search + save actions */}
@@ -123,13 +121,7 @@ export function ModelsPage() {
         <div className="flex items-end gap-2 border-b pt-2 pb-3">
           <div className="flex flex-1 flex-col gap-2">
             <Label htmlFor="model-search">Search models</Label>
-            <Input
-              id="model-search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by name or provider…"
-              className="bg-input/30 outline-none"
-            />
+            <Input id="model-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or provider…" className="bg-input/30 outline-none" />
           </div>
 
           <div className="flex shrink-0 items-center gap-2 pb-[2px]">
@@ -163,11 +155,7 @@ export function ModelsPage() {
 
                 <div className="flex items-center gap-2">
                   <span className="text-xs">{hidden ? "Hidden" : "Visible"}</span>
-                  <Switch
-                    checked={!hidden}
-                    onCheckedChange={(v) => setHidden(id, !v)}
-                    aria-label={`Toggle visibility for ${d.display.unique ?? d.display.name}`}
-                  />
+                  <Switch checked={!hidden} onCheckedChange={(v) => setHidden(id, !v)} aria-label={`Toggle visibility for ${d.display.unique ?? d.display.name}`} />
                 </div>
               </CardContent>
             </Card>
@@ -177,3 +165,4 @@ export function ModelsPage() {
     </div>
   );
 }
+

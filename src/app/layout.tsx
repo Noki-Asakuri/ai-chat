@@ -1,8 +1,13 @@
 import "@/styles/globals.css";
-import "katex/dist/katex.min.css";
+
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { type Metadata, type Viewport } from "next";
 import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
+
+import { Providers } from "@/components/provider/main-providers";
+import { Toaster } from "@/components/ui/sonner";
 
 import { WebVitals } from "@/lib/axiom/client";
 
@@ -49,7 +54,17 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
       <WebVitals />
 
-      <body className="dark isolate font-sans">{children}</body>
+      <body className="dark isolate font-sans">
+        <Providers>{children}</Providers>
+        <Toaster />
+
+        {process.env.ENV === "production" && (
+          <>
+            <Analytics basePath="/api/vercel" />
+            <SpeedInsights basePath="/api/vercel" />
+          </>
+        )}
+      </body>
     </html>
   );
 }
