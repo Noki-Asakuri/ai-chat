@@ -3,7 +3,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { BrainIcon, CheckIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { useRouter } from "next/navigation";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
@@ -21,7 +21,7 @@ export function AiProfileSelectorButton() {
 
   const chatAIProfile = useChatStore((s) => s.chatConfig.profile);
   const setChatConfig = useChatStore((s) => s.setChatConfig);
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const { data } = useQuery(
     convexQuery(api.functions.aiProfiles.listProfiles, { search, sort: "recently-updated" }),
@@ -84,7 +84,7 @@ export function AiProfileSelectorButton() {
               title="Create AI Profile"
               onMouseDown={async () => {
                 setOpen(false);
-                await navigate("/auth/settings/ai-profiles");
+                router.push("/settings/ai-profiles");
               }}
             >
               <PlusIcon className="size-4" />
