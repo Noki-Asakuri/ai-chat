@@ -56,6 +56,11 @@ const nextConfig: NextConfig = {
         source: "/manifest.json",
         destination: "/manifest.webmanifest",
       },
+      {
+        permanent: true,
+        source: "/settings",
+        destination: "/settings/account",
+      },
     ];
   },
   async headers() {
