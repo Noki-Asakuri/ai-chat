@@ -188,7 +188,7 @@
 .custom-scroll,
 #textarea-chat-input {
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: var(--color-ring) transparent;
 }
 
 .codeblock pre.shiki::-webkit-scrollbar,
@@ -207,14 +207,14 @@
 .codeblock pre.shiki::-webkit-scrollbar-thumb,
 .custom-scroll::-webkit-scrollbar-thumb,
 #textarea-chat-input::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--color-ring);
   border-radius: 0.5rem;
 }
 
 .codeblock pre.shiki::-webkit-scrollbar-thumb:hover,
 .custom-scroll::-webkit-scrollbar-thumb:hover,
 #textarea-chat-input::-webkit-scrollbar-thumb:hover {
-  background: var(--border);
+  background: var(--color-ring);
 }
 
 .appearance-none::-webkit-inner-spin-button,
@@ -228,8 +228,9 @@
   appearance: none;
 }
 
-.message *::selection {
-  @apply bg-accent text-accent-foreground;
+[data-slot="message"] *::selection,
+.codeblock pre.shiki *::selection {
+  @apply bg-accent text-current;
 }
 
 #sidebar-provider[data-disable-blur="true"] .backdrop-blur-md {

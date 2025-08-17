@@ -21,6 +21,7 @@ export function CopyButton({ content, className, ...props }: CopyButtonProps) {
 
   return (
     <ButtonWithTip
+      size="icon"
       variant="ghost"
       className={className}
       onMouseDown={() => copeMessageContent(content)}
