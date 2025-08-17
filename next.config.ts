@@ -2,10 +2,12 @@
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
  * for Docker builds.
  */
-import type { NextConfig } from "next";
 import "./src/env.js";
 
+import type { NextConfig } from "next";
+
 import { withSentryConfig } from "@sentry/nextjs";
+import { withBotId } from "botid/next/config";
 
 function noWrapper(config: NextConfig, ..._args: unknown[]) {
   return config;
@@ -80,8 +82,6 @@ const nextConfig: NextConfig = {
 };
 
 // Injected content via Sentry wizard below
-const withSentry = process.env.NODE_ENV === "production" ? withSentryConfig : noWrapper;
-
 const sentryOptions = {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
@@ -114,4 +114,4 @@ const sentryOptions = {
   automaticVercelMonitors: true,
 };
 
-export default withSentry(nextConfig, sentryOptions);
+export default withSentryConfig(withBotId(nextConfig), sentryOptions);

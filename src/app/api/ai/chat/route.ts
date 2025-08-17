@@ -4,6 +4,7 @@ import { serverConvexClient } from "@/lib/convex/server";
 
 import { auth } from "@clerk/nextjs/server";
 import { waitUntil } from "@vercel/functions";
+import { checkBotId } from "botid/server";
 import dedent from "dedent";
 import { Redis } from "ioredis";
 import { after, NextResponse, type NextRequest } from "next/server";
@@ -29,9 +30,16 @@ const streamContext = createResumableStreamContext({
 });
 
 export const POST = withAxiom(async (req) => {
-  const user = await auth();
+  const verification = await checkBotId();
 
+  if (verification.isBot) {
+    logger.error("[Chat Error]: Access denied!", { verification });
+    return NextResponse.json({ error: { message: "Error: Access denied!" } }, { status: 401 });
+  }
+
+  const user = await auth();
   if (!user.userId) {
+    logger.error("[Chat Error]: Unauthenticated POST request!", { user });
     return NextResponse.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
   }
 
