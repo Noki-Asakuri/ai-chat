@@ -1,5 +1,6 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
+import { Redis } from "ioredis";
 import { z } from "zod/v4";
 
 import { google, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
@@ -7,6 +8,8 @@ import { type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import type { ModelMessage, ToolSet, UserContent } from "ai";
 
 import { AllModelIds, getModelData } from "../chat/models";
+
+import { env } from "@/env";
 
 const inputSchema = z.object({
   messages: z.array(
@@ -102,7 +105,7 @@ export async function getRequestBody(req: Request, userId: string) {
   }
 
   const tools: ToolSet = {};
-  const transformedMessages = transformMessages(messages, userId);
+  const transformedMessages = await Promise.all(transformMessages(messages, userId));
 
   if (config?.webSearch) {
     tools.google_search = google.tools.googleSearch({});
@@ -121,32 +124,50 @@ export async function getRequestBody(req: Request, userId: string) {
   };
 }
 
+const redis = new Redis(env.REDIS_URL);
+
 function transformMessages(messages: z.infer<typeof inputSchema>["messages"], userId: string) {
-  return messages.map((message): ModelMessage => {
+  return messages.map(async (message): Promise<ModelMessage> => {
     if (message.role === "assistant") return { role: "assistant", content: message.content };
 
     const attachmentParts = message.attachments
-      ? message.attachments.map((attachment): Exclude<UserContent[number], string> => {
-          const url = `https://files.chat.asakuri.me/${userId}/${attachment.threadId}/${attachment._id}`;
+      ? message.attachments.map(
+          async (attachment): Promise<Exclude<UserContent[number], string>> => {
+            const url = `https://files.chat.asakuri.me/${userId}/${attachment.threadId}/${attachment._id}`;
 
-          if (attachment.type === "image") {
-            return { type: "image" as const, image: url };
-          }
+            if (attachment.type === "image") {
+              const cacheKey = `attachment:${userId}:${attachment.threadId}:${attachment._id}`;
+              const cache = await redis.get(cacheKey);
 
-          if (attachment.type === "pdf") {
-            return { type: "file" as const, data: url, mediaType: "application/pdf" };
-          }
+              const data = cache
+                ? Buffer.from(cache, "base64")
+                : await fetch(url).then((res) => res.arrayBuffer());
 
-          return { type: "text" as const, text: url };
-        })
+              // Expire after 1h. Data only be ArrayBuffer if we fetched it from Cloudflare.
+              if (data instanceof ArrayBuffer) {
+                await redis.set(cacheKey, Buffer.from(data).toString("base64"), "EX", 60 * 60);
+              }
+
+              return { type: "image" as const, image: data };
+            }
+
+            if (attachment.type === "pdf") {
+              return { type: "file" as const, data: url, mediaType: "application/pdf" };
+            }
+
+            return { type: "text" as const, text: url };
+          },
+        )
       : [];
+
+    const parts = (await Promise.allSettled(attachmentParts))
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => result.value);
 
     return {
       role: "user",
       content:
-        attachmentParts.length === 0
-          ? message.content
-          : [{ type: "text", text: message.content }, ...attachmentParts],
+        parts.length === 0 ? message.content : [{ type: "text", text: message.content }, ...parts],
     };
   });
 }
