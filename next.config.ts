@@ -6,12 +6,8 @@ import "./src/env.js";
 
 import type { NextConfig } from "next";
 
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig, type SentryBuildOptions } from "@sentry/nextjs";
 import { withBotId } from "botid/next/config";
-
-function noWrapper(config: NextConfig, ..._args: unknown[]) {
-  return config;
-}
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
@@ -38,7 +34,7 @@ const nextConfig: NextConfig = {
       beforeFiles: [
         {
           source: "/api/vercel/:path*",
-          destination: `/_vercel/:path*`,
+          destination: "/_vercel/:path*",
         },
         {
           source: "/threads/:path",
@@ -66,8 +62,6 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
-    if (process.env.NODE_ENV !== "production") return [];
-
     return [
       {
         source: "/(.*)",
@@ -82,7 +76,7 @@ const nextConfig: NextConfig = {
 };
 
 // Injected content via Sentry wizard below
-const sentryOptions = {
+const sentryOptions: SentryBuildOptions = {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
