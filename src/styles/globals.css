@@ -244,3 +244,7 @@
 #sidebar-provider[data-disable-blur="true"] .backdrop-blur-md.backdrop-saturate-150 {
   @apply !backdrop-blur-none !backdrop-saturate-100;
 }
+
+.katex-display {
+  @apply block w-full;
+}

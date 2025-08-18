@@ -53,6 +53,7 @@
     "convex": "^1.25.4",
     "convex-helpers": "^0.1.104",
     "dedent": "^1.6.0",
+    "harden-react-markdown": "^1.0.4",
     "ioredis": "^5.7.0",
     "katex": "^0.16.22",
     "lodash.throttle": "^4.1.1",

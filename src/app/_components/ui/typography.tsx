@@ -58,6 +58,19 @@ export function TypographyH4({ className, children, ...props }: React.ComponentP
   );
 }
 
+export function TypographyAnchor({ className, children, ...props }: React.ComponentProps<"a">) {
+  return (
+    <a
+      className={cn("text-primary font-medium underline", className)}
+      rel="noreferrer"
+      target="_blank"
+      {...props}
+    >
+      {children}
+    </a>
+  );
+}
+
 export function TypographyBlockquote({
   className,
   children,
@@ -101,7 +114,7 @@ export function TypographySmall({ children }: React.ComponentProps<"small">) {
 export function TypographyTable({ children }: React.ComponentProps<"table">) {
   return (
     <div className="w-full overflow-y-auto">
-      <table className="!my-0">{children}</table>
+      <table className="border-border !my-0 w-full border-collapse border">{children}</table>
     </div>
   );
 }
