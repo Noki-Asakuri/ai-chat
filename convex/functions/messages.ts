@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel";
 import { mutation, query } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 export const getAllMessagesFromThread = query({
   args: { threadId: v.optional(v.id("threads")) },
@@ -79,6 +80,9 @@ export const addMessagesToThread = mutation({
         updatedAt: Date.now() + 1,
         userId: user.subject,
       });
+      await ctx.runMutation(internal.functions.userStats.incrementThreads, {
+        userId: user.subject,
+      });
     } else if (thread.userId !== user.subject) {
       throw new Error("Not authorized");
     }
@@ -92,6 +96,14 @@ export const addMessagesToThread = mutation({
       });
 
       if (message.role === "assistant") assistantMessageId = data;
+      if (message.role === "user") {
+        await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
+          userId: user.subject,
+          threadId: args.threadId,
+          content: message.content,
+          createdAt: message.createdAt,
+        });
+      }
     }
 
     return assistantMessageId;
@@ -182,6 +194,23 @@ export const updateMessageById = mutation({
       await ctx.db.patch(args.threadId, {
         updatedAt: Date.now(),
         ...(args.updates.status !== undefined ? { status: args.updates.status } : {}),
+      });
+    }
+
+    const becameComplete = message.status !== "complete" && args.updates.status === "complete";
+
+    if (message.role === "assistant" && becameComplete) {
+      const content = args.updates.content ?? message.content ?? "";
+      const modelUniqueId = args.updates.model ?? message.model ?? "";
+      const aiProfileId = args.updates.metadata?.aiProfileId ?? message.metadata?.aiProfileId;
+
+      await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
+        userId: user.subject,
+        threadId: message.threadId,
+        content,
+        modelUniqueId,
+        createdAt: message.createdAt,
+        ...(aiProfileId ? { aiProfileId } : {}),
       });
     }
   },

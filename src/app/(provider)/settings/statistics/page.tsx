@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
@@ -166,7 +167,7 @@ export default function StatisticsPage() {
           </div>
 
           <div className="mt-2 space-y-2">
-            {modelRank.slice(0, 5).map((item) => (
+            {modelRank.slice(0, 5).map((item: { name: string; value: number }) => (
               <ModelRank key={item.name} model={item} assistantMessages={stats.messages.assistant} />
             ))}
           </div>
@@ -180,7 +181,7 @@ export default function StatisticsPage() {
           </div>
 
           <div className="mt-2 flex flex-col gap-2">
-            {threadRank.slice(0, 5).map((item) => (
+            {threadRank.slice(0, 5).map((item: { id: Id<"threads">; name: string; value: number }) => (
               <Link href={`/threads/${toUUID(item.id)}`} key={item.id}>
                 <div className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2">
                   <p className="truncate">{item.name}</p>
@@ -200,13 +201,13 @@ export default function StatisticsPage() {
         </div>
 
         <div className="mt-2 flex flex-col gap-2">
-          {aiProfileRank?.slice(0, 5)?.map((item) => (
+          {aiProfileRank?.slice(0, 5)?.map((item: { name: string; value: number }) => (
             <div key={item.name} className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2">
               <p className="truncate">{item.name}</p>
               <span>{item.value}</span>
             </div>
           ))}
-
+ 
           {(!aiProfileRank || aiProfileRank.length === 0) && (
             <div className="text-muted-foreground text-sm">No AI profile usage yet.</div>
           )}

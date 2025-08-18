@@ -144,4 +144,24 @@ export default defineSchema({
     base: v.number(),
     resetAt: v.number(),
   }).index("by_userId", ["userId"]),
+
+  user_stats: defineTable({
+    userId: v.string(),
+
+    stats: v.object({
+      threads: v.number(),
+      words: v.number(),
+      messages: v.object({
+        assistant: v.number(),
+        user: v.number(),
+      }),
+    }),
+
+    modelCounts: v.record(v.string(), v.number()),
+    threadCounts: v.record(v.id("threads"), v.number()),
+    activityCounts: v.record(v.string(), v.number()),
+    aiProfileCounts: v.record(v.string(), v.number()),
+
+    lastUpdatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
 });

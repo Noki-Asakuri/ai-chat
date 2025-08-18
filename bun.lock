@@ -17,6 +17,7 @@
         "@clerk/react-router": "^1.9.1",
         "@clerk/themes": "^2.4.10",
         "@convex-dev/crons": "^0.1.9",
+        "@convex-dev/migrations": "^0.2.9",
         "@convex-dev/polar": "^0.6.3",
         "@convex-dev/r2": "^0.7.1",
         "@convex-dev/react-query": "^0.0.0-alpha.11",
@@ -283,6 +284,8 @@
     "@convex-dev/crons": ["@convex-dev/crons@0.1.9", "", { "dependencies": { "cron-parser": "^4.9.0" }, "peerDependencies": { "convex": "~1.16.5 || >=1.17.0 <1.35.0" } }, "sha512-TV7hFli9iDekLQt95HgL1YfwdjG7TnVR2E+6meWo0VztdXqYN14aqwvEOcaadtDhFfedGx32xHZBFzvfgQZkYQ=="],
 
     "@convex-dev/eslint-plugin": ["@convex-dev/eslint-plugin@0.0.1-alpha.4", "", { "dependencies": { "@typescript-eslint/utils": "~8.4.0" } }, "sha512-no/F96kJOgqK3g5zVkJrXYhw+QhiqVv+l7u/ID17AisI+I/Dr43MLij780tE0UbXUIwTAe5cRa9VQ0AEZQiDYQ=="],
+
+    "@convex-dev/migrations": ["@convex-dev/migrations@0.2.9", "", { "peerDependencies": { "convex": "~1.16.5 || >=1.17.0 <1.35.0" } }, "sha512-HfIv6/F8VbtJ1NVT2bQRTumJGdaqROl/+s5IOnubHm7vvgie0RjcfO6YiB7JoLFWwS19vjDQDKl63ihoA08zOA=="],
 
     "@convex-dev/polar": ["@convex-dev/polar@0.6.3", "", { "dependencies": { "buffer": "^6.0.3", "convex-helpers": "^0.1.63", "remeda": "^2.20.2", "standardwebhooks": "^1.0.0" }, "peerDependencies": { "@polar-sh/checkout": ">=0.1.10", "@polar-sh/sdk": ">=0.32.11", "convex": "^1.25.4", "react": "^18 || ^19", "react-dom": "^18 || ^19" } }, "sha512-9Yhc1U/A/mKazs6XZEzbfVEte5RAHN+OWd82MzoKE+GQX+344Lk6n5xMyph/4LU6HswNjXZbI8zmZ1hNeI0C3g=="],
 
