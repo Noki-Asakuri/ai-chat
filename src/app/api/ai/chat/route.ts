@@ -273,12 +273,14 @@ export const POST = withAxiom(async (req) => {
             metadata.totalTokens = stream.totalUsage.outputTokens ?? 0;
             metadata.thinkingTokens = stream.totalUsage.reasoningTokens ?? 0;
 
-            if (
-              model.id.startsWith("openai/gpt-5") &&
-              metadata.totalTokens > metadata.thinkingTokens
-            ) {
+            if (model.id.startsWith("openai/gpt-5")) {
               // OpenAI GPT 5 output token also includes the reasoning tokens
-              metadata.totalTokens = metadata.totalTokens - metadata.thinkingTokens;
+              // In case AI SDK change and remove reasoning tokens from output
+              // Then we revert back to original total tokens
+              metadata.totalTokens = Math.min(
+                metadata.totalTokens - metadata.thinkingTokens,
+                metadata.totalTokens,
+              );
             }
             break;
         }
