@@ -1,5 +1,6 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
+import { waitUntil } from "@vercel/functions";
 import { Redis } from "ioredis";
 import { z } from "zod/v4";
 
@@ -137,18 +138,24 @@ function transformMessages(messages: z.infer<typeof inputSchema>["messages"], us
 
             if (attachment.type === "image") {
               const cacheKey = `attachment:${userId}:${attachment.threadId}:${attachment._id}`;
-              const cache = await redis.get(cacheKey);
 
-              const data = cache
-                ? Buffer.from(cache, "base64")
-                : await fetch(url).then((res) => res.arrayBuffer());
-
-              // Expire after 1h. Data only be ArrayBuffer if we fetched it from Cloudflare.
-              if (data instanceof ArrayBuffer) {
-                await redis.set(cacheKey, Buffer.from(data).toString("base64"), "EX", 60 * 60);
+              const cachedDataUrl = await redis.get(cacheKey);
+              if (cachedDataUrl) {
+                return { type: "image" as const, image: cachedDataUrl };
               }
 
-              return { type: "image" as const, image: data };
+              const res = await fetch(url);
+              const contentTypeHeader = res.headers.get("content-type");
+              const mediaType = contentTypeHeader?.split(";")[0] ?? "image/png";
+
+              const arrayBuffer = await res.arrayBuffer();
+              const base64 = Buffer.from(arrayBuffer).toString("base64");
+              const dataUrl = `data:${mediaType};base64,${base64}`;
+
+              // Expire after 1h, single key, not await so doesn't block response
+              waitUntil(redis.set(cacheKey, dataUrl, "EX", 60 * 60));
+
+              return { type: "image" as const, image: dataUrl };
             }
 
             if (attachment.type === "pdf") {
