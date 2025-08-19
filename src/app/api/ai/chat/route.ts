@@ -272,6 +272,14 @@ export const POST = withAxiom(async (req) => {
           case "finish":
             metadata.totalTokens = stream.totalUsage.outputTokens ?? 0;
             metadata.thinkingTokens = stream.totalUsage.reasoningTokens ?? 0;
+
+            if (
+              model.id.startsWith("openai/gpt-5") &&
+              metadata.totalTokens > metadata.thinkingTokens
+            ) {
+              // OpenAI GPT 5 output token also includes the reasoning tokens
+              metadata.totalTokens = metadata.totalTokens - metadata.thinkingTokens;
+            }
             break;
         }
       }
@@ -297,12 +305,13 @@ export const POST = withAxiom(async (req) => {
       });
 
       if (updates.content?.length === 0) {
-        updates.content = "Upstream returned empty content. Please try again.";
+        updates.content = `Upstream returned empty content. Please try again. Reason: ${metadata.finishReason}`;
         logger.error("[Chat Error]: Upstream returned empty content!", {
           userId: user.userId,
           threadId,
           assistantMessageId,
           model: model.uniqueId,
+          metadata,
         });
       }
 

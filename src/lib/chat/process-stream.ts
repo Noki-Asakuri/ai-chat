@@ -1,5 +1,7 @@
 import type { UIMessageChunk } from "ai";
 
+import { tryCatch } from "../utils";
+
 export type StreamDataHandler = (message: UIMessageChunk) => void | Promise<void>;
 
 export function tryParseJson<T>(jsonString: string, context: string): T {
@@ -25,14 +27,17 @@ export async function processChatStream({
   const response = await fetch;
 
   if (!response.ok) {
-    const textResponse = response.clone();
+    let error: string;
+    const textRes = response.clone();
 
-    const error = await response
-      .json()
-      .then((response: { error: { message: string } }) => response.error.message)
-      .catch(() =>
-        textResponse.text().then((text) => text || "Unknown error. Failed to get error message."),
-      );
+    const [jsonResult] = await tryCatch(textRes.json() as Promise<{ error: { message: string } }>);
+
+    if (jsonResult) {
+      error = jsonResult.error.message;
+    } else {
+      const text = await textRes.text();
+      error = text || "Unknown error. Failed to get error message.";
+    }
 
     throw new Error(`Failed to fetch: ${response.status} - ${error}`);
   }

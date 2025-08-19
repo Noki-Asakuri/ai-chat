@@ -98,9 +98,11 @@ export type GoResult<T, E = Error> = [T, null] | [null, E];
  * @param {() => Promise<T>} promiseFn The function that returns the Promise to be executed.
  * @returns {Promise<GoResult<T>>} A Promise that resolves to a tuple: `[data, null]` on success, or `[null, error]` on failure.
  */
-export async function tryCatch<T>(promiseFn: () => Promise<T>): Promise<GoResult<T>> {
+export async function tryCatch<T>(
+  promiseFn: (() => Promise<T>) | Promise<T>,
+): Promise<GoResult<T>> {
   try {
-    const data = await promiseFn();
+    const data = await (typeof promiseFn === "function" ? promiseFn() : promiseFn);
     return [data, null];
   } catch (error) {
     // Ensure the error is a proper Error object
