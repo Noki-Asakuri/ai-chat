@@ -13,9 +13,9 @@ import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { createUIMessageStream, generateId, smoothStream, streamText, type AISDKError } from "ai";
 
 import { logger, withAxiom } from "@/lib/axiom/server";
-import { getRequestBody } from "@/lib/server/get-request-body";
 import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
+import { validateRequestBody } from "@/lib/server/validate-request-body";
 import { fixMarkdownCodeBlocks, tryCatch } from "@/lib/utils";
 
 import { env } from "@/env";
@@ -53,7 +53,7 @@ export const POST = withAxiom(async (req) => {
   }
   serverConvexClient.setAuth(authToken);
 
-  const [data, error] = await tryCatch(() => getRequestBody(req, user.userId));
+  const [data, error] = await tryCatch(() => validateRequestBody(req, user.userId));
   if (error) {
     logger.error("[Chat Error]: Failed to parse request body!", { error, userId: user.userId });
     return NextResponse.json({ error: { message: error.message } }, { status: 400 });

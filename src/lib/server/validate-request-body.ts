@@ -11,6 +11,7 @@ import type { ModelMessage, ToolSet, UserContent } from "ai";
 import { AllModelIds, getModelData } from "../chat/models";
 
 import { env } from "@/env";
+import { logger } from "../axiom/server";
 
 const inputSchema = z.object({
   messages: z.array(
@@ -74,7 +75,7 @@ const safetySettings = [
   { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_SEXUALLY_EXPLICIT" },
 ];
 
-export async function getRequestBody(req: Request, userId: string) {
+export async function validateRequestBody(req: Request, userId: string) {
   const { success, data, error } = inputSchema.safeParse(await req.json());
   if (!success) {
     throw new Error(z.prettifyError(error));
@@ -140,6 +141,12 @@ function transformMessages(messages: z.infer<typeof inputSchema>["messages"], us
               const cacheKey = `attachment:${userId}:${attachment.threadId}:${attachment._id}`;
 
               const cachedDataUrl = await redis.get(cacheKey);
+              logger.info(`[Chat Cache] ${url}`, {
+                url,
+                status: cachedDataUrl ? "HIT" : "MISS",
+                cacheKey,
+              });
+
               if (cachedDataUrl) {
                 return { type: "image" as const, image: cachedDataUrl };
               }

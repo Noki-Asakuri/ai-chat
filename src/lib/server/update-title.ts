@@ -6,6 +6,7 @@ import { generateText } from "ai";
 
 import { serverConvexClient } from "../convex/server";
 import { registry } from "./model-registry";
+import dedent from "dedent";
 
 export async function updateTitle(
   messages: { role: string; content: string }[],
@@ -27,9 +28,15 @@ export async function updateTitle(
       },
       {
         role: "user",
-        content: `User: ${messages[0].content}
+        content: dedent`
+				User: ${messages[0].content}
 
-Please summarize the above conversation into a title of 10 words or less, without punctuation, prefix or any special characters and must be in English.`,
+				Please summarize the above conversation into a title, following the following rules.
+				- The title must be 10 words or less.
+				- The title must be without punctuation, prefix or any special characters.
+				- The title must be short and descriptive.
+				- The title must be in the same language as the user's text.
+				`.trim(),
       },
       {
         role: "assistant",
