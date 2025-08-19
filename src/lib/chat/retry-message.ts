@@ -51,7 +51,7 @@ export async function retryMessage(
 
   const config = {
     ...state.chatConfig,
-    model: options?.modelId ?? state.chatConfig.model,
+    model: options?.modelId ?? state.messages.at(-1)?.model ?? state.chatConfig.model,
   };
 
   const body: ChatRequest = {
@@ -59,10 +59,6 @@ export async function retryMessage(
     assistantMessageId: assistantMessage._id,
     messages: allMessages,
     config,
-    profile: {
-      id: state.chatConfig.profile.id as Id<"ai_profiles"> | null,
-      systemPrompt: state.chatConfig.profile.systemPrompt,
-    },
   };
 
   await sendChatRequest(

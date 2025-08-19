@@ -2,7 +2,7 @@ import { BrainIcon, ChevronRightIcon, EyeIcon, RefreshCcwIcon, RssIcon } from "l
 import * as React from "react";
 
 import { CapabilityIcon } from "@/components/capability-icon";
-import { Button, buttonVariants, ButtonWithTip } from "@/components/ui/button";
+import { type Button, buttonVariants, ButtonWithTip } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { Menu, MenuArrow } from "@/components/ui/menu";
 import { Separator } from "@/components/ui/separator";
@@ -49,6 +49,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
   // Left click: immediately retry with the same model.
   function handleMouseDown(event: React.MouseEvent<HTMLButtonElement>) {
     if (message.status === "pending") return;
+
     // 0 = primary/left button
     if (event.button === 0) {
       event.preventDefault();

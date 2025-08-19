@@ -20,6 +20,7 @@ export function MessageEdit({ id, content, index }: MessageEditProps) {
   return (
     <Textarea
       rows={3}
+      id="textarea-user-message-edit"
       name="user-input"
       defaultValue={content}
       onChange={(event) => setEditMessage({ _id: id, content: event.target.value })}

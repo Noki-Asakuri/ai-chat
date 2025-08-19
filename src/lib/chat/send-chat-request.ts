@@ -216,10 +216,6 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     messages: allMessages,
     config: state.chatConfig,
     assistantMessageId: assistantMessageId!,
-    profile: {
-      id: state.chatConfig.profile.id as Id<"ai_profiles"> | null,
-      systemPrompt: state.chatConfig.profile.systemPrompt,
-    },
   };
 
   await sendChatRequest(
