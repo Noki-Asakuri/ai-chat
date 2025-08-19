@@ -46,7 +46,7 @@ const inputSchema = z.object({
       temperature: z.number().min(0).max(1),
       topP: z.number().min(0).max(1),
       topK: z.number().min(1).max(100),
-      maxTokens: z.number().min(1024).max(65_536),
+      maxTokens: z.number().min(1024).max(128_000),
       presencePenalty: z.number().min(0).max(1),
       frequencyPenalty: z.number().min(0).max(1),
 
