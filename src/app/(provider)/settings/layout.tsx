@@ -9,7 +9,7 @@ import { UserNavbar } from "@/components/user/navbar";
 import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import { TopSettingHeaders } from "@/components/settings/top-setting-headers";
 
-export default function AuthLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function AuthLayout({ children }: LayoutProps<"/settings">) {
   const { isAuthenticated, isLoading } = useConvexAuth();
 
   if (isLoading) return <LoadingPage />;

@@ -43,7 +43,7 @@ const codeFont = JetBrains_Mono({
   variable: "--font-codeblock",
 });
 
-export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${mainFont.variable} ${codeFont.variable} antialiased`}>
       <head>
