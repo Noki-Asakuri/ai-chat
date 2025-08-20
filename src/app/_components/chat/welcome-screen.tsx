@@ -2,7 +2,7 @@ import { useUser } from "@clerk/react-router";
 import { BookOpenIcon, CodeIcon, CompassIcon, SparklesIcon } from "lucide-react";
 import { useParams } from "react-router";
 
-import { Tab, Tabs, TabsList, TabsPanel } from "./ui/tabs";
+import { Tab, Tabs, TabsList, TabsPanel } from "../ui/tabs";
 
 import { useChatStore } from "@/lib/chat/store";
 

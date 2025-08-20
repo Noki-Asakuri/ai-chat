@@ -7,10 +7,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useParams } from "react-router";
 
-import { ChatTextarea } from "@/components/chat/chat-textarea";
+import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
+import { WelcomeScreen } from "@/components/chat/welcome-screen";
 import { MessageHistory } from "@/components/message/message-history";
 import { useSidebar } from "@/components/ui/sidebar";
-import { WelcomeScreen } from "@/components/welcome-screen";
 
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore } from "@/lib/chat/store";

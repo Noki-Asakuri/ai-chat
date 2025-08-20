@@ -6,12 +6,12 @@ import { api } from "@/convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
-import { ScrollButton } from "../scroll-button";
+import { ScrollButton } from "./scroll-group-button";
 import { Textarea } from "../ui/textarea";
 
-import { ChatActionButtons } from "./chat-action-buttons";
-import { ChatAttachmentDisplay } from "./chat-attachment-display";
-import { ChatSendButton } from "./chat-send-button";
+import { ChatActionButtons } from "./action-buttons";
+import { ChatAttachmentDisplay } from "./attachment-display";
+import { ChatSendButton } from "./send-button";
 
 import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";

@@ -1,4 +1,4 @@
-import { MemoizedMarkdown } from "../markdown";
+import { MemoizedMarkdown } from "../message-markdown";
 
 import { MessageAttachmentDisplay } from "./message-attachment-display";
 

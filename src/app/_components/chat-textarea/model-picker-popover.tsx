@@ -5,18 +5,18 @@ import { useQuery } from "@tanstack/react-query";
 import { BrainIcon, ChevronDownIcon, EyeIcon, RssIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { buttonVariants } from "./ui/button";
-import { Icons } from "./ui/icons";
-import { Input } from "./ui/input";
-import { Menu, MenuArrow } from "./ui/menu";
+import { buttonVariants } from "../ui/button";
+import { Icons } from "../ui/icons";
+import { Input } from "../ui/input";
+import { Menu, MenuArrow } from "../ui/menu";
 
-import { CapabilityIcon } from "./capability-icon";
+import { CapabilityIcon } from "../capability-icon";
 
 import { AllModelIds, getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";
 
-export function ModelPicker() {
+export function ChatModelPicker() {
   const [modelSearchQuery, setModelSearchQuery] = useState("");
 
   const { model } = useChatStore((state) => state.chatConfig);

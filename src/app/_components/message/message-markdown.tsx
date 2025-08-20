@@ -15,7 +15,7 @@ import remarkMath from "remark-math";
 
 import { cn } from "@/lib/utils";
 
-import { ShikiCodeBlock } from "./ui/code-block";
+import { ShikiCodeBlock } from "../ui/code-block";
 import {
   TypographyBlockquote,
   TypographyH1,
@@ -33,7 +33,7 @@ import {
   TypographyAnchor,
   TypographyOrderedList,
   TypographyUnorderedList,
-} from "./ui/typography";
+} from "../ui/typography";
 
 function parseMarkdownIntoBlocks(markdown: string): string[] {
   const tokens = marked.lexer(markdown);
@@ -299,9 +299,9 @@ function escapeInvalidMath(text: string): string {
 
   return out;
 }
- 
+
 const HardenedMarkdown = hardenReactMarkdown(ReactMarkdown);
- 
+
 function CodeBlock({
   className,
   children,
@@ -326,7 +326,7 @@ function CodeBlock({
 const MemoizedMarkdownBlock = memo(
   ({ content }: { content: string }) => {
     const parsedContent = escapeInvalidMath(parseIncompleteMarkdown(content));
- 
+
     return (
       <HardenedMarkdown
         allowedImagePrefixes={["*"]}

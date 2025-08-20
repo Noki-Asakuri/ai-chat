@@ -1,7 +1,7 @@
 import { Collapsible } from "@base-ui-components/react/collapsible";
 import { Loader2Icon, PlusIcon, SparkleIcon } from "lucide-react";
 
-import { MemoizedMarkdown } from "../markdown";
+import { MemoizedMarkdown } from "../message-markdown";
 
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
