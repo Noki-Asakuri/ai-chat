@@ -1,6 +1,8 @@
 "use client";
 
-import { EllipsisIcon, ExpandIcon, ShrinkIcon, TextIcon, WrapTextIcon } from "lucide-react";
+import { transformerColorizedBrackets } from "@shikijs/colorized-brackets";
+import { EllipsisIcon, ShrinkIcon, TextIcon, WrapTextIcon } from "lucide-react";
+import { Fragment } from "react";
 import { useShikiHighlighter } from "react-shiki";
 
 import { CopyButton } from "../copy-button";
@@ -12,91 +14,35 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "./sheet";
 import { cn } from "@/lib/utils";
 
 export type CodeBlockHeaderProps = {
-  language?: string;
-  showExpand: boolean;
-  isExpanded: boolean;
-  onExpand: () => void;
-  wrapline: boolean;
-  onToggleWrapline: () => void;
   code: string;
 };
 
-export function CodeBlockHeader({
-  language,
-  showExpand,
-  isExpanded,
-  onExpand,
-  wrapline,
-  onToggleWrapline,
-  code,
-}: CodeBlockHeaderProps) {
+export function CodeBlockHeader({ code }: CodeBlockHeaderProps) {
   return (
-    <div className="bg-muted/70 flex w-full items-center justify-between gap-2 rounded-md border-b px-2 py-1.5 backdrop-blur-md transition-[border-color] duration-300">
-      {showExpand ? (
-        <ButtonWithTip
-          size="icon"
-          title="Open Full Code"
-          className="hover:bg-accent/50 pointer-events-auto flex items-center gap-2 bg-transparent text-white"
-          onMouseDown={onExpand}
-        >
-          {isExpanded ? <ShrinkIcon className="size-5" /> : <ExpandIcon className="size-5" />}
-        </ButtonWithTip>
-      ) : (
-        <span className="size-10" />
-      )}
-
-      <span className="font-semibold select-none">{language}</span>
-
-      <div className="space-x-2">
-        <ButtonWithTip
-          title="Wrap Line"
-          side="top"
-          size="icon"
-          variant="ghost"
-          onMouseDown={onToggleWrapline}
-        >
-          {wrapline ? <TextIcon className="size-5" /> : <WrapTextIcon className="size-5" />}
-        </ButtonWithTip>
-
-        <CopyButton content={code} />
-      </div>
+    <div className="absolute top-2 right-2">
+      <CopyButton content={code} className="size-8" />
     </div>
   );
 }
 
 export type CodeInlinePaneProps = {
   wrapline: boolean;
-  totalLines: number;
-  previewText: string;
-  fullText: string;
+  code: string;
   langKey?: string;
 };
 
-export function CodeInlinePane({
-  wrapline,
-  totalLines,
-  previewText,
-  fullText,
-  langKey,
-}: CodeInlinePaneProps) {
-  const showFullInline = totalLines <= 10;
-
-  const highlighted = useShikiHighlighter(
-    showFullInline ? fullText : previewText,
-    langKey,
-    "one-dark-pro",
-    { delay: 50 },
-  );
+export function CodeInlinePane({ wrapline, code, langKey }: CodeInlinePaneProps) {
+  const highlighted = useShikiHighlighter(code, langKey, "one-dark-pro", { delay: 50 });
 
   return (
     <div
       style={{ scrollbarGutter: "stable both-edges" }}
       className={cn(
-        "custom-scroll codeblock w-full overflow-x-auto bg-[#282c34] p-3 font-mono text-sm *:!bg-transparent",
+        "custom-scroll codeblock w-full overflow-x-auto bg-[#282c34] p-3 pr-10 font-mono text-sm *:!bg-transparent",
         { "*:text-wrap *:wrap-anywhere": wrapline },
       )}
     >
-      {highlighted ?? <pre>{showFullInline ? fullText : previewText}</pre>}
+      {highlighted ?? <pre>{code}</pre>}
     </div>
   );
 }
@@ -144,11 +90,6 @@ export function FullCodeOverlay({
   normalizedFull,
   langKey,
 }: FullCodeOverlayProps) {
-  const highlightedFull = useShikiHighlighter(normalizedFull, langKey, "one-dark-pro", {
-    delay: 50,
-    showLineNumbers: true,
-  });
-
   if (isMobile) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -161,42 +102,15 @@ export function FullCodeOverlay({
             Full source code block preview and copy actions
           </DialogDescription>
 
-          <div className="bg-muted/70 flex w-full items-center justify-between gap-2 border-b px-3 py-2">
-            <span className="font-semibold select-none">{language}</span>
-            <div className="space-x-2">
-              <ButtonWithTip
-                title="Wrap Line"
-                side="top"
-                variant="ghost"
-                size="icon"
-                onMouseDown={onToggleWrapline}
-              >
-                {wrapline ? <TextIcon className="size-5" /> : <WrapTextIcon className="size-5" />}
-              </ButtonWithTip>
-
-              <CopyButton content={code} />
-
-              <ButtonWithTip
-                title="Close"
-                side="top"
-                variant="ghost"
-                size="icon"
-                onMouseDown={() => onOpenChange(false)}
-              >
-                <ShrinkIcon className="size-5" />
-              </ButtonWithTip>
-            </div>
-          </div>
-
-          <div
-            style={{ scrollbarGutter: "stable both-edges" }}
-            className={cn(
-              "custom-scroll codeblock flex-1 overflow-auto bg-[#282c34] p-3 font-mono text-sm *:!bg-transparent",
-              { "*:text-wrap *:wrap-anywhere": wrapline },
-            )}
-          >
-            {highlightedFull ?? <pre>{normalizedFull}</pre>}
-          </div>
+          <CodeBlockRender
+            language={language}
+            wrapline={wrapline}
+            onToggleWrapline={onToggleWrapline}
+            code={code}
+            normalizedFull={normalizedFull}
+            langKey={langKey}
+            onOpenChange={onOpenChange}
+          />
         </DialogContent>
       </Dialog>
     );
@@ -214,41 +128,72 @@ export function FullCodeOverlay({
           Full source code block preview and copy actions
         </SheetDescription>
 
-        <div className="bg-muted/70 flex w-full items-center justify-between gap-2 border-b px-3 py-2">
-          <span className="font-semibold select-none">{language}</span>
-          <div className="space-x-2">
-            <ButtonWithTip
-              title="Wrap Line"
-              side="top"
-              variant="ghost"
-              size="icon"
-              onMouseDown={onToggleWrapline}
-            >
-              {wrapline ? <TextIcon className="size-5" /> : <WrapTextIcon className="size-5" />}
-            </ButtonWithTip>
-            <CopyButton content={code} />
-            <ButtonWithTip
-              title="Close"
-              side="top"
-              variant="ghost"
-              size="icon"
-              onMouseDown={() => onOpenChange(false)}
-            >
-              <ShrinkIcon className="size-5" />
-            </ButtonWithTip>
-          </div>
-        </div>
-
-        <div
-          style={{ scrollbarGutter: "stable both-edges" }}
-          className={cn(
-            "custom-scroll codeblock h-[calc(100vh-48px)] overflow-auto bg-[#282c34] p-3 font-mono text-sm *:!bg-transparent",
-            { "*:text-wrap *:wrap-anywhere": wrapline },
-          )}
-        >
-          {highlightedFull ?? <pre>{normalizedFull}</pre>}
-        </div>
+        <CodeBlockRender
+          language={language}
+          wrapline={wrapline}
+          onToggleWrapline={onToggleWrapline}
+          code={code}
+          normalizedFull={normalizedFull}
+          langKey={langKey}
+          onOpenChange={onOpenChange}
+        />
       </SheetContent>
     </Sheet>
+  );
+}
+
+type CodeBlockRenderProps = {
+  language?: string;
+  wrapline: boolean;
+  onToggleWrapline: () => void;
+  code: string;
+  normalizedFull: string;
+  langKey?: string;
+  onOpenChange: (v: boolean) => void;
+};
+
+function CodeBlockRender(props: CodeBlockRenderProps) {
+  const highlightedFull = useShikiHighlighter(props.normalizedFull, props.langKey, "one-dark-pro", {
+    transformers: [transformerColorizedBrackets()],
+  });
+
+  return (
+    <Fragment>
+      <div className="bg-muted/70 flex w-full items-center justify-between gap-2 border-b px-3 py-2">
+        <span className="font-semibold capitalize">{props.language}</span>
+
+        <div className="space-x-2">
+          <ButtonWithTip
+            title="Wrap Line"
+            side="top"
+            variant="ghost"
+            className="size-8"
+            onMouseDown={props.onToggleWrapline}
+          >
+            {props.wrapline ? <TextIcon className="size-4" /> : <WrapTextIcon className="size-4" />}
+          </ButtonWithTip>
+
+          <CopyButton content={props.code} className="size-8" />
+
+          <ButtonWithTip
+            title="Close"
+            side="top"
+            variant="ghost"
+            className="size-8"
+            onMouseDown={() => props.onOpenChange(false)}
+          >
+            <ShrinkIcon className="size-4" />
+          </ButtonWithTip>
+        </div>
+      </div>
+
+      <div
+        data-slot="codeblock"
+        data-should-wrap={props.wrapline}
+        className="custom-scroll codeblock overflow-auto font-mono text-sm"
+      >
+        {highlightedFull ?? <pre>{props.normalizedFull}</pre>}
+      </div>
+    </Fragment>
   );
 }

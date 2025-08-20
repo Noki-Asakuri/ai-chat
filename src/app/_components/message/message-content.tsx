@@ -1,5 +1,4 @@
-import { MemoizedMarkdown } from "../message-markdown";
-
+import { MemoizedMarkdown } from "./message-markdown";
 import { MessageAttachmentDisplay } from "./message-attachment-display";
 
 import type { ChatMessage } from "@/lib/types";

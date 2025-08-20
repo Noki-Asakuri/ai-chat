@@ -50,26 +50,11 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
   const langKey = language === "assembly" ? "asm" : language;
 
   return (
-    <div className="codeblock overflow-hidden rounded-md border">
-      <CodeBlockHeader
-        language={language}
-        showExpand={totalLines > 10}
-        isExpanded={open}
-        onExpand={() => setOpen(true)}
-        wrapline={wrapline}
-        onToggleWrapline={toggleWrapline}
-        code={code}
-      />
+    <div className="codeblock relative overflow-hidden rounded-md border">
+      <CodeBlockHeader code={code} />
 
       <div className="flex flex-col justify-end overflow-hidden text-sm">
-        <CodeInlinePane
-          wrapline={wrapline}
-          totalLines={totalLines}
-          previewText={previewText}
-          fullText={normalizedFull}
-          langKey={langKey}
-        />
-
+        <CodeInlinePane wrapline={wrapline} code={previewText} langKey={langKey} />
         <ExpandFooter totalLines={totalLines} onExpand={() => setOpen(true)} />
       </div>
 

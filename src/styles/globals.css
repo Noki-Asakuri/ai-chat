@@ -233,6 +233,19 @@
   @apply bg-accent text-current;
 }
 
+div[data-slot="codeblock"] {
+  pre.shiki {
+    @apply pointer-events-auto h-max w-max min-w-full p-3 pr-8;
+    scrollbar-gutter: "stable both-edges";
+  }
+
+  &[data-should-wrap="true"] {
+    pre.shiki {
+      @apply w-full text-wrap wrap-anywhere break-all whitespace-break-spaces;
+    }
+  }
+}
+
 #sidebar-provider[data-disable-blur="true"] .backdrop-blur-md {
   @apply !backdrop-blur-none;
 }

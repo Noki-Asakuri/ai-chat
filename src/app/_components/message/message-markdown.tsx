@@ -73,13 +73,12 @@ function parseIncompleteMarkdown(text: string): string {
     }
   }
 
-  // Handle incomplete italic formatting (__)
+  // Handle incomplete italic formatting (__) — ignore underscores inside fenced code blocks (```...```)
   const italicPattern = /(__)([^_]*?)$/;
   const italicMatch = result.match(italicPattern);
   if (italicMatch) {
-    // Count the number of __ in the entire string
-    const underscorePairs = (result.match(/__/g) || []).length;
-    // If odd number of __, we have an incomplete italic - complete it
+    const outside = stripFencedCode(result);
+    const underscorePairs = (outside.match(/__/g) || []).length;
     if (underscorePairs % 2 === 1) {
       result = `${result}__`;
     }
@@ -89,12 +88,14 @@ function parseIncompleteMarkdown(text: string): string {
   function stripFencedCode(input: string): string {
     let out = "";
     let i = 0;
+
     while (i < input.length) {
       const open = input.indexOf("```", i);
       if (open === -1) {
         out += input.slice(i);
         break;
       }
+
       // append text before the fence
       out += input.slice(i, open);
       const close = input.indexOf("```", open + 3);
@@ -120,21 +121,21 @@ function parseIncompleteMarkdown(text: string): string {
       }
       return acc;
     }, 0);
+
     if (singleAsterisks % 2 === 1) {
       result = `${result}*`;
     }
   }
 
-  // Handle incomplete single underscore italic (_)
+  // Handle incomplete single underscore italic (_) — ignore underscores inside fenced code blocks (```...```)
   const singleUnderscorePattern = /(_)([^_]*?)$/;
   const singleUnderscoreMatch = result.match(singleUnderscorePattern);
   if (singleUnderscoreMatch) {
-    // Count single underscores that aren't part of __
-    const singleUnderscores = result.split("").reduce((acc, char, index) => {
+    const outside = stripFencedCode(result);
+    const singleUnderscores = outside.split("").reduce((acc, char, index) => {
       if (char === "_") {
-        // Check if it's part of a __ pair
-        const prevChar = result[index - 1];
-        const nextChar = result[index + 1];
+        const prevChar = outside[index - 1];
+        const nextChar = outside[index + 1];
         if (prevChar !== "_" && nextChar !== "_") {
           return acc + 1;
         }
@@ -142,7 +143,6 @@ function parseIncompleteMarkdown(text: string): string {
       return acc;
     }, 0);
 
-    // If odd number of single _, we have an incomplete italic - complete it
     if (singleUnderscores % 2 === 1) {
       result = `${result}_`;
     }

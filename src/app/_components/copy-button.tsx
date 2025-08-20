@@ -21,7 +21,6 @@ export function CopyButton({ content, className, ...props }: CopyButtonProps) {
 
   return (
     <ButtonWithTip
-      size="icon"
       variant="ghost"
       className={className}
       onMouseDown={() => copeMessageContent(content)}
@@ -29,7 +28,7 @@ export function CopyButton({ content, className, ...props }: CopyButtonProps) {
       disabled={pending}
       {...props}
     >
-      {pending ? <CopyCheckIcon className="size-5" /> : <CopyIcon className="size-5" />}
+      {pending ? <CopyCheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
     </ButtonWithTip>
   );
 }
