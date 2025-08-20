@@ -207,6 +207,7 @@ function CodeBlockRender(props: CodeBlockRenderProps) {
         data-slot="codeblock"
         data-should-wrap={props.wrapline}
         className="custom-scroll codeblock overflow-auto font-mono text-sm"
+        style={{ minHeight: "calc(100% - 49px)" }}
       >
         {highlightedFull ?? <pre>{props.normalizedFull}</pre>}
       </div>

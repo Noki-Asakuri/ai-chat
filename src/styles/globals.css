@@ -235,7 +235,7 @@
 
 div[data-slot="codeblock"] {
   pre.shiki {
-    @apply pointer-events-auto h-max w-max min-w-full p-3 pr-8;
+    @apply pointer-events-auto h-max min-h-full w-max min-w-full p-3 pr-8;
     scrollbar-gutter: "stable both-edges";
   }
 
