@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { ArrowLeftIcon, SunIcon, LogOutIcon } from "lucide-react";
+import { ArrowLeftIcon, LogOutIcon, SunIcon } from "lucide-react";
 
 import Link from "next/link";
 
@@ -11,10 +11,10 @@ export function TopSettingHeaders() {
   const auth = useAuth();
 
   return (
-    <header>
-      <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-4">
+    <header className="border-b">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
         <Button variant="ghost" asChild>
-          <Link href="/">
+          <Link href={window.localStorage.getItem("last-thread-ids") ?? "/"}>
             <ArrowLeftIcon />
             Back to Chat
           </Link>

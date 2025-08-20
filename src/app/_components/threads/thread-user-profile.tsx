@@ -15,7 +15,14 @@ export function ThreadUserProfile() {
   return (
     <Link
       href="/settings"
+      prefetch={false}
       className="hover:bg-primary/20 hover:border-primary/30 flex gap-2 rounded-md border border-transparent p-2 transition-colors"
+      onNavigate={() => {
+        const pathname = window.location.pathname;
+        if (!pathname.startsWith("/threads/")) return;
+
+        localStorage.setItem("last-thread-ids", pathname);
+      }}
     >
       <Avatar className="size-11 rounded-md">
         <AvatarImage src={user.imageUrl} alt={user.username!} />

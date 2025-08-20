@@ -20,7 +20,7 @@ export default function AuthLayout({ children }: Readonly<{ children: React.Reac
       <TopSettingHeaders />
 
       <main className="mx-auto w-full max-w-7xl flex-1 p-4 lg:overflow-hidden">
-        <div className="grid h-full w-full grid-rows-[auto_1fr] gap-8 lg:grid-cols-[300px_1fr]">
+        <div className="grid h-full w-full grid-rows-[auto_1fr] gap-4 lg:grid-cols-[300px_1fr] lg:grid-rows-1">
           <SettingsSidebar />
 
           <div className="flex h-full flex-col overflow-hidden">

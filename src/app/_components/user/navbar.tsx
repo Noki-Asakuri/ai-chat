@@ -47,7 +47,11 @@ export function UserNavbar() {
       <TabsList>
         {paths.map(({ path, name }) => (
           <Tab key={path} value={"tab-" + name} className="h-10 px-0">
-            <Link href={path} className="flex h-full w-full items-center justify-center px-2">
+            <Link
+              href={path}
+              prefetch={false}
+              className="flex h-full w-full items-center justify-center px-2"
+            >
               {name}
             </Link>
           </Tab>
