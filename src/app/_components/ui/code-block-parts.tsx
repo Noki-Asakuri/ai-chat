@@ -152,6 +152,20 @@ type CodeBlockRenderProps = {
   onOpenChange: (v: boolean) => void;
 };
 
+const languageDisplayName: Record<string, string> = {
+  ts: "TypeScript",
+  js: "JavaScript",
+  cpp: "C++",
+  cs: "C#",
+  py: "Python",
+  kt: "Kotlin",
+  rs: "Rust",
+  php: "PHP",
+  rb: "Ruby",
+  sh: "Shell",
+  md: "Markdown",
+};
+
 function CodeBlockRender(props: CodeBlockRenderProps) {
   const highlightedFull = useShikiHighlighter(props.normalizedFull, props.langKey, "one-dark-pro", {
     transformers: [transformerColorizedBrackets()],
@@ -160,7 +174,9 @@ function CodeBlockRender(props: CodeBlockRenderProps) {
   return (
     <Fragment>
       <div className="bg-muted/70 flex w-full items-center justify-between gap-2 border-b px-3 py-2">
-        <span className="font-semibold capitalize">{props.language}</span>
+        <span className="font-semibold capitalize">
+          {languageDisplayName[props.langKey ?? ""] ?? props.langKey}
+        </span>
 
         <div className="space-x-2">
           <ButtonWithTip
