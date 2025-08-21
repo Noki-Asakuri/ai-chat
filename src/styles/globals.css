@@ -261,3 +261,7 @@ div[data-slot="codeblock"] {
 .katex-display {
   @apply block w-full;
 }
+
+[data-sonner-toaster] {
+  @apply !font-sans;
+}

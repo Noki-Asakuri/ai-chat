@@ -4,10 +4,15 @@ import { FileIcon } from "lucide-react";
 
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
+
 import { ImagePreviewDialog } from "../image-preview-dialog";
 
-export function MessageAttachmentDisplay({ message }: { message: ChatMessage }) {
-  if (!message.attachments || message.attachments.length === 0) return null;
+type MessageAttachmentDisplayProps = {
+  attachments: ChatMessage["attachments"];
+};
+
+export function MessageAttachmentDisplay({ attachments }: MessageAttachmentDisplayProps) {
+  if (!attachments || attachments.length === 0) return null;
 
   return (
     <div
@@ -15,7 +20,7 @@ export function MessageAttachmentDisplay({ message }: { message: ChatMessage }) 
       aria-label="Attachments"
       className="flex flex-wrap items-center justify-end gap-2"
     >
-      {message.attachments.map((attachment) => (
+      {attachments.map((attachment) => (
         <AttachmentPreview key={attachment._id} attachment={attachment} />
       ))}
     </div>
@@ -36,12 +41,12 @@ function AttachmentPreview({ attachment }: { attachment: Doc<"attachments"> }) {
           size: attachment.size,
         }}
       >
-        <img alt="Attachment" className="size-full object-cover" src={imageUrl} />
+        <img alt="Attachment" className="size-full rounded-md border object-cover" src={imageUrl} />
       </ImagePreviewDialog>
     );
   }
 
-  if (attachment.type === "pdf" || attachment.type === "doc") {
+  if (attachment.type === "pdf") {
     const fileUrl = `https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`;
 
     return (

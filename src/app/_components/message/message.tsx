@@ -50,11 +50,11 @@ export function Message({ message, index, isLast }: MessageProps) {
   return (
     <div
       data-slot="message-wrapper"
+      data-height={lastUserMessageHeight}
       style={{ minHeight }}
       ref={(ref) => {
         if (message.role === "user" && isLast) setMessageHeight(ref?.clientHeight);
       }}
-      data-height={lastUserMessageHeight}
     >
       <div
         data-slot="message"
