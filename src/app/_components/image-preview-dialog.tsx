@@ -196,11 +196,11 @@ export function ImagePreviewDialog({
       </Dialog.Trigger>
 
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-all duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:opacity-70" />
+        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-[opacity] duration-300 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:opacity-70" />
 
         <Dialog.Popup
           data-slot="image-preview-popup"
-          className="pointer-events-none fixed top-0 z-50 flex h-full w-full flex-col items-center justify-center gap-2 transition-[transform,opacity,scale] duration-150 outline-none data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0"
+          className="group/image-preview pointer-events-none fixed top-0 z-50 flex h-full w-full flex-col items-center justify-center gap-2 transition-[opacity] duration-300 outline-none data-[ending-style]:opacity-0 data-[starting-style]:opacity-0"
         >
           <div className="absolute top-4 right-4 flex h-10 items-center gap-2">
             <div
@@ -252,11 +252,11 @@ export function ImagePreviewDialog({
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center gap-6">
+          <div className="flex flex-col items-center justify-center gap-6 transition-[scale,opacity] duration-300 group-data-[ending-style]/image-preview:scale-90 group-data-[ending-style]/image-preview:opacity-0 group-data-[starting-style]/image-preview:opacity-0">
             <img
               src={objectUrl ?? image.src}
               alt={image.alt}
-              className="pointer-events-auto max-h-[80vh] rounded-lg object-center"
+              className="pointer-events-none max-h-[80vh] max-w-[80vw] rounded-lg"
             />
 
             <div className="pointer-events-auto flex flex-col items-center justify-center gap-1 text-sm">
