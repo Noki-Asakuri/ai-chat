@@ -142,6 +142,34 @@ export function fixMarkdownCodeBlocks(markdownText: string): string {
   });
 }
 
+/**
+ * Returns the first non-empty string from the given arguments, in order.
+ * All arguments before the final one are optional; the final argument is required
+ * and is returned as a fallback even if it's empty.
+ *
+ * @param strings - A sequence of optional strings followed by a required final string (fallback).
+ * @returns The first string with length > 0, or the last argument if none are non-empty.
+ *
+ * @example
+ * firstNonEmptyOrLast(undefined, "", "hello", "fallback"); // "hello"
+ *
+ * @example
+ * firstNonEmptyOrLast(undefined, "", ""); // ""
+ *
+ * @example
+ * firstNonEmptyOrLast("value"); // "value"
+ */
+export function firstNonEmptyOrLast(...strings: [...(string | undefined)[], string]): string {
+  const last = strings[strings.length - 1]!;
+
+  for (let i = 0; i < strings.length - 1; i++) {
+    const s = strings[i];
+    if (s && s.length > 0) return s;
+  }
+
+  return last;
+}
+
 export const format = {
   number: numberFormat.format,
   time: timeFormat.format,

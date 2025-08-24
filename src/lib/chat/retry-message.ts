@@ -3,6 +3,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { sendChatRequest } from "./send-chat-request";
 import { chatStore } from "./store";
+import { firstNonEmptyOrLast } from "../utils";
 
 import type { ChatRequest } from "../types";
 
@@ -16,6 +17,15 @@ export async function retryMessage(
   options?: {
     editedUserMessage?: { _id: Id<"messages">; content: string };
     modelId?: string;
+    webSearch?: boolean;
+    attachmentsOverride?: Array<{
+      _id: Id<"attachments">;
+      id: string;
+      threadId: Id<"threads">;
+      name: string;
+      size: number;
+      type: "image" | "pdf";
+    }>;
   },
 ) {
   if (!threadId) return;
@@ -29,11 +39,14 @@ export async function retryMessage(
   const userMessageIndex = index % 2 === 0 ? index : index - 1;
   const assistantMessage = state.messages[userMessageIndex + 1]!;
 
-  const allMessages = state.messages.slice(0, userMessageIndex + 1).map((message) => ({
+  const allMessages = state.messages.slice(0, userMessageIndex + 1).map((message, i) => ({
     id: message.messageId,
     role: message.role,
     content: message.content,
-    attachments: message.attachments,
+    attachments:
+      i === userMessageIndex && options?.attachmentsOverride
+        ? options.attachmentsOverride
+        : message.attachments,
   }));
 
   await convexClient.mutation(api.functions.messages.retryChatMessage, {
@@ -48,10 +61,21 @@ export async function retryMessage(
   if (editedUserMessage) {
     allMessages.at(-1)!.content = editedUserMessage.content;
   }
+  if (options?.attachmentsOverride) {
+    // reflect latest attachments for the edited user message in the outbound payload
+    allMessages.at(-1)!.attachments = options.attachmentsOverride;
+  }
+
+  const model = firstNonEmptyOrLast(
+    options?.modelId,
+    state.messages.at(-1)!.model,
+    state.chatConfig.model,
+  );
 
   const config = {
     ...state.chatConfig,
-    model: options?.modelId ?? state.messages.at(-1)?.model ?? state.chatConfig.model,
+    model,
+    webSearch: options?.webSearch ?? state.chatConfig.webSearch,
   };
 
   const body: ChatRequest = {

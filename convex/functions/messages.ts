@@ -147,6 +147,8 @@ export const updateMessageById = mutation({
       sources: v.optional(
         v.array(v.object({ id: v.string(), title: v.optional(v.string()), url: v.string() })),
       ),
+      // Allow exact attachment list updates for a message (unlink/link only)
+      attachments: v.optional(v.array(v.id("attachments"))),
 
       metadata: v.optional(
         v.object({

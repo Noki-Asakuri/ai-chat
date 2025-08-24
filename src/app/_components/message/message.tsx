@@ -1,7 +1,7 @@
 import { Loader2Icon } from "lucide-react";
 
 import { MessageContent } from "./message-content";
-import { MessageEdit } from "./message-edit";
+import { MessageEditComposer } from "./message-edit-composer";
 import { MessageFooter } from "./message-footer";
 import { ThinkingToggle } from "./message-thinking";
 import { UserAvatar } from "./user-avatar";
@@ -65,10 +65,15 @@ export function Message({ message, index, isLast }: MessageProps) {
         data-role={message.role}
         data-id={message.messageId}
         data-status={message.status}
+        data-model={message.model}
         data-streaming={message.status === "streaming" || message.status === "pending"}
         data-open={popupRetryMessageId === message._id || editMessage?._id === message._id}
       >
-        {isLoading ? <MessageLoading /> : <MessageInner message={message} index={index} />}
+        {isLoading ? (
+          <MessageLoading model={message.model} />
+        ) : (
+          <MessageInner message={message} index={index} />
+        )}
 
         {message.role === "user" && <UserAvatar />}
       </div>
@@ -76,11 +81,11 @@ export function Message({ message, index, isLast }: MessageProps) {
   );
 }
 
-function MessageLoading() {
+function MessageLoading({ model }: { model: ChatMessage["model"] }) {
   return (
     <div className="bg-background/80 flex h-11 w-full shrink-0 items-center gap-2 rounded-md border px-4 py-2 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
       <Loader2Icon className="size-6 animate-spin" />
-      <span>Waiting for response...</span>
+      <span title={`Waiting for response from ${model}`}>Waiting for response...</span>
     </div>
   );
 }
@@ -101,10 +106,9 @@ function MessageInner({ message, index }: Omit<MessageProps, "isLast">) {
   return (
     <div
       className={cn("relative flex grow-0 flex-col", "[&:has(.codeblock)]:w-full", {
-        hidden: message.status === "pending",
         "w-full": message.role === "assistant" || editMessage?._id === message._id || isMobile,
         "mx-0 max-w-[calc(100%-44px-8px)] gap-1 md:ml-auto":
-          message.role === "user" && !editMessage,
+          message.role === "user" && editMessage?._id !== message._id && !isMobile,
       })}
     >
       <ThinkingToggle
@@ -114,12 +118,14 @@ function MessageInner({ message, index }: Omit<MessageProps, "isLast">) {
       />
 
       {message.role === "user" && editMessage?._id === message._id ? (
-        <MessageEdit content={message.content} index={index} id={message._id} />
+        <MessageEditComposer message={message} index={index} />
       ) : (
         <MessageContent content={renderMessage.content} message={message} />
       )}
 
-      <MessageFooter message={message} index={index} renderMessage={renderMessage} />
+      {!(message.role === "user" && editMessage?._id === message._id) && (
+        <MessageFooter message={message} index={index} renderMessage={renderMessage} />
+      )}
     </div>
   );
 }

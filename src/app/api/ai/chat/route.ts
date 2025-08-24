@@ -158,6 +158,9 @@ export const POST = withAxiom(async (req) => {
 
     async onError({ error }) {
       const err = error as AISDKError;
+      // Skip proxy-related type validation errors as they are expected during proxy configuration
+      if (err.name === "AI_TypeValidationError" && err.message.includes("proxy-")) return;
+
       console.error("[Chat] Error:", err);
       logger.error("[Chat Error]: " + err.message, {
         userId: user.userId,
@@ -167,8 +170,6 @@ export const POST = withAxiom(async (req) => {
         errorName: err.name,
       });
 
-      // Skip proxy-related type validation errors as they are expected during proxy configuration
-      if (err.name === "AI_TypeValidationError" && err.message.includes("proxy-")) return;
       if (err.name === "AbortError" && req.signal.aborted) return;
 
       await serverConvexClient.mutation(api.functions.usages.refundRequest, { amount: 1 });
