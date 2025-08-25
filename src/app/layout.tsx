@@ -58,7 +58,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <Providers>{children}</Providers>
         <Toaster />
 
-        {process.env.ENV === "production" && (
+        {process.env.NEXT_PUBLIC_ENV === "production" && (
           <>
             <Analytics basePath="/api/vercel" />
             <SpeedInsights basePath="/api/vercel" />
