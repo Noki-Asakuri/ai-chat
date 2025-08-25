@@ -10,7 +10,14 @@ import { Redis } from "ioredis";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 
-import { createUIMessageStream, generateId, smoothStream, streamText, type AISDKError } from "ai";
+import {
+  createUIMessageStream,
+  generateId,
+  smoothStream,
+  stepCountIs,
+  streamText,
+  type AISDKError,
+} from "ai";
 
 import { logger, withAxiom } from "@/lib/axiom/server";
 import { registry } from "@/lib/server/model-registry";
@@ -154,6 +161,7 @@ export const POST = withAxiom(async (req) => {
     presencePenalty: config.presencePenalty,
     frequencyPenalty: config.frequencyPenalty,
 
+    stopWhen: stepCountIs(5),
     experimental_transform: smoothStream({ delayInMs: 10, chunking: "line" }),
 
     async onError({ error }) {

@@ -1,12 +1,9 @@
 "use client";
 
 import { ClerkProvider, useAuth } from "@clerk/clerk-react";
+import { ConvexQueryClient } from "@convex-dev/react-query";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
-
-import { ConvexQueryClient } from "@convex-dev/react-query";
-import { SessionProvider } from "convex-helpers/react/sessions";
-import { ConvexProvider } from "convex/react";
 
 import { getConvexReactClient } from "@/lib/convex/client";
 
@@ -30,11 +27,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       publishableKey={env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
     >
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <ConvexProvider client={convex}>
-          <SessionProvider>
-            <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-          </SessionProvider>
-        </ConvexProvider>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>
   );
