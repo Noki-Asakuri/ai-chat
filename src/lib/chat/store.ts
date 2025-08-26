@@ -6,6 +6,13 @@ import { create } from "zustand";
 import type { ChatMessage, Thread, UserAttachment } from "../types";
 import { getModelData } from "./models";
 
+type PreviewImage = {
+  src: string;
+  mediaType: string;
+  name?: string;
+  size?: number;
+};
+
 const DEFAULT_CONFIG = {
   webSearch: false,
   reasoningEffort: "medium",
@@ -95,6 +102,11 @@ export interface ChatState {
     }>,
   ) => void;
 
+  // Client-side early image previews during streaming
+  previewImages: Record<string, Array<PreviewImage>>;
+  addPreviewImage: (messageId: string, image: PreviewImage) => void;
+  clearPreviewImages: (messageId: string) => void;
+
   chatConfig: ReturnType<typeof getChatConfigFromLS>;
   setChatConfig: (config: Partial<ReturnType<typeof getChatConfigFromLS>>) => void;
 
@@ -146,6 +158,21 @@ export const useChatStore = create<ChatState>((set) => ({
   assistantMessage: { id: "", content: "", reasoning: "", metadata: undefined },
   setAssistantMessage: (message) =>
     set((state) => ({ assistantMessage: { ...state.assistantMessage, ...message } })),
+
+  // Previews
+  previewImages: {},
+  addPreviewImage: (messageId, image) =>
+    set((state) => {
+      const key = String(messageId);
+      const list = state.previewImages[key] ?? [];
+      return { previewImages: { ...state.previewImages, [key]: [...list, image] } };
+    }),
+  clearPreviewImages: (messageId) =>
+    set((state) => {
+      const previews = { ...state.previewImages };
+      delete previews[String(messageId)];
+      return { previewImages: previews };
+    }),
 
   isStreaming: false,
   setIsStreaming: (isStreaming) => set({ isStreaming }),
@@ -230,7 +257,17 @@ export const useChatStore = create<ChatState>((set) => ({
   lastUserMessageHeight: null,
   setMessageHeight: (height) => set({ lastUserMessageHeight: height }),
 
-  setDataFromConvex: (messages, status) => set({ messages, status }),
+  setDataFromConvex: (messages, status) =>
+    set((state) => {
+      const previews = { ...state.previewImages };
+      for (const m of messages) {
+        const key = String(m._id);
+        if ((previews[key]?.length ?? 0) > 0 && (m.attachments?.length ?? 0) > 0) {
+          delete previews[key];
+        }
+      }
+      return { messages, status, previewImages: previews };
+    }),
   resetState: () =>
     set(() => ({
       messages: [],
@@ -241,6 +278,7 @@ export const useChatStore = create<ChatState>((set) => ({
       messageHeights: {},
       lastUserMessageId: null,
       lastUserMessageHeight: null,
+      previewImages: {},
     })),
 }));
 

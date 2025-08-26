@@ -61,8 +61,19 @@ export async function sendChatRequest(
             reasoning += stream.delta;
             break;
 
+          case "file": {
+            // Early client-side preview for streamed image data URLs
+            state.addPreviewImage(String(assistantMessageId), {
+              src: stream.url,
+              mediaType: stream.mediaType,
+            });
+            break;
+          }
+
           case "finish":
             metadata = stream.messageMetadata as ChatMessage["metadata"];
+            // Do NOT clear previews here; wait for Convex to persist attachment,
+            // setDataFromConvex will clear previews when attachments are present.
             state.setStatus("complete");
             break;
         }

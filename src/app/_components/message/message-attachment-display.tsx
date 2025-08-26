@@ -1,7 +1,8 @@
-import type { Doc } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 import { FileIcon } from "lucide-react";
 
+import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
 
@@ -9,10 +10,19 @@ import { ImagePreviewDialog } from "../image-preview-dialog";
 
 type MessageAttachmentDisplayProps = {
   attachments: ChatMessage["attachments"];
+  messageId?: Id<"messages">;
 };
 
-export function MessageAttachmentDisplay({ attachments }: MessageAttachmentDisplayProps) {
-  if (!attachments || attachments.length === 0) return null;
+export function MessageAttachmentDisplay({
+  attachments,
+  messageId,
+}: MessageAttachmentDisplayProps) {
+  const previewImages = useChatStore((state) => state.previewImages)[messageId!] ?? [];
+
+  const hasPersisted = !!attachments && attachments.length > 0;
+  const hasPreviews = previewImages.length > 0;
+
+  if (!hasPersisted && !hasPreviews) return null;
 
   return (
     <div
@@ -20,9 +30,31 @@ export function MessageAttachmentDisplay({ attachments }: MessageAttachmentDispl
       aria-label="Attachments"
       className="flex flex-wrap items-center justify-end gap-2 group-data-[role='assistant']:justify-start"
     >
-      {attachments.map((attachment) => (
-        <AttachmentPreview key={attachment._id} attachment={attachment} />
-      ))}
+      {!hasPersisted &&
+        hasPreviews &&
+        previewImages.map((img, idx) => (
+          <ImagePreviewDialog
+            key={`preview-${idx}`}
+            className="aspect-square size-40 overflow-hidden rounded-md"
+            image={{
+              src: img.src,
+              alt: "Generating image...",
+              name: "Generating image...",
+              size: img.size,
+            }}
+          >
+            <img
+              alt="Attachment preview"
+              className="size-full rounded-md border object-cover"
+              src={img.src}
+            />
+          </ImagePreviewDialog>
+        ))}
+
+      {hasPersisted &&
+        attachments.map((attachment) => (
+          <AttachmentPreview key={attachment._id} attachment={attachment} />
+        ))}
     </div>
   );
 }
