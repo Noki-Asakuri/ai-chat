@@ -94,6 +94,8 @@ To get a local copy up and running, follow these simple steps.
 - [ ] Switch to use Better-Auth for auth
 - [ ] Add pricing and subscription tier
 - [ ] Image generation support
+  - [x] Google Gemini Image Gen
+  - [ ] OpenAI GPT Image 1
 - [ ] Sub-model params (for model using reasoning effort 'high', 'medium', 'low')
 - [ ] Switch to using same format from budget to effort for Gemini models (low: 10%, medium: 25%, high: 50%)
 
