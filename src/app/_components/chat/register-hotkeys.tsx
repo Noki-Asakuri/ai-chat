@@ -23,8 +23,21 @@ export function RegisterHotkeys() {
 
   useEffect(() => {
     function onPaste(event: ClipboardEvent) {
-      // Handle pasted files (existing behavior - unchanged)
+      // Route pasted files to the correct composer
       if (event.clipboardData?.files.length) {
+        const target = event.target as HTMLTextAreaElement | null;
+
+        // If paste is inside either composer textarea, let that component handle it
+        if (
+          target &&
+          target.tagName === "TEXTAREA" &&
+          ["textarea-user-message-edit", "textarea-chat-input"].includes(target.id)
+        ) {
+          // The respective textarea onPaste will stop propagation and manage files locally
+          return;
+        }
+
+        // Default behavior: add files to the global chat composer
         const files = Array.from(event.clipboardData.files ?? []);
 
         const acceptFiles = files.filter(

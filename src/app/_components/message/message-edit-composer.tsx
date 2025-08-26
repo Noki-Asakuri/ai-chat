@@ -247,6 +247,22 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
             value={text}
             onChange={(e) => setText(e.target.value)}
             className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
+            onPaste={(event) => {
+              const { items } = event.clipboardData;
+              const files = Array.from(items)
+                .filter((item) => item.kind === "file")
+                .map((item) => item.getAsFile())
+                .filter((file): file is File => file !== null);
+
+              if (files.length === 0) {
+                return;
+              }
+
+              event.preventDefault();
+              event.stopPropagation();
+
+              addFiles(files);
+            }}
             onKeyDown={onKeyDown}
             disabled={savingPhase !== "idle"}
           />
