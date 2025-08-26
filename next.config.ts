@@ -18,8 +18,6 @@ const nextConfig: NextConfig = {
 
     clientSegmentCache: true,
     devtoolSegmentExplorer: true,
-
-    browserDebugInfoInTerminal: true,
   },
 
   skipTrailingSlashRedirect: true,
@@ -30,11 +28,14 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_ENV: process.env.NODE_ENV,
   },
   async rewrites() {
+    const host =
+      process.env.NODE_ENV === "production" ? "https://chat.asakuri.me" : "http://localhost:3000";
+
     return {
       beforeFiles: [
         {
           source: "/api/vercel/:path*",
-          destination: "/_vercel/:path*",
+          destination: `${host}/_vercel/:path*`,
         },
         {
           source: "/threads/:path",
