@@ -150,29 +150,28 @@ function transformMessages(messages: z.infer<typeof inputSchema>["messages"], us
             if (attachment.type === "image") {
               const cacheKey = `attachment:${userId}:${attachment.threadId}:${attachment._id}`;
 
-              const cachedDataUrl = await redis.get(cacheKey);
+              const cachedBuffer = await redis.getBuffer(cacheKey);
+              const hit = Boolean(cachedBuffer);
+
               logger.info(`[Chat Cache] ${url}`, {
                 url,
-                status: cachedDataUrl ? "HIT" : "MISS",
+                status: hit ? "HIT" : "MISS",
                 cacheKey,
               });
 
-              if (cachedDataUrl) {
-                return { type: "image" as const, image: cachedDataUrl };
+              if (hit && cachedBuffer) {
+                return { type: "image" as const, image: cachedBuffer };
               }
 
               const res = await fetch(url);
-              const contentTypeHeader = res.headers.get("content-type");
-              const mediaType = contentTypeHeader?.split(";")[0] ?? "image/png";
 
               const arrayBuffer = await res.arrayBuffer();
-              const base64 = Buffer.from(arrayBuffer).toString("base64");
-              const dataUrl = `data:${mediaType};base64,${base64}`;
+              const buffer = Buffer.from(arrayBuffer);
 
-              // Expire after 12h, single key, not await so doesn't block response
-              waitUntil(redis.set(cacheKey, dataUrl, "EX", 12 * 60 * 60));
+              // Expire after 12h; store raw buffer. Not awaited so it doesn't block the response.
+              waitUntil(redis.set(cacheKey, buffer, "EX", 12 * 60 * 60));
 
-              return { type: "image" as const, image: dataUrl };
+              return { type: "image" as const, image: buffer };
             }
 
             if (attachment.type === "pdf") {
