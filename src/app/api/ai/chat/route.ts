@@ -35,6 +35,7 @@ const streamContext = createResumableStreamContext({
   waitUntil: after,
   publisher: publisher,
   subscriber: subscriber,
+  keyPrefix: `${env.NODE_ENV}:resumable-stream`,
 });
 
 export const POST = withAxiom(async (req) => {

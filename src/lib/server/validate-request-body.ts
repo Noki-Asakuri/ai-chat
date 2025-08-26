@@ -148,7 +148,7 @@ function transformMessages(messages: z.infer<typeof inputSchema>["messages"], us
             const url = `https://files.chat.asakuri.me/${userId}/${attachment.threadId}/${attachment._id}`;
 
             if (attachment.type === "image") {
-              const cacheKey = `attachment:${userId}:${attachment.threadId}:${attachment._id}`;
+              const cacheKey = `${env.NODE_ENV}:attachment:${userId}:${attachment.threadId}:${attachment._id}`;
 
               const cachedBuffer = await redis.getBuffer(cacheKey);
               const hit = Boolean(cachedBuffer);
