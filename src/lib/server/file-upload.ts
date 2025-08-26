@@ -21,6 +21,7 @@ export async function serverUploadFileR2(data: {
       size: data.buffer.length,
       type: "image",
       threadId: data.threadId,
+      source: "assistant",
     },
   );
 

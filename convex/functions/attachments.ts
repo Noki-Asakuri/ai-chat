@@ -11,12 +11,15 @@ export const createAttachment = mutation({
     size: v.number(),
     type: v.union(v.literal("image"), v.literal("pdf")),
     threadId: v.id("threads"),
+    // Optional during migration; default to "user" when not provided.
+    source: v.optional(v.union(v.literal("assistant"), v.literal("user"))),
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
     if (!user) throw new Error("Not authenticated");
 
-    return await ctx.db.insert("attachments", { ...args, userId: user.subject });
+    const source = args.source ?? "user";
+    return await ctx.db.insert("attachments", { ...args, source, userId: user.subject });
   },
 });
 

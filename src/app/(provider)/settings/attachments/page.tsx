@@ -7,8 +7,8 @@ import { useMutation } from "convex/react";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { FileTextIcon, SearchIcon, TrashIcon } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
@@ -26,8 +26,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-import { format, toUUID } from "@/lib/utils";
+import { format, toUUID, tryCatch } from "@/lib/utils";
+
+type SourceFilter = "all" | "user" | "assistant";
 
 function LoadingSkeleton() {
   return (
@@ -58,19 +67,75 @@ function LoadingSkeleton() {
 }
 
 export default function AttachmentsPage() {
-  const { data, isPending } = useQuery(convexQuery(api.functions.attachments.getAllAttachments, {}));
+  const { data, isPending } = useQuery(
+    convexQuery(api.functions.attachments.getAllAttachments, {}),
+  );
+
   const [searchText, setSearchText] = useState<string>("");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+
+  // Selection mode and state
+  const [selectionMode, setSelectionMode] = useState<boolean>(false);
+  const [selected, setSelected] = useState<Set<Id<"attachments">>>(() => new Set());
+  const [bulkPending, startBulkTransition] = useTransition();
+  const deleteAttachments = useMutation(api.functions.attachments.deleteAttachments);
+
+  function toggleSelectionMode() {
+    setSelectionMode((s) => {
+      if (s) setSelected(new Set());
+      return !s;
+    });
+  }
+
+  function toggleSelect(id: Id<"attachments">) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllVisible(current: Array<{ _id: Id<"attachments"> }>) {
+    const all = new Set<Id<"attachments">>();
+    for (const a of current) all.add(a._id);
+    setSelected(all);
+  }
 
   const filteredData = useMemo(() => {
     const q = searchText.trim().toLowerCase();
-    if (!q) return data ?? [];
-
-    return (data ?? []).filter((attachment) => {
+    const list = (data ?? []).filter((attachment) => {
+      // Search by name or thread title
       const name = attachment.name.toLowerCase();
       const threadTitle = (attachment.thread?.title ?? "").toLowerCase();
-      return name.includes(q) || threadTitle.includes(q);
+      const matchesSearch = !q || name.includes(q) || threadTitle.includes(q);
+
+      // Filter by source if requested; treat missing as "user" for backwards compatibility
+      const src = attachment.source ?? "user";
+      const matchesSource = sourceFilter === "all" || src === sourceFilter;
+
+      return matchesSearch && matchesSource;
     });
-  }, [data, searchText]);
+
+    return list;
+  }, [data, searchText, sourceFilter]);
+
+  function onBulkDelete() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    startBulkTransition(async () => {
+      const [, error] = await tryCatch(deleteAttachments({ attachmentIds: ids }));
+
+      if (error) {
+        toast.error("Failed to delete selected files", { description: error.message });
+        return;
+      }
+
+      setSelected(new Set());
+      setSelectionMode(false);
+      toast.success("Selected files deleted");
+    });
+  }
 
   if (isPending) return <LoadingSkeleton />;
 
@@ -82,10 +147,67 @@ export default function AttachmentsPage() {
       </div>
 
       <div className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 py-2 backdrop-blur">
-        <div className="relative">
-          <SearchIcon size={16} className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2" />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full max-w-md sm:max-w-[unset]">
+            <SearchIcon
+              size={16}
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+            />
 
-          <Input placeholder="Search attachments..." value={searchText} onChange={(e) => setSearchText(e.target.value)} className="pl-9" />
+            <Input
+              placeholder="Search attachments..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="h-9 w-full pl-9"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as SourceFilter)}>
+              <SelectTrigger>
+                <SelectValue aria-label="Filter by source" placeholder="Source: All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Source: All</SelectItem>
+                <SelectItem value="user">Source: User uploads</SelectItem>
+                <SelectItem value="assistant">Source: Assistant generated</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {!selectionMode && (
+              <Button variant="outline" onClick={toggleSelectionMode}>
+                Select
+              </Button>
+            )}
+
+            {selectionMode && (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground w-max text-sm">
+                  {selected.size} selected
+                </span>
+
+                <Button
+                  variant="secondary"
+                  onClick={() => selectAllVisible(filteredData)}
+                  disabled={filteredData.length === 0}
+                >
+                  Select all
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  onClick={onBulkDelete}
+                  disabled={selected.size === 0 || bulkPending}
+                >
+                  {bulkPending ? "Deleting..." : "Delete selected"}
+                </Button>
+
+                <Button variant="outline" onClick={toggleSelectionMode}>
+                  Cancel
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -96,41 +218,106 @@ export default function AttachmentsPage() {
           </div>
         )}
 
-        {filteredData.map((attachment) => (
-          <div key={attachment._id} className="hover:bg-card/80 flex flex-col overflow-hidden rounded-md border transition-colors">
-            <div className="relative size-full">
-              <a target="_blank" rel="noopener noreferrer" className="block size-full" href={`https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`}>
-                {attachment.type === "image" ? (
-                  <img alt={attachment.name} className="aspect-square size-full object-cover" src={`https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`} />
+        {filteredData.map((attachment) => {
+          const isSelected = selected.has(attachment._id);
+          const imageUrl = `https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`;
+
+          return (
+            <div
+              key={attachment._id}
+              className="hover:bg-card/80 group flex flex-col overflow-hidden rounded-md border transition-colors"
+              data-selected={isSelected}
+            >
+              <div className="relative size-full">
+                {selectionMode ? (
+                  <button
+                    type="button"
+                    className="block size-full cursor-pointer"
+                    onClick={() => toggleSelect(attachment._id)}
+                    aria-pressed={isSelected}
+                    aria-label={`Select ${attachment.name}`}
+                  >
+                    {attachment.type === "image" ? (
+                      <img
+                        alt={attachment.name}
+                        className="aspect-square size-full object-cover"
+                        src={imageUrl}
+                      />
+                    ) : (
+                      <div className="flex aspect-square size-full items-center justify-center p-2">
+                        <FileTextIcon size={64} />
+                      </div>
+                    )}
+                  </button>
                 ) : (
-                  <div className="flex aspect-square size-full items-center justify-center p-2">
-                    <FileTextIcon size={64} />
-                  </div>
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block size-full"
+                    href={imageUrl}
+                  >
+                    {attachment.type === "image" ? (
+                      <img
+                        alt={attachment.name}
+                        className="aspect-square size-full object-cover"
+                        src={imageUrl}
+                      />
+                    ) : (
+                      <div className="flex aspect-square size-full items-center justify-center p-2">
+                        <FileTextIcon size={64} />
+                      </div>
+                    )}
+                  </a>
                 )}
-              </a>
-              <div className="pointer-events-none absolute top-0 left-0 flex size-full items-start justify-between gap-2 p-2">
-                <Badge>{format.size(attachment.size)}</Badge>
-                <DeleteAttachmentDialog attachmentId={attachment._id} name={attachment.name}>
-                  <Button variant="secondary" className="hover:bg-destructive pointer-events-auto size-7 transition-colors">
-                    <TrashIcon />
-                    <span className="sr-only">Delete {attachment.name}</span>
-                  </Button>
-                </DeleteAttachmentDialog>
+
+                <div className="pointer-events-none absolute top-0 left-0 flex size-full items-start justify-between gap-2 p-2">
+                  <div className="flex items-center gap-2">
+                    {selectionMode && (
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${attachment.name}`}
+                        className="bg-background pointer-events-auto size-5 cursor-pointer rounded border"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(attachment._id)}
+                      />
+                    )}
+                    <Badge>{format.size(attachment.size)}</Badge>
+                  </div>
+
+                  {!selectionMode && (
+                    <DeleteAttachmentDialog attachmentId={attachment._id} name={attachment.name}>
+                      <Button
+                        variant="secondary"
+                        className="hover:bg-destructive pointer-events-auto size-7 transition-colors"
+                      >
+                        <TrashIcon />
+                        <span className="sr-only">Delete {attachment.name}</span>
+                      </Button>
+                    </DeleteAttachmentDialog>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1 border-t p-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate" title={attachment.name}>
+                    {attachment.name}
+                  </p>
+                  <span className="text-muted-foreground shrink-0 text-sm">
+                    {format.date(attachment._creationTime)}
+                  </span>
+                </div>
+                <Link
+                  href={`/threads/${toUUID(attachment.threadId)}`}
+                  className="line-clamp-1 w-fit text-sm underline-offset-4 hover:underline"
+                  title={attachment.thread?.title}
+                >
+                  Thread: {attachment.thread?.title}
+                </Link>
               </div>
             </div>
-            <div className="flex flex-col gap-1 border-t p-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="truncate" title={attachment.name}>
-                  {attachment.name}
-                </p>
-                <span className="text-muted-foreground shrink-0 text-sm">{format.date(attachment._creationTime)}</span>
-              </div>
-              <Link href={`/threads/${toUUID(attachment.threadId)}`} className="line-clamp-1 w-fit text-sm underline-offset-4 hover:underline" title={attachment.thread?.title}>
-                Thread: {attachment.thread?.title}
-              </Link>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -163,7 +350,8 @@ function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachme
         <AlertDialogHeader>
           <AlertDialogTitle>Delete file {name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete this file and remove it from our servers and your chats!
+            This action cannot be undone. This will permanently delete this file and remove it from
+            our servers and your chats!
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -177,4 +365,3 @@ function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachme
     </AlertDialog>
   );
 }
-

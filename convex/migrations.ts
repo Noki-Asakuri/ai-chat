@@ -60,9 +60,25 @@ export const backfillMessages = migrations.define({
 });
 
 /**
+ * Backfill attachments.source defaulting to "user" where missing.
+ */
+export const backfillAttachmentsSource = migrations.define({
+  table: "attachments" as const,
+  migrateOne: async (ctx, a: Doc<"attachments">) => {
+    type Source = "assistant" | "user";
+    type AttachmentWithSource = Doc<"attachments"> & { source?: Source };
+    const att = a as AttachmentWithSource;
+    if (att.source === undefined) {
+      await ctx.db.patch(att._id, { source: "user" as const });
+    }
+  },
+});
+
+/**
  * Run the full backfill series:
- * 1. backfillThreads
- * 2. backfillMessages
+ * 1. backfillAttachmentsSource
+ * 2. backfillThreads
+ * 3. backfillMessages
  *
  * Examples:
  *   - Dry run locally:
@@ -76,6 +92,7 @@ export const backfillMessages = migrations.define({
  *     bunx convex deploy --cmd 'bun run build' && bunx convex run convex/migrations.ts:runAll --prod
  */
 export const runAll = migrations.runner([
+  internal.migrations.backfillAttachmentsSource,
   internal.migrations.backfillThreads,
   internal.migrations.backfillMessages,
 ]);
