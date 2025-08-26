@@ -1,5 +1,7 @@
 import "server-only";
 
+import { waitUntil } from "@vercel/functions";
+
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -22,12 +24,12 @@ export async function serverUploadFileR2(data: {
     },
   );
 
-  const { key, url } = await serverConvexClient.mutation(
-    api.functions.files.generateAttachmentUploadUrl,
-    { fileId: attachmentId, threadId: data.threadId },
-  );
-
   try {
+    const { key, url } = await serverConvexClient.mutation(
+      api.functions.files.generateAttachmentUploadUrl,
+      { fileId: attachmentId, threadId: data.threadId },
+    );
+
     const result = await fetch(url, {
       method: "PUT",
       headers: { "Content-Type": data.mediaType },
@@ -37,8 +39,8 @@ export async function serverUploadFileR2(data: {
     if (!result.ok) {
       throw new Error(`Failed to upload image: ${result.statusText}`);
     }
+    waitUntil(serverConvexClient.mutation(api.functions.files.syncMetadata, { key }));
 
-    await serverConvexClient.mutation(api.functions.files.syncMetadata, { key });
     return attachmentId;
   } catch (error) {
     throw new Error(`Failed to upload image: ${error}`);
