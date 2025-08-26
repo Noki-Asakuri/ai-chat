@@ -5,13 +5,10 @@ import { getConvexReactClient } from "./client";
 
 const convexClient = getConvexReactClient();
 
-export async function uploadFile(file: File, threadId: Id<"threads">, fileId: string) {
+export async function uploadFile(file: File, threadId: Id<"threads">, fileId: Id<"attachments">) {
   const { url, key } = await convexClient.mutation(
     api.functions.files.generateAttachmentUploadUrl,
-    {
-      threadId,
-      fileId,
-    },
+    { threadId, fileId },
   );
 
   try {

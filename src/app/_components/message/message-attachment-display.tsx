@@ -18,7 +18,7 @@ export function MessageAttachmentDisplay({ attachments }: MessageAttachmentDispl
     <div
       role="list"
       aria-label="Attachments"
-      className="flex flex-wrap items-center justify-end gap-2"
+      className="flex flex-wrap items-center justify-end gap-2 group-data-[role='assistant']:justify-start"
     >
       {attachments.map((attachment) => (
         <AttachmentPreview key={attachment._id} attachment={attachment} />

@@ -59,13 +59,9 @@ const inputSchema = z.object({
     .partial(),
 });
 
-const modelValidator = z
-  .enum(AllModelIds)
-  .default("google/gemini-2.5-flash")
-  .catch("google/gemini-2.5-flash")
-  .transform((model) => {
-    return { id: getModelData(model).id, model };
-  });
+const modelValidator = z.enum(AllModelIds).transform((model) => {
+  return { id: getModelData(model).id, model };
+});
 
 const safetySettings = [
   { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_HARASSMENT" },
@@ -82,7 +78,16 @@ export async function validateRequestBody(req: Request, userId: string) {
   }
 
   const { messages, assistantMessageId, threadId, config } = data;
-  const { id, model } = modelValidator.parse(config?.model);
+  const {
+    success: modelSuccess,
+    data: modelData,
+    error: modelError,
+  } = modelValidator.safeParse(config?.model);
+  if (!modelSuccess) {
+    throw new Error(z.prettifyError(modelError));
+  }
+
+  const { id, model } = modelData;
 
   const providerOptions = {
     google: { safetySettings } as GoogleGenerativeAIProviderOptions,
@@ -104,6 +109,11 @@ export async function validateRequestBody(req: Request, userId: string) {
 
       store: false,
     };
+  }
+
+  if (model.includes("image")) {
+    delete providerOptions.google.thinkingConfig;
+    providerOptions.google.responseModalities = ["TEXT", "IMAGE"];
   }
 
   const tools: ToolSet = {};

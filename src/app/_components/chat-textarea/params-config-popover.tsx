@@ -2,12 +2,12 @@ import { SettingsIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ButtonWithTip } from "../ui/button";
+import { NumberInput } from "../ui/number-input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Slider } from "../ui/slider";
 
 import { getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
-import { NumberInput } from "../ui/number-input";
 
 export function ChatParamsPopup() {
   const config = useChatStore((state) => state.chatConfig);
@@ -31,51 +31,6 @@ export function ChatParamsPopup() {
 
       <PopoverContent align="center" sideOffset={10} className="w-80 px-4 pt-3 pb-5">
         <div className="flex flex-col gap-4">
-          <ParameterSlider
-            label="Temperature"
-            value={config.temperature}
-            min={0}
-            max={2}
-            step={0.01}
-            onChange={(value) => setChatConfig({ temperature: value })}
-            hidden={!modelConfig.capabilities.config.temperature}
-          />
-          <ParameterSlider
-            label="Top P"
-            value={config.topP}
-            min={0}
-            max={1}
-            step={0.01}
-            onChange={(value) => setChatConfig({ topP: value })}
-            hidden={!modelConfig.capabilities.config.topP}
-          />
-          <ParameterSlider
-            label="Top K"
-            value={config.topK}
-            min={1}
-            max={100}
-            step={1}
-            onChange={(value) => setChatConfig({ topK: value })}
-            hidden={!modelConfig.capabilities.config.topK}
-          />
-          <ParameterSlider
-            label="Presence Penalty"
-            value={config.presencePenalty}
-            min={0}
-            max={1}
-            step={0.01}
-            onChange={(value) => setChatConfig({ presencePenalty: value })}
-            hidden={!modelConfig.capabilities.config.presencePenalty}
-          />
-          <ParameterSlider
-            label="Frequency Penalty"
-            value={config.frequencyPenalty}
-            min={0}
-            max={1}
-            step={0.01}
-            onChange={(value) => setChatConfig({ frequencyPenalty: value })}
-            hidden={!modelConfig.capabilities.config.frequencyPenalty}
-          />
           <ParameterSlider
             label="Max Tokens"
             value={config.maxTokens}

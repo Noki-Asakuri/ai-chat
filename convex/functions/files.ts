@@ -19,7 +19,7 @@ const { syncMetadata, getMetadata, listMetadata, onSyncMetadata } = r2.clientApi
 });
 
 export const generateAttachmentUploadUrl = mutation({
-  args: { threadId: v.id("threads"), fileId: v.string() },
+  args: { threadId: v.id("threads"), fileId: v.id("attachments") },
   handler: async (ctx, args) => {
     const currentUser = await ctx.auth.getUserIdentity();
     if (!currentUser) throw new Error("Not authenticated");

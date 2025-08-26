@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 type CapabilityIconProps = {
   children: React.ReactNode;
   variant: "webSearch" | "reasoning" | "vision";
-  enabled: boolean;
+  enabled?: boolean;
   title: string;
 };
 

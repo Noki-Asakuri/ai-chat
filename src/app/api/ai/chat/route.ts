@@ -1,5 +1,5 @@
 import { api } from "@/convex/_generated/api";
-import type { Doc } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { serverConvexClient } from "@/lib/convex/server";
 
 import { auth } from "@clerk/nextjs/server";
@@ -26,6 +26,7 @@ import { validateRequestBody } from "@/lib/server/validate-request-body";
 import { fixMarkdownCodeBlocks, tryCatch } from "@/lib/utils";
 
 import { env } from "@/env";
+import { serverUploadFileR2 } from "@/lib/server/file-upload";
 
 const publisher = new Redis(env.REDIS_URL);
 const subscriber = new Redis(env.REDIS_URL);
@@ -213,6 +214,7 @@ export const POST = withAxiom(async (req) => {
     execute: async ({ writer }) => {
       let content = "";
       let reasoning = "";
+      let attachmentId: Id<"attachments"> | null = null;
 
       let reasoningDuration = 0;
       let textDuration = 0;
@@ -270,6 +272,16 @@ export const POST = withAxiom(async (req) => {
             metadata.durations.text = Date.now() - textDuration;
             break;
 
+          case "file":
+            attachmentId = await serverUploadFileR2({
+              buffer: stream.file.uint8Array,
+              mediaType: stream.file.mediaType,
+              threadId,
+            });
+
+            console.log("File received", stream.file.mediaType, attachmentId);
+            break;
+
           case "finish-step":
             metadata.model = stream.response.modelId;
             metadata.finishReason = stream.finishReason;
@@ -302,6 +314,8 @@ export const POST = withAxiom(async (req) => {
         model: model.uniqueId,
         resumableStreamId: null,
         status: "complete" as const,
+
+        attachments: attachmentId ? [attachmentId] : [],
 
         content: fixMarkdownCodeBlocks(content),
         reasoning: reasoning.length > 0 ? reasoning : undefined,
