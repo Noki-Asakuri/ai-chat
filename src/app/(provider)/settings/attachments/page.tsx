@@ -120,6 +120,26 @@ export default function AttachmentsPage() {
     return list;
   }, [data, searchText, sourceFilter]);
 
+  // Totals across all attachments (not filtered)
+  const totals = useMemo(() => {
+    const list = data ?? [];
+    const count = list.length;
+    const bytes = list.reduce((sum, a) => sum + a.size, 0);
+    return { count, bytes };
+  }, [data]);
+
+  // Total size of selected attachments
+  const selectedBytes = useMemo(() => {
+    if (selected.size === 0) return 0;
+    const ids = new Set(selected);
+    const list = data ?? [];
+    let sum = 0;
+    for (const a of list) {
+      if (ids.has(a._id)) sum += a.size;
+    }
+    return sum;
+  }, [selected, data]);
+
   function onBulkDelete() {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
@@ -141,9 +161,16 @@ export default function AttachmentsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold">Attachments</h2>
-        <p className="text-muted-foreground">View and manage your attachments.</p>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Attachments</h2>
+          <p className="text-muted-foreground">View and manage your attachments.</p>
+        </div>
+
+        <div className="text-muted-foreground text-sm">
+          <span className="font-medium">{totals.count}</span> attachments •{" "}
+          <span className="font-medium">{format.size(totals.bytes)} total</span>
+        </div>
       </div>
 
       <div className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 py-2 backdrop-blur">
@@ -182,9 +209,12 @@ export default function AttachmentsPage() {
 
             {selectionMode && (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground w-max text-sm">
-                  {selected.size} selected
-                </span>
+                <div className="flex w-max flex-col leading-tight">
+                  <span className="text-muted-foreground text-sm">{selected.size} selected</span>
+                  <span className="text-muted-foreground text-center text-xs">
+                    {format.size(selectedBytes)} total
+                  </span>
+                </div>
 
                 <Button
                   variant="secondary"
@@ -281,6 +311,7 @@ export default function AttachmentsPage() {
                         onChange={() => toggleSelect(attachment._id)}
                       />
                     )}
+
                     <Badge>{format.size(attachment.size)}</Badge>
                   </div>
 
@@ -295,6 +326,12 @@ export default function AttachmentsPage() {
                       </Button>
                     </DeleteAttachmentDialog>
                   )}
+                </div>
+
+                <div className="pointer-events-none absolute top-0 left-0 flex size-full items-end justify-between gap-2 p-2">
+                  <Badge variant={attachment.source === "assistant" ? "destructive" : "secondary"}>
+                    {(attachment.source ?? "user") === "assistant" ? "AI" : "User"}
+                  </Badge>
                 </div>
               </div>
 
