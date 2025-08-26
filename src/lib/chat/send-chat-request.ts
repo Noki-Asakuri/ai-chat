@@ -107,6 +107,9 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
   state.setAttachment([]);
   state.setEditMessage(null);
 
+  state.setStatus("pending");
+  state.setIsStreaming(true);
+
   // Force UI to stick to bottom on user send action
   try {
     window.dispatchEvent(new Event("chat:force-scroll-bottom"));

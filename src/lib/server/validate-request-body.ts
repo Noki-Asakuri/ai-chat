@@ -169,8 +169,8 @@ function transformMessages(messages: z.infer<typeof inputSchema>["messages"], us
               const base64 = Buffer.from(arrayBuffer).toString("base64");
               const dataUrl = `data:${mediaType};base64,${base64}`;
 
-              // Expire after 1h, single key, not await so doesn't block response
-              waitUntil(redis.set(cacheKey, dataUrl, "EX", 60 * 60));
+              // Expire after 12h, single key, not await so doesn't block response
+              waitUntil(redis.set(cacheKey, dataUrl, "EX", 12 * 60 * 60));
 
               return { type: "image" as const, image: dataUrl };
             }
