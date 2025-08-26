@@ -252,11 +252,11 @@ export function ImagePreviewDialog({
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center gap-6 transition-[scale,opacity] duration-300 group-data-[ending-style]/image-preview:scale-90 group-data-[ending-style]/image-preview:opacity-0 group-data-[starting-style]/image-preview:opacity-0">
+          <div className="pointer-events-auto flex flex-col items-center justify-center gap-6 transition-[scale,opacity] duration-300 group-data-[ending-style]/image-preview:scale-90 group-data-[ending-style]/image-preview:opacity-0 group-data-[starting-style]/image-preview:opacity-0">
             <img
-              src={objectUrl ?? image.src}
               alt={image.alt}
-              className="pointer-events-none max-h-[80vh] max-w-[80vw] rounded-lg"
+              src={objectUrl ?? image.src}
+              className="max-h-[80vh] max-w-[80vw] rounded-lg select-none"
             />
 
             <div className="pointer-events-auto flex flex-col items-center justify-center gap-1 text-sm">
