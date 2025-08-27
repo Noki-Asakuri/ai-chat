@@ -273,6 +273,13 @@ export const POST = withAxiom(async (req) => {
             });
 
             console.log("File received", stream.file.mediaType, attachmentId);
+            logger.info("[Chat] File received", {
+              userId: user.userId,
+              threadId,
+              assistantMessageId,
+              model: model.uniqueId,
+              attachmentId,
+            });
             break;
 
           case "finish-step":
