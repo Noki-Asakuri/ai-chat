@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Loader2Icon } from "lucide-react";
 
 import { MessageContent } from "./message-content";
@@ -25,6 +26,7 @@ export function Message({ message, index, isLast }: MessageProps) {
 
   const lastUserMessageHeight = useChatStore((state) => state.lastUserMessageHeight) ?? 114;
   const setMessageHeight = useChatStore((state) => state.setMessageHeight);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
 
   const userMessageHeight =
     lastUserMessageHeight > window.innerHeight ? 114 : lastUserMessageHeight;
@@ -34,6 +36,28 @@ export function Message({ message, index, isLast }: MessageProps) {
       ? // 100vh - (padding top + padding bottom + textarea height + last known user message height)
         `calc(100vh - (40px + ${Math.max(textareaHeight, 165 + 50)}px + 16px + ${userMessageHeight}px))`
       : "auto";
+
+  // Keep assistant min-height in sync with live changes to the most recent user message
+  React.useEffect(() => {
+    if (!(message.role === "user" && isLast)) return;
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const h = Math.round(entry.contentRect.height);
+        setMessageHeight(h);
+      }
+    });
+
+    // init and observe
+    setMessageHeight(el.clientHeight);
+    ro.observe(el);
+
+    return () => {
+      ro.disconnect();
+    };
+  }, [isLast, message.role, setMessageHeight]);
 
   const renderMessage =
     message.role === "assistant" &&
@@ -52,9 +76,7 @@ export function Message({ message, index, isLast }: MessageProps) {
       data-slot="message-wrapper"
       data-height={lastUserMessageHeight}
       style={{ minHeight }}
-      ref={(ref) => {
-        if (message.role === "user" && isLast) setMessageHeight(ref?.clientHeight);
-      }}
+      ref={containerRef}
     >
       <div
         data-slot="message"
