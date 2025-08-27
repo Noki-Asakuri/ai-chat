@@ -13,7 +13,7 @@ export async function serverUploadFileR2(data: {
   threadId: Id<"threads">;
   mediaType: string;
 }) {
-  logger.debug("[Chat] Uploading file to R2", { threadId: data.threadId });
+  logger.info("[Chat] Uploading file to R2", { threadId: data.threadId });
 
   const randomId = crypto.randomUUID();
   const attachmentId = await serverConvexClient.mutation(
@@ -28,7 +28,11 @@ export async function serverUploadFileR2(data: {
     },
   );
 
-  logger.debug("[Chat] Attachment created", { attachmentId, threadId: data.threadId });
+  logger.info("[Chat] Attachment created", {
+    attachmentId,
+    threadId: data.threadId,
+    type: data.mediaType,
+  });
 
   try {
     const { key, url } = await serverConvexClient.mutation(
@@ -43,11 +47,19 @@ export async function serverUploadFileR2(data: {
     });
 
     if (!result.ok) {
+      const error = await result.text();
+      logger.error("[Chat Error]: Failed to upload image to R2!", {
+        attachmentId,
+        threadId: data.threadId,
+        status: result.status,
+        error,
+      });
+
       throw new Error(`Failed to upload image: ${result.statusText}`);
     }
 
     waitUntil(serverConvexClient.mutation(api.functions.files.syncMetadata, { key }));
-    logger.debug("[Chat] File uploaded to R2", { attachmentId, threadId: data.threadId });
+    logger.info("[Chat] File uploaded to R2", { attachmentId, threadId: data.threadId });
   } catch (error) {
     logger.error("[Chat Error]: Failed to upload image to R2!", {
       error,
