@@ -45,19 +45,15 @@ export const POST = withAxiom(async (req) => {
   }
 
   const authToken = await user.getToken({ template: "convex" });
-  if (!authToken) {
-    logger.error("[Chat Error]: Missing Convex auth token!", { user });
-    return NextResponse.json(
-      { error: { message: "Error: Missing Convex auth token!" } },
-      { status: 401 },
-    );
-  }
-  serverConvexClient.setAuth(authToken);
+  serverConvexClient.setAuth(authToken!);
 
-  const [data, error] = await tryCatch(() => validateRequestBody(req, user.userId));
-  if (error) {
-    logger.error("[Chat Error]: Failed to parse request body!", { error, userId: user.userId });
-    return NextResponse.json({ error: { message: error.message } }, { status: 400 });
+  const [requestBody, validateError] = await tryCatch(validateRequestBody(req, user.userId));
+  if (validateError) {
+    logger.error("[Chat Error]: Failed to parse request body!", {
+      error: validateError,
+      userId: user.userId,
+    });
+    return NextResponse.json({ error: { message: validateError.message } }, { status: 400 });
   }
 
   const {
@@ -69,7 +65,7 @@ export const POST = withAxiom(async (req) => {
     providerOptions,
     config,
     tools,
-  } = data;
+  } = requestBody;
 
   // Enforce monthly per-user usage limit before processing the request
   const usage = await serverConvexClient.mutation(api.functions.usages.checkAndIncrement, {
@@ -342,8 +338,8 @@ export const POST = withAxiom(async (req) => {
       });
 
       if (updates.content?.length === 0) {
-        updates.content = `Upstream returned empty content. Please try again. Reason: ${metadata.finishReason}`;
-        logger.error("[Chat Error]: Upstream returned empty content!", {
+        updates.content = `Upstream returned empty content. Stop reason: ${metadata.finishReason}`;
+        logger.info("[Chat]: Upstream returned empty content!", {
           userId: user.userId,
           threadId,
           assistantMessageId,
@@ -396,7 +392,7 @@ export const POST = withAxiom(async (req) => {
       model: model.uniqueId,
     });
 
-    await chatStream.cancel(new Error("Request aborted"));
+    await readableStream.cancel(new Error("Chat request aborted"));
   };
 
   return new Response(resumeableStream, {

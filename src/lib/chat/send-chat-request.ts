@@ -63,7 +63,7 @@ export async function sendChatRequest(
 
           case "file": {
             // Early client-side preview for streamed image data URLs
-            state.addPreviewImage(String(assistantMessageId), {
+            state.addPreviewImage(assistantMessageId, {
               src: stream.url,
               mediaType: stream.mediaType,
             });
@@ -82,17 +82,14 @@ export async function sendChatRequest(
         state.setAssistantMessage({ id: assistantMessageId, content, reasoning, metadata });
       },
     });
-  } catch (error) {
-    if (!(error instanceof Error)) {
-      console.warn("[Chat] Error:", error);
-      return;
-    }
+  } catch (rawError) {
+    const error = new Error(rawError as string);
     if (error.name === "AbortError") return;
 
     console.log("[Chat] Chat error:", error);
-    const errorMessage = "Failed to generate response. \n\nError: " + error.message;
+    const errorMessage = `Receieved an error from the server.\n\n${error.message}`;
 
-    void convexClient.mutation(api.functions.messages.updateErrorMessage, {
+    await convexClient.mutation(api.functions.messages.updateErrorMessage, {
       error: errorMessage,
       model: state.chatConfig.model,
       messageId: assistantMessageId,

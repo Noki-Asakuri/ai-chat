@@ -1,6 +1,6 @@
 import type { UIMessageChunk } from "ai";
 
-import { tryCatch } from "../utils";
+import { tryCatchSync } from "../utils";
 
 export type StreamDataHandler = (message: UIMessageChunk) => void | Promise<void>;
 
@@ -27,19 +27,12 @@ export async function processChatStream({
   const response = await fetch;
 
   if (!response.ok) {
-    let error: string;
-    const textRes = response.clone();
+    const text = await response.text();
+    const [jsonResult] = tryCatchSync(() => JSON.parse(text) as { error: { message: string } });
 
-    const [jsonResult] = await tryCatch(textRes.json() as Promise<{ error: { message: string } }>);
+    const error = jsonResult?.error?.message ?? text;
 
-    if (jsonResult) {
-      error = jsonResult.error.message;
-    } else {
-      const text = await textRes.text();
-      error = text || "Unknown error. Failed to get error message.";
-    }
-
-    throw new Error(`Failed to fetch: ${response.status} - ${error}`);
+    throw new Error(`Status: ${response.status} - Message: ${error}`);
   }
 
   const reader = response.body!.getReader();

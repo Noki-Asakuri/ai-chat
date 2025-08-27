@@ -14,7 +14,7 @@ export function MessageContent({ message, content }: MessageContentProps) {
       ? message.error
       : "An error have occurred. Please try again.";
 
-    return <MessageError message={error} />;
+    return <MessageError message={error} id={message.messageId} />;
   }
 
   if (!content) return null;
@@ -33,10 +33,10 @@ export function MessageContent({ message, content }: MessageContentProps) {
   );
 }
 
-function MessageError({ message }: { message: string }) {
+function MessageError({ message, id }: { message: string; id: string }) {
   return (
     <div className="bg-destructive/40 border-destructive/60 text-destructive-foreground rounded-md border px-4 py-2 backdrop-blur-md backdrop-saturate-150">
-      <p>{message}</p>
+      <MemoizedMarkdown id={`error-${id}`} content={message} />
     </div>
   );
 }
