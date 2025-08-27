@@ -7,7 +7,6 @@ import "./src/env.js";
 import type { NextConfig } from "next";
 
 import { withSentryConfig, type SentryBuildOptions } from "@sentry/nextjs";
-import { withBotId } from "botid/next/config";
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
@@ -109,4 +108,4 @@ const sentryOptions: SentryBuildOptions = {
   automaticVercelMonitors: true,
 };
 
-export default withSentryConfig(withBotId(nextConfig), sentryOptions);
+export default withSentryConfig(nextConfig, sentryOptions);

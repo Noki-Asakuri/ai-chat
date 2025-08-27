@@ -1,15 +1,4 @@
 import * as Sentry from "@sentry/nextjs";
-import { initBotId } from "botid/client/core";
-
-initBotId({
-  protect: [
-    { path: "/api/*", method: "POST" },
-    { path: "/api/*", method: "GET" },
-
-    { path: "/", method: "GET" },
-    { path: "/threads/*", method: "GET" },
-  ],
-});
 
 // This file configures the initialization of Sentry on the client.
 // The added config here will be used whenever a users loads a page in their browser.
