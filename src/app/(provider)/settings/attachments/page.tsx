@@ -330,7 +330,7 @@ export default function AttachmentsPage() {
 
                 <div className="pointer-events-none absolute top-0 left-0 flex size-full items-end justify-between gap-2 p-2">
                   <Badge variant={attachment.source === "assistant" ? "destructive" : "secondary"}>
-                    {(attachment.source ?? "user") === "assistant" ? "AI" : "User"}
+                    {attachment.source === "assistant" ? "AI" : "User"}
                   </Badge>
                 </div>
               </div>
@@ -340,17 +340,25 @@ export default function AttachmentsPage() {
                   <p className="truncate" title={attachment.name}>
                     {attachment.name}
                   </p>
+
                   <span className="text-muted-foreground shrink-0 text-sm">
                     {format.date(attachment._creationTime)}
                   </span>
                 </div>
-                <Link
-                  href={`/threads/${toUUID(attachment.threadId)}`}
-                  className="line-clamp-1 w-fit text-sm underline-offset-4 hover:underline"
-                  title={attachment.thread?.title}
-                >
-                  Thread: {attachment.thread?.title}
-                </Link>
+
+                {attachment.thread && (
+                  <Link
+                    title={attachment.thread.title}
+                    href={`/threads/${toUUID(attachment.threadId)}`}
+                    className="line-clamp-1 w-fit text-sm underline-offset-4 hover:underline"
+                  >
+                    Thread: {attachment.thread.title}
+                  </Link>
+                )}
+
+                {!attachment.thread && (
+                  <span className="w-full text-sm select-none">Thread: [Deleted]</span>
+                )}
               </div>
             </div>
           );
@@ -361,9 +369,9 @@ export default function AttachmentsPage() {
 }
 
 type DeleteAttachmentDialogProps = {
-  attachmentId: Id<"attachments">;
   name: string;
   children?: React.ReactNode;
+  attachmentId: Id<"attachments">;
 };
 
 function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachmentDialogProps) {
@@ -371,12 +379,15 @@ function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachme
   const deleteAttachment = useMutation(api.functions.attachments.deleteAttachment);
 
   function onDelete() {
-    startTransition(() => {
-      toast.promise(deleteAttachment({ attachmentId }), {
-        loading: "Deleting file...",
-        success: "File deleted",
-        error: "Failed to delete file",
-      });
+    startTransition(async () => {
+      const [, error] = await tryCatch(deleteAttachment({ attachmentId }));
+
+      if (error) {
+        toast.error("Failed to delete file", { description: error.message });
+        return;
+      }
+
+      toast.success("File deleted");
     });
   }
 

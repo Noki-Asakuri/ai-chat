@@ -1,4 +1,3 @@
-import { Loader2Icon } from "lucide-react";
 import * as React from "react";
 
 import { Icons } from "../ui/icons";
@@ -107,18 +106,17 @@ export function Message({ message, index, isLast }: MessageProps) {
 }
 
 function MessageLoading({ model }: { model: ChatMessage["model"] }) {
-  const modelData = getModelData(model);
+  const modelData = getModelData(model || "google/gemini-2.5-flash");
 
   return (
-    <div className="bg-background/80 flex h-11 w-full shrink-0 items-center gap-2 rounded-md border px-4 py-2 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
-      <Loader2Icon className="size-6 animate-spin" />
+    <div className="bg-background/80 flex h-11 w-full shrink-0 items-center gap-2 rounded-md border px-4 py-2 backdrop-blur-md backdrop-saturate-150">
       <div className="flex gap-2">
-        <span>Waiting for response by</span>{" "}
         <div className="flex items-center justify-center gap-2">
           <Icons.provider provider={modelData?.provider} className="size-5 rounded-md" />
-          <span>{modelData?.display.name}</span>
+          <span>{modelData?.display.name}: </span>
         </div>
-        <span>...</span>
+
+        <span>Waiting for response...</span>
       </div>
     </div>
   );
