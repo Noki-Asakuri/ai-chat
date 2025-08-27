@@ -1,34 +1,19 @@
 "use client";
 
-import { convexQuery } from "@convex-dev/react-query";
-import { useQuery } from "@tanstack/react-query";
-import {
-  BrainIcon,
-  ChevronDownIcon,
-  EyeIcon,
-  FileUpIcon,
-  GlobeIcon,
-  Loader2Icon,
-  RssIcon,
-  SaveIcon,
-  XIcon,
-} from "lucide-react";
+import { FileUpIcon, GlobeIcon, Loader2Icon, SaveIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { v4 as uuidv4 } from "uuid";
 
-import { CapabilityIcon } from "../capability-icon";
-import { ButtonWithTip, buttonVariants } from "../ui/button";
-import { Icons } from "../ui/icons";
-import { Input } from "../ui/input";
-import { Menu, MenuArrow } from "../ui/menu";
+import { ButtonWithTip } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
+import { ModelSelector } from "../chat-textarea/model-selector";
 import { MessageEditAttachments } from "./message-edit-attachments";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { AllModelIds, getModelData } from "@/lib/chat/models";
+import { getModelData } from "@/lib/chat/models";
 import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 import { getConvexReactClient } from "@/lib/convex/client";
@@ -36,12 +21,21 @@ import { uploadFile } from "@/lib/convex/uploadFiles";
 import type { ChatMessage, UserAttachment } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+const convexClient = getConvexReactClient();
+
 type MessageEditComposerProps = {
   message: ChatMessage;
   index: number;
 };
 
-const convexClient = getConvexReactClient();
+type AttachmentOverride = {
+  _id: Id<"attachments">;
+  id: string;
+  threadId: Id<"threads">;
+  name: string;
+  size: number;
+  type: "image" | "pdf";
+};
 
 export function MessageEditComposer({ message, index }: MessageEditComposerProps) {
   const chatConfig = useChatStore((s) => s.chatConfig);
@@ -55,13 +49,16 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
       ? assistantMessage.model
       : chatConfig.model;
 
-  const [text, setText] = React.useState<string>(message.content);
-  const [modelId, setModelId] = React.useState<string>(initialModel);
-  const [webSearch, setWebSearch] = React.useState<boolean>(chatConfig.webSearch);
+  const [text, setText] = React.useState(message.content);
+  const [modelId, setModelId] = React.useState(initialModel);
+  const [webSearch, setWebSearch] = React.useState(chatConfig.webSearch);
   const [savingPhase, setSavingPhase] = React.useState<"idle" | "uploading" | "saving">("idle");
 
+  // New attachments management (local only until Save)
+  const [newFiles, setNewFiles] = React.useState<Array<UserAttachment>>([]);
+
   // Existing attachments management (unlink by marking removed ids)
-  const [removed, setRemoved] = React.useState<Set<Id<"attachments">>>(new Set());
+  const [removed, setRemoved] = React.useState(new Set<Id<"attachments">>());
   function toggleRemoveExisting(id: Id<"attachments">) {
     setRemoved((prev) => {
       const next = new Set(prev);
@@ -71,8 +68,6 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
     });
   }
 
-  // New attachments management (local only until Save)
-  const [newFiles, setNewFiles] = React.useState<Array<UserAttachment>>([]);
   function addFiles(files: Array<File>) {
     const accepted = files.filter((f) => f.type.includes("image") || f.type.includes("pdf"));
     if (accepted.length !== files.length) {
@@ -86,8 +81,10 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
       if (file.type.includes("pdf")) type = "pdf";
       return { id: uuidv4(), name: file.name, size: file.size, file, type } as UserAttachment;
     });
+
     setNewFiles((prev) => [...prev, ...mapped]);
   }
+
   function removeNew(id: string) {
     setNewFiles((prev) => prev.filter((f) => f.id !== id));
   }
@@ -96,14 +93,6 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
   const canWebSearch = getModelData(modelId)?.capabilities.webSearch ?? false;
 
   // Shape used for per-retry attachments override (not full Doc<"attachments">)
-  type AttachmentOverride = {
-    _id: Id<"attachments">;
-    id: string;
-    threadId: Id<"threads">;
-    name: string;
-    size: number;
-    type: "image" | "pdf";
-  };
 
   function onBottomFileInputChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -259,9 +248,7 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
                 .map((item) => item.getAsFile())
                 .filter((file): file is File => file !== null);
 
-              if (files.length === 0) {
-                return;
-              }
+              if (files.length === 0) return;
 
               event.preventDefault();
               event.stopPropagation();
@@ -282,7 +269,7 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
               "pointer-events-none opacity-60": savingPhase !== "idle",
             })}
           >
-            <EditModelPicker value={modelId} onChange={setModelId} />
+            <ModelSelector value={modelId} onChange={setModelId} />
 
             <ButtonWithTip
               type="button"
@@ -363,149 +350,5 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
         </div>
       </div>
     </div>
-  );
-}
-
-type EditModelPickerProps = {
-  value: string;
-  onChange: (id: string) => void;
-};
-
-function EditModelPicker({ value, onChange }: EditModelPickerProps) {
-  const [query, setQuery] = React.useState("");
-  const { data } = useQuery(convexQuery(api.functions.users.currentUser, {}));
-
-  const hidden = React.useMemo(
-    () => data?.customization?.hiddenModels ?? [],
-    [data?.customization],
-  );
-  const models = React.useMemo(() => {
-    return AllModelIds.slice()
-      .sort()
-      .filter((id) => !hidden.includes(id))
-      .filter((modelId) => {
-        const d = getModelData(modelId);
-        const text =
-          `${d?.display?.unique ?? d?.display?.name ?? ""} ${d?.provider ?? ""}`.toLowerCase();
-        return text.includes(query.trim().toLowerCase());
-      });
-  }, [hidden, query]);
-
-  const current = getModelData(value);
-
-  return (
-    <Menu.Root>
-      <Menu.Trigger
-        className={cn(
-          "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 px-2 py-1.5 text-xs",
-          buttonVariants({ variant: "ghost" }),
-        )}
-      >
-        <div className="flex items-center justify-center gap-2">
-          <Icons.provider provider={current?.provider} className="size-4" />
-          <span className="w-max">
-            {current?.display?.unique ?? current?.display?.name ?? "Select model"}
-          </span>
-        </div>
-        <ChevronDownIcon className="size-4" />
-      </Menu.Trigger>
-
-      <Menu.Portal>
-        <Menu.Positioner className="z-50 outline-none" sideOffset={8} align="start">
-          <Menu.Popup className="bg-popover/70 text-popover-foreground origin-[var(--transform-origin)] rounded-md border backdrop-blur-md backdrop-saturate-150 transition-[transform,scale,opacity] outline-none data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
-            <MenuArrow className="fill-popover" />
-
-            <div className="w-96 max-w-[calc(100vw-8rem)] outline-none">
-              <div className="bg-popover/70 sticky top-0 z-10 p-2 backdrop-blur-md backdrop-saturate-150">
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search models…"
-                  aria-label="Search models"
-                  className="h-8 text-xs"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()}
-                />
-              </div>
-
-              <div
-                className="custom-scroll h-[400px] overflow-y-auto px-2 py-2"
-                style={{ scrollbarGutter: "stable both-edges" }}
-              >
-                <div className="flex flex-col gap-2">
-                  {models.map((modelId) => (
-                    <EditModelItem
-                      key={modelId}
-                      modelId={modelId}
-                      currentModel={value}
-                      onChange={onChange}
-                    />
-                  ))}
-
-                  {models.length === 0 && (
-                    <div className="text-muted-foreground px-2 py-1.5 text-xs">
-                      No models available. Enable models in Settings → Models.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Menu.Popup>
-        </Menu.Positioner>
-      </Menu.Portal>
-    </Menu.Root>
-  );
-}
-
-function EditModelItem({
-  modelId,
-  currentModel,
-  onChange,
-}: {
-  modelId: (typeof AllModelIds)[number];
-  currentModel: string;
-  onChange: (id: string) => void;
-}) {
-  const data = getModelData(modelId);
-
-  return (
-    <Menu.Item
-      data-model={modelId}
-      data-active={modelId === currentModel}
-      onClick={() => onChange(modelId)}
-      closeOnClick={false}
-      className="data-[highlighted]:border-primary/70 data-[highlighted]:bg-primary/20 data-[active=true]:border-primary/70 data-[active=true]:bg-primary/20 text-foreground flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-sm leading-4 outline-none select-none"
-    >
-      <div className="flex items-center justify-center gap-2">
-        <Icons.provider provider={data.provider} className="size-4" />
-        <span className="w-max text-sm">{data.display.unique ?? data.display.name}</span>
-      </div>
-
-      <div className="flex items-center gap-1">
-        <CapabilityIcon
-          variant="webSearch"
-          enabled={data.capabilities.webSearch}
-          title="This model supports web search."
-        >
-          <RssIcon size={14} />
-        </CapabilityIcon>
-
-        <CapabilityIcon
-          variant="reasoning"
-          enabled={data.capabilities.reasoning !== false}
-          title="This model supports reasoning."
-        >
-          <BrainIcon size={14} />
-        </CapabilityIcon>
-
-        <CapabilityIcon
-          variant="vision"
-          enabled={data.capabilities.vision}
-          title="This model supports vision."
-        >
-          <EyeIcon size={14} />
-        </CapabilityIcon>
-      </div>
-    </Menu.Item>
   );
 }

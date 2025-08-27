@@ -3,12 +3,13 @@ import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
 import { BrainIcon, ChevronDownIcon, EyeIcon, RssIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+
+import { Select } from "@base-ui-components/react/select";
 
 import { buttonVariants } from "../ui/button";
 import { Icons } from "../ui/icons";
 import { Input } from "../ui/input";
-import { Menu, MenuArrow } from "../ui/menu";
 
 import { CapabilityIcon } from "../capability-icon";
 
@@ -16,10 +17,15 @@ import { AllModelIds, getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";
 
-export function ChatModelPicker() {
-  const [modelSearchQuery, setModelSearchQuery] = useState("");
+type ModelSelectorProps = {
+  value: string;
+  onChange?: (id: string) => void;
+};
 
-  const { model } = useChatStore((state) => state.chatConfig);
+function ModelSelectorBase({ value, onChange }: ModelSelectorProps) {
+  const storeModel = useChatStore.getState().chatConfig.model;
+
+  const [modelSearchQuery, setModelSearchQuery] = useState("");
   const setChatConfig = useChatStore((s) => s.setChatConfig);
 
   const { data } = useQuery(convexQuery(api.functions.users.currentUser, {}));
@@ -40,46 +46,49 @@ export function ChatModelPicker() {
       });
   }, [hidden, modelSearchQuery]);
 
-  useEffect(() => {
-    if (hidden.includes(model)) {
-      const fallback = AllModelIds.find((id) => !hidden.includes(id));
-      if (fallback) setChatConfig({ model: fallback });
-    }
-  }, [hidden, model, setChatConfig]);
+  function handleChange(model: string) {
+    if (onChange) onChange(model);
+    else setChatConfig({ model });
+  }
 
-  const dataModel = getModelData(model);
+  function renderTriggerValue(value: string) {
+    const modelData = getModelData(value);
+
+    return (
+      <div className="flex items-center justify-center gap-2">
+        <Icons.provider provider={modelData?.provider} className="size-4" />
+        <span className="w-max">{modelData?.display?.unique ?? modelData?.display?.name}</span>
+      </div>
+    );
+  }
 
   return (
-    <Menu.Root>
-      <Menu.Trigger
+    <Select.Root value={value ?? storeModel} onValueChange={handleChange}>
+      <Select.Trigger
         className={cn(
           "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 px-2 py-1.5 text-xs",
           buttonVariants({ variant: "ghost" }),
         )}
       >
-        <div className="flex items-center justify-center gap-2">
-          <Icons.provider provider={dataModel?.provider} className="size-4" />
-          <span className="w-max">{dataModel?.display.unique ?? dataModel?.display.name}</span>
-        </div>
+        <Select.Value>{renderTriggerValue}</Select.Value>
+        <Select.Icon>
+          <ChevronDownIcon />
+        </Select.Icon>
+      </Select.Trigger>
 
-        <ChevronDownIcon />
-      </Menu.Trigger>
-
-      <Menu.Portal>
-        <Menu.Positioner className="z-50 outline-none" sideOffset={8} align="start">
-          <Menu.Popup className="bg-popover/70 text-popover-foreground origin-[var(--transform-origin)] rounded-md border backdrop-blur-md backdrop-saturate-150 transition-[transform,scale,opacity] outline-none data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
-            <MenuArrow className="fill-popover" />
-
+      <Select.Portal>
+        <Select.Positioner className="z-50 outline-none" sideOffset={8} align="start">
+          <Select.Popup className="bg-popover/70 text-popover-foreground origin-[var(--transform-origin)] rounded-md border backdrop-blur-md backdrop-saturate-150 transition-[transform,scale,opacity] outline-none data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
             <div className="w-96 max-w-[calc(100vw-8rem)] outline-none">
               <div className="bg-popover/70 sticky top-0 z-10 p-2 backdrop-blur-md backdrop-saturate-150">
                 <Input
                   value={modelSearchQuery}
-                  onChange={(e) => setModelSearchQuery(e.target.value)}
                   placeholder="Search models…"
                   aria-label="Search models"
-                  className="h-8 text-xs"
-                  onPointerDown={(e) => e.stopPropagation()}
+                  className="h-8 text-xs ring-0"
                   onKeyDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onChange={(e) => setModelSearchQuery(e.target.value)}
                 />
               </div>
 
@@ -89,35 +98,43 @@ export function ChatModelPicker() {
               >
                 <div className="flex flex-col gap-2">
                   {visibleModels.map((modelId) => (
-                    <ModelItem key={modelId} modelId={modelId} currentModel={model} />
+                    <ModelItem key={modelId} modelId={modelId} />
                   ))}
 
                   {visibleModels.length === 0 && (
-                    <div className="text-muted-foreground px-2 py-1.5 text-xs">
+                    <div className="text-muted-foreground px-2 py-1.5 text-center text-xs">
                       No models available. Enable models in Settings → Models.
+                      <br />
+                      Or change your search query.
                     </div>
                   )}
                 </div>
               </div>
             </div>
-          </Menu.Popup>
-        </Menu.Positioner>
-      </Menu.Portal>
-    </Menu.Root>
+          </Select.Popup>
+        </Select.Positioner>
+      </Select.Portal>
+    </Select.Root>
   );
 }
 
-function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentModel: string }) {
+export function ChatModelSelector() {
+  const { model: storeModel } = useChatStore((state) => state.chatConfig);
+  return <ModelSelectorBase value={storeModel} />;
+}
+
+export function ModelSelector(props: ModelSelectorProps) {
+  return <ModelSelectorBase {...props} />;
+}
+
+function ModelItem({ modelId }: { modelId: AllModelIds }) {
   const data = getModelData(modelId);
-  const setActiveModel = useChatStore((state) => state.setChatConfig);
 
   return (
-    <Menu.Item
-      data-model={modelId}
-      data-active={modelId === currentModel}
-      onClick={() => setActiveModel({ model: modelId })}
-      closeOnClick={false}
-      className="data-[highlighted]:border-primary/70 data-[highlighted]:bg-primary/20 data-[active=true]:border-primary/70 data-[active=true]:bg-primary/20 text-foreground flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-sm leading-4 outline-none select-none"
+    <Select.Item
+      value={modelId}
+      label={data.display.unique ?? data.display.name}
+      className="data-[highlighted]:border-primary/70 data-[highlighted]:bg-primary/20 data-[selected]:border-primary/70 data-[selected]:bg-primary/20 text-foreground flex cursor-pointer items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-sm leading-4 outline-none select-none"
     >
       <div className="flex items-center justify-center gap-2">
         <Icons.provider provider={data.provider} className="size-4" />
@@ -149,6 +166,6 @@ function ModelItem({ modelId, currentModel }: { modelId: AllModelIds; currentMod
           <EyeIcon size={14} />
         </CapabilityIcon>
       </div>
-    </Menu.Item>
+    </Select.Item>
   );
 }

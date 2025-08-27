@@ -143,7 +143,7 @@ export const ModelsData = {
   },
 
   "openai/gpt-4.1": {
-    display: { name: "GPT-4.1" },
+    display: { name: "GPT 4.1" },
     id: "openai/gpt-4.1",
     provider: "openai",
     capabilities: {
@@ -161,7 +161,7 @@ export const ModelsData = {
     },
   },
   "openai/gpt-4o": {
-    display: { name: "GPT-4o" },
+    display: { name: "GPT 4o" },
     id: "openai/gpt-4o",
     provider: "openai",
     capabilities: {
@@ -171,7 +171,7 @@ export const ModelsData = {
   },
 
   "openai/gpt-5": {
-    display: { name: "GPT-5" },
+    display: { name: "GPT 5" },
     id: "openai/gpt-5",
     provider: "openai",
     capabilities: {
@@ -181,7 +181,7 @@ export const ModelsData = {
     },
   },
   "openai/gpt-5-mini": {
-    display: { name: "GPT-5 Mini" },
+    display: { name: "GPT 5 Mini" },
     id: "openai/gpt-5-mini",
     provider: "openai",
     capabilities: {
@@ -191,7 +191,7 @@ export const ModelsData = {
     },
   },
   "openai/gpt-5-chat": {
-    display: { name: "GPT-5 Chat" },
+    display: { name: "GPT 5 Chat" },
     id: "openai/gpt-5-chat-latest",
     altModelIds: ["openai/gpt-5-chat-latest"],
     provider: "openai",
