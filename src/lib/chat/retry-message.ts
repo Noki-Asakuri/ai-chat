@@ -49,9 +49,16 @@ export async function retryMessage(
         : message.attachments,
   }));
 
+  const model = firstNonEmptyOrLast(
+    options?.modelId,
+    state.messages.at(-1)!.model,
+    state.chatConfig.model,
+  );
+
   await convexClient.mutation(api.functions.messages.retryChatMessage, {
     threadId,
     assistantMessageId: assistantMessage._id,
+    model: model,
     userMessage: {
       messageId: state.messages[userMessageIndex]!._id,
       content: editedUserMessage?.content,
@@ -61,16 +68,11 @@ export async function retryMessage(
   if (editedUserMessage) {
     allMessages.at(-1)!.content = editedUserMessage.content;
   }
+
   if (options?.attachmentsOverride) {
     // reflect latest attachments for the edited user message in the outbound payload
     allMessages.at(-1)!.attachments = options.attachmentsOverride;
   }
-
-  const model = firstNonEmptyOrLast(
-    options?.modelId,
-    state.messages.at(-1)!.model,
-    state.chatConfig.model,
-  );
 
   const config = {
     ...state.chatConfig,

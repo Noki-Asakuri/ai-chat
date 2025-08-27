@@ -156,7 +156,7 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     content: "",
     role: "assistant" as const,
     status: "pending" as const,
-    model: "",
+    model: state.chatConfig.model ?? "",
     createdAt: Date.now(),
     updatedAt: Date.now(),
     attachments: [] as Id<"attachments">[],

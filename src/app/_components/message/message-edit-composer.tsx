@@ -1,38 +1,38 @@
 "use client";
 
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
+  BrainIcon,
+  ChevronDownIcon,
+  EyeIcon,
+  FileUpIcon,
   GlobeIcon,
+  Loader2Icon,
+  RssIcon,
   SaveIcon,
   XIcon,
-  ChevronDownIcon,
-  BrainIcon,
-  EyeIcon,
-  RssIcon,
-  FileUpIcon,
-  Loader2Icon,
 } from "lucide-react";
 import * as React from "react";
 import { v4 as uuidv4 } from "uuid";
-import { useQuery } from "@tanstack/react-query";
-import { convexQuery } from "@convex-dev/react-query";
 
-import { Textarea } from "../ui/textarea";
-import { ButtonWithTip, buttonVariants } from "../ui/button";
-import { Menu, MenuArrow } from "../ui/menu";
-import { Input } from "../ui/input";
-import { Icons } from "../ui/icons";
 import { CapabilityIcon } from "../capability-icon";
+import { ButtonWithTip, buttonVariants } from "../ui/button";
+import { Icons } from "../ui/icons";
+import { Input } from "../ui/input";
+import { Menu, MenuArrow } from "../ui/menu";
+import { Textarea } from "../ui/textarea";
 
 import { MessageEditAttachments } from "./message-edit-attachments";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { useChatStore } from "@/lib/chat/store";
+import { AllModelIds, getModelData } from "@/lib/chat/models";
 import { useChatRequest } from "@/lib/chat/send-chat-request";
+import { useChatStore } from "@/lib/chat/store";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { uploadFile } from "@/lib/convex/uploadFiles";
-import { AllModelIds, getModelData } from "@/lib/chat/models";
 import type { ChatMessage, UserAttachment } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -44,13 +44,18 @@ type MessageEditComposerProps = {
 const convexClient = getConvexReactClient();
 
 export function MessageEditComposer({ message, index }: MessageEditComposerProps) {
-  const setEditMessage = useChatStore((s) => s.setEditMessage);
   const chatConfig = useChatStore((s) => s.chatConfig);
+  const setEditMessage = useChatStore((s) => s.setEditMessage);
+  const assistantMessage = useChatStore((s) => s.messages[index + 1]);
 
   const { retryMessage } = useChatRequest();
 
+  const initialModel =
+    assistantMessage && assistantMessage.model.length > 0
+      ? assistantMessage.model
+      : chatConfig.model;
+
   const [text, setText] = React.useState<string>(message.content);
-  const initialModel = message.model && message.model.length > 0 ? message.model : chatConfig.model;
   const [modelId, setModelId] = React.useState<string>(initialModel);
   const [webSearch, setWebSearch] = React.useState<boolean>(chatConfig.webSearch);
   const [savingPhase, setSavingPhase] = React.useState<"idle" | "uploading" | "saving">("idle");

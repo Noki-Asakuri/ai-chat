@@ -97,16 +97,13 @@ export const ModelsData = {
     },
   },
   "google/gemini-2.5-flash-image": {
-    display: { name: "Gemini 2.5 Flash Image", unique: "Gemini 2.5 Flash (Image)" },
+    display: { name: "Gemini 2.5 Flash (Image)", unique: "Gemini 2.5 Flash (Image)" },
     id: "google/gemini-2.5-flash-image",
     altModelIds: ["google/gemini-2.5-flash-image-preview"],
     provider: "google",
     capabilities: {
       vision: true,
-      webSearch: true,
-      reasoning: "budget",
-      budgetLimit: { min: 0, max: 24_576 },
-      maxTokens: 65_536,
+      maxTokens: 32_768,
     },
   },
   "google/gemini-2.5-pro-thinking": {

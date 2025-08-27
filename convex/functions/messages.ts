@@ -222,6 +222,7 @@ export const retryChatMessage = mutation({
   args: {
     threadId: v.id("threads"),
     assistantMessageId: v.id("messages"),
+    model: v.optional(v.string()),
     userMessage: v.object({
       messageId: v.id("messages"),
       content: v.optional(v.string()),
@@ -271,7 +272,7 @@ export const retryChatMessage = mutation({
         resumableStreamId: null,
         error: undefined,
         modelParams: undefined,
-        model: "",
+        model: args.model ?? assistantMessage.model ?? "",
         attachments: [],
         updatedAt: Date.now(),
       }),
