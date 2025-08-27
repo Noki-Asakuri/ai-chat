@@ -207,7 +207,7 @@ export const POST = withAxiom(async (req) => {
     execute: async ({ writer }) => {
       let content = "";
       let reasoning = "";
-      let attachmentId: Id<"attachments"> | null = null;
+      const attachmentIds: Id<"attachments">[] = [];
 
       let reasoningDuration = 0;
       let textDuration = 0;
@@ -266,20 +266,32 @@ export const POST = withAxiom(async (req) => {
             break;
 
           case "file":
-            attachmentId = await serverUploadFileR2({
+            const attachmentId = await serverUploadFileR2({
               buffer: stream.file.uint8Array,
               mediaType: stream.file.mediaType,
               threadId,
             });
 
-            console.log("File received", stream.file.mediaType, attachmentId);
-            logger.info("[Chat] File received", {
-              userId: user.userId,
-              threadId,
-              assistantMessageId,
-              model: model.uniqueId,
-              attachmentId,
-            });
+            if (attachmentId) {
+              attachmentIds.push(attachmentId);
+
+              console.log("File received", stream.file.mediaType, attachmentId);
+              logger.info("[Chat] File received", {
+                userId: user.userId,
+                threadId,
+                assistantMessageId,
+                model: model.uniqueId,
+                attachmentId,
+              });
+            } else {
+              logger.error("[Chat Error]: Failed to upload file", {
+                userId: user.userId,
+                threadId,
+                assistantMessageId,
+                model: model.uniqueId,
+              });
+            }
+
             break;
 
           case "finish-step":
@@ -315,7 +327,7 @@ export const POST = withAxiom(async (req) => {
         resumableStreamId: null,
         status: "complete" as const,
 
-        attachments: attachmentId ? [attachmentId] : [],
+        attachments: attachmentIds,
 
         content: fixMarkdownCodeBlocks(content),
         reasoning: reasoning.length > 0 ? reasoning : undefined,
