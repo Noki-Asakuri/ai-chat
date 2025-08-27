@@ -1,5 +1,6 @@
 import "server-only";
 
+import { auth } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 
 import axiomClient from "@/lib/axiom/axiom";
@@ -16,10 +17,14 @@ export const logger = new Logger({
 });
 
 export const withAxiom = createAxiomRouteHandler(logger, {
-  store: (req: NextRequest) => {
+  store: async (req: NextRequest) => {
+    const { userId } = await auth();
+
     return {
+      enviroment: env.NODE_ENV,
       request_id: crypto.randomUUID(),
       trace_id: req.headers.get("x-trace-id"),
+      user_id: userId,
     };
   },
 });
