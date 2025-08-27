@@ -17,12 +17,50 @@ export function MessageAttachmentDisplay({
   attachments,
   messageId,
 }: MessageAttachmentDisplayProps) {
-  const previewImages = useChatStore((state) => state.previewImages)[messageId!] ?? [];
+  const previewImagesMap = useChatStore((state) => state.previewImages);
+  const previewImages = previewImagesMap[messageId!] ?? [];
 
-  const hasPersisted = !!attachments && attachments.length > 0;
-  const hasPreviews = previewImages.length > 0;
+  // Split persisted attachments into images vs. others.
+  const persistedAll = attachments ?? [];
+  const persistedImages = persistedAll.filter((a) => a.type === "image");
+  const otherAttachments = persistedAll.filter((a) => a.type !== "image");
 
-  if (!hasPersisted && !hasPreviews) return null;
+  const totalImageSlots = Math.max(previewImages.length, persistedImages.length);
+
+  if (totalImageSlots === 0 && otherAttachments.length === 0) return null;
+
+  const baseKey = messageId ?? "no-message";
+  function imageUrlFromAttachment(att: Doc<"attachments">): string {
+    return `https://ik.imagekit.io/gmethsnvl/ai-chat/${att.userId}/${att.threadId}/${att._id}`;
+  }
+
+  function renderImageSlot(idx: number) {
+    const att = persistedImages[idx] as Doc<"attachments"> | undefined;
+    const prev = previewImages[idx] as { src: string; size?: number; name?: string } | undefined;
+
+    if (!att && !prev) return null;
+
+    const src = att ? imageUrlFromAttachment(att) : prev!.src;
+    const alt = att ? att.name : "Generating image...";
+    const name = att ? att.name : "Generating image...";
+    const size = att ? att.size : prev?.size;
+
+    // IMPORTANT: Always render the same component type (ImagePreviewDialog) with a stable key,
+    // so when a preview transitions to a persisted attachment, the dialog instance stays mounted.
+    return (
+      <ImagePreviewDialog
+        key={`${baseKey}-image-slot-${idx}`}
+        className="aspect-square size-40 overflow-hidden rounded-md"
+        image={{ src, alt, name, size }}
+      >
+        <img
+          alt={att ? "Attachment" : "Attachment preview"}
+          className="size-full rounded-md border object-cover"
+          src={src}
+        />
+      </ImagePreviewDialog>
+    );
+  }
 
   return (
     <div
@@ -30,31 +68,13 @@ export function MessageAttachmentDisplay({
       aria-label="Attachments"
       className="flex flex-wrap items-center justify-end gap-2 group-data-[role='assistant']:justify-start"
     >
-      {!hasPersisted &&
-        hasPreviews &&
-        previewImages.map((img, idx) => (
-          <ImagePreviewDialog
-            key={`preview-${idx}`}
-            className="aspect-square size-40 overflow-hidden rounded-md"
-            image={{
-              src: img.src,
-              alt: "Generating image...",
-              name: "Generating image...",
-              size: img.size,
-            }}
-          >
-            <img
-              alt="Attachment preview"
-              className="size-full rounded-md border object-cover"
-              src={img.src}
-            />
-          </ImagePreviewDialog>
-        ))}
+      {/* Image slots: keep identity stable across preview -> persisted transitions */}
+      {Array.from({ length: totalImageSlots }).map((_, idx) => renderImageSlot(idx))}
 
-      {hasPersisted &&
-        attachments.map((attachment) => (
-          <AttachmentPreview key={attachment._id} attachment={attachment} />
-        ))}
+      {/* Non-image attachments (e.g., PDFs) */}
+      {otherAttachments.map((attachment) => (
+        <AttachmentPreview key={attachment._id} attachment={attachment} />
+      ))}
     </div>
   );
 }
