@@ -6,6 +6,7 @@ import { useMutation } from "convex/react";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
+
 import { FileTextIcon, SearchIcon, TrashIcon } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
@@ -348,6 +349,7 @@ export default function AttachmentsPage() {
 
                 {attachment.thread && (
                   <Link
+                    prefetch={false}
                     title={attachment.thread.title}
                     href={`/threads/${toUUID(attachment.threadId)}`}
                     className="line-clamp-1 w-fit text-sm underline-offset-4 hover:underline"

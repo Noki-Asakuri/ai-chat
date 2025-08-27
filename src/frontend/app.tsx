@@ -2,7 +2,7 @@
 
 import { useConvexAuth } from "convex/react";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-router";
 import { toast } from "sonner";
@@ -23,7 +23,12 @@ const router = createBrowserRouter([
       { index: true, element: Chat },
       { path: "threads/:threadId", element: Chat },
     ],
-    errorElement: <Navigate to="/" replace />,
+    ErrorBoundary: () => {
+      const pathname = usePathname();
+
+      if (pathname.startsWith("/threads")) return <Navigate to={pathname} replace />;
+      return <Navigate to="/" />;
+    },
   },
 ]);
 
