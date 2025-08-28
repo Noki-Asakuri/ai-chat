@@ -186,9 +186,14 @@ export const updateMessageById = mutation({
     if (!user) throw new Error("Not authenticated");
 
     const message = await ctx.db.get(args.messageId);
+    console.log("Updating message by Id", {
+      userId: user.subject,
+      messageId: args.messageId,
+      messageUserId: message?.userId ?? "Message not found",
+    });
+
     if (!message) throw new Error("Message not found");
     if (message.userId !== user.subject) throw new Error("Not authorized");
-
     if (message.status === "error") return;
 
     await ctx.db.patch(args.messageId, { ...args.updates, updatedAt: Date.now() });

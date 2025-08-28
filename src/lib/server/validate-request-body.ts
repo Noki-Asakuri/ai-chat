@@ -1,17 +1,18 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
+import { waitUntil } from "@vercel/functions";
 import { Redis } from "ioredis";
 import { z } from "zod/v4";
-import { waitUntil } from "@vercel/functions";
 
 import { google, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import type { ModelMessage, ToolSet, UserContent } from "ai";
 
-import { AllModelIds, getModelData } from "../chat/models";
+import { logger } from "../axiom/server";
+import { getModelData } from "../chat/models";
+import { tryCatchSync } from "../utils";
 
 import { env } from "@/env";
-import { logger } from "../axiom/server";
 
 const inputSchema = z.object({
   messages: z.array(
@@ -59,10 +60,6 @@ const inputSchema = z.object({
     .partial(),
 });
 
-const modelValidator = z.enum(AllModelIds).transform((model) => {
-  return { id: getModelData(model).id, model };
-});
-
 const safetySettings = [
   { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_HARASSMENT" },
   { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_HATE_SPEECH" },
@@ -78,14 +75,12 @@ export async function validateRequestBody(req: Request, userId: string) {
   }
 
   const { messages, assistantMessageId, threadId, config } = data;
-  const {
-    success: modelSuccess,
-    data: modelData,
-    error: modelError,
-  } = modelValidator.safeParse(config?.model);
-  if (!modelSuccess) {
-    throw new Error(z.prettifyError(modelError));
-  }
+  const [modelData, modelError] = tryCatchSync(() => {
+    if (!config.model || config.model.length === 0) throw new Error("No model provided");
+    return { id: getModelData(config.model).id, model: config.model };
+  });
+
+  if (modelError) throw new Error(`Invalid model: ${modelError.message}`);
 
   const { id, model } = modelData;
 
