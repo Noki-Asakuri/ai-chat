@@ -1,5 +1,4 @@
 import { createEnv } from "@t3-oss/env-nextjs";
-import { vercel } from "@t3-oss/env-nextjs/presets-zod";
 
 import { z } from "zod/v4";
 
@@ -9,7 +8,7 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
-    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    NODE_ENV: z.enum(["development", "production"]).default("development"),
 
     CONVEX_DEPLOYMENT: z.string(),
 
@@ -56,5 +55,4 @@ export const env = createEnv({
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
-  extends: [vercel()],
 });
