@@ -77,38 +77,37 @@ export async function validateRequestBody(req: Request, userId: string) {
   const { messages, assistantMessageId, threadId, config } = data;
   const [modelData, modelError] = tryCatchSync(() => {
     if (!config.model || config.model.length === 0) throw new Error("No model provided");
-    return { id: getModelData(config.model).id, model: config.model };
+    return { data: getModelData(config.model), model: config.model };
   });
 
   if (modelError) throw new Error(`Invalid model: ${modelError.message}`);
 
-  const { id, model } = modelData;
+  const { data: modelInfo, model } = modelData;
 
   const providerOptions = {
     google: { safetySettings } as GoogleGenerativeAIProviderOptions,
-    openai: {} as OpenAIResponsesProviderOptions,
+    openai: { store: false } as OpenAIResponsesProviderOptions,
   };
 
-  if (config?.thinkingBudget || config?.reasoningEffort) {
+  if (config?.thinkingBudget) {
     const isThinkingModel = model.includes("-thinking");
 
     providerOptions.google.thinkingConfig = {
       includeThoughts: isThinkingModel,
       thinkingBudget: isThinkingModel ? config.thinkingBudget : 0,
     };
-
-    providerOptions.openai = {
-      reasoningSummary: "detailed",
-      reasoningEffort: config.reasoningEffort,
-      include: ["reasoning.encrypted_content"],
-
-      store: false,
-    };
   }
 
-  if (model.includes("image")) {
+  if (modelInfo.capabilities.generateImage) {
     delete providerOptions.google.thinkingConfig;
     providerOptions.google.responseModalities = ["TEXT", "IMAGE"];
+  }
+
+  if (modelInfo.capabilities.reasoning === "effort") {
+    providerOptions.openai.reasoningSummary = "detailed";
+    providerOptions.openai.reasoningEffort = config.reasoningEffort ?? "medium";
+
+    providerOptions.openai.include = ["reasoning.encrypted_content"];
   }
 
   const tools: ToolSet = {};
@@ -125,7 +124,7 @@ export async function validateRequestBody(req: Request, userId: string) {
     assistantMessageId,
     threadId,
     config,
-    model: { id, uniqueId: model },
+    model: { id: modelInfo.id, uniqueId: model },
     providerOptions,
     tools,
   };
