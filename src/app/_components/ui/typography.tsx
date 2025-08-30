@@ -29,7 +29,7 @@ export function TypographyH2({ className, children, ...props }: React.ComponentP
   return (
     <h2
       className={cn(
-        "scroll-m-20 text-center text-4xl font-extrabold tracking-tight text-balance",
+        "scroll-m-20 text-center text-3xl font-extrabold tracking-tight text-balance",
         className,
       )}
       {...props}
@@ -58,44 +58,15 @@ export function TypographyH4({ className, children, ...props }: React.ComponentP
   );
 }
 
-export function TypographyAnchor({ className, children, ...props }: React.ComponentProps<"a">) {
-  return (
-    <a
-      className={cn("text-primary font-medium underline", className)}
-      rel="noreferrer"
-      target="_blank"
-      {...props}
-    >
-      {children}
-    </a>
-  );
-}
-
 export function TypographyBlockquote({
   className,
   children,
   ...props
 }: React.ComponentProps<"blockquote">) {
   return (
-    <blockquote className={cn("mt-4 border-l-2 pl-6 italic", className)} {...props}>
+    <blockquote {...props} className={cn("mt-4 border-l-2 pl-6 italic", className)}>
       {children}
     </blockquote>
-  );
-}
-
-export function TypographyUnorderedList({ children }: React.ComponentProps<"ul">) {
-  return (
-    <ul className="ml-6 list-disc [&>li]:my-2 [&>li:first-child]:mt-4 [&>li:last-child]:mb-4">
-      {children}
-    </ul>
-  );
-}
-
-export function TypographyOrderedList({ children }: React.ComponentProps<"ul">) {
-  return (
-    <ol className="ml-6 list-decimal [&>li]:my-2 [&>li:first-child]:mt-4 [&>li:last-child]:mb-4">
-      {children}
-    </ol>
   );
 }
 
@@ -107,10 +78,6 @@ export function TypographyInlineCode({ children }: React.ComponentProps<"code">)
   );
 }
 
-export function TypographySmall({ children }: React.ComponentProps<"small">) {
-  return <small className="text-sm leading-none font-medium">{children}</small>;
-}
-
 export function TypographyTable({ children }: React.ComponentProps<"table">) {
   return (
     <div className="w-full overflow-y-auto">
@@ -119,17 +86,27 @@ export function TypographyTable({ children }: React.ComponentProps<"table">) {
   );
 }
 
-export function TypographyTableTHead({ children }: React.ComponentProps<"thead">) {
-  return <thead className="*:!bg-transparent">{children}</thead>;
+export function TypographyTableTHead({ children, ...props }: React.ComponentProps<"thead">) {
+  return (
+    <thead {...props} className="[&>tr]:!bg-transparent">
+      {children}
+    </thead>
+  );
 }
 
 export function TypographyTableTR({ children }: React.ComponentProps<"tr">) {
   return <tr className="odd:bg-muted m-0 border-t p-0">{children}</tr>;
 }
 
-export function TypographyTableTH({ children }: React.ComponentProps<"th">) {
+export function TypographyTableTH({ children, ...props }: React.ComponentProps<"th">) {
   return (
-    <th className="border px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right">
+    <th
+      {...props}
+      className={cn(
+        "border px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right",
+        props.className,
+      )}
+    >
       {children}
     </th>
   );
