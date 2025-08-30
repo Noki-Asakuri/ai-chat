@@ -175,6 +175,7 @@ const MemoizedMarkdownBlock = memo(
         components={{
           code: CodeBlock,
           pre: ({ children }) => children,
+
           h1: TypographyH1,
           h2: TypographyH2,
           h3: TypographyH3,
