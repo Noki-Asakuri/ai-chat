@@ -14,7 +14,10 @@ export function TopSettingHeaders() {
     <header className="border-b">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
         <Button variant="ghost" asChild>
-          <Link href={window.localStorage.getItem("last-thread-ids") ?? "/"}>
+          <Link
+            href={window.localStorage.getItem("last-thread-ids") ?? "/"}
+            onNavigate={() => window.localStorage.removeItem("last-thread-ids")}
+          >
             <ArrowLeftIcon />
             Back to Chat
           </Link>
