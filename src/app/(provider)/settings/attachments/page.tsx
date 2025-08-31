@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { ImagePreviewDialog } from "@/components/image-preview-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +27,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { format, toUUID, tryCatch } from "@/lib/utils";
 
@@ -120,6 +121,29 @@ export default function AttachmentsPage() {
 
     return list;
   }, [data, searchText, sourceFilter]);
+
+  // Build gallery sources for image preview (only currently visible items)
+  const imageAttachments = useMemo(
+    () => filteredData.filter((a) => a.type === "image"),
+    [filteredData],
+  );
+
+  const galleryImages = useMemo(
+    () =>
+      imageAttachments.map((a) => ({
+        src: `https://files.chat.asakuri.me/${a.userId}/${a.threadId}/${a._id}`,
+        alt: a.name,
+        name: a.name,
+        size: a.size,
+      })),
+    [imageAttachments],
+  );
+
+  const imageIndexById = useMemo(() => {
+    const m = new Map<Id<"attachments">, number>();
+    imageAttachments.forEach((a, i) => m.set(a._id, i));
+    return m;
+  }, [imageAttachments]);
 
   // Totals across all attachments (not filtered)
   const totals = useMemo(() => {
@@ -280,6 +304,24 @@ export default function AttachmentsPage() {
                       </div>
                     )}
                   </button>
+                ) : attachment.type === "image" ? (
+                  <ImagePreviewDialog
+                    className="block size-full"
+                    image={{
+                      src: imageUrl,
+                      alt: attachment.name,
+                      name: attachment.name,
+                      size: attachment.size,
+                    }}
+                    images={galleryImages}
+                    initialIndex={imageIndexById.get(attachment._id) ?? 0}
+                  >
+                    <img
+                      alt={attachment.name}
+                      className="aspect-square size-full object-cover"
+                      src={imageUrl}
+                    />
+                  </ImagePreviewDialog>
                 ) : (
                   <a
                     target="_blank"
@@ -287,17 +329,9 @@ export default function AttachmentsPage() {
                     className="block size-full"
                     href={imageUrl}
                   >
-                    {attachment.type === "image" ? (
-                      <img
-                        alt={attachment.name}
-                        className="aspect-square size-full object-cover"
-                        src={imageUrl}
-                      />
-                    ) : (
-                      <div className="flex aspect-square size-full items-center justify-center p-2">
-                        <FileTextIcon size={64} />
-                      </div>
-                    )}
+                    <div className="flex aspect-square size-full items-center justify-center p-2">
+                      <FileTextIcon size={64} />
+                    </div>
                   </a>
                 )}
 
