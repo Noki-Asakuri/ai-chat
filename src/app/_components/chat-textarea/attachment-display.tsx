@@ -93,9 +93,9 @@ export function ChatAttachmentDisplay() {
 
   return (
     <div
-      className={cn("flex items-center justify-start gap-4 border-b p-2.5", {
-        hidden: !preview,
-      })}
+      data-slot="attachment-display"
+      data-visible={!!preview}
+      className="custom-scroll flex items-center justify-start gap-4 overflow-x-auto border-b p-2.5 data-[visible=false]:hidden"
     >
       {preview?.map((attachment) => (
         <AttachmentPreview key={attachment.id} attachment={attachment} />
@@ -110,7 +110,11 @@ function AttachmentPreview({ attachment }: { attachment: Preview }) {
   return (
     <div className="relative flex items-center justify-center gap-2">
       {attachment.type === "image" ? (
-        <img src={attachment.url} alt="Attachment" className="h-12 rounded-md object-contain" />
+        <img
+          src={attachment.url}
+          alt="Attachment"
+          className="h-12 max-w-[12rem] rounded-md object-contain"
+        />
       ) : (
         <div className="flex h-12 w-12 items-center justify-center rounded-md bg-gray-200">
           <FileIcon className="size-6" />

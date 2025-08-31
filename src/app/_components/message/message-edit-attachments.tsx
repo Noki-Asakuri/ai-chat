@@ -119,7 +119,7 @@ export function MessageEditAttachments(props: MessageEditAttachmentsProps) {
           {remotePreviews.map((att) => (
             <div key={att._id} className="relative flex items-center justify-center gap-2">
               {att.type === "image" ? (
-                <img src={att.url} alt="Attachment" className="h-12 rounded-md object-contain" />
+                <img src={att.url} alt="Attachment" className="h-12 max-w-[12rem] rounded-md object-contain" />
               ) : (
                 <div className="flex h-12 w-12 items-center justify-center rounded-md bg-gray-200">
                   <FileIcon className="size-6" />
@@ -149,7 +149,7 @@ export function MessageEditAttachments(props: MessageEditAttachmentsProps) {
           {localPreviews.map((att) => (
             <div key={att.id} className="relative flex items-center justify-center gap-2">
               {att.type === "image" ? (
-                <img src={att.url} alt="Attachment" className="h-12 rounded-md object-contain" />
+                <img src={att.url} alt="Attachment" className="h-12 max-w-[12rem] rounded-md object-contain" />
               ) : (
                 <div className="flex h-12 w-12 items-center justify-center rounded-md bg-gray-200">
                   <FileIcon className="size-6" />
