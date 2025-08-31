@@ -34,6 +34,32 @@ export function MessageAttachmentDisplay({
     return `https://ik.imagekit.io/gmethsnvl/ai-chat/${att.userId}/${att.threadId}/${att._id}`;
   }
 
+  // Build a normalized list of image entries preserving visual order (by slot index).
+  // Each slot may be from a persisted attachment or a preview image, or be empty.
+  const imageSlots: Array<{ src?: string; alt: string; name: string; size?: number } | null> =
+    Array.from({ length: totalImageSlots }).map((_, idx) => {
+      const att = persistedImages[idx] as Doc<"attachments"> | undefined;
+      const prev = previewImages[idx] as { src: string; size?: number; name?: string } | undefined;
+
+      if (att) {
+        return {
+          src: imageUrlFromAttachment(att),
+          alt: att.name,
+          name: att.name,
+          size: att.size,
+        };
+      }
+      if (prev) {
+        return {
+          src: prev.src,
+          alt: prev.name ?? "Attachment preview",
+          name: prev.name ?? "Attachment preview",
+          size: prev.size,
+        };
+      }
+      return null;
+    });
+
   function renderImageSlot(idx: number) {
     const att = persistedImages[idx] as Doc<"attachments"> | undefined;
     const prev = previewImages[idx] as { src: string; size?: number; name?: string } | undefined;
@@ -41,9 +67,16 @@ export function MessageAttachmentDisplay({
     if (!att && !prev) return null;
 
     const src = att ? imageUrlFromAttachment(att) : prev!.src;
-    const alt = att ? att.name : "Generating image...";
-    const name = att ? att.name : "Generating image...";
+    const alt = att ? att.name : (prev?.name ?? "Generating image...");
+    const name = att ? att.name : (prev?.name ?? "Generating image...");
     const size = att ? att.size : prev?.size;
+
+    // Compute the initial index within the compacted images list (exclude empty slots).
+    const compactImages = imageSlots.filter(
+      (v): v is { src?: string; alt: string; name: string; size?: number } => v !== null,
+    );
+    const initialIndexWithinList =
+      imageSlots.slice(0, idx + 1).filter((v) => v !== null).length - 1;
 
     // IMPORTANT: Always render the same component type (ImagePreviewDialog) with a stable key,
     // so when a preview transitions to a persisted attachment, the dialog instance stays mounted.
@@ -52,6 +85,8 @@ export function MessageAttachmentDisplay({
         key={`${baseKey}-image-slot-${idx}`}
         className="aspect-square size-40 overflow-hidden rounded-md"
         image={{ src, alt, name, size }}
+        images={compactImages}
+        initialIndex={Math.max(0, initialIndexWithinList)}
       >
         <img
           alt={att ? "Attachment" : "Attachment preview"}

@@ -6,6 +6,8 @@ import {
   ImagesIcon,
   LoaderCircleIcon,
   XIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -76,6 +78,8 @@ type ImagePreviewDialogProps = Omit<
 > & {
   file?: File | null;
   image: { src?: string; alt: string; name: string; size?: number };
+  images?: Array<{ src?: string; alt: string; name: string; size?: number }>;
+  initialIndex?: number;
   children: ((objectUrl: string | null) => React.ReactNode) | React.ReactNode;
 };
 
@@ -83,10 +87,13 @@ export function ImagePreviewDialog({
   children,
   className,
   image,
+  images,
+  initialIndex,
   file,
   ...props
 }: ImagePreviewDialogProps) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [currentIndex, setCurrentIndex] = useState<number>(initialIndex ?? 0);
 
   useEffect(() => {
     if (!file) return setObjectUrl(null);
@@ -99,12 +106,25 @@ export function ImagePreviewDialog({
     };
   }, [file]);
 
-  if (!image.src && !objectUrl) return null;
+  useEffect(() => {
+    setCurrentIndex(initialIndex ?? 0);
+  }, [initialIndex]);
+
+  // Determine active image (single or from carousel)
+  const totalImages = images?.length ?? 0;
+  const hasCarousel = totalImages > 1;
+  const normalizedIndex = totalImages
+    ? ((currentIndex % totalImages) + totalImages) % totalImages
+    : 0;
+  const activeImage =
+    (totalImages ? images?.[normalizedIndex] : undefined) ?? image;
+
+  if (!activeImage.src && !objectUrl) return null;
 
   function openInNewTab() {
-    if (!image.src) return;
+    if (!activeImage.src) return;
 
-    const url = image.src.replace(
+    const url = activeImage.src.replace(
       "https://ik.imagekit.io/gmethsnvl/ai-chat/",
       "https://files.chat.asakuri.me/",
     );
@@ -113,7 +133,7 @@ export function ImagePreviewDialog({
   }
 
   async function copyImage() {
-    if (!image.src) return;
+    if (!activeImage.src) return;
     if (!isClipboardImageWriteSupported()) {
       return toast.error("Copying image is not supported in this browser.", {
         position: "top-center",
@@ -121,7 +141,7 @@ export function ImagePreviewDialog({
       });
     }
 
-    const url = image.src.replace(
+    const url = activeImage.src.replace(
       "https://ik.imagekit.io/gmethsnvl/ai-chat/",
       "https://files.chat.asakuri.me/",
     );
@@ -178,9 +198,9 @@ export function ImagePreviewDialog({
   }
 
   async function copyLink() {
-    if (!image.src) return;
+    if (!activeImage.src) return;
 
-    const url = image.src.replace(
+    const url = activeImage.src.replace(
       "https://ik.imagekit.io/gmethsnvl/ai-chat/",
       "https://files.chat.asakuri.me/",
     );
@@ -191,8 +211,15 @@ export function ImagePreviewDialog({
 
   return (
     <Dialog.Root>
-      <Dialog.Trigger className={className} {...props}>
-        {typeof children === "function" ? children(objectUrl) : image.src ? children : null}
+      <Dialog.Trigger
+        className={className}
+        {...props}
+        onMouseDown={() => {
+          // Reset the index to the provided starting index when opening
+          setCurrentIndex(initialIndex ?? 0);
+        }}
+      >
+        {typeof children === "function" ? children(objectUrl) : activeImage.src ? children : null}
       </Dialog.Trigger>
 
       <Dialog.Portal>
@@ -201,13 +228,21 @@ export function ImagePreviewDialog({
         <Dialog.Popup
           data-slot="image-preview-popup"
           className="group/image-preview pointer-events-none fixed top-0 z-50 flex h-full w-full flex-col items-center justify-center gap-2 transition-[opacity] duration-300 outline-none data-[ending-style]:opacity-0 data-[starting-style]:opacity-0"
+          onKeyDown={(e) => {
+            if (!hasCarousel) return;
+            if (e.key === "ArrowLeft") {
+              setCurrentIndex((i) => i - 1);
+            } else if (e.key === "ArrowRight") {
+              setCurrentIndex((i) => i + 1);
+            }
+          }}
         >
           <div className="absolute top-4 right-4 flex h-10 items-center gap-2">
             <div
-              data-hidden={!image.src}
+              data-hidden={!activeImage.src}
               className="bg-muted/80 flex gap-2 rounded-md border p-1 data-[hidden=true]:hidden"
             >
-              <DownloadImageButton image={image} />
+              <DownloadImageButton image={activeImage} />
 
               <ButtonWithTip
                 title="Open in New Tab"
@@ -253,15 +288,45 @@ export function ImagePreviewDialog({
           </div>
 
           <div className="pointer-events-none flex flex-col items-center justify-center gap-6 transition-[scale,opacity] duration-300 group-data-[ending-style]/image-preview:scale-90 group-data-[ending-style]/image-preview:opacity-0 group-data-[starting-style]/image-preview:opacity-0">
+            {/* Carousel navigation buttons */}
+            {hasCarousel && (
+              <>
+                <button
+                  type="button"
+                  className="pointer-events-auto absolute left-4 top-1/2 -translate-y-1/2 rounded-full border bg-muted/80 p-2"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setCurrentIndex((i) => i - 1);
+                  }}
+                  aria-label="Previous image"
+                  title="Previous (ArrowLeft)"
+                >
+                  <ChevronLeftIcon />
+                </button>
+                <button
+                  type="button"
+                  className="pointer-events-auto absolute right-4 top-1/2 -translate-y-1/2 rounded-full border bg-muted/80 p-2"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setCurrentIndex((i) => i + 1);
+                  }}
+                  aria-label="Next image"
+                  title="Next (ArrowRight)"
+                >
+                  <ChevronRightIcon />
+                </button>
+              </>
+            )}
+
             <img
-              alt={image.alt}
-              src={objectUrl ?? image.src}
+              alt={activeImage.alt}
+              src={objectUrl ?? activeImage.src}
               className="pointer-events-auto max-h-[80vh] max-w-[80vw] rounded-lg select-none"
             />
 
             <div className="pointer-events-auto flex flex-col items-center justify-center gap-1 text-sm">
-              <span>Name: {image.name}</span>
-              {image.size && <span>Size: {format.size(image.size)}</span>}
+              <span>Name: {activeImage.name}</span>
+              {activeImage.size && <span>Size: {format.size(activeImage.size)}</span>}
             </div>
           </div>
         </Dialog.Popup>

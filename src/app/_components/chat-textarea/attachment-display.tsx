@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { ButtonWithTip } from "../ui/button";
+import { ImagePreviewDialog } from "../image-preview-dialog";
 
 import { getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
@@ -91,6 +92,9 @@ export function ChatAttachmentDisplay() {
 
   if (attachments.length === 0) return null;
 
+  // Build image-only list for carousel navigation
+  const imageList = preview?.filter((p) => p.type === "image") ?? [];
+
   return (
     <div
       data-slot="attachment-display"
@@ -98,23 +102,48 @@ export function ChatAttachmentDisplay() {
       className="custom-scroll flex items-center justify-start gap-4 overflow-x-auto border-b p-2.5 data-[visible=false]:hidden"
     >
       {preview?.map((attachment) => (
-        <AttachmentPreview key={attachment.id} attachment={attachment} />
+        <AttachmentPreview key={attachment.id} attachment={attachment} images={imageList} />
       ))}
     </div>
   );
 }
 
-function AttachmentPreview({ attachment }: { attachment: Preview }) {
+function AttachmentPreview({ attachment, images }: { attachment: Preview; images: Preview[] }) {
   const removeAttachment = useChatStore((state) => state.removeAttachment);
+
+  // Prepare carousel images for dialog (image-only)
+  const carouselImages =
+    images.map((img) => ({
+      src: img.url,
+      alt: img.name,
+      name: img.name,
+      size: img.size,
+    })) ?? [];
+  const initialIndex = Math.max(
+    0,
+    images.findIndex((img) => img.id === attachment.id),
+  );
 
   return (
     <div className="relative flex items-center justify-center gap-2">
       {attachment.type === "image" ? (
-        <img
-          src={attachment.url}
-          alt="Attachment"
-          className="h-12 max-w-[12rem] rounded-md object-contain"
-        />
+        <ImagePreviewDialog
+          className="h-12 max-w-[12rem] overflow-hidden rounded-md"
+          image={{
+            src: attachment.url,
+            alt: attachment.name,
+            name: attachment.name,
+            size: attachment.size,
+          }}
+          images={carouselImages}
+          initialIndex={initialIndex}
+        >
+          <img
+            src={attachment.url}
+            alt="Attachment"
+            className="h-12 max-w-[12rem] rounded-md object-contain"
+          />
+        </ImagePreviewDialog>
       ) : (
         <div className="flex h-12 w-12 items-center justify-center rounded-md bg-gray-200">
           <FileIcon className="size-6" />
