@@ -41,7 +41,7 @@ export const getStatistics = query({
       ? {
           stats: statsDoc.stats,
           modelCounts: statsDoc.modelCounts,
-          threadCounts: statsDoc.threadCounts as Record<string, number>,
+          threadCounts: statsDoc.threadCounts,
           activityCounts: statsDoc.activityCounts,
           aiProfileCounts: statsDoc.aiProfileCounts,
         }
@@ -55,11 +55,13 @@ export const getStatistics = query({
     // threadRank: resolve names
     const threadEntries = Object.entries(s.threadCounts);
     const threadIds: Array<Id<"threads">> = threadEntries.map(
-      ([threadId]) => threadId as unknown as Id<"threads">,
+      ([threadId]) => threadId as Id<"threads">,
     );
+
     const threadDocs: Array<Doc<"threads"> | null> = await Promise.all(
       threadIds.map(async (id) => ctx.db.get(id)),
     );
+
     const threadRank = threadEntries
       .map(([, value], idx) => {
         const id = threadIds[idx];

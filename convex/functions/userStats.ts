@@ -141,7 +141,7 @@ export const incrementOnAssistantComplete = internalMutation({
     modelCounts[normalizedModelId] = (modelCounts[normalizedModelId] ?? 0) + 1;
 
     const aiProfileCounts: Record<string, number> = { ...doc.aiProfileCounts };
-    const aiKey = args.aiProfileId ? (args.aiProfileId as unknown as string) : "null";
+    const aiKey = args.aiProfileId ?? "null";
     aiProfileCounts[aiKey] = (aiProfileCounts[aiKey] ?? 0) + 1;
 
     await ctx.db.patch(doc._id, {
