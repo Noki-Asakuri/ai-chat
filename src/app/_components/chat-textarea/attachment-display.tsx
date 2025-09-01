@@ -1,13 +1,13 @@
-import { FileIcon, FileUpIcon, XIcon } from "lucide-react";
+import { FileIcon, PaperclipIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
-import { ButtonWithTip } from "../ui/button";
 import { ImagePreviewDialog } from "../image-preview-dialog";
+import { ButtonWithTip } from "../ui/button";
 
 import { getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
-import { cn, format } from "@/lib/utils";
+import { format } from "@/lib/utils";
 
 export function ChatAttachmentButton() {
   const model = useChatStore((state) => state.chatConfig.model);
@@ -35,10 +35,10 @@ export function ChatAttachmentButton() {
         asChild
         title="Upload Image"
         variant="secondary"
-        className="size-9 border px-2 py-1.5 text-xs"
+        className="border- size-9 border px-2 py-1.5 text-xs"
       >
         <label htmlFor="image-upload" className="cursor-pointer">
-          <FileUpIcon />
+          <PaperclipIcon />
           <span className="sr-only">Upload Image</span>
         </label>
       </ButtonWithTip>

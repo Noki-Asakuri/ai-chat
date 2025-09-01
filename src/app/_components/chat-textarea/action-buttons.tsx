@@ -1,11 +1,10 @@
 import { GlobeIcon } from "lucide-react";
 
-import { ChatModelSelector } from "./model-selector";
 import { ButtonWithTip } from "../ui/button";
+import { ChatModelSelector } from "./model-selector";
 
-import { ChatAttachmentButton } from "./attachment-display";
-import { ChatParamsPopup } from "./params-config-popover";
 import { AiProfileSelectorButton } from "./ai-profile-selector";
+import { ChatAttachmentButton } from "./attachment-display";
 
 import { getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
@@ -17,9 +16,7 @@ export function ChatActionButtons() {
 
   return (
     <div className="flex items-center justify-center gap-2">
-      <ChatModelSelector />
-      <AiProfileSelectorButton />
-      <ChatParamsPopup />
+      <ChatAttachmentButton />
 
       <ButtonWithTip
         type="button"
@@ -36,7 +33,8 @@ export function ChatActionButtons() {
         </span>
       </ButtonWithTip>
 
-      <ChatAttachmentButton />
+      <ChatModelSelector />
+      <AiProfileSelectorButton />
     </div>
   );
 }
