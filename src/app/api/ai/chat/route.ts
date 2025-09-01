@@ -38,64 +38,65 @@ const streamContext = createResumableStreamContext({
 });
 
 export const POST = withAxiom(async (req) => {
-  const user = await auth();
-  if (!user.userId) {
-    logger.error("[Chat Error]: Unauthenticated POST request!", { user });
-    return NextResponse.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
-  }
+  try {
+    const user = await auth();
+    if (!user.userId) {
+      logger.error("[Chat Error]: Unauthenticated POST request!", { user });
+      return NextResponse.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
+    }
 
-  const authToken = await user.getToken({ template: "convex" });
-  serverConvexClient.setAuth(authToken!);
+    const authToken = await user.getToken({ template: "convex" });
+    serverConvexClient.setAuth(authToken!);
 
-  const [requestBody, validateError] = await tryCatch(validateRequestBody(req, user.userId));
-  if (validateError) {
-    logger.error("[Chat Error]: Failed to parse request body!", {
-      error: validateError,
-      userId: user.userId,
-    });
-    return NextResponse.json({ error: { message: validateError.message } }, { status: 400 });
-  }
+    const [requestBody, validateError] = await tryCatch(validateRequestBody(req, user.userId));
+    if (validateError) {
+      logger.error("[Chat Error]: Failed to parse request body!", {
+        error: validateError,
+        userId: user.userId,
+      });
+      return NextResponse.json({ error: { message: validateError.message } }, { status: 400 });
+    }
 
-  const {
-    messages,
-    transformedMessages,
-    assistantMessageId,
-    threadId,
-    model,
-    providerOptions,
-    config,
-    tools,
-  } = requestBody;
+    const {
+      messages,
+      transformedMessages,
+      assistantMessageId,
+      threadId,
+      model,
+      providerOptions,
+      config,
+      tools,
+    } = requestBody;
 
-  // Enforce monthly per-user usage limit before processing the request
-  const usage = await serverConvexClient.mutation(api.functions.usages.checkAndIncrement, {
-    amount: 1,
-  });
-
-  if (!usage.allowed) {
-    await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
-      error: `Monthly message limit reached (${usage.used}/${usage.base}).`,
-      model: model.uniqueId,
-      messageId: assistantMessageId,
+    // Enforce monthly per-user usage limit before processing the request
+    const usage = await serverConvexClient.mutation(api.functions.usages.checkAndIncrement, {
+      amount: 1,
     });
 
-    logger.error("[Chat Error]: Monthly message limit reached!", {
-      userId: user.userId,
-      used: usage.used,
-      base: usage.base,
-    });
+    if (!usage.allowed) {
+      await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
+        error: `Monthly message limit reached (${usage.used}/${usage.base}).`,
+        model: model.uniqueId,
+        messageId: assistantMessageId,
+      });
 
-    return NextResponse.json(
-      { error: { message: `Monthly message limit reached (${usage.used}/${usage.base}).` } },
-      { status: 429 },
-    );
-  }
+      logger.error("[Chat Error]: Monthly message limit reached!", {
+        userId: user.userId,
+        used: usage.used,
+        base: usage.base,
+      });
 
-  const dataCustomization = await serverConvexClient.query(api.functions.users.currentUser);
-  let systemInstruction = "";
+      return NextResponse.json(
+        { error: { message: `Monthly message limit reached (${usage.used}/${usage.base}).` } },
+        { status: 429 },
+      );
+    }
 
-  if (dataCustomization?.customization?.name) {
-    systemInstruction += dedent`
+    const dataCustomization = await serverConvexClient.query(api.functions.users.currentUser);
+    let systemInstruction = "";
+
+    if (dataCustomization?.customization?.name) {
+      systemInstruction += dedent`
 		<user>
 		## User Information:
 		User basic information. Avoid mentioning the user's name or occupation during the conversation.
@@ -105,9 +106,9 @@ export const POST = withAxiom(async (req) => {
 		Occupation: ${dataCustomization.customization.occupation ?? "unknown"}
 		</user>
 		\n`;
-  }
+    }
 
-  systemInstruction += dedent`
+    systemInstruction += dedent`
 	<global>
 	## Global System Instruction:
 	This is the global system instruction. It should be followed unless there is a conflicting instruction in the AI Profile Instruction.
@@ -116,9 +117,9 @@ export const POST = withAxiom(async (req) => {
 	</global>
 	`;
 
-  const profilePrompt = config.profile?.systemPrompt?.trim();
-  if (profilePrompt && profilePrompt.length > 0) {
-    systemInstruction += dedent`\n
+    const profilePrompt = config.profile?.systemPrompt?.trim();
+    if (profilePrompt && profilePrompt.length > 0) {
+      systemInstruction += dedent`\n
 		<profile>
 		## AI Profile Instruction:
 		User defined instruction. This is the most important instruction. It should take precedence over the global system instruction.
@@ -131,278 +132,286 @@ export const POST = withAxiom(async (req) => {
 		</traits>
 		</profile>
 		`;
-  }
+    }
 
-  const streamId = generateId();
-  const startTime = Date.now();
+    const streamId = generateId();
+    const startTime = Date.now();
 
-  const result = streamText({
-    model: registry.languageModel(model.id),
-    system: systemInstruction.trim(),
-    messages: transformedMessages,
-    providerOptions,
-    tools,
-    abortSignal: req.signal,
+    const result = streamText({
+      model: registry.languageModel(model.id),
+      system: systemInstruction.trim(),
+      messages: transformedMessages,
+      providerOptions,
+      tools,
+      abortSignal: req.signal,
 
-    topP: config.topP,
-    topK: config.topK,
-    temperature: config.temperature,
-    maxOutputTokens: config.maxTokens,
-    presencePenalty: config.presencePenalty,
-    frequencyPenalty: config.frequencyPenalty,
+      topP: config.topP,
+      topK: config.topK,
+      temperature: config.temperature,
+      maxOutputTokens: config.maxTokens,
+      presencePenalty: config.presencePenalty,
+      frequencyPenalty: config.frequencyPenalty,
 
-    stopWhen: stepCountIs(5),
-    experimental_transform: smoothStream({ delayInMs: 10, chunking: "line" }),
+      stopWhen: stepCountIs(5),
+      experimental_transform: smoothStream({ delayInMs: 10, chunking: "line" }),
 
-    async onError({ error }) {
-      const err = error as AISDKError;
-      // Skip proxy-related type validation errors as they are expected during proxy configuration
-      if (err.name === "AI_TypeValidationError" && err.message.includes("proxy-")) return;
+      async onError({ error }) {
+        const err = error as AISDKError;
+        // Skip proxy-related type validation errors as they are expected during proxy configuration
+        if (err.name === "AI_TypeValidationError" && err.message.includes("proxy-")) return;
 
-      console.error("[Chat] Error:", err);
-      logger.error("[Chat Error]: " + err.message, {
-        userId: user.userId,
-        threadId,
-        assistantMessageId,
-        model: model.uniqueId,
-        errorName: err.name,
-      });
+        console.error("[Chat] Error:", err);
+        logger.error("[Chat Error]: " + err.message, {
+          userId: user.userId,
+          threadId,
+          assistantMessageId,
+          model: model.uniqueId,
+          errorName: err.name,
+        });
 
-      if (err.name === "AbortError" && req.signal.aborted) return;
+        if (err.name === "AbortError" && req.signal.aborted) return;
 
-      await serverConvexClient.mutation(api.functions.usages.refundRequest, { amount: 1 });
-      await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
-        error: err.message,
-        model: model.uniqueId,
-        messageId: assistantMessageId,
-      });
-    },
-  });
+        await serverConvexClient.mutation(api.functions.usages.refundRequest, { amount: 1 });
+        await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
+          error: err.message,
+          model: model.uniqueId,
+          messageId: assistantMessageId,
+        });
+      },
+    });
 
-  await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
-    threadId,
-    messageId: assistantMessageId,
-    updates: { status: "streaming", resumableStreamId: streamId, model: model.uniqueId },
-  });
+    await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
+      threadId,
+      messageId: assistantMessageId,
+      updates: { status: "streaming", resumableStreamId: streamId, model: model.uniqueId },
+    });
 
-  const metadata = {
-    model: model.uniqueId as string,
-    aiProfileId: config.profile?.id ?? undefined,
-    duration: 0,
-    finishReason: "",
-    totalTokens: 0,
-    thinkingTokens: 0,
-    timeToFirstTokenMs: 0,
-    durations: { request: 0, reasoning: 0, text: 0 },
-  } satisfies Doc<"messages">["metadata"];
+    const metadata = {
+      model: model.uniqueId,
+      aiProfileId: config.profile?.id ?? undefined,
+      duration: 0,
+      finishReason: "",
+      totalTokens: 0,
+      thinkingTokens: 0,
+      timeToFirstTokenMs: 0,
+      durations: { request: 0, reasoning: 0, text: 0 },
+    } satisfies Doc<"messages">["metadata"];
 
-  waitUntil(updateTitle(messages, threadId));
-  waitUntil(result.consumeStream());
+    waitUntil(updateTitle(messages, threadId));
+    waitUntil(result.consumeStream());
 
-  const chatStream = createUIMessageStream({
-    execute: async ({ writer }) => {
-      let content = "";
-      let reasoning = "";
-      const attachmentIds: Id<"attachments">[] = [];
+    const chatStream = createUIMessageStream({
+      execute: async ({ writer }) => {
+        let content = "";
+        let reasoning = "";
+        const attachmentIds: Id<"attachments">[] = [];
 
-      let reasoningDuration = 0;
-      let textDuration = 0;
+        let reasoningDuration = 0;
+        let textDuration = 0;
 
-      writer.merge(
-        result.toUIMessageStream({
-          sendFinish: true,
-          sendReasoning: true,
-          sendSources: true,
-          sendStart: true,
-        }),
-      );
+        writer.merge(
+          result.toUIMessageStream({
+            sendFinish: true,
+            sendReasoning: true,
+            sendSources: true,
+            sendStart: true,
+          }),
+        );
 
-      // OpenAI reasoning return multiple reasoning-start/end events. We only want to count the first one.
-      let hasStartedReasoning = false;
+        // OpenAI reasoning return multiple reasoning-start/end events. We only want to count the first one.
+        let hasStartedReasoning = false;
 
-      for await (const stream of result.fullStream) {
-        switch (stream.type) {
-          case "reasoning-start":
-            if (hasStartedReasoning) {
-              // OpenAI seperate reasoning part with new 'reasoning-start' event
-              reasoning += "\n\n";
-              continue;
-            }
+        for await (const stream of result.fullStream) {
+          switch (stream.type) {
+            case "reasoning-start":
+              if (hasStartedReasoning) {
+                // OpenAI seperate reasoning part with new 'reasoning-start' event
+                reasoning += "\n\n";
+                continue;
+              }
 
-            // Start first token time if model return reasoning
-            metadata.timeToFirstTokenMs = Date.now() - startTime;
-            reasoningDuration = Date.now();
-
-            hasStartedReasoning = true;
-            break;
-
-          case "reasoning-delta":
-            reasoning += stream.text;
-            break;
-
-          case "reasoning-end":
-            if (metadata.durations.reasoning === 0) {
-              metadata.durations.reasoning = Date.now() - reasoningDuration;
-            }
-            break;
-
-          case "text-start":
-            textDuration = Date.now();
-            if (metadata.timeToFirstTokenMs === 0) {
+              // Start first token time if model return reasoning
               metadata.timeToFirstTokenMs = Date.now() - startTime;
-            }
-            break;
+              reasoningDuration = Date.now();
 
-          case "text-delta":
-            content += stream.text;
-            break;
+              hasStartedReasoning = true;
+              break;
 
-          case "text-end":
-            metadata.durations.text = Date.now() - textDuration;
-            break;
+            case "reasoning-delta":
+              reasoning += stream.text;
+              break;
 
-          case "file":
-            const attachmentId = await serverUploadFileR2({
-              buffer: stream.file.uint8Array,
-              mediaType: stream.file.mediaType,
-              threadId,
-            });
+            case "reasoning-end":
+              if (metadata.durations.reasoning === 0) {
+                metadata.durations.reasoning = Date.now() - reasoningDuration;
+              }
+              break;
 
-            if (attachmentId) {
-              attachmentIds.push(attachmentId);
+            case "text-start":
+              textDuration = Date.now();
+              if (metadata.timeToFirstTokenMs === 0) {
+                metadata.timeToFirstTokenMs = Date.now() - startTime;
+              }
+              break;
 
-              console.log("File received", stream.file.mediaType, attachmentId);
-              logger.info("[Chat] File received", {
-                userId: user.userId,
+            case "text-delta":
+              content += stream.text;
+              break;
+
+            case "text-end":
+              metadata.durations.text = Date.now() - textDuration;
+              break;
+
+            case "file":
+              const attachmentId = await serverUploadFileR2({
+                buffer: stream.file.uint8Array,
+                mediaType: stream.file.mediaType,
                 threadId,
-                assistantMessageId,
-                model: model.uniqueId,
-                attachmentId,
               });
-            } else {
-              logger.error("[Chat Error]: Failed to upload file", {
-                userId: user.userId,
-                threadId,
-                assistantMessageId,
-                model: model.uniqueId,
-              });
-            }
 
-            break;
+              if (attachmentId) {
+                attachmentIds.push(attachmentId);
 
-          case "finish-step":
-            metadata.model = stream.response.modelId;
-            metadata.finishReason = stream.finishReason;
+                console.log("File received", stream.file.mediaType, attachmentId);
+                logger.info("[Chat] File received", {
+                  userId: user.userId,
+                  threadId,
+                  assistantMessageId,
+                  model: model.uniqueId,
+                  attachmentId,
+                });
+              } else {
+                logger.error("[Chat Error]: Failed to upload file", {
+                  userId: user.userId,
+                  threadId,
+                  assistantMessageId,
+                  model: model.uniqueId,
+                });
+              }
 
-            metadata.duration = Date.now() - startTime;
-            metadata.durations.request = metadata.duration;
-            break;
+              break;
 
-          case "finish":
-            metadata.totalTokens = stream.totalUsage.outputTokens ?? 0;
-            metadata.thinkingTokens = stream.totalUsage.reasoningTokens ?? 0;
+            case "finish-step":
+              metadata.model = stream.response.modelId;
+              metadata.finishReason = stream.finishReason;
 
-            if (model.id.startsWith("openai/gpt-5")) {
-              // OpenAI GPT 5 output token also includes the reasoning tokens
-              // In case AI SDK change and remove reasoning tokens from output
-              // Then we revert back to original total tokens
-              metadata.totalTokens = Math.min(
-                metadata.totalTokens - metadata.thinkingTokens,
-                metadata.totalTokens,
-              );
-            }
-            break;
+              metadata.duration = Date.now() - startTime;
+              metadata.durations.request = metadata.duration;
+              break;
+
+            case "finish":
+              metadata.totalTokens = stream.totalUsage.outputTokens ?? 0;
+              metadata.thinkingTokens = stream.totalUsage.reasoningTokens ?? 0;
+
+              if (model.id.startsWith("openai/gpt-5")) {
+                // OpenAI GPT 5 output token also includes the reasoning tokens
+                // In case AI SDK change and remove reasoning tokens from output
+                // Then we revert back to original total tokens
+                metadata.totalTokens = Math.min(
+                  metadata.totalTokens - metadata.thinkingTokens,
+                  metadata.totalTokens,
+                );
+              }
+              break;
+          }
         }
-      }
 
-      type Updates = (typeof api.functions.messages.updateMessageById)["_args"]["updates"];
+        type Updates = (typeof api.functions.messages.updateMessageById)["_args"]["updates"];
 
-      const updates: Updates = {
-        metadata,
-        model: model.uniqueId,
-        resumableStreamId: null,
-        status: "complete" as const,
+        const updates: Updates = {
+          metadata,
+          model: model.uniqueId,
+          resumableStreamId: null,
+          status: "complete" as const,
 
-        attachments: attachmentIds,
+          attachments: attachmentIds,
 
-        content: fixMarkdownCodeBlocks(content),
-        reasoning: reasoning.length > 0 ? reasoning : undefined,
-      };
+          content: fixMarkdownCodeBlocks(content),
+          reasoning: reasoning.length > 0 ? reasoning : undefined,
+        };
 
-      logger.info("[Chat] Chat request completed!", {
-        userId: user.userId,
-        threadId,
-        assistantMessageId,
-        model: model.uniqueId,
-        metadata,
-      });
-
-      if (updates.content?.length === 0) {
-        updates.content = `Upstream returned empty content. Stop reason: ${metadata.finishReason}`;
-        logger.info("[Chat]: Upstream returned empty content!", {
+        logger.info("[Chat] Chat request completed!", {
           userId: user.userId,
           threadId,
           assistantMessageId,
           model: model.uniqueId,
           metadata,
         });
-      }
 
-      if (!req.signal.aborted) {
-        const promise = serverConvexClient.mutation(api.functions.messages.updateMessageById, {
-          messageId: assistantMessageId,
-          threadId,
-          updates,
-        });
+        if (updates.content?.length === 0) {
+          updates.content = `Upstream returned empty content. Stop reason: ${metadata.finishReason}`;
+          logger.info("[Chat]: Upstream returned empty content!", {
+            userId: user.userId,
+            threadId,
+            assistantMessageId,
+            model: model.uniqueId,
+            metadata,
+          });
+        }
 
-        waitUntil(promise);
-      }
-    },
-  });
+        if (!req.signal.aborted) {
+          const promise = serverConvexClient.mutation(api.functions.messages.updateMessageById, {
+            messageId: assistantMessageId,
+            threadId,
+            updates,
+          });
 
-  const reader = chatStream.getReader();
-
-  const readableStream = new ReadableStream<string>({
-    async start(controller) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done || req.signal.aborted) break;
-        controller.enqueue("data: " + JSON.stringify(value) + "\n\n");
-      }
-
-      if (!req.signal.aborted) {
-        controller.enqueue("data: [DONE]\n\n");
-      }
-
-      return controller.close();
-    },
-  });
-
-  const resumeableStream = await streamContext.createNewResumableStream(
-    streamId,
-    () => readableStream,
-  );
-
-  req.signal.onabort = async () => {
-    console.log("[Chat] Chat request aborted");
-    logger.error("[Chat Error]: Chat request aborted!", {
-      userId: user.userId,
-      threadId,
-      assistantMessageId,
-      model: model.uniqueId,
+          waitUntil(promise);
+        }
+      },
     });
 
-    await readableStream.cancel(new Error("Chat request aborted"));
-  };
+    const reader = chatStream.getReader();
 
-  return new Response(resumeableStream, {
-    headers: {
-      connection: "keep-alive",
-      "Cache-Control": "no-cache",
-      "Transfer-Encoding": "chunked",
-      "Content-Type": "text/event-stream",
-    },
-  });
+    const readableStream = new ReadableStream<string>({
+      async start(controller) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done || req.signal.aborted) break;
+          controller.enqueue("data: " + JSON.stringify(value) + "\n\n");
+        }
+
+        if (!req.signal.aborted) {
+          controller.enqueue("data: [DONE]\n\n");
+        }
+
+        return controller.close();
+      },
+    });
+
+    const resumeableStream = await streamContext.createNewResumableStream(
+      streamId,
+      () => readableStream,
+    );
+
+    req.signal.onabort = async () => {
+      console.log("[Chat] Chat request aborted");
+      logger.error("[Chat Error]: Chat request aborted!", {
+        userId: user.userId,
+        threadId,
+        assistantMessageId,
+        model: model.uniqueId,
+      });
+
+      await readableStream.cancel(new Error("Chat request aborted"));
+    };
+
+    return new Response(resumeableStream, {
+      headers: {
+        connection: "keep-alive",
+        "Cache-Control": "no-cache",
+        "Transfer-Encoding": "chunked",
+        "Content-Type": "text/event-stream",
+      },
+    });
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+
+    console.error("[Chat] Error:", error);
+    logger.error("[Chat Error]: " + error.message);
+
+    return new Response("Error: " + error.message, { status: 500 });
+  }
 });
 
 export const GET = withAxiom(async (req: NextRequest) => {
