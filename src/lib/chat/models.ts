@@ -103,6 +103,7 @@ export const ModelsData = {
     provider: "google",
     capabilities: {
       vision: true,
+      generateImage: true,
       maxTokens: 32_768,
     },
   },
