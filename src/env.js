@@ -16,8 +16,6 @@ export const env = createEnv({
     PROXY_KEY: z.string(),
     REDIS_URL: z.string(),
 
-    SENTRY_AUTH_TOKEN: z.string(),
-
     CLERK_SECRET_KEY: z.string(),
     CLERK_WEBHOOK_SIGNING_SECRET: z.string(),
   },
