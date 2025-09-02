@@ -116,7 +116,7 @@ function MessageLoading({ model }: { model: ChatMessage["model"] }) {
           <span>{modelData?.display.name}: </span>
         </div>
 
-        <span>Waiting for response...</span>
+        <span>Waiting for server response...</span>
       </div>
     </div>
   );

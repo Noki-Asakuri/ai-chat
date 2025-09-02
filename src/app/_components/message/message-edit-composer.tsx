@@ -1,5 +1,8 @@
 "use client";
 
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+
 import { FileUpIcon, GlobeIcon, Loader2Icon, SaveIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { v4 as uuidv4 } from "uuid";
@@ -10,11 +13,9 @@ import { Textarea } from "../ui/textarea";
 import { ModelSelector } from "../chat-textarea/model-selector";
 import { MessageEditAttachments } from "./message-edit-attachments";
 
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
-
 import { getModelData } from "@/lib/chat/models";
 import { useChatRequest } from "@/lib/chat/send-chat-request";
+import { shouldSend } from "@/lib/chat/send-preference";
 import { useChatStore } from "@/lib/chat/store";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { uploadFile } from "@/lib/convex/uploadFiles";
@@ -206,7 +207,14 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
+    const send = shouldSend({
+      key: event.key,
+      shiftKey: event.shiftKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+    });
+
+    if (send) {
       event.preventDefault();
       void handleSave();
     }

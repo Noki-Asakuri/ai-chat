@@ -61,9 +61,11 @@ function ButtonWithTip({
   children,
   title,
   side = "top",
+  delay = 0,
   ...props
 }: React.ComponentProps<typeof Button> & {
   side?: "top" | "bottom" | "left" | "right" | "inline-end" | "inline-start";
+  delay?: number;
 }) {
   const trigger = (
     <Button aria-label={title} {...props}>
@@ -72,7 +74,7 @@ function ButtonWithTip({
   );
 
   return (
-    <Tooltip>
+    <Tooltip delay={delay}>
       <TooltipTrigger render={trigger} />
       <TooltipContent side={side}>{title}</TooltipContent>
     </Tooltip>

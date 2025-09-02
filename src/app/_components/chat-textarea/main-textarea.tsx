@@ -13,6 +13,7 @@ import { ChatAttachmentDisplay } from "./attachment-display";
 import { ChatSendButton } from "./send-button";
 
 import { useChatRequest } from "@/lib/chat/send-chat-request";
+import { shouldSend, useGetSendDescription } from "@/lib/chat/send-preference";
 import { useChatStore } from "@/lib/chat/store";
 
 export function ChatTextarea() {
@@ -143,17 +144,32 @@ function InputTextArea() {
           handleAddAttachments({ files });
         }}
         onKeyDown={(event) => {
-          if (event.key === "Enter" && (!event.shiftKey || event.metaKey || event.ctrlKey)) {
+          const send = shouldSend({
+            key: event.key,
+            shiftKey: event.shiftKey,
+            ctrlKey: event.ctrlKey,
+            metaKey: event.metaKey,
+          });
+
+          if (send) {
             event.preventDefault();
             void submitChatMessage();
           }
         }}
       />
 
-      <span id="textarea-description" className="sr-only">
-        Press enter to send message. Shift + enter or Ctrl + enter to add new line.
-      </span>
+      <TextareaDescription />
     </div>
+  );
+}
+
+function TextareaDescription() {
+  const sendDescription = useGetSendDescription();
+
+  return (
+    <span id="textarea-description" className="sr-only">
+      {sendDescription}
+    </span>
   );
 }
 
