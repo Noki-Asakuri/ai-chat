@@ -19,7 +19,7 @@ export default function AuthLayout({ children }: LayoutProps<"/settings">) {
     <div className="flex h-svh w-full flex-col">
       <TopSettingHeaders />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 p-4 lg:overflow-hidden">
+      <main className="container mx-auto w-full flex-1 p-4 lg:overflow-hidden">
         <div className="grid h-full w-full grid-rows-[auto_1fr] gap-4 lg:grid-cols-[300px_1fr] lg:grid-rows-1">
           <SettingsSidebar />
 

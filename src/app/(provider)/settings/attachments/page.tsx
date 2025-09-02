@@ -266,7 +266,7 @@ export default function AttachmentsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
         {filteredData.length === 0 && (
           <div className="col-span-full flex flex-col items-center justify-center gap-2 rounded-md border p-8 text-center">
             <p className="text-muted-foreground">No attachments found</p>

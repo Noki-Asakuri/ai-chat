@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { ArrowLeftIcon, LogOutIcon, SunIcon } from "lucide-react";
+import { ArrowLeftIcon, LogOutIcon } from "lucide-react";
 
 import Link from "next/link";
 
@@ -12,7 +12,7 @@ export function TopSettingHeaders() {
 
   return (
     <header className="border-b">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
+      <div className="container mx-auto flex items-center justify-between px-4 py-4">
         <Button variant="ghost" asChild>
           <Link
             href={window.localStorage.getItem("last-thread-ids") ?? "/"}
@@ -24,10 +24,6 @@ export function TopSettingHeaders() {
         </Button>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <SunIcon />
-          </Button>
-
           <Button variant="ghost" onMouseDown={() => auth.signOut()}>
             <LogOutIcon />
             Sign out
