@@ -137,9 +137,9 @@ function MessageInner({ message, index }: Omit<MessageProps, "isLast">) {
 
   return (
     <div
-      className={cn("relative flex grow-0 flex-col", "[&:has(.codeblock)]:w-full", {
+      className={cn("relative flex grow-0 flex-col gap-2", "[&:has(.codeblock)]:w-full", {
         "w-full": message.role === "assistant" || editMessage?._id === message._id || isMobile,
-        "mx-0 max-w-[calc(100%-44px-8px)] gap-1 md:ml-auto":
+        "mx-0 max-w-[calc(100%-44px-8px)] md:ml-auto":
           message.role === "user" && editMessage?._id !== message._id && !isMobile,
       })}
     >

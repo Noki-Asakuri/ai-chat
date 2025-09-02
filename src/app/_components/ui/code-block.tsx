@@ -105,15 +105,19 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
   const Icon = languageData?.icon;
 
   return (
-    <div className="codeblock relative overflow-hidden rounded-md border">
-      <div className="pointer-events-none flex items-center justify-between border-b px-2 py-1">
+    <div className="codeblock bg-background/80 relative overflow-hidden rounded-md border">
+      <div className="pointer-events-none relative flex items-center justify-between border-b px-2 py-1">
         <div className="flex items-center justify-center gap-1.5">
           {Icon && <Icon className="size-5 rounded-sm" />}{" "}
-          <span>{languageData?.name ?? langKey ?? "plaintext"}</span>
+          <span className="capitalize">{languageData?.name ?? langKey ?? "plaintext"}</span>
           <span className="text-primary text-xs">{totalLines} lines</span>
         </div>
 
-        {fileName && <span className="text-primary text-xs">{fileName[1]}</span>}
+        {fileName && (
+          <span className="text-primary absolute w-[calc(100%-16px)] text-center text-sm">
+            {fileName[1]}
+          </span>
+        )}
 
         <div className="pointer-events-auto flex items-center gap-1">
           {totalLines > 15 ? (
