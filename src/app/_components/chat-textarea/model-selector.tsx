@@ -131,7 +131,7 @@ function ModelItem({ selected, value, onChange }: ModelSelectorProps & { selecte
       onSelect={onChange}
       data-model-selected={selected}
       title={data.display.unique ?? data.display.name}
-      className="data-[model-selected=true]:bg-secondary data-[model-selected=true]:text-secondary-foreground mt-1 cursor-pointer justify-between gap-2 rounded-md px-3 py-1.5 text-sm leading-4 outline-none select-none first:mt-0"
+      className="data-[model-selected=true]:!bg-secondary data-[model-selected=true]:!text-secondary-foreground data-[selected=true]:bg-card data-[selected=true]:text-card-foreground data-[selected=true]:border-ring/60 mt-1 cursor-pointer justify-between gap-2 rounded-md border border-transparent px-3 py-1.5 text-sm leading-4 transition-[border-color] outline-none select-none first:mt-0"
     >
       <div className="flex items-center justify-center gap-2">
         <Icons.provider provider={data.provider} className="size-4" />
