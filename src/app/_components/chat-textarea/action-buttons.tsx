@@ -3,7 +3,7 @@ import { GlobeIcon } from "lucide-react";
 import { ButtonWithTip } from "../ui/button";
 import { ChatModelSelector } from "./model-selector";
 
-import { AiProfileSelectorButton } from "./ai-profile-selector";
+import { ProfileSelectorButton } from "./profile-selector";
 import { ChatAttachmentButton } from "./attachment-display";
 
 import { getModelData } from "@/lib/chat/models";
@@ -34,7 +34,7 @@ export function ChatActionButtons() {
       </ButtonWithTip>
 
       <ChatModelSelector />
-      <AiProfileSelectorButton />
+      <ProfileSelectorButton />
     </div>
   );
 }

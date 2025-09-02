@@ -16,14 +16,7 @@ type PreviewImage = {
 const DEFAULT_CONFIG = {
   webSearch: false,
   reasoningEffort: "medium",
-  thinkingBudget: 0,
-  model: "google/gemini-2.5-flash-preview-05-20",
-  temperature: 1,
-  topP: 1,
-  topK: 40,
-  maxTokens: 4096,
-  presencePenalty: 0,
-  frequencyPenalty: 0,
+  model: "openai/gpt-5-nano",
   profile: { id: null, systemPrompt: "" },
 } as const;
 
@@ -38,15 +31,8 @@ function getChatConfigFromLS() {
   const schema = z.object({
     model: z.string().catch(DEFAULT_CONFIG.model),
     webSearch: z.boolean().catch(DEFAULT_CONFIG.webSearch),
-    thinkingBudget: z.number().catch(DEFAULT_CONFIG.thinkingBudget),
     reasoningEffort: z.enum(["low", "medium", "high"]).catch(DEFAULT_CONFIG.reasoningEffort),
 
-    temperature: z.number().catch(DEFAULT_CONFIG.temperature),
-    topP: z.number().catch(DEFAULT_CONFIG.topP),
-    topK: z.number().catch(DEFAULT_CONFIG.topK),
-    maxTokens: z.number().catch(DEFAULT_CONFIG.maxTokens),
-    presencePenalty: z.number().catch(DEFAULT_CONFIG.presencePenalty),
-    frequencyPenalty: z.number().catch(DEFAULT_CONFIG.frequencyPenalty),
     profile: z
       .object({ id: z.string().nullable(), systemPrompt: z.string() })
       .catch(DEFAULT_CONFIG.profile),
@@ -197,26 +183,6 @@ export const useChatStore = create<ChatState>((set) => ({
 
       if (config.model) {
         if (!model.capabilities.webSearch) newConfig.webSearch = false;
-
-        if (model.capabilities.reasoning === "budget") {
-          const value = Math.max(
-            model.capabilities.budgetLimit!.min,
-            Math.min(model.capabilities.budgetLimit!.max, newConfig.thinkingBudget),
-          );
-
-          newConfig.thinkingBudget = value;
-        }
-
-        if (newConfig.maxTokens > model.capabilities.maxTokens) {
-          newConfig.maxTokens = model.capabilities.maxTokens;
-        }
-      }
-
-      if (typeof newConfig.thinkingBudget === "number" && newConfig.thinkingBudget > 0) {
-        const maxBudget = Math.floor(newConfig.maxTokens * 0.8);
-        if (newConfig.thinkingBudget > maxBudget) {
-          newConfig.thinkingBudget = maxBudget;
-        }
       }
 
       localStorage.setItem("chatConfig", JSON.stringify(newConfig));

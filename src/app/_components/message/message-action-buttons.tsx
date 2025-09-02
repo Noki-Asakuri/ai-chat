@@ -48,7 +48,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
           title="Branch off at this message"
           disabled={message.status === "pending" || message.status === "streaming"}
         >
-          <SplitIcon className="size-5 rotate-180" />
+          <SplitIcon className="size-4 rotate-180" />
         </ButtonWithTip>
       )}
 
@@ -62,7 +62,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
             className={cn("hidden size-8", { flex: editMessage?._id === message._id })}
             title="Cancel Edit"
           >
-            <XIcon className="size-5" />
+            <XIcon className="size-4" />
             <span className="sr-only">Cancel Edit</span>
           </ButtonWithTip>
 
@@ -75,9 +75,9 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
             title={editMessage?._id === message._id ? "Save Message" : "Edit Message"}
           >
             {editMessage?._id === message._id ? (
-              <SaveIcon className="size-5" />
+              <SaveIcon className="size-4" />
             ) : (
-              <PencilIcon className="size-5" />
+              <PencilIcon className="size-4" />
             )}
 
             <span className="sr-only">

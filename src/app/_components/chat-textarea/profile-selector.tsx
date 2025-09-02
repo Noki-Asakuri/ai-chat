@@ -15,7 +15,7 @@ import { Input } from "../ui/input";
 import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";
 
-export function AiProfileSelectorButton() {
+export function ProfileSelectorButton() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 

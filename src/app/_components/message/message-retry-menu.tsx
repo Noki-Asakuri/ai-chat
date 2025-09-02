@@ -34,7 +34,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
   const setPopupRetryMessageId = useChatStore((state) => state.setPopupRetryMessageId);
 
   const modelsByProvider = AllModelIds.reduce<GroupedModels>((acc, modelId) => {
-    const model = ModelsData[modelId];
+    const model = ModelsData[modelId]!;
     const provider = model.provider;
     (acc[provider] ??= []).push({ modelId, ...model });
 
@@ -91,7 +91,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
         onContextMenu={handleContextMenu}
         {...props}
       >
-        <RefreshCcwIcon className="size-5" />
+        <RefreshCcwIcon className="size-4" />
       </Menu.Trigger>
 
       <Menu.Portal>

@@ -48,8 +48,6 @@ export function ChatTextarea() {
   return (
     <div className="pointer-events-none absolute bottom-2 w-full px-4" ref={parentRef}>
       <form className="mx-auto space-y-2">
-        <ScrollButton />
-
         <div className="bg-muted/40 group-data-[disable-blur=true]/sidebar-provider:bg-muted pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-md border backdrop-blur-md backdrop-saturate-150">
           <UsageBanner />
           <ChatAttachmentDisplay />

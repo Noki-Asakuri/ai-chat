@@ -64,7 +64,10 @@ export function TypographyBlockquote({
   ...props
 }: React.ComponentProps<"blockquote">) {
   return (
-    <blockquote {...props} className={cn("mt-4 border-l-2 pl-6 italic", className)}>
+    <blockquote
+      {...props}
+      className={cn("bg-card border-card-foreground mt-4 border-l-4 py-2.5 pl-4", className)}
+    >
       {children}
     </blockquote>
   );

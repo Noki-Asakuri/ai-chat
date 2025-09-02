@@ -1,11 +1,16 @@
 "use client";
 
+import { transformerColorizedBrackets } from "@shikijs/colorized-brackets";
+import { EllipsisIcon, ExpandIcon, ShrinkIcon, TextIcon, WrapTextIcon } from "lucide-react";
 import * as React from "react";
+import { useShikiHighlighter } from "react-shiki";
 
-import { CodeBlockHeader, CodeInlinePane, ExpandFooter, FullCodeOverlay } from "./code-block-parts";
+import { CopyButton } from "../copy-button";
+import { ButtonWithTip } from "./button";
 
 import { useChatStore } from "@/lib/chat/store";
-import { useIsMobile } from "@/lib/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+import { Icons } from "./icons";
 
 type CodeBlockProps = React.ComponentProps<"div"> & {
   code: string;
@@ -31,12 +36,30 @@ function trimOneEdgeNewline(input: string): string {
   return s;
 }
 
+const languageDisplayName: Record<
+  string,
+  { name: string; icon?: (props: React.SVGProps<SVGSVGElement>) => React.ReactNode }
+> = {
+  ts: { name: "TypeScript", icon: Icons.typescript },
+  js: { name: "JavaScript", icon: Icons.javascript },
+  cpp: { name: "C++", icon: Icons.cpp },
+  cs: { name: "C#", icon: Icons.csharp },
+  py: { name: "Python", icon: Icons.python },
+  kt: { name: "Kotlin", icon: Icons.kotlin },
+  rs: { name: "Rust", icon: Icons.rust },
+  php: { name: "PHP", icon: Icons.php },
+  rb: { name: "Ruby", icon: Icons.ruby },
+  md: { name: "Markdown", icon: Icons.markdown },
+  css: { name: "CSS", icon: Icons.css },
+  html: { name: "HTML", icon: Icons.html },
+  sh: { name: "Shell" },
+};
+
 export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
   const wrapline = useChatStore((state) => state.wrapline);
   const toggleWrapline = useChatStore((state) => state.toggleWrapline);
-  const isMobile = useIsMobile();
 
-  const [open, setOpen] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(false);
 
   const normalizedFull = React.useMemo(() => {
     const onceTrimmed = trimOneEdgeNewline(code);
@@ -45,31 +68,86 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
 
   const lines = React.useMemo(() => normalizedFull.split("\n"), [normalizedFull]);
   const totalLines = lines.length;
-  const previewText = React.useMemo(() => lines.slice(0, 10).join("\n"), [lines]);
+  const moreCount = totalLines > 15 ? totalLines - 15 : 0;
 
-  const langKey = language === "assembly" ? "asm" : language;
+  const langKey = React.useMemo(() => {
+    const key = language === "assembly" ? "asm" : language;
+    return key?.toLowerCase();
+  }, [language]);
+
+  const highlighted = useShikiHighlighter(normalizedFull, langKey, "one-dark-pro", {
+    delay: 50,
+    transformers: [transformerColorizedBrackets()],
+  });
+
+  const containerMaxHeight = React.useMemo(() => {
+    if (expanded || totalLines <= 15) return undefined;
+
+    const lineHeightPx = 20;
+    const verticalPadding = 8;
+    return `${15 * lineHeightPx + verticalPadding}px`;
+  }, [expanded, totalLines]);
+
+  const languageData = languageDisplayName[langKey ?? "plaintext"];
+  const Icon = languageData?.icon;
 
   return (
     <div className="codeblock relative overflow-hidden rounded-md border">
-      <CodeBlockHeader code={code} />
+      <div className="pointer-events-none flex items-center justify-between border-b px-2 py-1">
+        <div className="flex items-center justify-center gap-1.5">
+          {Icon && <Icon className="size-5 rounded-md" />}{" "}
+          <span>{languageData?.name ?? langKey ?? "plaintext"}</span>
+          <span className="text-primary text-sm">{totalLines} lines</span>
+        </div>
 
-      <div className="flex flex-col justify-end overflow-hidden text-sm">
-        <CodeInlinePane wrapline={wrapline} code={previewText} langKey={langKey} />
-        <ExpandFooter totalLines={totalLines} onExpand={() => setOpen(true)} />
+        <div className="pointer-events-auto flex items-center gap-1">
+          {totalLines > 15 ? (
+            <ButtonWithTip
+              title={expanded ? "Collapse" : "Expand"}
+              side="top"
+              variant="ghost"
+              className="size-8"
+              onMouseDown={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+            >
+              {expanded ? <ShrinkIcon className="size-4" /> : <ExpandIcon className="size-4" />}
+            </ButtonWithTip>
+          ) : null}
+
+          <ButtonWithTip
+            title="Wrap"
+            side="top"
+            variant="ghost"
+            className="size-8"
+            onMouseDown={toggleWrapline}
+          >
+            {wrapline ? <TextIcon className="size-4" /> : <WrapTextIcon className="size-4" />}
+          </ButtonWithTip>
+
+          <CopyButton content={code} className="size-8" />
+        </div>
       </div>
 
-      {totalLines > 10 ? (
-        <FullCodeOverlay
-          open={open}
-          onOpenChange={setOpen}
-          isMobile={isMobile}
-          language={language}
-          wrapline={wrapline}
-          onToggleWrapline={toggleWrapline}
-          code={code}
-          normalizedFull={normalizedFull}
-          langKey={langKey}
-        />
+      <div
+        style={{ scrollbarGutter: "stable both-edges", height: containerMaxHeight }}
+        className={cn(
+          "custom-scroll codeblock w-full overflow-auto px-1 py-2 pr-10 font-mono text-sm transition-[height] *:!bg-transparent",
+          { "*:text-wrap *:wrap-anywhere": wrapline },
+        )}
+      >
+        {highlighted ?? <pre>{normalizedFull}</pre>}
+      </div>
+
+      {!expanded && moreCount > 0 ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center">
+          <button
+            type="button"
+            className="bg-card hover:bg-card/70 pointer-events-auto inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors"
+            onMouseDown={() => setExpanded(true)}
+          >
+            <EllipsisIcon className="size-4" /> {moreCount} more lines
+          </button>
+        </div>
       ) : null}
     </div>
   );

@@ -17,7 +17,7 @@ export function MessageFooter({ index, message, renderMessage }: MessageFooterPr
   return (
     <div
       className={cn(
-        "mt-2 flex w-full items-center gap-2 transition-opacity sm:pointer-events-none sm:opacity-0",
+        "mt-2 flex w-full items-center transition-opacity sm:pointer-events-none sm:opacity-0",
         "group-hover:pointer-events-auto group-hover:opacity-100",
         "group-data-[open=true]:pointer-events-auto group-data-[open=true]:opacity-100",
         { "justify-end bg-transparent": message.role === "user" },

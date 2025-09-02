@@ -28,6 +28,7 @@ const openai = customProvider({
 
     "gpt-5": baseOpenai.languageModel("gpt-5"),
     "gpt-5-mini": baseOpenai.languageModel("gpt-5-mini"),
+    "gpt-5-nano": baseOpenai.languageModel("gpt-5-nano"),
     "gpt-5-chat-latest": baseOpenai.languageModel("gpt-5-chat-latest"),
   },
 });

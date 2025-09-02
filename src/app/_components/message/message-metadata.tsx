@@ -34,9 +34,9 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
 
   if (isMobile) {
     return (
-      <div className="bg-background/80 flex h-full w-full flex-wrap items-center justify-between gap-2 rounded-md border px-4 text-sm backdrop-blur-md backdrop-saturate-150 select-none group-data-[disable-blur=true]/sidebar-provider:border-0">
+      <div className="bg-background/80 flex h-full w-full flex-wrap items-center justify-between gap-2 rounded-md border px-2 text-sm backdrop-blur-md backdrop-saturate-150 select-none group-data-[disable-blur=true]/sidebar-provider:border-0">
         <div className="flex items-center justify-center gap-2">
-          <Icons.provider provider={modelData?.provider} className="size-5 rounded-md" />
+          <Icons.provider provider={modelData?.provider} className="size-4 rounded-md" />
           <span>{modelData?.display.name}</span>
         </div>
 
@@ -95,12 +95,12 @@ export function MessageMetadata({ metadata, model, hiddenReasoning }: MessageMet
   return (
     <div
       className={cn(
-        "bg-background/80 flex h-full w-full flex-wrap items-center rounded-md border px-4 py-2 text-xs backdrop-blur-md backdrop-saturate-150 select-none group-data-[disable-blur=true]/sidebar-provider:border-0",
+        "bg-background/80 flex h-full w-full flex-wrap items-center rounded-md border p-2 text-xs backdrop-blur-md backdrop-saturate-150 select-none group-data-[disable-blur=true]/sidebar-provider:border-0",
         "[&>*:not(:first-child)]:before:px-1.5 [&>*:not(:first-child)]:before:content-['-']",
       )}
     >
       <div className="flex items-center justify-center gap-2">
-        <Icons.provider provider={modelData?.provider} className="size-5 rounded-md" />
+        <Icons.provider provider={modelData?.provider} className="size-4 rounded-md" />
         <span>By {modelData?.display.name}</span>
       </div>
 
