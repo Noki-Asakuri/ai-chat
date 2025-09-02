@@ -83,22 +83,22 @@ export function TypographyInlineCode({ children }: React.ComponentProps<"code">)
 
 export function TypographyTable({ children }: React.ComponentProps<"table">) {
   return (
-    <div className="w-full overflow-y-auto">
-      <table className="border-border !my-0 w-full border-collapse border">{children}</table>
+    <div className="w-full overflow-hidden rounded-md border">
+      <table className="w-full">{children}</table>
     </div>
   );
 }
 
 export function TypographyTableTHead({ children, ...props }: React.ComponentProps<"thead">) {
   return (
-    <thead {...props} className="[&>tr]:!bg-transparent">
+    <thead {...props} className="bg-muted">
       {children}
     </thead>
   );
 }
 
 export function TypographyTableTR({ children }: React.ComponentProps<"tr">) {
-  return <tr className="odd:bg-muted m-0 border-t p-0">{children}</tr>;
+  return <tr className="hover:bg-muted/40 m-0 p-0 transition-colors">{children}</tr>;
 }
 
 export function TypographyTableTH({ children, ...props }: React.ComponentProps<"th">) {
@@ -106,7 +106,7 @@ export function TypographyTableTH({ children, ...props }: React.ComponentProps<"
     <th
       {...props}
       className={cn(
-        "border px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right",
+        "px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right",
         props.className,
       )}
     >
@@ -117,7 +117,7 @@ export function TypographyTableTH({ children, ...props }: React.ComponentProps<"
 
 export function TypographyTableTD({ children }: React.ComponentProps<"td">) {
   return (
-    <td className="border px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right">
+    <td className="px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right">
       {children}
     </td>
   );

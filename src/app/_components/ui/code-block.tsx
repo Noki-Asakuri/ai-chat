@@ -88,6 +88,10 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
     return `${15 * lineHeightPx + verticalPadding}px`;
   }, [expanded, totalLines]);
 
+  const fileName = lines[0]?.match(
+    /(?:^|.*[\/\\])([A-Za-z0-9._-]+\.[A-Za-z0-9]+)(?=[^A-Za-z0-9._-]*$)/,
+  );
+
   const languageData = languageDisplayName[langKey ?? "plaintext"];
   const Icon = languageData?.icon;
 
@@ -95,10 +99,12 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
     <div className="codeblock relative overflow-hidden rounded-md border">
       <div className="pointer-events-none flex items-center justify-between border-b px-2 py-1">
         <div className="flex items-center justify-center gap-1.5">
-          {Icon && <Icon className="size-5 rounded-md" />}{" "}
+          {Icon && <Icon className="size-5 rounded-sm" />}{" "}
           <span>{languageData?.name ?? langKey ?? "plaintext"}</span>
-          <span className="text-primary text-sm">{totalLines} lines</span>
+          <span className="text-primary text-xs">{totalLines} lines</span>
         </div>
+
+        {fileName && <span className="text-primary text-xs">{fileName[1]}</span>}
 
         <div className="pointer-events-auto flex items-center gap-1">
           {totalLines > 15 ? (

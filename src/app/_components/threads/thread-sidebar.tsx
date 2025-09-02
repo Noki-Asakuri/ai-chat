@@ -33,22 +33,17 @@ export function ThreadSidebar() {
       className="bg-sidebar/40 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar backdrop-blur-md backdrop-saturate-150"
     >
       <div className="pointer-events-none absolute inset-0 -z-5 group-data-[disable-blur=true]/sidebar-provider:hidden">
-        <div className="from-sidebar h-1/2 w-full bg-gradient-to-b from-5% to-transparent to-80%" />
-        <div className="from-sidebar h-1/2 w-full bg-gradient-to-t from-5% to-transparent to-80%" />
+        <div className="from-sidebar/80 h-1/2 w-full bg-gradient-to-b from-5% to-transparent to-80%" />
+        <div className="from-sidebar/80 h-1/2 w-full bg-gradient-to-t from-5% to-transparent to-80%" />
       </div>
 
       <SidebarHeader>
-        <span className="text-center text-xl">AI Chat</span>
+        <NavLink to="/" className="text-center text-xl">
+          AI Chat
+        </NavLink>
       </SidebarHeader>
 
       <SidebarContent className="flex flex-1 flex-col gap-2">
-        <NavLink
-          to="/"
-          className="hover:bg-primary/20 bg-sidebar mx-2 rounded-md border px-3 py-1.5 text-center transition-colors"
-        >
-          <span className="line-clamp-1 w-full">Create new thread</span>
-        </NavLink>
-
         <ThreadContents />
       </SidebarContent>
 
@@ -66,7 +61,7 @@ function ThreadContents() {
 
   return (
     <>
-      <div className="mx-2">
+      <div className="mx-2 mt-2">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}

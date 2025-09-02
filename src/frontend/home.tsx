@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Chat } from "./chat";
 
 import { RegisterHotkeys } from "@/components/chat/register-hotkeys";
-import { ThreadGroupButtons } from "@/components/threads/thread-group-buttons";
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider } from "@/components/ui/sidebar";
 
@@ -27,7 +26,6 @@ export default function Home() {
         defaultOpen={defaultOpenSidebar}
       >
         <ThreadSidebar />
-        <ThreadGroupButtons />
 
         <Chat />
       </SidebarProvider>

@@ -145,13 +145,13 @@ export function MessageHistory() {
     <div
       id="messages-scrollarea"
       onScroll={handleOnScroll}
-      className="custom-scroll absolute inset-0 overflow-y-scroll"
+      className="custom-scroll absolute inset-0 overflow-y-scroll border-l"
       style={{ scrollbarGutter: "stable both-edges" }}
       ref={outerScrollRef}
     >
       <div
         data-slot="message-history"
-        className="mx-auto min-h-full max-w-[calc(896px+32px)] space-y-4 px-4 py-10"
+        className="mx-auto min-h-full max-w-[calc(896px+32px)] space-y-4 px-4 py-20"
         ref={scrollContainerRef}
         style={{ paddingBottom: `${textareaHeight}px` }}
       >

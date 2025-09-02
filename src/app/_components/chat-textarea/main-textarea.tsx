@@ -6,7 +6,6 @@ import { api } from "@/convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
-import { ScrollButton } from "./scroll-group-button";
 import { Textarea } from "../ui/textarea";
 
 import { ChatActionButtons } from "./action-buttons";
@@ -15,7 +14,6 @@ import { ChatSendButton } from "./send-button";
 
 import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
-import { cn } from "@/lib/utils";
 
 export function ChatTextarea() {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -48,17 +46,14 @@ export function ChatTextarea() {
   return (
     <div className="pointer-events-none absolute bottom-2 w-full px-4" ref={parentRef}>
       <form className="mx-auto space-y-2">
-        <div className="bg-muted/40 group-data-[disable-blur=true]/sidebar-provider:bg-muted pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-md border backdrop-blur-md backdrop-saturate-150">
+        <div
+          data-dragover={isDragOver}
+          className="data-[dragover=true]:bg-primary/20 data-[dragover=true]:border-primary/40 bg-background/80 pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-md border backdrop-blur-md backdrop-saturate-150"
+        >
           <UsageBanner />
           <ChatAttachmentDisplay />
 
-          <div
-            data-dragover={isDragOver}
-            className={cn(
-              "data-[dragover=true]:bg-primary/20 data-[dragover=true]:border-primary/40",
-              "group-data-[disable-blur=true]/sidebar-provider:bg-transparent",
-            )}
-          >
+          <div>
             <InputTextArea />
 
             <div className="flex items-end justify-between border-t px-2.5 py-2">

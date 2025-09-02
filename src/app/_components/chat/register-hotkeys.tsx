@@ -72,8 +72,7 @@ export function RegisterHotkeys() {
       if (!text) return;
 
       const target = event.target as HTMLElement;
-      if (target.tagName === "TEXTAREA" && target.id === "textarea-chat-input") return;
-      if (target.tagName === "TEXTAREA" && target.id === "textarea-user-message-edit") return;
+      if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") return;
 
       const chatInput = document.querySelector<HTMLTextAreaElement>("#textarea-chat-input");
       if (!chatInput) return;

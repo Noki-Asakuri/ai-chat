@@ -7,11 +7,14 @@ export const getAllMessagesFromThread = query({
   args: { threadId: v.optional(v.id("threads")) },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
+
     if (!user) throw new Error("Not authenticated");
+    if (!args.threadId) return { messages: [], thread: null };
 
-    if (!args.threadId) return [];
+    const thread = await ctx.db.get(args.threadId);
+    if (thread?.userId !== user.subject) throw new Error("Not authorized");
 
-    const messages = await ctx.db
+    const messagesFromThread = await ctx.db
       .query("messages")
       .withIndex("by_userId_threadId", (q) =>
         q.eq("userId", user.subject).eq("threadId", args.threadId!),
@@ -19,8 +22,8 @@ export const getAllMessagesFromThread = query({
       .order("asc")
       .collect();
 
-    return await Promise.all(
-      messages.map(async (message) => {
+    const messages = await Promise.all(
+      messagesFromThread.map(async (message) => {
         const attachmentDocs = await Promise.all(
           (message.attachments ?? []).map((attachmentId) => ctx.db.get(attachmentId)),
         );
@@ -29,6 +32,8 @@ export const getAllMessagesFromThread = query({
         return { ...message, attachments };
       }),
     );
+
+    return { messages, thread };
   },
 });
 

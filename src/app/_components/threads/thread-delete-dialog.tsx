@@ -2,9 +2,7 @@ import { api } from "@/convex/_generated/api";
 
 import { useState, useTransition } from "react";
 import { useNavigate } from "react-router";
-import { TrashIcon } from "lucide-react";
 
-import { ButtonWithTip } from "../ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,13 +20,19 @@ import type { Thread } from "@/lib/types";
 type ThreadDeleteDialogProps = {
   threadId: Thread["_id"];
   title: Thread["title"];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
 const convexClient = getConvexReactClient();
 
-export function ThreadDeleteDialog({ threadId, title }: ThreadDeleteDialogProps) {
+export function ThreadDeleteDialog({
+  threadId,
+  title,
+  open,
+  onOpenChange,
+}: ThreadDeleteDialogProps) {
   const [pending, startTransition] = useTransition();
-  const [open, setOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -41,25 +45,8 @@ export function ThreadDeleteDialog({ threadId, title }: ThreadDeleteDialogProps)
     });
   }
 
-  function handleToggleOpen(event: React.MouseEvent<HTMLButtonElement>) {
-    event.stopPropagation();
-    event.preventDefault();
-
-    setOpen(!open);
-  }
-
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <ButtonWithTip
-        title="Delete Thread"
-        variant="none"
-        className="size-8"
-        onClick={handleToggleOpen}
-      >
-        <TrashIcon size={10} />
-        <span className="sr-only">Delete Thread</span>
-      </ButtonWithTip>
-
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>

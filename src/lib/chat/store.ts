@@ -216,9 +216,9 @@ export const useChatStore = create<ChatState>((set) => ({
   scrollPosition: null,
   setScrollPosition: (value) => set({ scrollPosition: value }),
 
-  // Default: 187px + 8px (positon bottom) + 16px (padding above)
-  textareaHeight: 187 + 8 + 16,
-  setTextareaHeight: (height) => set({ textareaHeight: Math.max(height, 187) + 8 + 16 }),
+  // Default: 147px + 8px (positon bottom) + 16px (padding above)
+  textareaHeight: 147 + 8 + 16,
+  setTextareaHeight: (height) => set({ textareaHeight: Math.max(height, 147) + 8 + 16 }),
 
   lastUserMessageHeight: null,
   setMessageHeight: (height) => set({ lastUserMessageHeight: height }),
