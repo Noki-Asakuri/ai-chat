@@ -22,7 +22,8 @@ export function Chat() {
   const resumeRef = useRef<boolean>(false);
   const { threadId } = useParams<{ threadId: Id<"threads"> }>();
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
+    enabled: Boolean(threadId),
     ...convexQuery(api.functions.messages.getAllMessagesFromThread, {
       threadId: fromUUID(threadId),
     }),
@@ -62,13 +63,19 @@ export function Chat() {
   return (
     <main className="relative inset-0 h-dvh w-screen overflow-hidden">
       <WelcomeScreen />
-      <MessageRenderer thread={data?.thread} />
+      <MessageRenderer thread={data?.thread} isLoading={isLoading} />
       <ChatTextarea />
     </main>
   );
 }
 
-function MessageRenderer({ thread }: { thread?: Doc<"threads"> | null }) {
+function MessageRenderer({
+  thread,
+  isLoading,
+}: {
+  thread?: Doc<"threads"> | null;
+  isLoading: boolean;
+}) {
   return (
     <>
       <div className="bg-sidebar/80 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar absolute top-0 z-10 flex h-10 w-full items-center justify-start gap-2 border-b border-l px-4 text-sm backdrop-blur-md backdrop-saturate-150">
@@ -82,7 +89,7 @@ function MessageRenderer({ thread }: { thread?: Doc<"threads"> | null }) {
           <span className="sr-only">Create new thread</span>
         </NavLink>
 
-        <ThreadTitle thread={thread} />
+        <ThreadTitle thread={thread} isLoading={isLoading} />
       </div>
 
       <MessageHistory />
@@ -90,13 +97,19 @@ function MessageRenderer({ thread }: { thread?: Doc<"threads"> | null }) {
   );
 }
 
-function ThreadTitle({ thread }: { thread?: Doc<"threads"> | null }) {
-  if (thread === null) {
-    return <p className="text-muted-foreground text-sm">New Thread</p>;
+function ThreadTitle({
+  thread,
+  isLoading,
+}: {
+  thread?: Doc<"threads"> | null;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return <Skeleton className="h-4 w-80" />;
   }
 
-  if (typeof thread === "undefined") {
-    return <Skeleton className="h-4 w-80" />;
+  if (!thread) {
+    return <p className="text-muted-foreground text-sm">New Thread</p>;
   }
 
   return <p className="text-muted-foreground truncate text-sm">{thread.title}</p>;
