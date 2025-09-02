@@ -11,6 +11,7 @@ import { NavLink, useParams } from "react-router";
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { WelcomeScreen } from "@/components/chat/welcome-screen";
 import { MessageHistory } from "@/components/message/message-history";
+import { ThreadCommand } from "@/components/threads/thread-command";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -78,18 +79,24 @@ function MessageRenderer({
 }) {
   return (
     <>
-      <div className="bg-sidebar/80 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar absolute top-0 z-10 flex h-10 w-full items-center justify-start gap-2 border-b border-l px-4 text-sm backdrop-blur-md backdrop-saturate-150">
-        <SidebarTrigger />
+      <div className="bg-sidebar/80 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar absolute top-0 z-10 flex h-10 w-full items-center justify-between gap-2 border-b border-l px-4 text-sm backdrop-blur-md backdrop-saturate-150">
+        <div className="flex items-center gap-2">
+          <SidebarTrigger />
 
-        <NavLink
-          to="/"
-          className="hover:bg-primary/20 rounded-md p-1.5 text-center transition-colors"
-        >
-          <PlusIcon className="size-4" />
-          <span className="sr-only">Create new thread</span>
-        </NavLink>
+          <NavLink
+            to="/"
+            className="hover:bg-primary/20 rounded-md p-1.5 text-center transition-colors"
+          >
+            <PlusIcon className="size-4" />
+            <span className="sr-only">Create new thread</span>
+          </NavLink>
 
-        <ThreadTitle thread={thread} isLoading={isLoading} />
+          <ThreadTitle thread={thread} isLoading={isLoading} />
+        </div>
+
+        <div>
+          <ThreadCommand />
+        </div>
       </div>
 
       <MessageHistory />

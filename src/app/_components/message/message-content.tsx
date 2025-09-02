@@ -35,7 +35,10 @@ export function MessageContent({ message, content }: MessageContentProps) {
 
 function MessageError({ message, id }: { message: string; id: string }) {
   return (
-    <div className="bg-destructive/80 text-destructive-foreground border-destructive-foreground rounded-md border px-4 py-2 backdrop-blur-md backdrop-saturate-150">
+    <div
+      data-slot="message-error"
+      className="bg-destructive/80 group-data-[disable-blur=true]/sidebar-provider:bg-destructive text-destructive-foreground rounded-md px-4 py-2 backdrop-blur-md backdrop-saturate-150"
+    >
       <MemoizedMarkdown id={`error-${id}`} content={message} />
     </div>
   );

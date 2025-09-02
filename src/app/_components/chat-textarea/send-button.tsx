@@ -20,7 +20,7 @@ export function ChatSendButton() {
 
   return (
     <Menu.Root open={open} onOpenChange={setOpen}>
-      <div className="bg-secondary flex h-9 items-center gap-2 overflow-hidden rounded-md pl-3">
+      <div className="from-primary/35 to-primary/60 border-primary/50 flex h-9 items-center gap-2 overflow-hidden rounded-md border bg-gradient-to-t pl-3">
         <button
           type="button"
           className="flex h-full flex-1 cursor-pointer items-center gap-2"
@@ -36,7 +36,7 @@ export function ChatSendButton() {
 
         <Menu.Trigger
           type="button"
-          className="border-accent h-9 rounded-none border-l"
+          className="border-primary/40 h-9 rounded-none border-l"
           title={isStreaming ? "Abort Request" : "Send preferences"}
           render={<ButtonWithTip delay={1000} side="top" variant="none" className="size-8" />}
         >

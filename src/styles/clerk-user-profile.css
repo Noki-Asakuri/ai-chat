@@ -1,5 +1,13 @@
 @reference "./globals.css";
 
+[data-clerk-component="UserProfile"] {
+  @apply w-full;
+
+  & > .cl-cardBox {
+    @apply w-full;
+  }
+}
+
 .cl-button,
 .cl-input,
 .cl-menuList {

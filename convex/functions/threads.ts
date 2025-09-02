@@ -106,10 +106,7 @@ export const getAllThreads = query({
       .filter((q) => q.neq(q.field("pinned"), true))
       .take(limit);
 
-    return [...pinnedMatches, ...nonPinnedMatches].map((thread) => ({
-      ...thread,
-      pinned: thread.pinned ?? false,
-    }));
+    return [...pinnedMatches, ...nonPinnedMatches];
   },
 });
 
