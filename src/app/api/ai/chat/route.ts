@@ -16,6 +16,7 @@ import {
   stepCountIs,
   streamText,
   type AISDKError,
+  type Experimental_DownloadFunction,
 } from "ai";
 
 import { logger, withAxiom } from "@/lib/axiom/server";
@@ -29,6 +30,7 @@ import { serverUploadFileR2 } from "@/lib/server/file-upload";
 
 const publisher = new Redis(env.REDIS_URL);
 const subscriber = new Redis(env.REDIS_URL);
+const cacheRedis = new Redis(env.REDIS_URL);
 
 const streamContext = createResumableStreamContext({
   waitUntil: after,
@@ -154,6 +156,55 @@ export const POST = withAxiom(async (req) => {
 
       stopWhen: stepCountIs(5),
       experimental_transform: smoothStream({ delayInMs: 10, chunking: "line" }),
+
+      experimental_download: async (options) => {
+        type OutputType = Awaited<ReturnType<Experimental_DownloadFunction>>[number];
+
+        return await Promise.all(
+          options.map(async ({ url, isUrlSupportedByModel }): Promise<OutputType> => {
+            const normalizedUrl = url.pathname.slice(1).replace("/", ":");
+            const cacheKey = `${env.NODE_ENV}:attachment:${normalizedUrl}`;
+
+            const [cachedBuffer, cachedMediaType] = await Promise.all([
+              cacheRedis.getBuffer(cacheKey),
+              cacheRedis.get(`${cacheKey}:mediaType`),
+            ]);
+
+            const hit = Boolean(cachedBuffer) && Boolean(cachedMediaType);
+
+            console.log({ url: url.toString(), isUrlSupportedByModel, hit: hit ? "HIT" : "MISS" });
+            logger.info(`[Chat Cache] ${url}`, {
+              url,
+              status: hit ? "HIT" : "MISS",
+              cacheKey,
+            });
+
+            if (hit && cachedBuffer && cachedMediaType) {
+              return { data: cachedBuffer, mediaType: cachedMediaType };
+            }
+
+            const res = await fetch(url);
+
+            const arrayBuffer = await res.arrayBuffer();
+            const mediaType = res.headers.get("content-type")!;
+            const buffer = Buffer.from(arrayBuffer);
+
+            async function saveCache() {
+              const expireTime = 12 * 60 * 60;
+
+              await Promise.allSettled([
+                cacheRedis.set(cacheKey, buffer, "EX", expireTime),
+                cacheRedis.set(`${cacheKey}:mediaType`, mediaType, "EX", expireTime),
+              ]);
+            }
+
+            // Expire after 12h; store raw buffer. Not awaited so it doesn't block the response.
+            waitUntil(saveCache());
+
+            return { data: buffer, mediaType };
+          }),
+        );
+      },
 
       async onError({ error }) {
         const err = error as AISDKError;

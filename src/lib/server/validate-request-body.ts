@@ -141,30 +141,11 @@ function transformMessages(messages: z.infer<typeof inputSchema>["messages"], us
             const url = `https://files.chat.asakuri.me/${userId}/${attachment.threadId}/${attachment._id}`;
 
             if (attachment.type === "image") {
-              const cacheKey = `${env.NODE_ENV}:attachment:${userId}:${attachment.threadId}:${attachment._id}`;
-
-              const cachedBuffer = await redis.getBuffer(cacheKey);
-              const hit = Boolean(cachedBuffer);
-
-              logger.info(`[Chat Cache] ${url}`, {
-                url,
-                status: hit ? "HIT" : "MISS",
-                cacheKey,
-              });
-
-              if (hit && cachedBuffer) {
-                return { type: "image" as const, image: cachedBuffer };
-              }
-
-              const res = await fetch(url);
-
-              const arrayBuffer = await res.arrayBuffer();
-              const buffer = Buffer.from(arrayBuffer);
-
-              // Expire after 12h; store raw buffer. Not awaited so it doesn't block the response.
-              waitUntil(redis.set(cacheKey, buffer, "EX", 12 * 60 * 60));
-
-              return { type: "image" as const, image: buffer };
+              return {
+                type: "image" as const,
+                image: url,
+                providerOptions: { openai: { imageDetail: "high" } },
+              };
             }
 
             if (attachment.type === "pdf") {

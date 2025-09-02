@@ -11,17 +11,9 @@ export type ChatRequest = {
   messages: Omit<InputMessage, "messageId">[];
 
   config: {
-    temperature: number;
-    topP: number;
-    topK: number;
-    maxTokens: number;
-    presencePenalty: number;
-    frequencyPenalty: number;
-
-    webSearch: boolean;
-    reasoningEffort: ReasoningEffort;
-    thinkingBudget: ThinkingBudget;
     model: string;
+    webSearch: boolean;
+    effort: ReasoningEffort;
   };
 };
 

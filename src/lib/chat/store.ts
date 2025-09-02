@@ -15,7 +15,7 @@ type PreviewImage = {
 
 const DEFAULT_CONFIG = {
   webSearch: false,
-  reasoningEffort: "medium",
+  effort: "medium",
   model: "openai/gpt-5-nano",
   profile: { id: null, systemPrompt: "" },
 } as const;
@@ -31,7 +31,7 @@ function getChatConfigFromLS() {
   const schema = z.object({
     model: z.string().catch(DEFAULT_CONFIG.model),
     webSearch: z.boolean().catch(DEFAULT_CONFIG.webSearch),
-    reasoningEffort: z.enum(["low", "medium", "high"]).catch(DEFAULT_CONFIG.reasoningEffort),
+    effort: z.enum(["low", "medium", "high"]).catch(DEFAULT_CONFIG.effort),
 
     profile: z
       .object({ id: z.string().nullable(), systemPrompt: z.string() })
