@@ -2,6 +2,7 @@
 
 import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 import { ConvexQueryClient } from "@convex-dev/react-query";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
@@ -21,8 +22,12 @@ const queryClient = new QueryClient({
 convexQueryClient.connect(queryClient);
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+
   return (
     <ClerkProvider
+      routerPush={(href) => router.push(href)}
+      routerReplace={(href) => router.replace(href)}
       waitlistUrl="/auth/wait-list"
       appearance={{ cssLayerName: "clerk" }}
       publishableKey={env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
