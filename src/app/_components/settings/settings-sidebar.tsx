@@ -97,6 +97,11 @@ export function SettingsSidebar() {
               <span>New Chat</span>
               <kbd className="bg-muted rounded-md border px-2 py-1 text-xs">Ctrl Shift O</kbd>
             </li>
+
+            <li className="flex justify-between">
+              <span>Open Model Picker</span>
+              <kbd className="bg-muted rounded-md border px-2 py-1 text-xs">Ctrl M</kbd>
+            </li>
           </ul>
         </CardContent>
       </Card>

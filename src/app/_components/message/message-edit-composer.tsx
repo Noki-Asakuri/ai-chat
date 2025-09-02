@@ -269,7 +269,11 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
               "pointer-events-none opacity-60": savingPhase !== "idle",
             })}
           >
-            <ModelSelector value={modelId} onChange={setModelId} />
+            <ModelSelector
+              value={modelId}
+              onChange={setModelId}
+              triggerId="button-edit-model-selector-trigger"
+            />
 
             <ButtonWithTip
               type="button"

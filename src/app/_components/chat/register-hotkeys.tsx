@@ -9,6 +9,7 @@ import { useChatStore } from "@/lib/chat/store";
 
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
 const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
+const MODEL_SELECTOR_KEYBOARD_SHORTCUT = "m";
 
 export function RegisterHotkeys() {
   const navigate = useNavigate();
@@ -95,7 +96,9 @@ export function RegisterHotkeys() {
         target.tagName !== "TEXTAREA" &&
         !target.isContentEditable
       ) {
-        const chatInput = document.getElementById("textarea-chat-input");
+        const chatInput = document.getElementById(
+          editMessage ? "textarea-user-message-edit" : "textarea-chat-input",
+        );
         if (chatInput) chatInput.focus();
       }
 
@@ -123,6 +126,18 @@ export function RegisterHotkeys() {
       ) {
         event.preventDefault();
         setThreadCommandOpen((open) => !open);
+      }
+
+      if (
+        event.key.toLowerCase() === MODEL_SELECTOR_KEYBOARD_SHORTCUT &&
+        (event.metaKey || event.ctrlKey)
+      ) {
+        event.preventDefault();
+        const targetId = editMessage
+          ? "button-edit-model-selector-trigger"
+          : "button-chat-model-selector-trigger";
+        const btn = document.getElementById(targetId) as HTMLButtonElement | null;
+        btn?.click();
       }
 
       if (

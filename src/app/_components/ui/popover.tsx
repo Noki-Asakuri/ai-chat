@@ -38,9 +38,7 @@ function PopoverContent({
           )}
           {...props}
         >
-          <PopoverPrimitive.Arrow className="data-[side=bottom]:top-[-8px] data-[side=left]:right-[-13px] data-[side=left]:rotate-90 data-[side=right]:left-[-13px] data-[side=right]:-rotate-90 data-[side=top]:bottom-[-9px] data-[side=top]:rotate-180">
-            <Icons.arrow className="fill-popover" />
-          </PopoverPrimitive.Arrow>
+          <PopoverArrow />
 
           {children}
         </PopoverPrimitive.Popup>
@@ -49,4 +47,15 @@ function PopoverContent({
   );
 }
 
-export { Popover, PopoverTrigger, PopoverContent, PopoverPrimitive };
+function PopoverArrow({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Arrow>) {
+  return (
+    <PopoverPrimitive.Arrow
+      {...props}
+      className="data-[side=bottom]:top-[-8px] data-[side=left]:right-[-13px] data-[side=left]:rotate-90 data-[side=right]:left-[-13px] data-[side=right]:-rotate-90 data-[side=top]:bottom-[-9px] data-[side=top]:rotate-180"
+    >
+      <Icons.arrow className="fill-popover" />
+    </PopoverPrimitive.Arrow>
+  );
+}
+
+export { Popover, PopoverTrigger, PopoverContent, PopoverPrimitive, PopoverArrow };
