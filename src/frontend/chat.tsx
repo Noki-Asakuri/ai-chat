@@ -1,7 +1,8 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
-import { useConvexQuery } from "@convex-dev/react-query";
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { PlusIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
@@ -21,8 +22,10 @@ export function Chat() {
   const resumeRef = useRef<boolean>(false);
   const { threadId } = useParams<{ threadId: Id<"threads"> }>();
 
-  const data = useConvexQuery(api.functions.messages.getAllMessagesFromThread, {
-    threadId: fromUUID(threadId),
+  const { data } = useQuery({
+    ...convexQuery(api.functions.messages.getAllMessagesFromThread, {
+      threadId: fromUUID(threadId),
+    }),
   });
 
   useEffect(() => {
