@@ -23,7 +23,7 @@ export function MessageContent({ message, content }: MessageContentProps) {
     <>
       {message.role === "user" && <MessageAttachmentDisplay attachments={message.attachments} />}
 
-      <div className="bg-background/80 grow-0 space-y-4 rounded-md border p-2 backdrop-blur-md backdrop-saturate-150 group-data-[role=user]:ml-auto group-data-[role=user]:w-max group-data-[role=user]:max-w-full md:p-4">
+      <div className="bg-background/80 group-data-[role=user]:bg-secondary/80 group-data-[role=user]:text-secondary-foreground grow-0 space-y-4 rounded-md border p-2 backdrop-blur-md backdrop-saturate-150 group-data-[role=user]:ml-auto group-data-[role=user]:w-max group-data-[role=user]:max-w-full md:p-4">
         <MemoizedMarkdown id={message.messageId} content={content} />
         {message.role === "assistant" && (
           <MessageAttachmentDisplay attachments={message.attachments} messageId={message._id} />

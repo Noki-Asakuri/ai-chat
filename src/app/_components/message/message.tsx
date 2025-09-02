@@ -75,10 +75,10 @@ export function Message({ message, index, isLast }: MessageProps) {
 
   return (
     <div
+      ref={containerRef}
+      style={{ minHeight }}
       data-slot="message-wrapper"
       data-height={lastUserMessageHeight}
-      style={{ minHeight }}
-      ref={containerRef}
     >
       <div
         data-slot="message"

@@ -41,17 +41,26 @@ const languageDisplayName: Record<
   { name: string; icon?: (props: React.SVGProps<SVGSVGElement>) => React.ReactNode }
 > = {
   ts: { name: "TypeScript", icon: Icons.typescript },
+  typescript: { name: "TypeScript", icon: Icons.typescript },
   js: { name: "JavaScript", icon: Icons.javascript },
+  javascript: { name: "JavaScript", icon: Icons.javascript },
   cpp: { name: "C++", icon: Icons.cpp },
   cs: { name: "C#", icon: Icons.csharp },
+  csharp: { name: "C#", icon: Icons.csharp },
   py: { name: "Python", icon: Icons.python },
+  python: { name: "Python", icon: Icons.python },
   kt: { name: "Kotlin", icon: Icons.kotlin },
+  kotlin: { name: "Kotlin", icon: Icons.kotlin },
   rs: { name: "Rust", icon: Icons.rust },
+  rust: { name: "Rust", icon: Icons.rust },
   php: { name: "PHP", icon: Icons.php },
   rb: { name: "Ruby", icon: Icons.ruby },
+  ruby: { name: "Ruby", icon: Icons.ruby },
   md: { name: "Markdown", icon: Icons.markdown },
+  markdown: { name: "Markdown", icon: Icons.markdown },
   css: { name: "CSS", icon: Icons.css },
   html: { name: "HTML", icon: Icons.html },
+  sql: { name: "SQL" },
   sh: { name: "Shell" },
 };
 

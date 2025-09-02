@@ -89,26 +89,25 @@ export async function validateRequestBody(req: Request, userId: string) {
     openai: { store: false } as OpenAIResponsesProviderOptions,
   };
 
-  if (config?.thinkingBudget) {
-    const isThinkingModel = model.includes("-thinking");
-
-    providerOptions.google.thinkingConfig = {
-      includeThoughts: isThinkingModel,
-      thinkingBudget: isThinkingModel ? config.thinkingBudget : 0,
-    };
-  }
+  providerOptions.google.thinkingConfig = {
+    includeThoughts: !!modelInfo.capabilities.reasoning,
+    // Auto thinking budget if model can reasoning
+    thinkingBudget: modelInfo.capabilities.reasoning ? -1 : 0,
+  };
 
   if (modelInfo.capabilities.generateImage) {
     delete providerOptions.google.thinkingConfig;
     providerOptions.google.responseModalities = ["TEXT", "IMAGE"];
   }
 
-  if (modelInfo.capabilities.reasoning === "effort") {
+  if (modelInfo.capabilities.reasoning) {
     providerOptions.openai.reasoningSummary = "detailed";
     providerOptions.openai.reasoningEffort = config.reasoningEffort ?? "medium";
 
     providerOptions.openai.include = ["reasoning.encrypted_content"];
   }
+
+  console.log(providerOptions);
 
   const tools: ToolSet = {};
   const transformedMessages = await Promise.all(transformMessages(messages, userId));

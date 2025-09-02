@@ -4,7 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { type Metadata, type Viewport } from "next";
-import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
+import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 
 import { Providers } from "@/components/provider/main-providers";
 import { Toaster } from "@/components/ui/sonner";
@@ -27,11 +27,11 @@ export const viewport: Viewport = {
   interactiveWidget: "resizes-content",
 };
 
-const mainFont = Be_Vietnam_Pro({
+const mainFont = Space_Grotesk({
   display: "swap",
-  weight: ["200", "300"],
+  weight: ["300"],
   subsets: ["latin", "vietnamese"],
-  style: ["normal", "italic"],
+  style: ["normal"],
   variable: "--font-main",
 });
 
