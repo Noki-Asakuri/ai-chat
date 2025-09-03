@@ -1,6 +1,7 @@
 import { Migrations } from "@convex-dev/migrations";
+
 import { components, internal } from "./_generated/api";
-import type { Doc, Id, DataModel } from "./_generated/dataModel";
+import type { DataModel } from "./_generated/dataModel";
 
 /**
  * Initialize migrations component with DataModel for proper typing.
@@ -20,8 +21,8 @@ export const run = migrations.runner();
  * - messages.addMessagesToThread() when a thread is auto-created
  */
 export const backfillThreads = migrations.define({
-  table: "threads" as const,
-  migrateOne: async (ctx, thread: Doc<"threads">) => {
+  table: "threads",
+  migrateOne: async (ctx, thread) => {
     await ctx.runMutation(internal.functions.userStats.incrementThreads, {
       userId: thread.userId,
     });
@@ -35,25 +36,25 @@ export const backfillThreads = migrations.define({
  * System or non-completed assistant messages are ignored to match live behavior.
  */
 export const backfillMessages = migrations.define({
-  table: "messages" as const,
-  migrateOne: async (ctx, m: Doc<"messages">) => {
+  table: "messages",
+  migrateOne: async (ctx, message) => {
     const base = {
-      userId: m.userId,
-      threadId: m.threadId as Id<"threads">,
-      content: m.content,
-      createdAt: m.createdAt,
+      userId: message.userId,
+      threadId: message.threadId,
+      content: message.content,
+      createdAt: message.createdAt,
     };
 
-    if (m.role === "user") {
+    if (message.role === "user") {
       await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, base);
       return;
     }
 
-    if (m.role === "assistant" && m.status === "complete") {
+    if (message.role === "assistant" && message.status === "complete") {
       await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
         ...base,
-        modelUniqueId: m.model,
-        aiProfileId: m.metadata?.aiProfileId,
+        modelUniqueId: message.model,
+        aiProfileId: message.metadata?.aiProfileId,
       });
     }
   },
@@ -63,13 +64,10 @@ export const backfillMessages = migrations.define({
  * Backfill attachments.source defaulting to "user" where missing.
  */
 export const backfillAttachmentsSource = migrations.define({
-  table: "attachments" as const,
-  migrateOne: async (ctx, a: Doc<"attachments">) => {
-    type Source = "assistant" | "user";
-    type AttachmentWithSource = Doc<"attachments"> & { source?: Source };
-    const att = a as AttachmentWithSource;
-    if (att.source === undefined) {
-      await ctx.db.patch(att._id, { source: "user" as const });
+  table: "attachments",
+  migrateOne: async (ctx, attachment) => {
+    if (attachment.source === undefined) {
+      await ctx.db.patch(attachment._id, { source: "user" as const });
     }
   },
 });
