@@ -50,7 +50,7 @@ function LoadingSkeleton() {
       </div>
 
       <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-        {Array.from({ length: 8 }).map((_, i) => (
+        {Array.from({ length: 10 }).map((_, i) => (
           <div key={i} className="flex w-full flex-col rounded-md border">
             <Skeleton className="relative aspect-square size-full rounded-none" />
 
@@ -231,7 +231,10 @@ export default function AttachmentsPage() {
               </SelectContent>
             </Select>
 
-            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as AttachmentTypeFilter)}>
+            <Select
+              value={typeFilter}
+              onValueChange={(v) => setTypeFilter(v as AttachmentTypeFilter)}
+            >
               <SelectTrigger>
                 <SelectValue aria-label="Filter by type" placeholder="Type: All" />
               </SelectTrigger>

@@ -150,7 +150,8 @@ export default function StatisticsPage() {
         <div className="mt-2 flex justify-between">
           <p className="text-sm">
             A total of {format.number(activity.reduce((sum, d) => sum + d.value, 0))} user messages
-            sent in the {thisYear.getFullYear()}
+            sent in the {thisYear.getFullYear()} with a peak of{" "}
+            {format.number(Math.max(...activity.map((d) => d.value)))} messages on a single day.
           </p>
 
           <div className="text-foreground/70 flex items-center gap-2 text-xs">
