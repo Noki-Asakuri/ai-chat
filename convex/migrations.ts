@@ -72,25 +72,8 @@ export const backfillAttachmentsSource = migrations.define({
   },
 });
 
-/**
- * Backfill message modelParams to new format.
- */
-export const backfillMessageModelParams = migrations.define({
-  table: "messages",
-  migrateOne: async (ctx, doc) => {
-    const effort = doc.modelParams?.effort ?? "medium";
-    const webSearchEnabled =
-      doc.modelParams?.webSearchEnabled ?? doc.modelParams?.enableWebSearch ?? false;
-
-    await ctx.db.patch(doc._id, { modelParams: { webSearchEnabled, effort } });
-  },
-});
-
 export const runBackfillAttachmentsSource = migrations.runner(
   internal.migrations.backfillAttachmentsSource,
-);
-export const runBackfillMessageModelParams = migrations.runner(
-  internal.migrations.backfillMessageModelParams,
 );
 export const runBackfillThreads = migrations.runner(internal.migrations.backfillThreads);
 export const runBackfillMessages = migrations.runner(internal.migrations.backfillMessages);
