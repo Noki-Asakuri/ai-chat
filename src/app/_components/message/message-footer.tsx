@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 type MessageFooterProps = {
   index: number;
   message: ChatMessage;
-  renderMessage: { reasoning?: string; metadata?: ChatMessage["metadata"] };
+  renderMessage: { metadata?: ChatMessage["metadata"] };
 };
 
 export function MessageFooter({ index, message, renderMessage }: MessageFooterProps) {
@@ -16,20 +16,12 @@ export function MessageFooter({ index, message, renderMessage }: MessageFooterPr
 
   return (
     <div
-      className={cn(
-        "flex w-full items-center gap-1.5 transition-opacity sm:pointer-events-none sm:opacity-0",
-        "group-hover:pointer-events-auto group-hover:opacity-100",
-        "group-data-[open=true]:pointer-events-auto group-data-[open=true]:opacity-100",
-        { "justify-end bg-transparent": message.role === "user" },
-      )}
+      className={cn("flex w-full items-center gap-4", {
+        "justify-end bg-transparent": message.role === "user",
+      })}
     >
       <MessageActionButtons index={index} message={message} />
-
-      <MessageMetadata
-        model={message.model}
-        metadata={renderMessage.metadata}
-        hiddenReasoning={!renderMessage.reasoning}
-      />
+      <MessageMetadata model={message.model} metadata={renderMessage.metadata} />
     </div>
   );
 }

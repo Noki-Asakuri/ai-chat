@@ -19,12 +19,14 @@ function PopoverContent({
   align = "center",
   sideOffset = 4,
   side = "top",
+  includeArrow = true,
   children,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Popup> & {
   align?: "center" | "start" | "end";
   side?: "top" | "right" | "bottom" | "left";
   sideOffset?: number;
+  includeArrow?: boolean;
 }) {
   return (
     <PopoverPrimitive.Portal data-slot="popover-portal">
@@ -38,7 +40,7 @@ function PopoverContent({
           )}
           {...props}
         >
-          <PopoverArrow />
+          {includeArrow && <PopoverArrow className="fill-inherit" />}
 
           {children}
         </PopoverPrimitive.Popup>
@@ -47,13 +49,16 @@ function PopoverContent({
   );
 }
 
-function PopoverArrow({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Arrow>) {
+function PopoverArrow({
+  className,
+  ...props
+}: React.ComponentProps<typeof PopoverPrimitive.Arrow>) {
   return (
     <PopoverPrimitive.Arrow
       {...props}
       className="data-[side=bottom]:top-[-8px] data-[side=left]:right-[-13px] data-[side=left]:rotate-90 data-[side=right]:left-[-13px] data-[side=right]:-rotate-90 data-[side=top]:bottom-[-9px] data-[side=top]:rotate-180"
     >
-      <Icons.arrow className="fill-popover" />
+      <Icons.arrow className={cn("fill-popover", className)} />
     </PopoverPrimitive.Arrow>
   );
 }
