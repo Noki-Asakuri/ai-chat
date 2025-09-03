@@ -31,6 +31,7 @@ export const openai: Record<ModelIdKey, ModelData> = {
     id: "openai/gpt-5",
     provider: "openai",
     capabilities: {
+      webSearch: true,
       reasoning: true,
       vision: true,
     },
@@ -40,6 +41,7 @@ export const openai: Record<ModelIdKey, ModelData> = {
     id: "openai/gpt-5-mini",
     provider: "openai",
     capabilities: {
+      webSearch: true,
       reasoning: true,
       vision: true,
     },
@@ -49,6 +51,7 @@ export const openai: Record<ModelIdKey, ModelData> = {
     id: "openai/gpt-5-nano",
     provider: "openai",
     capabilities: {
+      webSearch: true,
       reasoning: true,
       vision: true,
     },
@@ -59,6 +62,7 @@ export const openai: Record<ModelIdKey, ModelData> = {
     altModelIds: ["openai/gpt-5-chat-latest"],
     provider: "openai",
     capabilities: {
+      webSearch: true,
       reasoning: true,
       vision: true,
     },
@@ -69,6 +73,7 @@ export const openai: Record<ModelIdKey, ModelData> = {
     id: "openai/o3",
     provider: "openai",
     capabilities: {
+      webSearch: true,
       reasoning: true,
       vision: true,
     },
@@ -79,6 +84,7 @@ export const openai: Record<ModelIdKey, ModelData> = {
     id: "openai/o3-mini",
     provider: "openai",
     capabilities: {
+      webSearch: true,
       reasoning: true,
       vision: true,
     },
@@ -88,6 +94,7 @@ export const openai: Record<ModelIdKey, ModelData> = {
     id: "openai/o4-mini",
     provider: "openai",
     capabilities: {
+      webSearch: true,
       reasoning: true,
       vision: true,
     },

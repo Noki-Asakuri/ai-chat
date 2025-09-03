@@ -5,7 +5,7 @@ import { Redis } from "ioredis";
 import { z } from "zod/v4";
 
 import { google, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
-import { type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
+import { openai, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import type { ModelMessage, ToolSet, UserContent } from "ai";
 
 import { logger } from "../axiom/server";
@@ -107,14 +107,20 @@ export async function validateRequestBody(req: Request, userId: string) {
     providerOptions.openai.include = ["reasoning.encrypted_content"];
   }
 
-  console.log(providerOptions);
-
   const tools: ToolSet = {};
   const transformedMessages = await Promise.all(transformMessages(messages, userId));
 
   if (config?.webSearch) {
-    tools.google_search = google.tools.googleSearch({});
-    tools.url_context = google.tools.urlContext({});
+    switch (modelInfo.provider) {
+      case "google":
+        tools.google_search = google.tools.googleSearch({});
+        tools.url_context = google.tools.urlContext({});
+        break;
+
+      case "openai":
+        tools.web_search_preview = openai.tools.webSearchPreview({ searchContextSize: "high" });
+        break;
+    }
   }
 
   return {
@@ -128,8 +134,6 @@ export async function validateRequestBody(req: Request, userId: string) {
     tools,
   };
 }
-
-const redis = new Redis(env.REDIS_URL);
 
 function transformMessages(messages: z.infer<typeof inputSchema>["messages"], userId: string) {
   return messages.map(async (message): Promise<ModelMessage> => {
