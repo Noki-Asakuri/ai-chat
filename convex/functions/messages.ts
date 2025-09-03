@@ -1,7 +1,8 @@
 import { v } from "convex/values";
+
+import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { mutation, query } from "../_generated/server";
-import { internal } from "../_generated/api";
 
 export const getAllMessagesFromThread = query({
   args: { threadId: v.optional(v.id("threads")) },
@@ -78,19 +79,8 @@ export const addMessagesToThread = mutation({
     if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
-
-    if (!thread) {
-      await ctx.db.insert("threads", {
-        title: "New Chat",
-        updatedAt: Date.now() + 1,
-        userId: user.subject,
-      });
-      await ctx.runMutation(internal.functions.userStats.incrementThreads, {
-        userId: user.subject,
-      });
-    } else if (thread.userId !== user.subject) {
-      throw new Error("Not authorized");
-    }
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== user.subject) throw new Error("Not authorized");
 
     let assistantMessageId: Id<"messages"> | undefined;
     for (const message of args.messages) {

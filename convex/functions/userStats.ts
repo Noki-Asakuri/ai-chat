@@ -31,6 +31,7 @@ async function getOrCreate(ctx: MutationCtx, userId: string): Promise<Doc<"user_
       threads: 0,
       words: 0,
       messages: { assistant: 0, user: 0 },
+      wordsByRole: { assistant: 0, user: 0 },
     },
     modelCounts: {},
     threadCounts: {},
@@ -38,10 +39,10 @@ async function getOrCreate(ctx: MutationCtx, userId: string): Promise<Doc<"user_
     aiProfileCounts: {},
     lastUpdatedAt: now,
   });
+
   const doc = await ctx.db.get(id);
-  if (!doc) {
-    throw new Error("Failed to create user_stats");
-  }
+  if (!doc) throw new Error("Failed to create user_stats");
+
   return doc;
 }
 
@@ -86,6 +87,10 @@ export const incrementOnUserMessage = internalMutation({
         ...doc.stats.messages,
         user: doc.stats.messages.user + 1,
       },
+      wordsByRole: {
+        assistant: doc.stats.wordsByRole?.assistant ?? 0,
+        user: (doc.stats.wordsByRole?.user ?? 0) + words,
+      },
     };
 
     const threadCounts: Record<Id<"threads">, number> = { ...doc.threadCounts };
@@ -127,6 +132,10 @@ export const incrementOnAssistantComplete = internalMutation({
       messages: {
         ...doc.stats.messages,
         assistant: doc.stats.messages.assistant + 1,
+      },
+      wordsByRole: {
+        assistant: (doc.stats.wordsByRole?.assistant ?? 0) + words,
+        user: doc.stats.wordsByRole?.user ?? 0,
       },
     };
 

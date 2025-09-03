@@ -158,6 +158,13 @@ export default defineSchema({
         assistant: v.number(),
         user: v.number(),
       }),
+      // Split word counts by role for UI cards; kept optional for backward compatibility
+      wordsByRole: v.optional(
+        v.object({
+          assistant: v.number(),
+          user: v.number(),
+        }),
+      ),
     }),
 
     modelCounts: v.record(v.string(), v.number()),

@@ -1,11 +1,17 @@
 import { v } from "convex/values";
+
 import { mutation, query } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 export const createThread = mutation({
   args: { title: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
     if (!user) throw new Error("Not authenticated");
+
+    await ctx.runMutation(internal.functions.userStats.incrementThreads, {
+      userId: user.subject,
+    });
 
     return await ctx.db.insert("threads", {
       updatedAt: Date.now() + 1,

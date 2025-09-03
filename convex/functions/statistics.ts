@@ -1,6 +1,7 @@
-import { query } from "../_generated/server";
 import { v } from "convex/values";
+
 import type { Doc, Id } from "../_generated/dataModel";
+import { query } from "../_generated/server";
 
 export const getStatistics = query({
   args: {},
@@ -12,6 +13,12 @@ export const getStatistics = query({
         assistant: v.number(),
         user: v.number(),
       }),
+      wordsByRole: v.optional(
+        v.object({
+          assistant: v.number(),
+          user: v.number(),
+        }),
+      ),
     }),
     modelRank: v.array(v.object({ name: v.string(), value: v.number() })),
     threadRank: v.array(v.object({ id: v.id("threads"), name: v.string(), value: v.number() })),
@@ -30,16 +37,43 @@ export const getStatistics = query({
 
     // Defaults when no stats exist yet
     const defaults = {
-      stats: { threads: 0, words: 0, messages: { assistant: 0, user: 0 } },
+      stats: {
+        threads: 0,
+        words: 0,
+        messages: { assistant: 0, user: 0 },
+        wordsByRole: { assistant: 0, user: 0 },
+      },
       modelCounts: {} as Record<string, number>,
       threadCounts: {} as Record<string, number>,
       activityCounts: {} as Record<string, number>,
       aiProfileCounts: {} as Record<string, number>,
     };
 
+    // Safely parse optional wordsByRole for backward-compatible docs
+    const wr = (() => {
+      const maybe = statsDoc?.stats?.wordsByRole;
+      if (
+        typeof maybe === "object" &&
+        maybe !== null &&
+        typeof maybe.assistant === "number" &&
+        typeof maybe.user === "number"
+      ) {
+        return { assistant: maybe.assistant, user: maybe.user };
+      }
+      return { assistant: 0, user: 0 };
+    })();
+
     const s = statsDoc
       ? {
-          stats: statsDoc.stats,
+          stats: {
+            threads: statsDoc.stats.threads,
+            words: statsDoc.stats.words,
+            messages: {
+              assistant: statsDoc.stats.messages.assistant,
+              user: statsDoc.stats.messages.user,
+            },
+            wordsByRole: wr,
+          },
           modelCounts: statsDoc.modelCounts,
           threadCounts: statsDoc.threadCounts,
           activityCounts: statsDoc.activityCounts,
@@ -72,8 +106,44 @@ export const getStatistics = query({
       .filter((x): x is { id: Id<"threads">; name: string; value: number } => x !== null)
       .sort((a, b) => b.value - a.value);
 
-    // activity from pre-aggregated daily counts
-    const activity = Object.entries(s.activityCounts).map(([day, value]) => ({
+    // Build activity chart from user messages only (current year)
+    function dayKey(ts: number): string {
+      const d = new Date(ts);
+      const iso = new Date(
+        Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+      ).toISOString();
+      const day = iso.split("T")[0];
+      return day ?? "";
+    }
+
+    const now = Date.now();
+    const nowDate = new Date(now);
+    const yearStartMs = Date.UTC(nowDate.getUTCFullYear(), 0, 1);
+
+    const activityCounts: Record<string, number> = {};
+
+    // Collect all threads for this user
+    const userThreads = await ctx.db
+      .query("threads")
+      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .collect();
+
+    // For each thread, count only 'user' role messages in current year
+    for (const t of userThreads) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_threadId", (q) => q.eq("threadId", t._id))
+        .collect();
+
+      for (const m of messages) {
+        if (m.role === "user" && m.createdAt >= yearStartMs && m.createdAt <= now) {
+          const day = dayKey(m.createdAt);
+          activityCounts[day] = (activityCounts[day] ?? 0) + 1;
+        }
+      }
+    }
+
+    const activity = Object.entries(activityCounts).map(([day, value]) => ({
       day,
       value,
     }));

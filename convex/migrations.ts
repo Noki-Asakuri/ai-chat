@@ -74,6 +74,12 @@ export const backfillAttachmentsSource = migrations.define({
   },
 });
 
+export const runBackfillAttachmentsSource = migrations.runner(
+  internal.migrations.backfillAttachmentsSource,
+);
+export const runBackfillThreads = migrations.runner(internal.migrations.backfillThreads);
+export const runBackfillMessages = migrations.runner(internal.migrations.backfillMessages);
+
 /**
  * Run the full backfill series:
  * 1. backfillAttachmentsSource

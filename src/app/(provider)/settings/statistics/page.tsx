@@ -78,7 +78,6 @@ export default function StatisticsPage() {
   if (isPending) return <LoadingSkeleton />;
 
   const { stats, modelRank, threadRank, activity, aiProfileRank } = data!;
-  const totalMessages = stats.messages.assistant + stats.messages.user;
 
   return (
     <main className="space-y-4">
@@ -100,21 +99,27 @@ export default function StatisticsPage() {
 
         <Card className="rounded-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-normal text-gray-400">Messages</CardTitle>
+            <CardTitle className="text-sm font-normal text-gray-400">Assistant</CardTitle>
           </CardHeader>
 
           <CardContent>
-            <div className="text-3xl font-bold">{format.number(totalMessages)}</div>
+            <div className="text-3xl font-bold">{format.number(stats.messages.assistant)}</div>
+            <div className="text-muted-foreground mt-1 text-xs">
+              Words: {format.number(stats.wordsByRole?.assistant ?? 0)}
+            </div>
           </CardContent>
         </Card>
 
         <Card className="rounded-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-normal text-gray-400">Words</CardTitle>
+            <CardTitle className="text-sm font-normal text-gray-400">User</CardTitle>
           </CardHeader>
 
           <CardContent>
-            <div className="text-3xl font-bold">{format.number(stats.words)}</div>
+            <div className="text-3xl font-bold">{format.number(stats.messages.user)}</div>
+            <div className="text-muted-foreground mt-1 text-xs">
+              Words: {format.number(stats.wordsByRole?.user ?? 0)}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -144,8 +149,10 @@ export default function StatisticsPage() {
 
         <div className="mt-2 flex justify-between">
           <p className="text-sm">
-            A total of {format.number(totalMessages)} messages sent in the {thisYear.getFullYear()}
+            A total of {format.number(activity.reduce((sum, d) => sum + d.value, 0))} user messages
+            sent in the {thisYear.getFullYear()}
           </p>
+
           <div className="text-foreground/70 flex items-center gap-2 text-xs">
             <p>Inactive</p>
             <div className="size-4 rounded-xs" style={{ backgroundColor: "var(--border)" }} />
@@ -168,7 +175,11 @@ export default function StatisticsPage() {
 
           <div className="mt-2 space-y-2">
             {modelRank.slice(0, 5).map((item: { name: string; value: number }) => (
-              <ModelRank key={item.name} model={item} assistantMessages={stats.messages.assistant} />
+              <ModelRank
+                key={item.name}
+                model={item}
+                assistantMessages={stats.messages.assistant}
+              />
             ))}
           </div>
         </div>
@@ -181,14 +192,16 @@ export default function StatisticsPage() {
           </div>
 
           <div className="mt-2 flex flex-col gap-2">
-            {threadRank.slice(0, 5).map((item: { id: Id<"threads">; name: string; value: number }) => (
-              <Link href={`/threads/${toUUID(item.id)}`} key={item.id}>
-                <div className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2">
-                  <p className="truncate">{item.name}</p>
-                  <span>{item.value}</span>
-                </div>
-              </Link>
-            ))}
+            {threadRank
+              .slice(0, 5)
+              .map((item: { id: Id<"threads">; name: string; value: number }) => (
+                <Link href={`/threads/${toUUID(item.id)}`} key={item.id}>
+                  <div className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2">
+                    <p className="truncate">{item.name}</p>
+                    <span>{item.value}</span>
+                  </div>
+                </Link>
+              ))}
           </div>
         </div>
       </div>
@@ -202,12 +215,15 @@ export default function StatisticsPage() {
 
         <div className="mt-2 flex flex-col gap-2">
           {aiProfileRank?.slice(0, 5)?.map((item: { name: string; value: number }) => (
-            <div key={item.name} className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2">
+            <div
+              key={item.name}
+              className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2"
+            >
               <p className="truncate">{item.name}</p>
               <span>{item.value}</span>
             </div>
           ))}
- 
+
           {(!aiProfileRank || aiProfileRank.length === 0) && (
             <div className="text-muted-foreground text-sm">No AI profile usage yet.</div>
           )}
@@ -242,7 +258,10 @@ function ModelRank({
 
   return (
     <div className="hover:bg-card relative flex h-10 justify-between gap-4 overflow-hidden rounded-md border px-4 py-2">
-      <div className="bg-sidebar-primary/60 absolute top-0 left-0 h-full rounded-md" style={{ width: `${percentage}%` }} />
+      <div
+        className="bg-sidebar-primary/60 absolute top-0 left-0 h-full rounded-md"
+        style={{ width: `${percentage}%` }}
+      />
 
       <div className="z-10 flex items-center gap-2">
         <Icons.provider provider={modelData.provider} />
@@ -253,4 +272,3 @@ function ModelRank({
     </div>
   );
 }
-
