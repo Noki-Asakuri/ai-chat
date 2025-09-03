@@ -33,8 +33,9 @@ export function ThreadItem({ thread }: { thread: Thread }) {
       to={`/threads/${toUUID(thread._id)}`}
       title={thread.title}
       data-active={threadId === toUUID(thread._id)}
+      data-status={thread.status}
       className={cn(
-        "group/thread relative flex w-full items-center overflow-hidden rounded-md px-2 py-1.5",
+        "group/thread relative flex w-full items-center gap-1 overflow-hidden rounded-md px-2 py-1.5",
         "text-sidebar-foreground hover:bg-primary/30 transition-colors",
         "[&:has(button[data-popup-open])]:bg-primary/30",
         "data-[active=true]:bg-primary/30",
@@ -102,7 +103,7 @@ function ThreadActions({ thread }: { thread: Thread }) {
             e.stopPropagation();
             e.preventDefault();
           }}
-          className="pointer-events-auto hidden size-5 items-center justify-center group-hover/thread:flex group-data-[active=true]/thread:flex data-[popup-open]:flex"
+          className="pointer-events-auto hidden size-5 items-center justify-center group-hover/thread:flex group-data-[active=true]/thread:flex group-data-[status=streaming]/thread:hidden data-[popup-open]:flex"
         >
           <EllipsisIcon className="size-4" />
         </Menu.Trigger>

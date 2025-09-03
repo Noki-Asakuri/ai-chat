@@ -125,7 +125,7 @@ export const updateThreadTitle = mutation({
 });
 
 export const deleteThread = mutation({
-  args: { threadId: v.id("threads") },
+  args: { threadId: v.id("threads"), deleteAttachments: v.boolean() },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
     if (!user) throw new Error("Not authenticated");
@@ -143,6 +143,17 @@ export const deleteThread = mutation({
 
     for (const message of messages) {
       await ctx.db.delete(message._id);
+    }
+
+    if (args.deleteAttachments) {
+      const attachments = messages
+        .map((message) => message.attachments ?? [])
+        .flat()
+        .filter(Boolean);
+
+      for (const attachmentId of attachments) {
+        await ctx.db.delete(attachmentId);
+      }
     }
   },
 });
