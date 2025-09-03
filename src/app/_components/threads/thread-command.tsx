@@ -39,7 +39,7 @@ export function ThreadCommand() {
         title="Search Threads"
         data-expanded={threadCommandOpen}
         onClick={() => setThreadCommandOpen(true)}
-        className="h-7 rounded-md border px-2 py-1 opacity-100 transition-opacity data-[expanded=true]:opacity-0"
+        className="h-7 rounded-md border px-2 py-1 opacity-100 transition-opacity"
       >
         <SearchIcon />
         <span>Search Threads...</span>
