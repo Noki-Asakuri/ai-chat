@@ -46,22 +46,17 @@ export default defineSchema({
       v.literal("streaming"),
       v.literal("error"),
     ),
-    role: v.union(v.literal("assistant"), v.literal("user"), v.literal("system")),
 
+    role: v.union(v.literal("assistant"), v.literal("user")),
     resumableStreamId: v.optional(v.union(v.string(), v.null())),
 
     modelParams: v.optional(
       v.object({
-        temperature: v.optional(v.number()),
-        top_p: v.optional(v.number()),
-        top_k: v.optional(v.number()),
-        frequency_penalty: v.optional(v.number()),
-        presence_penalty: v.optional(v.number()),
-
         enableWebSearch: v.optional(v.boolean()),
-        enableThinking: v.optional(v.boolean()),
-        thinkingBudget: v.optional(v.number()),
         reasoningEffort: v.optional(v.number()),
+
+        webSearchEnabled: v.optional(v.boolean()),
+        effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
       }),
     ),
 
@@ -69,17 +64,10 @@ export default defineSchema({
     updatedAt: v.number(),
 
     sources: v.optional(
-      v.array(
-        v.object({
-          id: v.string(),
-          title: v.optional(v.string()),
-          url: v.string(),
-        }),
-      ),
+      v.array(v.object({ id: v.string(), title: v.optional(v.string()), url: v.string() })),
     ),
 
     attachments: v.optional(v.array(v.id("attachments"))),
-
     metadata: v.optional(
       v.object({
         model: v.optional(v.string()),
@@ -154,17 +142,9 @@ export default defineSchema({
     stats: v.object({
       threads: v.number(),
       words: v.number(),
-      messages: v.object({
-        assistant: v.number(),
-        user: v.number(),
-      }),
+      messages: v.object({ assistant: v.number(), user: v.number() }),
       // Split word counts by role for UI cards; kept optional for backward compatibility
-      wordsByRole: v.optional(
-        v.object({
-          assistant: v.number(),
-          user: v.number(),
-        }),
-      ),
+      wordsByRole: v.optional(v.object({ assistant: v.number(), user: v.number() })),
     }),
 
     modelCounts: v.record(v.string(), v.number()),

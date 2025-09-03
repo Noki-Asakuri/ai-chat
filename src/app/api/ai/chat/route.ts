@@ -147,13 +147,6 @@ export const POST = withAxiom(async (req) => {
       tools,
       abortSignal: req.signal,
 
-      topP: config.topP,
-      topK: config.topK,
-      temperature: config.temperature,
-      maxOutputTokens: config.maxTokens,
-      presencePenalty: config.presencePenalty,
-      frequencyPenalty: config.frequencyPenalty,
-
       stopWhen: stepCountIs(5),
       experimental_transform: smoothStream({ delayInMs: 10, chunking: "line" }),
 
@@ -379,6 +372,8 @@ export const POST = withAxiom(async (req) => {
 
           content: fixMarkdownCodeBlocks(content),
           reasoning: reasoning.length > 0 ? reasoning : undefined,
+
+          modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
         };
 
         logger.info("[Chat] Chat request completed!", {

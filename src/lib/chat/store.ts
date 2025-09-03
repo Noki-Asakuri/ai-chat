@@ -34,7 +34,10 @@ function getChatConfigFromLS() {
     effort: z.enum(["low", "medium", "high"]).catch(DEFAULT_CONFIG.effort),
 
     profile: z
-      .object({ id: z.string().nullable(), systemPrompt: z.string() })
+      .object({
+        id: z.custom<Id<"ai_profiles">>((data) => z.string().parse(data)).nullable(),
+        systemPrompt: z.string(),
+      })
       .catch(DEFAULT_CONFIG.profile),
   });
 

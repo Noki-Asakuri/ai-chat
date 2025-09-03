@@ -189,7 +189,7 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
 
   const allMessages = state.messages.map((message) => ({
     id: message.messageId,
-    role: message.role as "assistant" | "user",
+    role: message.role,
     content: message.content,
     attachments: message.attachments?.map((attachment) => ({
       _id: attachment._id,

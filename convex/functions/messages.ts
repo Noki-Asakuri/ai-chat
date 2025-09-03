@@ -62,7 +62,7 @@ export const addMessagesToThread = mutation({
     messages: v.array(
       v.object({
         messageId: v.string(),
-        role: v.union(v.literal("assistant"), v.literal("user"), v.literal("system")),
+        role: v.union(v.literal("assistant"), v.literal("user")),
         content: v.string(),
         status: v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
         model: v.string(),
@@ -162,16 +162,8 @@ export const updateMessageById = mutation({
       ),
       modelParams: v.optional(
         v.object({
-          temperature: v.optional(v.number()),
-          top_p: v.optional(v.number()),
-          top_k: v.optional(v.number()),
-          frequency_penalty: v.optional(v.number()),
-          presence_penalty: v.optional(v.number()),
-
-          enableThinking: v.optional(v.boolean()),
-          enableWebSearch: v.optional(v.boolean()),
-          thinkingBudget: v.optional(v.number()),
-          reasoningEffort: v.optional(v.number()),
+          webSearchEnabled: v.optional(v.boolean()),
+          effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
         }),
       ),
     }),
@@ -223,10 +215,7 @@ export const retryChatMessage = mutation({
     threadId: v.id("threads"),
     assistantMessageId: v.id("messages"),
     model: v.optional(v.string()),
-    userMessage: v.object({
-      messageId: v.id("messages"),
-      content: v.optional(v.string()),
-    }),
+    userMessage: v.object({ messageId: v.id("messages"), content: v.optional(v.string()) }),
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();

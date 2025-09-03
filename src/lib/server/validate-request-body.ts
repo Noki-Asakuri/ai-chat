@@ -1,18 +1,17 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { waitUntil } from "@vercel/functions";
-import { Redis } from "ioredis";
 import { z } from "zod/v4";
 
 import { google, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { openai, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import type { ModelMessage, ToolSet, UserContent } from "ai";
 
-import { logger } from "../axiom/server";
 import { getModelData } from "../chat/models";
 import { tryCatchSync } from "../utils";
 
-import { env } from "@/env";
+const threadIdSchema = z.custom<Id<"threads">>((data) => z.string().parse(data));
+const messageIdSchema = z.custom<Id<"messages">>((data) => z.string().parse(data));
+const attachmentIdSchema = z.custom<Id<"attachments">>((data) => z.string().parse(data));
 
 const inputSchema = z.object({
   messages: z.array(
@@ -23,9 +22,9 @@ const inputSchema = z.object({
       attachments: z
         .array(
           z.object({
-            _id: z.string(),
+            _id: attachmentIdSchema,
             id: z.string(),
-            threadId: z.string(),
+            threadId: threadIdSchema,
 
             name: z.string(),
             size: z.number(),
@@ -35,23 +34,15 @@ const inputSchema = z.object({
         .optional(),
     }),
   ),
-  assistantMessageId: z.custom<Id<"messages">>((data) => z.string().parse(data)),
-  threadId: z.custom<Id<"threads">>((data) => z.string().parse(data)),
+  assistantMessageId: messageIdSchema,
+  threadId: threadIdSchema,
 
   config: z
     .object({
-      webSearch: z.boolean(),
-      reasoningEffort: z.enum(["low", "medium", "high"]),
-      thinkingBudget: z.number().min(0).max(32_768),
+      webSearch: z.boolean().optional(),
+      effort: z.enum(["low", "medium", "high"]).default("medium"),
 
       model: z.string(),
-      temperature: z.number().min(0).max(1),
-      topP: z.number().min(0).max(1),
-      topK: z.number().min(1).max(100),
-      maxTokens: z.number().min(1024).max(128_000),
-      presencePenalty: z.number().min(0).max(1),
-      frequencyPenalty: z.number().min(0).max(1),
-
       profile: z.object({
         id: z.custom<Id<"ai_profiles">>((data) => z.string().parse(data)).nullable(),
         systemPrompt: z.string(),
@@ -59,6 +50,8 @@ const inputSchema = z.object({
     })
     .partial(),
 });
+
+export type RequestBody = z.infer<typeof inputSchema>;
 
 const safetySettings = [
   { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_HARASSMENT" },
@@ -70,9 +63,7 @@ const safetySettings = [
 
 export async function validateRequestBody(req: Request, userId: string) {
   const { success, data, error } = inputSchema.safeParse(await req.json());
-  if (!success) {
-    throw new Error(z.prettifyError(error));
-  }
+  if (!success) throw new Error(z.prettifyError(error));
 
   const { messages, assistantMessageId, threadId, config } = data;
   const [modelData, modelError] = tryCatchSync(() => {
@@ -102,13 +93,13 @@ export async function validateRequestBody(req: Request, userId: string) {
 
   if (modelInfo.capabilities.reasoning) {
     providerOptions.openai.reasoningSummary = "detailed";
-    providerOptions.openai.reasoningEffort = config.reasoningEffort ?? "medium";
+    providerOptions.openai.reasoningEffort = config.effort ?? "medium";
 
     providerOptions.openai.include = ["reasoning.encrypted_content"];
   }
 
   const tools: ToolSet = {};
-  const transformedMessages = await Promise.all(transformMessages(messages, userId));
+  const transformedMessages = transformMessages(messages, userId);
 
   if (config?.webSearch) {
     switch (modelInfo.provider) {
@@ -136,34 +127,28 @@ export async function validateRequestBody(req: Request, userId: string) {
 }
 
 function transformMessages(messages: z.infer<typeof inputSchema>["messages"], userId: string) {
-  return messages.map(async (message): Promise<ModelMessage> => {
+  return messages.map((message): ModelMessage => {
     if (message.role === "assistant") return { role: "assistant", content: message.content };
 
-    const attachmentParts = message.attachments
-      ? message.attachments.map(
-          async (attachment): Promise<Exclude<UserContent[number], string>> => {
-            const url = `https://files.chat.asakuri.me/${userId}/${attachment.threadId}/${attachment._id}`;
+    const parts = message.attachments
+      ? message.attachments.map((attachment): Exclude<UserContent[number], string> => {
+          const url = `https://files.chat.asakuri.me/${userId}/${attachment.threadId}/${attachment._id}`;
 
-            if (attachment.type === "image") {
-              return {
-                type: "image" as const,
-                image: url,
-                providerOptions: { openai: { imageDetail: "high" } },
-              };
-            }
+          if (attachment.type === "image") {
+            return {
+              type: "image" as const,
+              image: url,
+              providerOptions: { openai: { imageDetail: "high" } },
+            };
+          }
 
-            if (attachment.type === "pdf") {
-              return { type: "file" as const, data: url, mediaType: "application/pdf" };
-            }
+          if (attachment.type === "pdf") {
+            return { type: "file" as const, data: url, mediaType: "application/pdf" };
+          }
 
-            return { type: "text" as const, text: url };
-          },
-        )
+          return { type: "text" as const, text: url };
+        })
       : [];
-
-    const parts = (await Promise.allSettled(attachmentParts))
-      .filter((result) => result.status === "fulfilled")
-      .map((result) => result.value);
 
     return {
       role: "user",

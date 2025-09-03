@@ -1,21 +1,14 @@
 import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { RequestBody } from "@/lib/server/validate-request-body";
 
 export type Thread = Doc<"threads">;
 
 export type ReasoningEffort = "low" | "medium" | "high";
 export type ThinkingBudget = number;
 
-export type ChatRequest = {
-  threadId: Id<"threads">;
-  assistantMessageId: Id<"messages">;
-  messages: Omit<InputMessage, "messageId">[];
+export type { RequestBody };
 
-  config: {
-    model: string;
-    webSearch: boolean;
-    effort: ReasoningEffort;
-  };
-};
+export type ChatRequest = RequestBody;
 
 export type InputMessage = {
   messageId: string;
