@@ -52,7 +52,17 @@ export default defineSchema({
 
     modelParams: v.optional(
       v.object({
+        // @deprecated Will remove after migration, readd for backfill
+        temperature: v.optional(v.number()),
+        top_p: v.optional(v.number()),
+        top_k: v.optional(v.number()),
+        frequency_penalty: v.optional(v.number()),
+        presence_penalty: v.optional(v.number()),
+
+        // @deprecated Will remove after migration, readd for backfill
         enableWebSearch: v.optional(v.boolean()),
+        enableThinking: v.optional(v.boolean()),
+        thinkingBudget: v.optional(v.number()),
         reasoningEffort: v.optional(v.number()),
 
         webSearchEnabled: v.optional(v.boolean()),
