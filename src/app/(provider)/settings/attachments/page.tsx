@@ -39,6 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format, toUUID, tryCatch } from "@/lib/utils";
 
 type SourceFilter = "all" | "user" | "assistant";
+type AttachmentTypeFilter = "all" | "image" | "pdf";
 
 function LoadingSkeleton() {
   return (
@@ -75,6 +76,7 @@ export default function AttachmentsPage() {
 
   const [searchText, setSearchText] = useState<string>("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [typeFilter, setTypeFilter] = useState<AttachmentTypeFilter>("all");
 
   // Selection mode and state
   const [selectionMode, setSelectionMode] = useState<boolean>(false);
@@ -116,11 +118,14 @@ export default function AttachmentsPage() {
       const src = attachment.source ?? "user";
       const matchesSource = sourceFilter === "all" || src === sourceFilter;
 
-      return matchesSearch && matchesSource;
+      // Filter by attachment type (image/pdf)
+      const matchesType = typeFilter === "all" || attachment.type === typeFilter;
+
+      return matchesSearch && matchesSource && matchesType;
     });
 
     return list;
-  }, [data, searchText, sourceFilter]);
+  }, [data, searchText, sourceFilter, typeFilter]);
 
   // Build gallery sources for image preview (only currently visible items)
   const imageAttachments = useMemo(
@@ -223,6 +228,17 @@ export default function AttachmentsPage() {
                 <SelectItem value="all">Source: All</SelectItem>
                 <SelectItem value="user">Source: User uploads</SelectItem>
                 <SelectItem value="assistant">Source: Assistant generated</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as AttachmentTypeFilter)}>
+              <SelectTrigger>
+                <SelectValue aria-label="Filter by type" placeholder="Type: All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Type: All</SelectItem>
+                <SelectItem value="image">Type: Images</SelectItem>
+                <SelectItem value="pdf">Type: PDFs</SelectItem>
               </SelectContent>
             </Select>
 
