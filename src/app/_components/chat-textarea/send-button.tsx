@@ -20,10 +20,16 @@ export function ChatSendButton() {
 
   return (
     <Menu.Root open={open} onOpenChange={setOpen}>
-      <div className="from-primary/35 to-primary/60 border-primary/50 flex h-9 items-center gap-2 overflow-hidden rounded-md border bg-gradient-to-t pl-3">
-        <button
+      <div
+        data-streaming={isStreaming}
+        className="bg-card group data-[streaming=true]:border-destructive data-[streaming=true]:bg-destructive/60 flex h-9 items-center gap-2 overflow-hidden rounded-md border pl-3 data-[streaming=true]:pr-3"
+      >
+        <ButtonWithTip
           type="button"
-          className="flex h-full flex-1 cursor-pointer items-center gap-2"
+          size="none"
+          variant="none"
+          title={isStreaming ? "Abort Request" : "Send Message"}
+          className="flex h-full flex-1 cursor-pointer items-center gap-2 p-0"
           onClick={() => (isStreaming ? abortChatRequest() : submitChatMessage())}
         >
           {isStreaming ? (
@@ -32,12 +38,12 @@ export function ChatSendButton() {
             <SendHorizontalIcon className="size-4 -rotate-45" />
           )}
           <span>{isStreaming ? "Abort" : "Send"}</span>
-        </button>
+        </ButtonWithTip>
 
         <Menu.Trigger
           type="button"
-          className="border-primary/40 h-9 rounded-none border-l"
-          title={isStreaming ? "Abort Request" : "Send preferences"}
+          className="h-9 rounded-none border-l group-data-[streaming=true]:hidden"
+          title="Send Preferences"
           render={<ButtonWithTip delay={1000} side="top" variant="none" className="size-8" />}
         >
           <ChevronDownIcon className="size-4" />
