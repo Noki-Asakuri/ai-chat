@@ -34,7 +34,7 @@ export function ChatAttachmentButton() {
       <ButtonWithTip
         asChild
         title="Upload Image"
-        variant="secondary"
+        variant="ghost"
         className="border- size-9 border px-2 py-1.5 text-xs"
       >
         <label htmlFor="image-upload" className="cursor-pointer">
