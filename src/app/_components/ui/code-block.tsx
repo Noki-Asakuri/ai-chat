@@ -7,16 +7,10 @@ import { useShikiHighlighter } from "react-shiki";
 
 import { CopyButton } from "../copy-button";
 import { ButtonWithTip } from "./button";
+import { Icons } from "./icons";
 
 import { useChatStore } from "@/lib/chat/store";
 import { cn } from "@/lib/utils";
-import { Icons } from "./icons";
-
-type CodeBlockProps = React.ComponentProps<"div"> & {
-  code: string;
-  language?: string;
-  theme?: string;
-};
 
 function trimOneEdgeNewline(input: string): string {
   let s = input;
@@ -42,6 +36,8 @@ const languageDisplayName: Record<
 > = {
   ts: { name: "TypeScript", icon: Icons.typescript },
   typescript: { name: "TypeScript", icon: Icons.typescript },
+  tsx: { name: "TSX", icon: Icons.tsx },
+  jsx: { name: "JSX", icon: Icons.jsx },
   js: { name: "JavaScript", icon: Icons.javascript },
   javascript: { name: "JavaScript", icon: Icons.javascript },
   cpp: { name: "C++", icon: Icons.cpp },
@@ -64,74 +60,136 @@ const languageDisplayName: Record<
   sh: { name: "Shell" },
 };
 
-export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
+type CodeBlockProps = { language?: string | null; code: string };
+
+const LINE_CLAMP = 15;
+const FILE_NAME_RE = /(?:^|.*[\/\\])([A-Za-z0-9._-]+\.[A-Za-z0-9]+)(?=[^A-Za-z0-9._-]*$)/;
+
+const transformersOnce = [transformerColorizedBrackets()];
+
+function normalizeCode(input: string): string {
+  const onceTrimmed = trimOneEdgeNewline(input);
+  return onceTrimmed.replace(/\r\n/g, "\n");
+}
+
+function lineStats(s: string): { total: number; first?: string } {
+  if (s.length === 0) return { total: 1 };
+  const firstBreak = s.indexOf("\n");
+  if (firstBreak === -1) return { total: 1, first: s };
+  let total = 1;
+  for (let i = firstBreak + 1; i < s.length; i++) {
+    if (s.charCodeAt(i) === 10) total++;
+  }
+  return { total, first: s.slice(0, firstBreak) };
+}
+
+type CodeBlockHeaderProps = {
+  langKey: string;
+  totalLines: number;
+  firstLine?: string;
+};
+
+const CodeBlockHeader = React.memo(function CodeBlockHeader(props: CodeBlockHeaderProps) {
+  const fileName = React.useMemo(
+    () => (props.firstLine ? FILE_NAME_RE.exec(props.firstLine) : null),
+    [props.firstLine],
+  );
+
+  const languageData = languageDisplayName[props.langKey];
+  const Icon = languageData?.icon;
+
+  return (
+    <>
+      <div className="flex items-center justify-center gap-1.5">
+        {Icon && <Icon className="size-5 rounded-sm" />}
+        <span className="capitalize">{languageData?.name ?? props.langKey}</span>
+        <span className="text-primary text-xs">{props.totalLines} lines</span>
+      </div>
+
+      {fileName?.[1] && (
+        <span className="text-primary absolute w-[calc(100%-16px)] text-center text-sm">
+          {fileName[1]}
+        </span>
+      )}
+    </>
+  );
+});
+
+const HighlightPane = React.memo(function HighlightPane(props: {
+  code: string;
+  langKey: string;
+  height?: string;
+  wrapline: boolean;
+}) {
+  const shikiOptions = React.useMemo(() => ({ delay: 50, transformers: transformersOnce }), []);
+  const highlighted = useShikiHighlighter(props.code, props.langKey, "one-dark-pro", shikiOptions);
+
+  return (
+    <div
+      style={{ scrollbarGutter: "stable both-edges", height: props.height }}
+      className={cn(
+        "custom-scroll codeblock w-full overflow-auto px-1 py-2 pr-10 font-mono text-sm transition-[height] *:!bg-transparent",
+        { "*:text-wrap *:wrap-anywhere": props.wrapline },
+      )}
+    >
+      {highlighted ?? <pre>{props.code}</pre>}
+    </div>
+  );
+});
+
+export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
+  language,
+  code,
+}: CodeBlockProps) {
   const wrapline = useChatStore((state) => state.wrapline);
   const toggleWrapline = useChatStore((state) => state.toggleWrapline);
 
   const [expanded, setExpanded] = React.useState(false);
+  const onToggleExpanded = React.useCallback(() => setExpanded((v) => !v), []);
+  const onExpandAll = React.useCallback(() => setExpanded(true), []);
 
-  const normalizedFull = React.useMemo(() => {
-    const onceTrimmed = trimOneEdgeNewline(code);
-    return onceTrimmed.replace(/\r\n/g, "\n");
-  }, [code]);
+  const normalizedFull = React.useMemo(() => normalizeCode(code), [code]);
 
-  const lines = React.useMemo(() => normalizedFull.split("\n"), [normalizedFull]);
-  const totalLines = lines.length;
-  const moreCount = totalLines > 15 ? totalLines - 15 : 0;
+  // Optional: makes highlighting/UI smoother while code streams in rapidly.
+  const deferredFull = React.useDeferredValue(normalizedFull);
 
   const langKey = React.useMemo(() => {
-    const key = language === "assembly" ? "asm" : language;
-    return key?.toLowerCase();
+    const key = language === "assembly" ? "asm" : (language ?? "plaintext");
+    return key.toLowerCase();
   }, [language]);
 
-  const highlighted = useShikiHighlighter(normalizedFull, langKey, "one-dark-pro", {
-    delay: 50,
-    transformers: [transformerColorizedBrackets()],
-  });
-
-  const containerMaxHeight = React.useMemo(() => {
-    if (expanded || totalLines <= 15) return undefined;
-
-    const lineHeightPx = 20;
-    const verticalPadding = 8;
-    return `${15 * lineHeightPx + verticalPadding}px`;
-  }, [expanded, totalLines]);
-
-  const fileName = lines[0]?.match(
-    /(?:^|.*[\/\\])([A-Za-z0-9._-]+\.[A-Za-z0-9]+)(?=[^A-Za-z0-9._-]*$)/,
+  const { total: totalLines, first: firstLine } = React.useMemo(
+    () => lineStats(deferredFull),
+    [deferredFull],
   );
 
-  const languageData = languageDisplayName[langKey ?? "plaintext"];
-  const Icon = languageData?.icon;
+  const moreCount = totalLines > LINE_CLAMP ? totalLines - LINE_CLAMP : 0;
+
+  const containerMaxHeight = React.useMemo(() => {
+    if (expanded || totalLines <= LINE_CLAMP) return undefined;
+    const lineHeightPx = 20;
+    const verticalPadding = 8;
+    return `${LINE_CLAMP * lineHeightPx + verticalPadding}px`;
+  }, [expanded, totalLines]);
 
   return (
     <div className="codeblock bg-background/80 relative overflow-hidden rounded-md border">
       <div className="pointer-events-none relative flex items-center justify-between border-b px-2 py-1">
-        <div className="flex items-center justify-center gap-1.5">
-          {Icon && <Icon className="size-5 rounded-sm" />}{" "}
-          <span className="capitalize">{languageData?.name ?? langKey ?? "plaintext"}</span>
-          <span className="text-primary text-xs">{totalLines} lines</span>
-        </div>
-
-        {fileName && (
-          <span className="text-primary absolute w-[calc(100%-16px)] text-center text-sm">
-            {fileName[1]}
-          </span>
-        )}
+        <CodeBlockHeader langKey={langKey} totalLines={totalLines} firstLine={firstLine} />
 
         <div className="pointer-events-auto flex items-center gap-1">
-          {totalLines > 15 ? (
+          {totalLines > LINE_CLAMP && (
             <ButtonWithTip
               title={expanded ? "Collapse" : "Expand"}
               side="top"
               variant="ghost"
               className="size-8"
-              onMouseDown={() => setExpanded((v) => !v)}
+              onMouseDown={onToggleExpanded}
               aria-expanded={expanded}
             >
               {expanded ? <ShrinkIcon className="size-4" /> : <ExpandIcon className="size-4" />}
             </ButtonWithTip>
-          ) : null}
+          )}
 
           <ButtonWithTip
             title="Wrap"
@@ -143,31 +201,29 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
             {wrapline ? <TextIcon className="size-4" /> : <WrapTextIcon className="size-4" />}
           </ButtonWithTip>
 
+          {/* Always copy the most up-to-date code */}
           <CopyButton content={code} className="size-8" />
         </div>
       </div>
 
-      <div
-        style={{ scrollbarGutter: "stable both-edges", height: containerMaxHeight }}
-        className={cn(
-          "custom-scroll codeblock w-full overflow-auto px-1 py-2 pr-10 font-mono text-sm transition-[height] *:!bg-transparent",
-          { "*:text-wrap *:wrap-anywhere": wrapline },
-        )}
-      >
-        {highlighted ?? <pre>{normalizedFull}</pre>}
-      </div>
+      <HighlightPane
+        code={deferredFull}
+        langKey={langKey}
+        height={containerMaxHeight}
+        wrapline={wrapline}
+      />
 
-      {!expanded && moreCount > 0 ? (
+      {!expanded && moreCount > 0 && (
         <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center">
           <button
             type="button"
             className="bg-card hover:bg-card/70 pointer-events-auto inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors"
-            onMouseDown={() => setExpanded(true)}
+            onMouseDown={onExpandAll}
           >
             <EllipsisIcon className="size-4" /> {moreCount} more lines
           </button>
         </div>
-      ) : null}
+      )}
     </div>
   );
-}
+});
