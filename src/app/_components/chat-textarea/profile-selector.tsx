@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { BrainIcon, CheckIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
+import { BrainIcon, CheckIcon, PlusIcon, SearchIcon, SquareUserIcon, XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -48,12 +48,12 @@ export function ProfileSelectorButton() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         className={cn(
-          "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 px-2 py-1.5 text-xs",
+          "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 text-xs",
           buttonVariants({ variant: "ghost" }),
         )}
       >
         <div className="flex items-center justify-center gap-2">
-          <BrainIcon className="size-4" />
+          <SquareUserIcon className="size-4" />
           <span className="w-max">{currentLabel}</span>
         </div>
       </DialogTrigger>

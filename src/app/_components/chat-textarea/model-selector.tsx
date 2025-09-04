@@ -69,7 +69,7 @@ function ModelSelectorBase({ value, onChange, triggerId }: ModelSelectorProps) {
       <Popover.Trigger
         id={triggerId}
         className={cn(
-          "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 px-2 py-1.5 text-xs",
+          "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 text-xs",
           buttonVariants({ variant: "ghost" }),
         )}
       >
