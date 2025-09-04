@@ -14,9 +14,31 @@ import { retryMessage } from "./retry-message";
 import { chatStore } from "./store";
 
 import type { ChatMessage, ChatRequest } from "../types";
-import { fixMarkdownCodeBlocks, fromUUID, toUUID } from "../utils";
+import { fixMarkdownCodeBlocks, fromUUID, toUUID, tryCatch } from "../utils";
 
 const convexClient = getConvexReactClient();
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Wait until the server (Convex) has persisted the assistant message as "complete".
+// This prevents clearing the client-side streaming overlay too early which causes UI flicker.
+async function waitForServerSyncForMessage(
+  assistantMessageId: Id<"messages">,
+  timeoutMs = 10000,
+  intervalMs = 200,
+): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const s = chatStore.getState();
+    const msg = s.messages.find((m) => m._id === assistantMessageId);
+    if (msg && msg.status === "complete" && (msg.content?.length ?? 0) > 0) return;
+
+    // Polling here is intentional to wait for server sync without introducing effects.
+    await sleep(intervalMs);
+  }
+}
 
 export async function sendChatRequest(
   url: string | URL,
@@ -115,6 +137,13 @@ export async function sendChatRequest(
     // Clear controller and active stream tracking
     state.clearController(assistantMessageId);
     state.markStreamEnd(assistantMessageId);
+
+    // Wait for server to finish persisting the assistant message before clearing the client overlay.
+    // This avoids a flicker where the message briefly returns to a loading state.
+    if (!abortController.signal.aborted) {
+      // Ignore wait errors/timeouts; fall through to clear overlay to avoid leaks.
+      await tryCatch(waitForServerSyncForMessage(assistantMessageId));
+    }
 
     // Drop in-memory overlay to avoid leaks (Convex holds the persisted message)
     state.clearAssistantMessage(assistantMessageId);
