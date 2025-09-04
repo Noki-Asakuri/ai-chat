@@ -23,10 +23,11 @@ import { useQuery } from "@tanstack/react-query";
 
 type MessageMetadataProps = {
   metadata: ChatMessage["metadata"];
+  params: ChatMessage["modelParams"];
   model: string;
 };
 
-export function MessageMetadata({ metadata, model }: MessageMetadataProps) {
+export function MessageMetadata({ metadata, params, model }: MessageMetadataProps) {
   const aiProfileName = useAiProfileName(metadata?.aiProfileId);
 
   if (!metadata) return null;
@@ -37,11 +38,18 @@ export function MessageMetadata({ metadata, model }: MessageMetadataProps) {
       ? (metadata.totalTokens / ((metadata.durations?.text ?? metadata.duration) / 1000)).toFixed(2)
       : 0;
 
+  const showEffort =
+    typeof modelData.capabilities.reasoning === "boolean" &&
+    modelData.capabilities.reasoning === true &&
+    params?.effort &&
+    params.effort !== "medium";
+
   return (
     <div className="flex h-full w-full items-center justify-between">
       <div className="flex h-10.5 items-center justify-center gap-2">
         <Icons.provider provider={modelData?.provider} className="size-4 rounded-md" />
-        <span>{modelData?.display.name}</span>
+        {modelData?.display.name}{" "}
+        {showEffort && <span className="text-sm capitalize">({params?.effort})</span>}
       </div>
 
       <Popover>

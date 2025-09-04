@@ -5,13 +5,32 @@ import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "../ui/pop
 
 import { getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
+import type { ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export function EffortSelector() {
-  const config = useChatStore((state) => state.chatConfig);
-  const setChatConfig = useChatStore((state) => state.setChatConfig);
+type EffortSelectorProps = {
+  value: string;
+  modelId: string;
+  onChange?: (effort: ReasoningEffort) => void;
+};
 
-  const modelData = getModelData(config.model);
+export function ChatEffortSelector() {
+  const config = useChatStore((state) => state.chatConfig);
+  return <EffortSelectorBase value={config.effort} modelId={config.model} />;
+}
+
+export function EffortSelector(props: EffortSelectorProps) {
+  return <EffortSelectorBase {...props} />;
+}
+
+export function EffortSelectorBase(props: EffortSelectorProps) {
+  const setChatConfig = useChatStore((state) => state.setChatConfig);
+  const modelData = getModelData(props.modelId);
+
+  function handleChange(effort: ReasoningEffort) {
+    if (props.onChange) props.onChange(effort);
+    else setChatConfig({ effort });
+  }
 
   if (
     typeof modelData.capabilities.reasoning === "undefined" ||
@@ -30,7 +49,7 @@ export function EffortSelector() {
         )}
       >
         <BrainIcon className="size-4" />
-        {config.effort}
+        {props.value}
       </PopoverTrigger>
 
       <PopoverContent className="bg-card text-card-foreground w-max p-1" includeArrow={false}>
@@ -40,7 +59,7 @@ export function EffortSelector() {
           <Button
             variant="ghost"
             className="w-full cursor-pointer justify-start p-0"
-            onClick={() => setChatConfig({ effort: "low" })}
+            onClick={() => handleChange("low")}
           >
             <SignalLowIcon className="size-5" />
             Low
@@ -49,7 +68,7 @@ export function EffortSelector() {
           <Button
             variant="ghost"
             className="w-full cursor-pointer justify-start p-0"
-            onClick={() => setChatConfig({ effort: "medium" })}
+            onClick={() => handleChange("medium")}
           >
             <SignalMediumIcon className="size-5" />
             Medium
@@ -58,7 +77,7 @@ export function EffortSelector() {
           <Button
             variant="ghost"
             className="w-full cursor-pointer justify-start p-0"
-            onClick={() => setChatConfig({ effort: "high" })}
+            onClick={() => handleChange("high")}
           >
             <SignalHighIcon className="size-5" />
             High

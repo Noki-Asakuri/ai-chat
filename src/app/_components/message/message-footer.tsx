@@ -21,7 +21,11 @@ export function MessageFooter({ index, message, renderMessage }: MessageFooterPr
       })}
     >
       <MessageActionButtons index={index} message={message} />
-      <MessageMetadata model={message.model} metadata={renderMessage.metadata} />
+      <MessageMetadata
+        model={message.model}
+        params={message.modelParams}
+        metadata={renderMessage.metadata}
+      />
     </div>
   );
 }

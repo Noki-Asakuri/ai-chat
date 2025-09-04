@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 import { ButtonWithTip } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
+import { EffortSelector } from "../chat-textarea/effort-selector";
 import { ModelSelector } from "../chat-textarea/model-selector";
 import { MessageEditAttachments } from "./message-edit-attachments";
 
@@ -52,6 +53,7 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
 
   const [text, setText] = React.useState(message.content);
   const [modelId, setModelId] = React.useState(initialModel);
+  const [effort, setEffort] = React.useState(chatConfig.effort);
   const [webSearch, setWebSearch] = React.useState(chatConfig.webSearch);
   const [savingPhase, setSavingPhase] = React.useState<"idle" | "uploading" | "saving">("idle");
 
@@ -192,6 +194,7 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
       await retryMessage(index, {
         editedUserMessage: bodyEdited,
         modelId,
+        effort,
         webSearch: canWebSearch ? webSearch : false,
         attachmentsOverride,
       });
@@ -282,6 +285,8 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
               onChange={setModelId}
               triggerId="button-edit-model-selector-trigger"
             />
+
+            <EffortSelector modelId={modelId} value={effort} onChange={setEffort} />
 
             <ButtonWithTip
               type="button"

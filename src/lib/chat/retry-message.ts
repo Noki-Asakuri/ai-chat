@@ -5,7 +5,7 @@ import { sendChatRequest } from "./send-chat-request";
 import { chatStore } from "./store";
 import { firstNonEmptyOrLast } from "../utils";
 
-import type { ChatRequest } from "../types";
+import type { ChatRequest, ReasoningEffort } from "../types";
 
 import { getConvexReactClient } from "@/lib/convex/client";
 
@@ -17,6 +17,7 @@ export async function retryMessage(
   options?: {
     editedUserMessage?: { _id: Id<"messages">; content: string };
     modelId?: string;
+    effort?: ReasoningEffort;
     webSearch?: boolean;
     attachmentsOverride?: Array<{
       _id: Id<"attachments">;
@@ -77,6 +78,7 @@ export async function retryMessage(
   const config = {
     ...state.chatConfig,
     model,
+    effort: options?.effort ?? state.chatConfig.effort,
     webSearch: options?.webSearch ?? state.chatConfig.webSearch,
   };
 
