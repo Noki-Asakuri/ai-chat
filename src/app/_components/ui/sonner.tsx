@@ -15,8 +15,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       position="top-right"
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
+          "--normal-bg": "var(--card)",
+          "--normal-text": "var(--card-foreground)",
           "--normal-border": "var(--border)",
         } as React.CSSProperties
       }

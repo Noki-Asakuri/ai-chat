@@ -73,7 +73,7 @@ function NewVersionToast() {
         </button>
 
         <button
-          className="bg-destructive/50 text-destructive-foreground border-destructive flex cursor-pointer items-center justify-center rounded-md border p-1.5 text-sm hover:underline"
+          className="bg-destructive text-destructive-foreground flex cursor-pointer items-center justify-center rounded-md border p-1.5 text-sm hover:underline"
           onClick={() => window.location.reload()}
         >
           Refresh Now
