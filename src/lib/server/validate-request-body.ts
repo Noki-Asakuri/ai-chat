@@ -82,20 +82,23 @@ export async function validateRequestBody(req: Request, userId: string) {
 
   providerOptions.google.thinkingConfig = {
     includeThoughts: !!modelInfo.capabilities.reasoning,
-    // Auto thinking budget if model can reasoning
-    thinkingBudget: modelInfo.capabilities.reasoning ? -1 : 0,
+    thinkingBudget: 0,
   };
+
+  if (modelInfo.capabilities.reasoning) {
+    const effort = config.effort ?? "medium";
+
+    providerOptions.openai.reasoningEffort = effort;
+    providerOptions.openai.reasoningSummary = "detailed";
+    providerOptions.openai.include = ["reasoning.encrypted_content"];
+
+    providerOptions.google.thinkingConfig.thinkingBudget =
+      effort === "high" ? 20_000 : effort === "medium" ? 10_000 : 1_024;
+  }
 
   if (modelInfo.capabilities.generateImage) {
     delete providerOptions.google.thinkingConfig;
     providerOptions.google.responseModalities = ["TEXT", "IMAGE"];
-  }
-
-  if (modelInfo.capabilities.reasoning) {
-    providerOptions.openai.reasoningSummary = "detailed";
-    providerOptions.openai.reasoningEffort = config.effort ?? "medium";
-
-    providerOptions.openai.include = ["reasoning.encrypted_content"];
   }
 
   const tools: ToolSet = {};
