@@ -2,8 +2,8 @@ import { api } from "@/convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
-import { BrainIcon, ChevronDownIcon, EyeIcon, RssIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { BrainIcon, ChevronDownIcon, EyeIcon, GlobeIcon } from "lucide-react";
+import { useMemo } from "react";
 
 import { Popover } from "@base-ui-components/react/popover";
 
@@ -83,7 +83,7 @@ function ModelSelectorBase({ value, onChange, triggerId }: ModelSelectorProps) {
             <Command
               loop
               value={selectedModel}
-              className="bg-card text-card-foreground h-[400px] w-90 border"
+              className="bg-card text-card-foreground h-[400px] w-max min-w-100 border"
             >
               <CommandInput placeholder="Search models..." className="h-9" />
               <CommandList
@@ -144,12 +144,16 @@ function ModelItem({ selected, value, onChange }: ModelSelectorProps & { selecte
           enabled={data.capabilities.webSearch}
           title="This model supports web search."
         >
-          <RssIcon size={14} />
+          <GlobeIcon size={14} />
         </CapabilityIcon>
 
         <CapabilityIcon
           variant="reasoning"
-          enabled={data.capabilities.reasoning !== false}
+          enabled={
+            (typeof data.capabilities.reasoning === "boolean" &&
+              data.capabilities.reasoning === true) ||
+            data.capabilities.reasoning === "always"
+          }
           title="This model supports reasoning."
         >
           <BrainIcon size={14} />

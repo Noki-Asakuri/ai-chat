@@ -1,8 +1,8 @@
-import { BrainIcon, ChevronRightIcon, EyeIcon, RefreshCcwIcon, RssIcon } from "lucide-react";
+import { BrainIcon, ChevronRightIcon, EyeIcon, GlobeIcon, RefreshCcwIcon } from "lucide-react";
 import * as React from "react";
 
 import { CapabilityIcon } from "@/components/capability-icon";
-import { type Button, buttonVariants, ButtonWithTip } from "@/components/ui/button";
+import { buttonVariants, ButtonWithTip, type Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { Menu, MenuArrow } from "@/components/ui/menu";
 import { Separator } from "@/components/ui/separator";
@@ -96,8 +96,8 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
 
       <Menu.Portal>
         <Menu.Positioner className="outline-none" sideOffset={8} align="center" side="top">
-          <Menu.Popup className="bg-popover text-popover-foreground flex w-50 origin-[var(--transform-origin)] flex-col gap-1 rounded-md border p-1 transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
-            <MenuArrow className="fill-popover" />
+          <Menu.Popup className="bg-card text-card-foreground flex w-50 origin-[var(--transform-origin)] flex-col gap-1 rounded-md border p-1 transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
+            <MenuArrow className="fill-card" />
 
             <Menu.Item
               className={cn(buttonVariants({ variant: "ghost" }), "w-full justify-start")}
@@ -132,8 +132,8 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
 
                   <Menu.Portal>
                     <Menu.Positioner side="right" align="center" className="p-1" sideOffset={12}>
-                      <Menu.Popup className="bg-popover text-popover-foreground flex w-max origin-[var(--transform-origin)] flex-col gap-1 rounded-md border p-1 transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
-                        <MenuArrow className="fill-popover" />
+                      <Menu.Popup className="bg-card text-card-foreground flex w-max origin-[var(--transform-origin)] flex-col gap-1 rounded-md border p-1 transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
+                        <MenuArrow className="fill-card" />
 
                         {models?.map((model) => (
                           <ModelProviderPicker
@@ -188,12 +188,16 @@ function ModelProviderPicker(props: ModelProviderPickerProps) {
           enabled={props.model.capabilities.webSearch}
           title="This model supports web search."
         >
-          <RssIcon size={16} />
+          <GlobeIcon size={16} />
         </CapabilityIcon>
 
         <CapabilityIcon
           variant="reasoning"
-          enabled={props.model.capabilities.reasoning !== false}
+          enabled={
+            (typeof props.model.capabilities.reasoning === "boolean" &&
+              props.model.capabilities.reasoning === true) ||
+            props.model.capabilities.reasoning === "always"
+          }
           title="This model supports reasoning."
         >
           <BrainIcon size={16} />
