@@ -1,4 +1,10 @@
-import { ChevronRightIcon, RefreshCcwIcon } from "lucide-react";
+import {
+  ChevronRightIcon,
+  RefreshCcwIcon,
+  SignalHighIcon,
+  SignalLowIcon,
+  SignalMediumIcon,
+} from "lucide-react";
 import * as React from "react";
 
 import { ModelCapability } from "@/components/capability-icon";
@@ -16,7 +22,7 @@ import {
 } from "@/lib/chat/models";
 import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
-import type { ChatMessage } from "@/lib/types";
+import type { ChatMessage, ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type RetryModelPopupProps = React.ComponentPropsWithoutRef<typeof Button> & {
@@ -138,12 +144,13 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
                         {models?.map((model) => (
                           <ModelProviderPicker
                             key={model.modelId}
-                            provider={model.provider}
                             model={model}
                             index={index}
-                            retryMessage={async () => {
+                            provider={model.provider}
+                            messageRole={message.role}
+                            retryMessage={async (effort) => {
                               setPopupOpen(false);
-                              await retryMessage(index, { modelId: model.modelId });
+                              await retryMessage(index, { modelId: model.modelId, effort });
                             }}
                           />
                         ))}
@@ -164,11 +171,16 @@ type ModelProviderPickerProps = {
   provider: Provider;
   model: ModelWithId;
   index: number;
+  messageRole: ChatMessage["role"];
 
-  retryMessage: () => Promise<void>;
+  retryMessage: (effort?: ReasoningEffort) => Promise<void>;
 };
 
 function ModelProviderPicker(props: ModelProviderPickerProps) {
+  if (props.model.capabilities.reasoning === true) {
+    return <EffortSelector {...props} />;
+  }
+
   return (
     <Menu.Item
       className={cn(
@@ -184,5 +196,73 @@ function ModelProviderPicker(props: ModelProviderPickerProps) {
 
       <ModelCapability model={props.model} />
     </Menu.Item>
+  );
+}
+
+function EffortSelector(props: ModelProviderPickerProps) {
+  return (
+    <Menu.SubmenuRoot>
+      <Menu.SubmenuTrigger
+        className={cn(
+          buttonVariants({ variant: "ghost" }),
+          "w-full items-center justify-between gap-4 p-2",
+        )}
+      >
+        <div className="pointer-events-none flex items-center gap-2">
+          <Icons.provider provider={props.model.provider} />
+          <span className="w-max">{props.model.display.unique ?? props.model.display.name}</span>
+        </div>
+
+        <ModelCapability model={props.model} />
+      </Menu.SubmenuTrigger>
+
+      <Menu.Portal>
+        <Menu.Positioner
+          align="center"
+          className="p-1"
+          sideOffset={12}
+          side={props.messageRole === "user" ? "left" : "right"}
+        >
+          <Menu.Popup className="bg-card text-card-foreground flex w-max origin-[var(--transform-origin)] flex-col gap-1 rounded-md border p-1 transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
+            <MenuArrow className="fill-card" />
+
+            <div className="flex flex-col gap-1">
+              <Menu.Item
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "w-full cursor-pointer justify-start p-0",
+                )}
+                onClick={() => props.retryMessage("low")}
+              >
+                <SignalLowIcon className="size-5" />
+                Low
+              </Menu.Item>
+
+              <Menu.Item
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "w-full cursor-pointer justify-start p-0",
+                )}
+                onClick={() => props.retryMessage("medium")}
+              >
+                <SignalMediumIcon className="size-5" />
+                Medium
+              </Menu.Item>
+
+              <Menu.Item
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "w-full cursor-pointer justify-start p-0",
+                )}
+                onClick={() => props.retryMessage("high")}
+              >
+                <SignalHighIcon className="size-5" />
+                High
+              </Menu.Item>
+            </div>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.SubmenuRoot>
   );
 }
