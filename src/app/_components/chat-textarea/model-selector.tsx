@@ -2,7 +2,7 @@ import { api } from "@/convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
-import { BrainIcon, ChevronDownIcon, EyeIcon, GlobeIcon } from "lucide-react";
+import { ChevronDownIcon } from "lucide-react";
 import { useMemo } from "react";
 
 import { Popover } from "@base-ui-components/react/popover";
@@ -18,7 +18,7 @@ import {
 } from "../ui/command";
 import { Icons } from "../ui/icons";
 
-import { CapabilityIcon } from "../capability-icon";
+import { ModelCapability } from "../capability-icon";
 
 import { AllModelIds, getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
@@ -138,35 +138,7 @@ function ModelItem({ selected, value, onChange }: ModelSelectorProps & { selecte
         <span className="w-max text-sm">{data.display.unique ?? data.display.name}</span>
       </div>
 
-      <div className="flex items-center gap-1">
-        <CapabilityIcon
-          variant="webSearch"
-          enabled={data.capabilities.webSearch}
-          title="This model supports web search."
-        >
-          <GlobeIcon size={14} />
-        </CapabilityIcon>
-
-        <CapabilityIcon
-          variant="reasoning"
-          enabled={
-            (typeof data.capabilities.reasoning === "boolean" &&
-              data.capabilities.reasoning === true) ||
-            data.capabilities.reasoning === "always"
-          }
-          title="This model supports reasoning."
-        >
-          <BrainIcon size={14} />
-        </CapabilityIcon>
-
-        <CapabilityIcon
-          variant="vision"
-          enabled={data.capabilities.vision}
-          title="This model supports vision."
-        >
-          <EyeIcon size={14} />
-        </CapabilityIcon>
-      </div>
+      <ModelCapability model={data} />
     </CommandItem>
   );
 }

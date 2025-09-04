@@ -1,7 +1,7 @@
-import { BrainIcon, ChevronRightIcon, EyeIcon, GlobeIcon, RefreshCcwIcon } from "lucide-react";
+import { ChevronRightIcon, RefreshCcwIcon } from "lucide-react";
 import * as React from "react";
 
-import { CapabilityIcon } from "@/components/capability-icon";
+import { ModelCapability } from "@/components/capability-icon";
 import { buttonVariants, ButtonWithTip, type Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { Menu, MenuArrow } from "@/components/ui/menu";
@@ -182,35 +182,7 @@ function ModelProviderPicker(props: ModelProviderPickerProps) {
         <span className="w-max">{props.model.display.unique ?? props.model.display.name}</span>
       </div>
 
-      <div className="flex items-center gap-1">
-        <CapabilityIcon
-          variant="webSearch"
-          enabled={props.model.capabilities.webSearch}
-          title="This model supports web search."
-        >
-          <GlobeIcon size={16} />
-        </CapabilityIcon>
-
-        <CapabilityIcon
-          variant="reasoning"
-          enabled={
-            (typeof props.model.capabilities.reasoning === "boolean" &&
-              props.model.capabilities.reasoning === true) ||
-            props.model.capabilities.reasoning === "always"
-          }
-          title="This model supports reasoning."
-        >
-          <BrainIcon size={16} />
-        </CapabilityIcon>
-
-        <CapabilityIcon
-          variant="vision"
-          enabled={props.model.capabilities.vision}
-          title="This model supports vision."
-        >
-          <EyeIcon size={16} />
-        </CapabilityIcon>
-      </div>
+      <ModelCapability model={props.model} />
     </Menu.Item>
   );
 }
