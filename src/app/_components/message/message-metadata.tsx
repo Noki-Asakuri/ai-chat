@@ -1,25 +1,17 @@
-import {
-  BoltIcon,
-  BrainCircuitIcon,
-  ClockIcon,
-  HourglassIcon,
-  InfoIcon,
-  SparkleIcon,
-  ZapIcon,
-} from "lucide-react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
+
+import { BoltIcon, BrainIcon, ClockIcon, HourglassIcon, InfoIcon, ZapIcon } from "lucide-react";
 
 import { Icons } from "@/components/ui/icons";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { getModelData } from "@/lib/chat/models";
 import type { ChatMessage } from "@/lib/types";
-import { cn, format } from "@/lib/utils";
-
-// Convex
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
-import { convexQuery } from "@convex-dev/react-query";
-import { useQuery } from "@tanstack/react-query";
+import { format } from "@/lib/utils";
 
 type MessageMetadataProps = {
   metadata: ChatMessage["metadata"];
@@ -29,7 +21,6 @@ type MessageMetadataProps = {
 
 export function MessageMetadata({ metadata, params, model }: MessageMetadataProps) {
   const aiProfileName = useAiProfileName(metadata?.aiProfileId);
-
   if (!metadata) return null;
 
   const modelData = getModelData(model);
@@ -61,17 +52,26 @@ export function MessageMetadata({ metadata, params, model }: MessageMetadataProp
           <PopoverArrow className="fill-card" />
 
           <div className="grid grid-cols-1 gap-x-4 gap-y-2">
-            <div className="flex items-center gap-2">
+            <div data-slot="medatadata-tok-per-sec" className="flex items-center gap-2">
               <ZapIcon className="size-4" />
               <span>Speed: {tokPerSec} tok/sec</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div data-slot="medatadata-total-tokens" className="flex items-center gap-2">
               <BoltIcon className="size-4" />
               <span>Comsume: {format.number(metadata.totalTokens)} Tokens</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div
+              data-slot="medatadata-thinking-tokens"
+              className="flex items-center gap-2"
+              hidden={metadata.thinkingTokens === 0}
+            >
+              <BrainIcon className="size-4" />
+              <span>Thinking: {format.number(metadata.thinkingTokens)} Tokens</span>
+            </div>
+
+            <div data-slot="medatadata-duration" className="flex items-center gap-2">
               <HourglassIcon className="size-4" />
               <span>Duration: {format.time(metadata.duration / 1000)}</span>
             </div>
@@ -84,18 +84,6 @@ export function MessageMetadata({ metadata, params, model }: MessageMetadataProp
               <ClockIcon className="size-4" />
               <span title="Time to First Token">
                 TTFT: {format.time((metadata.timeToFirstTokenMs ?? 0) / 1000)}
-              </span>
-            </div>
-
-            <div
-              data-slot="medatadata-thinking-tokens"
-              className="flex items-center gap-2"
-              hidden={metadata.thinkingTokens === 0}
-            >
-              <BrainCircuitIcon className="size-4" />
-              <span>
-                {format.number(metadata.thinkingTokens)}
-                Thinking
               </span>
             </div>
 
