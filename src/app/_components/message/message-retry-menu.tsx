@@ -60,7 +60,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
     if (event.button === 0) {
       event.preventDefault();
       event.stopPropagation();
-      void retryMessage(index, { modelId: message.model });
+      void retryMessage(index, { modelId: message.model, effort: message.modelParams?.effort });
     }
   }
 
@@ -109,7 +109,10 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
               className={cn(buttonVariants({ variant: "ghost" }), "w-full justify-start")}
               onClick={async () => {
                 setPopupOpen(false);
-                await retryMessage(index, { modelId: message.model });
+                await retryMessage(index, {
+                  modelId: message.model,
+                  effort: message.modelParams?.effort,
+                });
               }}
             >
               <RefreshCcwIcon className="size-4" />
