@@ -76,20 +76,23 @@ export interface ChatState {
   popupRetryMessageId: string;
   setPopupRetryMessageId: (messageId: string) => void;
 
-  assistantMessage: {
-    id: string;
-    content: string;
-    reasoning: string;
-    metadata: ChatMessage["metadata"];
-  };
-  setAssistantMessage: (
-    message: Partial<{
+  assistantMessages: Record<
+    string,
+    {
       id: string;
       content: string;
       reasoning: string;
       metadata: ChatMessage["metadata"];
-    }>,
-  ) => void;
+    }
+  >;
+  setAssistantMessage: (message: {
+    id: string | Id<"messages">;
+    content?: string;
+    reasoning?: string;
+    metadata?: ChatMessage["metadata"];
+  }) => void;
+  clearAssistantMessage: (assistantMessageId: string | Id<"messages">) => void;
+  clearAssistantMessages: () => void;
 
   // Client-side early image previews during streaming
   previewImages: Record<string, Array<PreviewImage>>;
@@ -123,6 +126,20 @@ export interface ChatState {
   lastUserMessageHeight?: number | null;
   setMessageHeight: (height?: number | null) => void;
 
+  // Parallel streaming support
+  currentThreadId: Id<"threads"> | null;
+  setCurrentThreadId: (id: Id<"threads"> | null) => void;
+
+  activeStreams: Record<string, true>;
+  markStreamStart: (assistantMessageId: string | Id<"messages">) => void;
+  markStreamEnd: (assistantMessageId: string | Id<"messages">) => void;
+  hasActiveStream: (assistantMessageId: string | Id<"messages">) => boolean;
+
+  controllers: Record<string, AbortController>;
+  setController: (assistantMessageId: string | Id<"messages">, controller: AbortController) => void;
+  clearController: (assistantMessageId: string | Id<"messages">) => void;
+  getController: (assistantMessageId: string | Id<"messages">) => AbortController | undefined;
+
   resetState: () => void;
   setDataFromConvex: (
     messages: ChatMessage[],
@@ -130,7 +147,7 @@ export interface ChatState {
   ) => void;
 }
 
-export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   setMessages: (messages) => set({ messages }),
 
@@ -144,22 +161,40 @@ export const useChatStore = create<ChatState>((set) => ({
   status: undefined,
   setStatus: (status) => set({ status }),
 
-  assistantMessage: { id: "", content: "", reasoning: "", metadata: undefined },
+  assistantMessages: {},
   setAssistantMessage: (message) =>
-    set((state) => ({ assistantMessage: { ...state.assistantMessage, ...message } })),
+    set((state) => {
+      const id = message.id;
+      const prev = state.assistantMessages[id] ?? {
+        id,
+        content: "",
+        reasoning: "",
+        metadata: undefined,
+      };
+
+      return {
+        assistantMessages: { ...state.assistantMessages, [id]: { ...prev, ...message, id } },
+      };
+    }),
+  clearAssistantMessage: (assistantMessageId) =>
+    set((state) => {
+      const next = { ...state.assistantMessages };
+      delete next[assistantMessageId];
+      return { assistantMessages: next };
+    }),
+  clearAssistantMessages: () => set({ assistantMessages: {} }),
 
   // Previews
   previewImages: {},
   addPreviewImage: (messageId, image) =>
     set((state) => {
-      const key = String(messageId);
-      const list = state.previewImages[key] ?? [];
-      return { previewImages: { ...state.previewImages, [key]: [...list, image] } };
+      const list = state.previewImages[messageId] ?? [];
+      return { previewImages: { ...state.previewImages, [messageId]: [...list, image] } };
     }),
   clearPreviewImages: (messageId) =>
     set((state) => {
       const previews = { ...state.previewImages };
-      delete previews[String(messageId)];
+      delete previews[messageId];
       return { previewImages: previews };
     }),
 
@@ -177,6 +212,34 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => ({
       threadCommandOpen: typeof open === "function" ? open(state.threadCommandOpen) : open,
     })),
+
+  // Parallel streaming support
+  currentThreadId: null,
+  setCurrentThreadId: (id) => set({ currentThreadId: id }),
+
+  activeStreams: {},
+  hasActiveStream: (assistantMessageId) => Boolean(get().activeStreams[assistantMessageId]),
+  markStreamStart: (assistantMessageId) =>
+    set((state) => ({ activeStreams: { ...state.activeStreams, [assistantMessageId]: true } })),
+
+  markStreamEnd: (assistantMessageId) =>
+    set((state) => {
+      const next = { ...state.activeStreams };
+      delete next[assistantMessageId];
+      return { activeStreams: next };
+    }),
+
+  controllers: {},
+  getController: (assistantMessageId) => get().controllers[assistantMessageId],
+  setController: (assistantMessageId, controller) =>
+    set((state) => ({ controllers: { ...state.controllers, [assistantMessageId]: controller } })),
+
+  clearController: (assistantMessageId) =>
+    set((state) => {
+      const next = { ...state.controllers };
+      delete next[assistantMessageId];
+      return { controllers: next };
+    }),
 
   chatConfig: getChatConfigFromLS(),
   setChatConfig: (config) =>
@@ -248,6 +311,7 @@ export const useChatStore = create<ChatState>((set) => ({
       lastUserMessageId: null,
       lastUserMessageHeight: null,
       previewImages: {},
+      assistantMessages: {},
     })),
 }));
 

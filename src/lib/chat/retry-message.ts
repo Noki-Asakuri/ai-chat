@@ -33,7 +33,7 @@ export async function retryMessage(
 
   const state = chatStore.getState();
   state.setEditMessage(null);
-  state.setAssistantMessage({ id: "", content: "", reasoning: "", metadata: undefined });
+  state.clearAssistantMessages();
 
   const editedUserMessage = options?.editedUserMessage;
 
@@ -93,5 +93,6 @@ export async function retryMessage(
     "/api/ai/chat",
     { method: "POST", body: JSON.stringify(body) },
     assistantMessage._id,
+    threadId,
   );
 }

@@ -30,6 +30,12 @@ export function Chat() {
     }),
   });
 
+  // Track the currently active thread in the store so only it renders live streams
+  useEffect(() => {
+    const state = chatStore.getState();
+    state.setCurrentThreadId(fromUUID(threadId) ?? null);
+  }, [threadId]);
+
   useEffect(() => {
     const state = chatStore.getState();
     if (!data?.messages || data.messages.length === 0) return state.resetState();
@@ -43,7 +49,7 @@ export function Chat() {
     if (
       lastMessage?.resumableStreamId &&
       lastMessage.status === "streaming" &&
-      !state.isStreaming &&
+      !state.hasActiveStream(lastMessage._id) &&
       !resumeRef.current
     ) {
       resumeRef.current = true;
@@ -56,6 +62,7 @@ export function Chat() {
         `/api/ai/chat?streamId=${lastMessage.resumableStreamId}`,
         undefined,
         lastMessage._id,
+        lastMessage.threadId,
       );
       resumeRef.current = false;
     }

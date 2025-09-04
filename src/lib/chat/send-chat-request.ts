@@ -22,16 +22,22 @@ export async function sendChatRequest(
   url: string | URL,
   init: RequestInit | undefined,
   assistantMessageId: Id<"messages">,
+  threadId: Id<"threads">,
 ) {
   const state = chatStore.getState();
 
-  state.setIsStreaming(true);
-  state.setStatus("streaming");
+  state.markStreamStart(assistantMessageId);
 
-  let abortController = state.abortController;
-  if (abortController.signal.aborted) {
+  // Only reflect streaming UI for the active (visible) thread
+  if (state.currentThreadId && state.currentThreadId === threadId) {
+    state.setIsStreaming(true);
+    state.setStatus("streaming");
+  }
+
+  let abortController = state.getController(assistantMessageId);
+  if (!abortController || abortController.signal.aborted) {
     abortController = new AbortController();
-    state.setAbortController(abortController);
+    state.setController(assistantMessageId, abortController);
   }
 
   try {
@@ -74,12 +80,23 @@ export async function sendChatRequest(
             metadata = stream.messageMetadata as ChatMessage["metadata"];
             // Do NOT clear previews here; wait for Convex to persist attachment,
             // setDataFromConvex will clear previews when attachments are present.
-            state.setStatus("complete");
+            if (state.currentThreadId && state.currentThreadId === threadId) {
+              state.setStatus("complete");
+            }
             break;
         }
 
         content = fixMarkdownCodeBlocks(content);
-        state.setAssistantMessage({ id: assistantMessageId, content, reasoning, metadata });
+
+        // Only live-render the stream in the currently active thread
+        if (state.currentThreadId && state.currentThreadId === threadId) {
+          state.setAssistantMessage({
+            id: assistantMessageId,
+            content,
+            reasoning,
+            metadata,
+          });
+        }
       },
     });
   } catch (rawError) {
@@ -95,7 +112,16 @@ export async function sendChatRequest(
       messageId: assistantMessageId,
     });
   } finally {
-    state.setIsStreaming(false);
+    // Clear controller and active stream tracking
+    state.clearController(assistantMessageId);
+    state.markStreamEnd(assistantMessageId);
+
+    // Drop in-memory overlay to avoid leaks (Convex holds the persisted message)
+    state.clearAssistantMessage(assistantMessageId);
+
+    if (state.currentThreadId && state.currentThreadId === threadId) {
+      state.setIsStreaming(false);
+    }
   }
 }
 
@@ -233,22 +259,33 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     "/api/ai/chat",
     { method: "POST", body: JSON.stringify(body) },
     assistantMessageId!,
+    threadId,
   );
 }
 
 export async function abortChatRequest() {
   const state = chatStore.getState();
+
   const lastMessage = state.messages.at(-1);
-  if (lastMessage && lastMessage.role === "assistant" && lastMessage.status === "complete") return;
+  if (!lastMessage || lastMessage.role !== "assistant") return;
+  if (lastMessage.status === "complete") return;
 
   console.log("[Chat] Aborting chat request");
-  state.abortController.abort();
+
+  const controller = state.getController(lastMessage._id);
+  if (controller && !controller.signal.aborted) {
+    controller.abort();
+  }
 
   await convexClient.mutation(api.functions.messages.updateErrorMessage, {
     model: state.chatConfig.model,
-    messageId: state.messages.at(-1)!._id,
+    messageId: lastMessage._id,
     error: "User have aborted the request.",
   });
+
+  // Mark stream ended locally
+  state.clearController(lastMessage._id);
+  state.markStreamEnd(lastMessage._id);
 }
 
 export function useChatRequest() {

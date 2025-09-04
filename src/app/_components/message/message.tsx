@@ -21,7 +21,7 @@ type MessageProps = {
 };
 
 export function Message({ message, index, isLast }: MessageProps) {
-  const assistantMessage = useChatStore((state) => state.assistantMessage);
+  const overlay = useChatStore((state) => state.assistantMessages[message._id]);
   const editMessage = useChatStore((state) => state.editMessage);
   const popupRetryMessageId = useChatStore((state) => state.popupRetryMessageId);
   const textareaHeight = useChatStore((state) => state.textareaHeight);
@@ -62,11 +62,7 @@ export function Message({ message, index, isLast }: MessageProps) {
   }, [isLast, message.role, setMessageHeight]);
 
   const renderMessage =
-    message.role === "assistant" &&
-    assistantMessage?.id === message._id &&
-    message.status === "streaming"
-      ? assistantMessage
-      : message;
+    message.role === "assistant" && message.status === "streaming" && overlay ? overlay : message;
 
   const isLoading =
     (message.status === "streaming" || message.status === "pending") &&
@@ -126,14 +122,10 @@ function MessageInner({ message, index }: Omit<MessageProps, "isLast">) {
   const isMobile = useIsMobile();
 
   const editMessage = useChatStore((state) => state.editMessage);
-  const assistantMessage = useChatStore((state) => state.assistantMessage);
+  const overlay = useChatStore((state) => state.assistantMessages[message._id]);
 
   const renderMessage =
-    message.role === "assistant" &&
-    assistantMessage?.id === message._id &&
-    message.status === "streaming"
-      ? assistantMessage
-      : message;
+    message.role === "assistant" && message.status === "streaming" && overlay ? overlay : message;
 
   return (
     <div
