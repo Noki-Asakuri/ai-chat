@@ -63,7 +63,6 @@ export const openai: Record<ModelIdKey, ModelData> = {
     provider: "openai",
     capabilities: {
       webSearch: true,
-      reasoning: true,
       vision: true,
     },
   },
