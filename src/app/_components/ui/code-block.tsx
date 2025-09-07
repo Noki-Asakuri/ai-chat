@@ -3,7 +3,7 @@
 import { transformerColorizedBrackets } from "@shikijs/colorized-brackets";
 import { EllipsisIcon, ExpandIcon, ShrinkIcon, TextIcon, WrapTextIcon } from "lucide-react";
 import * as React from "react";
-import { useShikiHighlighter } from "react-shiki";
+import { useShikiHighlighter, type HighlighterOptions } from "react-shiki";
 
 import { CopyButton } from "../copy-button";
 import { ButtonWithTip } from "./button";
@@ -121,19 +121,40 @@ const HighlightPane = React.memo(function HighlightPane(props: {
   height?: string;
   wrapline: boolean;
 }) {
-  const shikiOptions = React.useMemo(() => ({ delay: 50, transformers: transformersOnce }), []);
-  const highlighted = useShikiHighlighter(props.code, props.langKey, "one-dark-pro", shikiOptions);
+  const shikiOptions = React.useMemo(
+    (): HighlighterOptions => ({ delay: 50, transformers: transformersOnce, outputFormat: "html" }),
+    [],
+  );
+  const className = React.useMemo(() => {
+    return cn(
+      "custom-scroll codeblock w-full overflow-auto px-2 py-2 font-mono text-sm transition-[height] *:!bg-transparent",
+      { "*:text-wrap *:wrap-anywhere": props.wrapline },
+    );
+  }, [props.wrapline]);
+
+  const highlighted = useShikiHighlighter(
+    props.code,
+    props.langKey,
+    "one-dark-pro",
+    shikiOptions,
+  ) as string | null;
+
+  if (!highlighted) {
+    return (
+      <pre
+        className={className}
+        children={props.code}
+        style={{ scrollbarGutter: "stable both-edges", height: props.height }}
+      />
+    );
+  }
 
   return (
     <div
+      className={className}
       style={{ scrollbarGutter: "stable both-edges", height: props.height }}
-      className={cn(
-        "custom-scroll codeblock w-full overflow-auto px-1 py-2 pr-10 font-mono text-sm transition-[height] *:!bg-transparent",
-        { "*:text-wrap *:wrap-anywhere": props.wrapline },
-      )}
-    >
-      {highlighted ?? <pre>{props.code}</pre>}
-    </div>
+      dangerouslySetInnerHTML={{ __html: highlighted }}
+    />
   );
 });
 
