@@ -150,9 +150,10 @@ export function MessageHistory() {
       ref={outerScrollRef}
     >
       <div
-        data-slot="message-history"
-        className="mx-auto min-h-full max-w-[calc(896px+32px)] space-y-4 px-4 py-20"
         ref={scrollContainerRef}
+        data-slot="message-history"
+        data-length={messages.length}
+        className="mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 py-20"
         style={{ paddingBottom: `${textareaHeight}px` }}
       >
         {messages.map((message, index) => (
