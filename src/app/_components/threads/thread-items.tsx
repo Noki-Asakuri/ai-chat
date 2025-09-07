@@ -41,7 +41,12 @@ export function ThreadItem({ thread }: { thread: Thread }) {
         "data-[active=true]:bg-primary/30",
       )}
     >
-      <div className="flex w-full items-center gap-2 group-hover/thread:w-[calc(100%-20px)] group-data-[active=true]/thread:w-[calc(100%-20px)]">
+      <div
+        className={cn("flex w-full items-center gap-2", {
+          "group-hover/thread:w-[calc(100%-20px)] group-data-[active=true]/thread:w-[calc(100%-20px)]":
+            thread.status === "complete",
+        })}
+      >
         <div className="flex w-full items-center justify-between gap-2">
           {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
           <span className="truncate text-sm">{thread.title}</span>

@@ -59,9 +59,6 @@ export interface ChatState {
   attachments: UserAttachment[];
   setAttachment: (attachments: UserAttachment[]) => void;
   addAttachment: (attachments: UserAttachment[]) => void;
-
-  status: "pending" | "complete" | "streaming" | "error" | undefined;
-  setStatus: (status: "pending" | "complete" | "streaming" | "error") => void;
   removeAttachment: (attachmentId: string) => void;
 
   editMessage: { _id: Id<"messages">; content: string } | null;
@@ -69,9 +66,6 @@ export interface ChatState {
 
   isDragOver: boolean;
   setIsDragOver: (isDragOver: boolean) => void;
-
-  isStreaming: boolean;
-  setIsStreaming: (isResuming: boolean) => void;
 
   popupRetryMessageId: string;
   setPopupRetryMessageId: (messageId: string) => void;
@@ -158,9 +152,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   removeAttachment: (attachmentId) =>
     set((state) => ({ attachments: state.attachments.filter((a) => a.id !== attachmentId) })),
 
-  status: undefined,
-  setStatus: (status) => set({ status }),
-
   assistantMessages: {},
   setAssistantMessage: (message) =>
     set((state) => {
@@ -197,9 +188,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       delete previews[messageId];
       return { previewImages: previews };
     }),
-
-  isStreaming: false,
-  setIsStreaming: (isStreaming) => set({ isStreaming }),
 
   popupRetryMessageId: "",
   setPopupRetryMessageId: (messageId) => set({ popupRetryMessageId: messageId }),

@@ -145,7 +145,7 @@ export function MessageHistory() {
     <div
       id="messages-scrollarea"
       onScroll={handleOnScroll}
-      className="custom-scroll absolute inset-0 overflow-y-scroll border-l"
+      className="custom-scroll absolute inset-0 overflow-y-scroll border-x"
       style={{ scrollbarGutter: "stable both-edges" }}
       ref={outerScrollRef}
     >

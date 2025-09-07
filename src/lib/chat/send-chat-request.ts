@@ -50,12 +50,6 @@ export async function sendChatRequest(
 
   state.markStreamStart(assistantMessageId);
 
-  // Only reflect streaming UI for the active (visible) thread
-  if (state.currentThreadId && state.currentThreadId === threadId) {
-    state.setIsStreaming(true);
-    state.setStatus("streaming");
-  }
-
   let abortController = state.getController(assistantMessageId);
   if (!abortController || abortController.signal.aborted) {
     abortController = new AbortController();
@@ -100,11 +94,6 @@ export async function sendChatRequest(
 
           case "finish":
             metadata = stream.messageMetadata as ChatMessage["metadata"];
-            // Do NOT clear previews here; wait for Convex to persist attachment,
-            // setDataFromConvex will clear previews when attachments are present.
-            if (state.currentThreadId && state.currentThreadId === threadId) {
-              state.setStatus("complete");
-            }
             break;
         }
 
@@ -134,9 +123,8 @@ export async function sendChatRequest(
       messageId: assistantMessageId,
     });
   } finally {
-    // Clear controller and active stream tracking
+    // Clear controller
     state.clearController(assistantMessageId);
-    state.markStreamEnd(assistantMessageId);
 
     // Wait for server to finish persisting the assistant message before clearing the client overlay.
     // This avoids a flicker where the message briefly returns to a loading state.
@@ -145,12 +133,11 @@ export async function sendChatRequest(
       await tryCatch(waitForServerSyncForMessage(assistantMessageId));
     }
 
+    // Mark stream end after server have persisted the message
+    state.markStreamEnd(assistantMessageId);
+
     // Drop in-memory overlay to avoid leaks (Convex holds the persisted message)
     state.clearAssistantMessage(assistantMessageId);
-
-    if (state.currentThreadId && state.currentThreadId === threadId) {
-      state.setIsStreaming(false);
-    }
   }
 }
 
@@ -161,17 +148,15 @@ type SubmitChatMessageParams = {
 
 export async function submitChatMessage({ navigate, threadId }: SubmitChatMessageParams) {
   const state = chatStore.getState();
+  const status = state.messages.at(-1)?.status;
   const chatInput = state.chatInput.trim();
 
-  if (!chatInput || state.status === "streaming" || state.status === "pending") return;
+  if (!chatInput || status === "streaming" || status === "pending") return;
 
   state.setChatInput("");
   window.localStorage.removeItem("chatInput");
   state.setAttachment([]);
   state.setEditMessage(null);
-
-  state.setStatus("pending");
-  state.setIsStreaming(true);
 
   // Force UI to stick to bottom on user send action
   try {

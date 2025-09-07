@@ -13,8 +13,6 @@ const MODEL_SELECTOR_KEYBOARD_SHORTCUT = "m";
 
 export function RegisterHotkeys() {
   const navigate = useNavigate();
-
-  const status = useChatStore((state) => state.status);
   const editMessage = useChatStore((state) => state.editMessage);
 
   const setEditMessage = useChatStore((state) => state.setEditMessage);
@@ -156,15 +154,7 @@ export function RegisterHotkeys() {
       window.removeEventListener("keydown", handleKeyboardShortcut);
       window.removeEventListener("paste", onPaste);
     };
-  }, [
-    editMessage,
-    navigate,
-    setEditMessage,
-    setThreadCommandOpen,
-    status,
-    addAttachment,
-    setChatInput,
-  ]);
+  }, [editMessage, navigate, setEditMessage, setThreadCommandOpen, addAttachment, setChatInput]);
 
   return null;
 }

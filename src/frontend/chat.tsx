@@ -12,7 +12,7 @@ import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { WelcomeScreen } from "@/components/chat/welcome-screen";
 import { MessageHistory } from "@/components/message/message-history";
 import { ThreadCommand } from "@/components/threads/thread-command";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
@@ -84,9 +84,14 @@ function MessageRenderer({
   thread?: Doc<"threads"> | null;
   isLoading: boolean;
 }) {
+  const { state } = useSidebar();
+
   return (
     <>
-      <div className="bg-sidebar/80 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar absolute top-0 z-10 flex h-10 w-full items-center justify-between gap-2 border-b border-l px-4 text-sm backdrop-blur-md backdrop-saturate-150">
+      <div
+        data-sidebar-state={state}
+        className="bg-sidebar/80 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar absolute top-0 z-10 flex h-10 w-full items-center justify-between gap-2 border-x border-b px-4 text-sm backdrop-blur-md backdrop-saturate-150"
+      >
         <div className="flex items-center gap-2">
           <SidebarTrigger />
 

@@ -11,7 +11,9 @@ import { useChatStore } from "@/lib/chat/store";
 
 export function ChatSendButton() {
   const { submitChatMessage, abortChatRequest } = useChatRequest();
-  const isStreaming = useChatStore((state) => state.isStreaming);
+  const isStreaming = useChatStore((state) =>
+    state.hasActiveStream(state.messages.at(-1)?._id ?? ""),
+  );
 
   const [open, setOpen] = React.useState(false);
   const [{ pref }, setSendPreference] = useLocalStorage<SendPreference>(STORAGE_KEY, {
@@ -37,6 +39,7 @@ export function ChatSendButton() {
           ) : (
             <SendHorizontalIcon className="size-4 -rotate-45" />
           )}
+
           <span>{isStreaming ? "Abort" : "Send"}</span>
         </ButtonWithTip>
 
