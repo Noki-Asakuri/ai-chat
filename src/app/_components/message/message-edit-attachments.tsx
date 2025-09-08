@@ -112,14 +112,20 @@ export function MessageEditAttachments(props: MessageEditAttachmentsProps) {
   }
 
   return (
-    <div className={cn("flex flex-col gap-2 border-b p-2.5", { hidden: !hasAny && hasImageVision })}>
+    <div
+      className={cn("flex flex-col gap-2 border-b p-2.5", { hidden: !hasAny && hasImageVision })}
+    >
       {/* Previews */}
       {hasAny && (
         <div className="flex flex-wrap items-center justify-start gap-4">
           {remotePreviews.map((att) => (
             <div key={att._id} className="relative flex items-center justify-center gap-2">
               {att.type === "image" ? (
-                <img src={att.url} alt="Attachment" className="h-12 max-w-[12rem] rounded-md object-contain" />
+                <img
+                  src={att.url}
+                  alt="Attachment"
+                  className="h-12 max-w-[12rem] rounded-md object-contain"
+                />
               ) : (
                 <div className="flex h-12 w-12 items-center justify-center rounded-md bg-gray-200">
                   <FileIcon className="size-6" />
@@ -149,7 +155,11 @@ export function MessageEditAttachments(props: MessageEditAttachmentsProps) {
           {localPreviews.map((att) => (
             <div key={att.id} className="relative flex items-center justify-center gap-2">
               {att.type === "image" ? (
-                <img src={att.url} alt="Attachment" className="h-12 max-w-[12rem] rounded-md object-contain" />
+                <img
+                  src={att.url}
+                  alt="Attachment"
+                  className="h-12 max-w-[12rem] rounded-md object-contain"
+                />
               ) : (
                 <div className="flex h-12 w-12 items-center justify-center rounded-md bg-gray-200">
                   <FileIcon className="size-6" />

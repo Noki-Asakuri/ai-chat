@@ -1,5 +1,5 @@
 // src/hooks/useVersionWatcher.ts
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const INTERVAL_IN_MS = 5 * 60 * 1000;
 

@@ -1,9 +1,8 @@
+import { transformMiddlewareRequest } from "@axiomhq/nextjs";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-
 import { logger } from "@/lib/axiom/server";
-import { transformMiddlewareRequest } from "@axiomhq/nextjs";
 
 const isProtectedRoute = createRouteMatcher(["/settings(.*)"]);
 

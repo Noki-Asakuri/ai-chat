@@ -1,6 +1,6 @@
-import { env } from "@/env";
-
 import { ConvexReactClient } from "convex/react";
+
+import { env } from "@/env";
 
 let convexReactClientSingleton: ConvexReactClient | undefined = undefined;
 

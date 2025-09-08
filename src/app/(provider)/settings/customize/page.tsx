@@ -23,7 +23,9 @@ function LoadingSkeleton() {
     <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-bold">Customize AI</h2>
-        <p className="text-muted-foreground">Customize the assistant's personality to your liking.</p>
+        <p className="text-muted-foreground">
+          Customize the assistant's personality to your liking.
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -133,7 +135,9 @@ export default function CustomizePage() {
     <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-bold">Customize AI</h2>
-        <p className="text-muted-foreground">Customize the assistant's personality to your liking.</p>
+        <p className="text-muted-foreground">
+          Customize the assistant's personality to your liking.
+        </p>
       </div>
 
       <form className="space-y-4" onSubmit={updateUserCustomization}>
@@ -194,17 +198,33 @@ export default function CustomizePage() {
           <div className="flex items-center gap-2">
             <Label htmlFor="disable-blur">Disable Blur</Label>
 
-            <ControlledSwitch id="disable-blur" name="disable-blur" defaultChecked={data?.customization?.disableBlur ?? false} />
+            <ControlledSwitch
+              id="disable-blur"
+              name="disable-blur"
+              defaultChecked={data?.customization?.disableBlur ?? false}
+            />
           </div>
 
           <div className="flex items-start gap-x-2">
             <div className="flex flex-col items-center justify-center gap-2">
-              <Button type="button" size="icon" variant="outline" className="size-12" onClick={() => imageInputRef.current?.click()}>
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                className="size-12"
+                onClick={() => imageInputRef.current?.click()}
+              >
                 <ImagePlusIcon className="size-5" />
               </Button>
 
               {data?.customization?.backgroundId && (
-                <Button size="icon" type="button" className="size-12" variant="destructive" onClick={handleRemoveBackground}>
+                <Button
+                  size="icon"
+                  type="button"
+                  className="size-12"
+                  variant="destructive"
+                  onClick={handleRemoveBackground}
+                >
                   <TrashIcon className="size-5" />
                 </Button>
               )}
@@ -223,7 +243,10 @@ export default function CustomizePage() {
             >
               {(objectUrl) => (
                 <img
-                  src={objectUrl ?? `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization!.backgroundId}`}
+                  src={
+                    objectUrl ??
+                    `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization!.backgroundId}`
+                  }
                   alt="User Background Image"
                   className="h-full w-full rounded-md object-cover"
                   hidden={!data?.customization?.backgroundId && !backgroundImage}
@@ -266,7 +289,10 @@ function ControlledInput({ defaultValue, ...props }: React.ComponentPropsWithout
   return <Input type="text" value={value} onValueChange={(value) => setValue(value)} {...props} />;
 }
 
-function ControlledTextarea({ defaultValue, ...props }: React.ComponentPropsWithoutRef<typeof Textarea>) {
+function ControlledTextarea({
+  defaultValue,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof Textarea>) {
   const [value, setValue] = useState(defaultValue);
 
   useEffect(() => {
@@ -276,7 +302,10 @@ function ControlledTextarea({ defaultValue, ...props }: React.ComponentPropsWith
   return <Textarea value={value} onChange={(event) => setValue(event.target.value)} {...props} />;
 }
 
-function ControlledSwitch({ defaultChecked, ...props }: React.ComponentPropsWithoutRef<typeof Switch>) {
+function ControlledSwitch({
+  defaultChecked,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof Switch>) {
   const [value, setValue] = useState(defaultChecked);
 
   useEffect(() => {
@@ -285,4 +314,3 @@ function ControlledSwitch({ defaultChecked, ...props }: React.ComponentPropsWith
 
   return <Switch checked={value} onCheckedChange={(value) => setValue(value)} {...props} />;
 }
-

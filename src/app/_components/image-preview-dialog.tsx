@@ -116,8 +116,7 @@ export function ImagePreviewDialog({
   const normalizedIndex = totalImages
     ? ((currentIndex % totalImages) + totalImages) % totalImages
     : 0;
-  const activeImage =
-    (totalImages ? images?.[normalizedIndex] : undefined) ?? image;
+  const activeImage = (totalImages ? images?.[normalizedIndex] : undefined) ?? image;
 
   if (!activeImage.src && !objectUrl) return null;
 
