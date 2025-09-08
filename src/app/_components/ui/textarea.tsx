@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 function Textarea({ value, className, ...props }: React.ComponentProps<"textarea">) {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: The dependency is needed for the effect to run whenever the value changes to update the height.
   React.useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {

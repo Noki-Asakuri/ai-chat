@@ -6,8 +6,8 @@ import * as React from "react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import type { UserAttachment } from "@/lib/types";
 
-import { cn, format } from "@/lib/utils";
 import { getModelData } from "@/lib/chat/models";
+import { cn, format } from "@/lib/utils";
 
 type Existing = Doc<"attachments">;
 
@@ -101,15 +101,6 @@ export function MessageEditAttachments(props: MessageEditAttachmentsProps) {
   const hasAny = localPreviews.length > 0 || remotePreviews.length > 0;
   // If there are no previews and the model doesn't support vision uploads, skip the whole section
   if (!hasAny && !hasImageVision) return null;
-
-  function onFileInputChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    props.onAddFiles([file]);
-    // clear value to allow uploading the same file again
-    event.currentTarget.value = "";
-  }
 
   return (
     <div
