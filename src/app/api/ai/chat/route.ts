@@ -376,6 +376,7 @@ export const POST = withAxiom(async (req) => {
           modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
         };
 
+        console.log("[Chat] Chat request completed!", { userId: user.userId });
         logger.info("[Chat] Chat request completed!", {
           userId: user.userId,
           threadId,
@@ -408,7 +409,6 @@ export const POST = withAxiom(async (req) => {
     });
 
     const reader = chatStream.getReader();
-
     const readableStream = new ReadableStream<string>({
       async start(controller) {
         while (true) {

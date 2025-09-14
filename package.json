@@ -6,7 +6,7 @@
   "scripts": {
     "build": "next build --turbopack",
     "check": "bun lint && bun typecheck",
-    "dev": "next dev --turbo",
+    "dev": "next dev --turbopack",
     "format:check": "biome format",
     "format:write": "biome format --write",
     "lint": "biome check",
