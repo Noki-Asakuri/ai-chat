@@ -168,6 +168,7 @@ export const POST = withAxiom(async (req) => {
             console.log({ url: url.toString(), isUrlSupportedByModel, hit: hit ? "HIT" : "MISS" });
             logger.info(`[Chat Cache] ${url}`, {
               url,
+              isUrlSupportedByModel,
               status: hit ? "HIT" : "MISS",
               cacheKey,
             });

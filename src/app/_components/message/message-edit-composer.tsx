@@ -130,6 +130,8 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
           size: att.size,
           type: att.type,
           threadId: message.threadId,
+          mimeType: att.file.type,
+          source: "user",
         });
 
         await uploadFile(att.file, message.threadId, createdId);

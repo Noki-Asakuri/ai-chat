@@ -205,11 +205,13 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
         const attachmentId = await convexClient.mutation(
           api.functions.attachments.createAttachment,
           {
+            threadId,
             id: attachment.id,
             name: attachment.name,
             size: attachment.size,
             type: attachment.type,
-            threadId,
+            source: "user",
+            mimeType: attachment.file.type,
           },
         );
 

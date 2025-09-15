@@ -135,11 +135,7 @@ function transformMessages(messages: z.infer<typeof inputSchema>["messages"], us
           const url = `https://files.chat.asakuri.me/${userId}/${attachment.threadId}/${attachment._id}`;
 
           if (attachment.type === "image") {
-            return {
-              type: "image" as const,
-              image: url,
-              providerOptions: { openai: { imageDetail: "high" } },
-            };
+            return { type: "image" as const, image: url };
           }
 
           if (attachment.type === "pdf") {

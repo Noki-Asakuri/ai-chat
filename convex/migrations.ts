@@ -2,6 +2,7 @@ import { Migrations } from "@convex-dev/migrations";
 
 import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
+import { r2 } from "./index";
 
 /**
  * Initialize migrations component with DataModel for proper typing.
@@ -72,17 +73,80 @@ export const backfillAttachmentsSource = migrations.define({
   },
 });
 
+/**
+ * Backfill attachments.mimeType by fetching from object storage metadata.
+ * Falls back to inferring from filename extension and type when metadata is missing.
+ */
+export const backfillAttachmentsMimeType = migrations.define({
+  table: "attachments",
+  migrateOne: async (ctx, attachment) => {
+    // Skip if already set
+    if (typeof attachment.mimeType === "string" && attachment.mimeType.length > 0) {
+      return;
+    }
+
+    const key = `${attachment.userId}/${attachment.threadId}/${attachment._id}`;
+
+    let mime: string | undefined;
+    try {
+      const meta = await r2.getMetadata(ctx, key);
+      mime = meta?.contentType;
+    } catch (_err) {
+      // Ignore errors and attempt inference below
+    }
+
+    if (!mime) {
+      if (attachment.type === "pdf") {
+        mime = "application/pdf";
+      } else {
+        const lower = attachment.name.toLowerCase();
+        const map: Record<string, string> = {
+          ".png": "image/png",
+          ".jpg": "image/jpeg",
+          ".jpeg": "image/jpeg",
+          ".jpe": "image/jpeg",
+          ".webp": "image/webp",
+          ".gif": "image/gif",
+          ".bmp": "image/bmp",
+          ".svg": "image/svg+xml",
+          ".tif": "image/tiff",
+          ".tiff": "image/tiff",
+          ".heic": "image/heic",
+          ".heif": "image/heif",
+        };
+        for (const ext in map) {
+          if (lower.endsWith(ext)) {
+            mime = map[ext];
+            break;
+          }
+        }
+        if (!mime && attachment.type === "image") {
+          mime = "image/*";
+        }
+      }
+    }
+
+    if (mime && mime !== attachment.mimeType) {
+      await ctx.db.patch(attachment._id, { mimeType: mime });
+    }
+  },
+});
+
 export const runBackfillAttachmentsSource = migrations.runner(
   internal.migrations.backfillAttachmentsSource,
+);
+export const runBackfillAttachmentsMimeType = migrations.runner(
+  internal.migrations.backfillAttachmentsMimeType,
 );
 export const runBackfillThreads = migrations.runner(internal.migrations.backfillThreads);
 export const runBackfillMessages = migrations.runner(internal.migrations.backfillMessages);
 
 /**
  * Run the full backfill series:
- * 1. backfillAttachmentsSource
- * 2. backfillThreads
- * 3. backfillMessages
+ * 1. backfillAttachmentsMimeType
+ * 2. backfillAttachmentsSource
+ * 3. backfillThreads
+ * 4. backfillMessages
  *
  * Examples:
  *   - Dry run locally:
@@ -96,6 +160,7 @@ export const runBackfillMessages = migrations.runner(internal.migrations.backfil
  *     bunx convex deploy --cmd 'bun run build' && bunx convex run convex/migrations.ts:runAll --prod
  */
 export const runAll = migrations.runner([
+  internal.migrations.backfillAttachmentsMimeType,
   internal.migrations.backfillAttachmentsSource,
   internal.migrations.backfillThreads,
   internal.migrations.backfillMessages,

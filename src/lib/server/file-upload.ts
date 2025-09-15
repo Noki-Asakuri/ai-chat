@@ -15,7 +15,14 @@ export async function serverUploadFileR2(data: {
   mediaType: string;
 }): Promise<Id<"attachments"> | null> {
   const maxAttempts = 3;
-  logger.info("[Chat] Uploading file to R2", { threadId: data.threadId });
+  console.log("[Chat] Uploading file to R2", {
+    threadId: data.threadId,
+    mediaType: data.mediaType,
+  });
+  logger.info("[Chat] Uploading file to R2", {
+    threadId: data.threadId,
+    mediaType: data.mediaType,
+  });
 
   try {
     const randomId = crypto.randomUUID();
@@ -26,10 +33,11 @@ export async function serverUploadFileR2(data: {
       {
         id: randomId,
         name: randomId,
+        threadId: data.threadId,
         size: data.buffer.length,
         type: "image",
-        threadId: data.threadId,
         source: "assistant",
+        mimeType: data.mediaType,
       },
     );
 
