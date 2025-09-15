@@ -169,6 +169,7 @@ const MemoizedMarkdownBlock = memo(
         defaultOrigin="https://*.asakuri.me"
         allowedImagePrefixes={["files.chat.asakuri.me"]}
         allowedLinkPrefixes={["*"]}
+        parseIncompleteMarkdown={false}
         rehypePlugins={[rehypeKatex]}
         remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
         children={escapeInvalidMath(content)}
