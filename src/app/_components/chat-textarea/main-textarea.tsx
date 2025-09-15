@@ -19,7 +19,6 @@ import { useChatStore } from "@/lib/chat/store";
 export function ChatTextarea() {
   const parentRef = useRef<HTMLDivElement>(null);
 
-  const isDragOver = useChatStore((state) => state.isDragOver);
   const setTextareaHeight = useChatStore((state) => state.setTextareaHeight);
 
   const onResize = useCallback(
@@ -45,12 +44,13 @@ export function ChatTextarea() {
   }, [onResize]);
 
   return (
-    <div className="pointer-events-none absolute bottom-2 w-full px-4" ref={parentRef}>
+    <div
+      ref={parentRef}
+      data-slot="chat-textarea"
+      className="pointer-events-none absolute bottom-2 w-full px-4"
+    >
       <form className="mx-auto space-y-2">
-        <div
-          data-dragover={isDragOver}
-          className="pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150 data-[dragover=true]:border-primary/40 data-[dragover=true]:bg-primary/20"
-        >
+        <div className="pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150">
           <UsageBanner />
           <ChatAttachmentDisplay />
 
@@ -74,7 +74,6 @@ function InputTextArea() {
 
   const setChatInput = useChatStore((state) => state.setChatInput);
   const addAttachment = useChatStore((state) => state.addAttachment);
-  const setIsDragOver = useChatStore((state) => state.setIsDragOver);
 
   function handleAddAttachments({ files }: { files: File[] }) {
     const acceptFiles = files.filter(
@@ -115,19 +114,6 @@ function InputTextArea() {
         onChange={(event) => setChatInput(event.target.value)}
         data-slot="textarea-chat-input"
         className="!bg-transparent !ring-0 max-h-[250px] w-full resize-none rounded-none border-0 p-0"
-        onDrop={(event) => {
-          event.preventDefault();
-          setIsDragOver(false);
-
-          handleAddAttachments({ files: Array.from(event.dataTransfer.files) });
-        }}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setIsDragOver(true);
-        }}
-        onDragLeave={() => {
-          setIsDragOver(false);
-        }}
         onPaste={(event) => {
           const { items } = event.clipboardData;
           const files = Array.from(items)

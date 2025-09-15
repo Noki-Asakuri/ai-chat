@@ -16,7 +16,7 @@ export function MessageFooter({ index, message, renderMessage }: MessageFooterPr
 
   return (
     <div
-      className={cn("flex w-full items-center gap-4", {
+      className={cn("flex w-full items-center gap-2", {
         "justify-end bg-transparent": message.role === "user",
       })}
     >

@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { PlusIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { NavLink, useParams } from "react-router";
+import { toast } from "sonner";
+import { v4 as uuidv4 } from "uuid";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { WelcomeScreen } from "@/components/chat/welcome-screen";
@@ -16,12 +18,17 @@ import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { sendChatRequest } from "@/lib/chat/send-chat-request";
-import { chatStore } from "@/lib/chat/store";
+import { chatStore, useChatStore } from "@/lib/chat/store";
 import { fromUUID } from "@/lib/utils";
 
 export function Chat() {
   const resumeRef = useRef<boolean>(false);
+  const dragCounterRef = useRef<number>(0);
   const { threadId } = useParams<{ threadId: Id<"threads"> }>();
+
+  const isDragOver = useChatStore((s) => s.isDragOver);
+  const setIsDragOver = useChatStore((s) => s.setIsDragOver);
+  const addAttachment = useChatStore((s) => s.addAttachment);
 
   const { data, isLoading } = useQuery({
     enabled: Boolean(threadId),
@@ -41,9 +48,9 @@ export function Chat() {
     if (!data?.messages || data.messages.length === 0) return state.resetState();
 
     const lastMessage = data.messages.at(-1)!;
-    const threadId = lastMessage.threadId;
+    const threadIdLocal = lastMessage.threadId;
 
-    console.debug("[Convex] Syncing messages from Convex", { data, threadId });
+    console.debug("[Convex] Syncing messages from Convex", { data, threadId: threadIdLocal });
     state.setDataFromConvex(data.messages, lastMessage.status ?? "complete");
 
     if (
@@ -54,7 +61,7 @@ export function Chat() {
     ) {
       resumeRef.current = true;
       console.debug("[Convex] Resuming chat streaming", {
-        threadId,
+        threadId: threadIdLocal,
         streamId: lastMessage.resumableStreamId,
       });
 
@@ -68,11 +75,95 @@ export function Chat() {
     }
   }, [data]);
 
+  function handleAddAttachments(files: Array<File>) {
+    const acceptFiles = files.filter(
+      (file) => file.type.includes("image") || file.type.includes("pdf"),
+    );
+
+    if (acceptFiles.length > 0) {
+      const attachments = acceptFiles.map((file) => {
+        let type: "image" | "pdf" = "image";
+        if (file.type.includes("pdf")) type = "pdf";
+        return { id: uuidv4(), name: file.name, size: file.size, file, type };
+      });
+
+      addAttachment(attachments);
+    }
+
+    if (acceptFiles.length < files.length) {
+      toast.error("File type not supported", {
+        description: "Please upload an image or PDF file.",
+      });
+    }
+  }
+
   return (
-    <main className="relative inset-0 h-dvh w-screen overflow-hidden">
+    <main
+      data-slot="chat"
+      className="relative inset-0 h-dvh w-screen overflow-hidden"
+      onDragEnter={(event) => {
+        const types = event.dataTransfer?.types ?? [];
+        const draggingFiles = Array.from(types).includes("Files");
+
+        if (!draggingFiles) return;
+        dragCounterRef.current += 1;
+        setIsDragOver(true);
+      }}
+      onDragOver={(event) => {
+        const types = event.dataTransfer?.types ?? [];
+        const draggingFiles = Array.from(types).includes("Files");
+
+        if (!draggingFiles) return;
+        event.preventDefault();
+        if (!isDragOver) setIsDragOver(true);
+      }}
+      onDragLeave={(event) => {
+        const types = event.dataTransfer?.types ?? [];
+        const draggingFiles = Array.from(types).includes("Files");
+
+        if (!draggingFiles) return;
+        dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+        if (dragCounterRef.current === 0) setIsDragOver(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        const native = event.nativeEvent as DragEvent;
+        const path =
+          typeof native.composedPath === "function"
+            ? native.composedPath()
+            : [event.target as EventTarget];
+
+        // Avoid double-handling when dropping directly on the textarea (it has its own onDrop)
+        if (path.some((t) => t instanceof Element && t.id === "textarea-chat-input")) {
+          dragCounterRef.current = 0;
+          setIsDragOver(false);
+          return;
+        }
+
+        const files = Array.from(event.dataTransfer.files ?? []);
+        dragCounterRef.current = 0;
+        setIsDragOver(false);
+        if (files.length > 0) {
+          handleAddAttachments(files);
+        }
+      }}
+    >
       <WelcomeScreen />
       <MessageRenderer thread={data?.thread} isLoading={isLoading} />
       <ChatTextarea />
+
+      {/* Global drop overlay for the chat section (excludes the sidebar) */}
+      <div
+        aria-hidden="true"
+        data-active={isDragOver}
+        className="group pointer-events-none absolute inset-0 z-5 flex items-center justify-center"
+      >
+        <div className="m-2 flex h-[calc(100%-1rem)] w-[calc(100%-1rem)] items-center justify-center rounded-md border-2 border-primary border-dashed bg-primary/10 text-primary opacity-0 transition-opacity duration-150 group-data-[active=true]:opacity-100">
+          <span className="rounded-md border bg-background/80 px-3 py-1 text-sm">
+            Drop files to attach
+          </span>
+        </div>
+      </div>
     </main>
   );
 }
@@ -90,14 +181,14 @@ function MessageRenderer({
     <>
       <div
         data-sidebar-state={state}
-        className="bg-sidebar/80 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar absolute top-0 z-10 flex h-10 w-full items-center justify-between gap-2 border-x border-b px-4 text-sm backdrop-blur-md backdrop-saturate-150"
+        className="absolute top-0 z-10 flex h-10 w-full items-center justify-between gap-2 border-x border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar"
       >
         <div className="flex items-center gap-2">
           <SidebarTrigger />
 
           <NavLink
             to="/"
-            className="hover:bg-primary/20 rounded-md p-1.5 text-center transition-colors"
+            className="rounded-md p-1.5 text-center transition-colors hover:bg-primary/20"
           >
             <PlusIcon className="size-4" />
             <span className="sr-only">Create new thread</span>
@@ -131,5 +222,5 @@ function ThreadTitle({
     return <p className="text-muted-foreground text-sm">New Thread</p>;
   }
 
-  return <p className="text-muted-foreground truncate text-sm">{thread.title}</p>;
+  return <p className="truncate text-muted-foreground text-sm">{thread.title}</p>;
 }

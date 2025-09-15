@@ -37,7 +37,7 @@ export function MessageMetadata({ metadata, params, model }: MessageMetadataProp
 
   return (
     <div className="flex h-full w-full items-center justify-between">
-      <div className="flex h-10.5 items-center justify-center gap-2 bg-background/80 p-2 backdrop-blur-md backdrop-saturate-150 rounded-md border">
+      <div className="flex h-10.5 items-center justify-center gap-2 rounded-md border bg-background/80 p-2 backdrop-blur-md backdrop-saturate-150">
         <Icons.provider provider={modelData?.provider} className="size-4 rounded-md" />
         {modelData?.display.name}{" "}
         {showEffort && <span className="text-sm capitalize">({params?.effort})</span>}
@@ -48,7 +48,7 @@ export function MessageMetadata({ metadata, params, model }: MessageMetadataProp
           <InfoIcon className="size-4" />
         </PopoverTrigger>
 
-        <PopoverContent className="bg-card w-max p-2 text-sm" align="end" includeArrow={false}>
+        <PopoverContent className="w-max bg-card p-2 text-sm" align="end" includeArrow={false}>
           <PopoverArrow className="fill-card" />
 
           <div className="grid grid-cols-1 gap-x-4 gap-y-2">
