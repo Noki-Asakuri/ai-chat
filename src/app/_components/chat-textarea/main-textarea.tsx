@@ -19,8 +19,8 @@ import { useChatStore } from "@/lib/chat/store";
 export function ChatTextarea() {
   const parentRef = useRef<HTMLDivElement>(null);
 
-  const setTextareaHeight = useChatStore((state) => state.setTextareaHeight);
   const isDragOver = useChatStore((state) => state.isDragOver);
+  const setTextareaHeight = useChatStore((state) => state.setTextareaHeight);
 
   const onResize = useCallback(
     (entries: ResizeObserverEntry[]) => {
@@ -49,7 +49,7 @@ export function ChatTextarea() {
       <form className="mx-auto space-y-2">
         <div
           data-dragover={isDragOver}
-          className="data-[dragover=true]:bg-primary/20 data-[dragover=true]:border-primary/40 bg-background/80 pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-md border backdrop-blur-md backdrop-saturate-150"
+          className="pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150 data-[dragover=true]:border-primary/40 data-[dragover=true]:bg-primary/20"
         >
           <UsageBanner />
           <ChatAttachmentDisplay />
@@ -113,7 +113,8 @@ function InputTextArea() {
         placeholder="Type your message here..."
         value={input}
         onChange={(event) => setChatInput(event.target.value)}
-        className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
+        data-slot="textarea-chat-input"
+        className="!bg-transparent !ring-0 max-h-[250px] w-full resize-none rounded-none border-0 p-0"
         onDrop={(event) => {
           event.preventDefault();
           setIsDragOver(false);

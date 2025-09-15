@@ -18,7 +18,19 @@
   },
   "linter": {
     "enabled": true,
-    "rules": { "recommended": false },
+    "rules": {
+      "recommended": false,
+      "nursery": {
+        "useSortedClasses": {
+          "fix": "safe",
+          "level": "info",
+          "options": {
+            "attributes": ["classList"],
+            "functions": ["clsx", "cva", "cn"]
+          }
+        }
+      }
+    },
     "includes": ["**", "!.next/**", "!convex/_generated/**"]
   },
   "javascript": {
