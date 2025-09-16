@@ -132,11 +132,25 @@ export const backfillAttachmentsMimeType = migrations.define({
   },
 });
 
+export const backfillAttachmentsPath = migrations.define({
+  table: "attachments",
+  migrateOne: async (ctx, attachment) => {
+    if (attachment.path === undefined) {
+      await ctx.db.patch(attachment._id, {
+        path: `${attachment.userId}/${attachment.threadId}/${attachment._id}`,
+      });
+    }
+  },
+});
+
 export const runBackfillAttachmentsSource = migrations.runner(
   internal.migrations.backfillAttachmentsSource,
 );
 export const runBackfillAttachmentsMimeType = migrations.runner(
   internal.migrations.backfillAttachmentsMimeType,
+);
+export const runBackfillAttachmentsPath = migrations.runner(
+  internal.migrations.backfillAttachmentsPath,
 );
 export const runBackfillThreads = migrations.runner(internal.migrations.backfillThreads);
 export const runBackfillMessages = migrations.runner(internal.migrations.backfillMessages);

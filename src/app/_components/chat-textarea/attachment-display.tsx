@@ -24,7 +24,9 @@ export function ChatAttachmentButton() {
       type = "pdf";
     }
 
-    addAttachment([{ id: uuidv4(), type, name: file.name, size: file.size, file }]);
+    addAttachment([
+      { id: uuidv4(), type, name: file.name, size: file.size, file, mimeType: file.type },
+    ]);
   }
 
   if (!hasImageVision) return null;
@@ -158,7 +160,7 @@ function AttachmentPreview({ attachment, images }: { attachment: Preview; images
         <div className="flex items-center justify-between gap-2">
           <span className="w-max">{format.size(attachment.size)}</span>
           <button
-            className="border-destructive bg-destructive/60 flex w-10 cursor-pointer items-center justify-center rounded-md border p-0"
+            className="flex w-10 cursor-pointer items-center justify-center rounded-md border border-destructive bg-destructive/60 p-0"
             onMouseDown={() => removeAttachment(attachment.id)}
           >
             <XIcon className="size-4" />

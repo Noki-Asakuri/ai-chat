@@ -45,7 +45,7 @@ function LoadingSkeleton() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-2xl font-bold">Attachments</h2>
+        <h2 className="font-bold text-2xl">Attachments</h2>
         <p className="text-muted-foreground">View and manage your attachments.</p>
       </div>
 
@@ -136,7 +136,7 @@ export default function AttachmentsPage() {
   const galleryImages = useMemo(
     () =>
       imageAttachments.map((a) => ({
-        src: `https://files.chat.asakuri.me/${a.userId}/${a.threadId}/${a._id}`,
+        src: `https://ik.imagekit.io/gmethsnvl/ai-chat/${a.path}`,
         alt: a.name,
         name: a.name,
         size: a.size,
@@ -193,7 +193,7 @@ export default function AttachmentsPage() {
     <div className="space-y-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Attachments</h2>
+          <h2 className="font-bold text-2xl">Attachments</h2>
           <p className="text-muted-foreground">View and manage your attachments.</p>
         </div>
 
@@ -203,12 +203,12 @@ export default function AttachmentsPage() {
         </div>
       </div>
 
-      <div className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 py-2 backdrop-blur">
+      <div className="sticky top-0 z-10 bg-background/80 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full max-w-md sm:max-w-[unset]">
             <SearchIcon
               size={16}
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+              className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-muted-foreground"
             />
 
             <Input
@@ -255,7 +255,7 @@ export default function AttachmentsPage() {
               <div className="flex items-center gap-2">
                 <div className="flex w-max flex-col leading-tight">
                   <span className="text-muted-foreground text-sm">{selected.size} selected</span>
-                  <span className="text-muted-foreground text-center text-xs">
+                  <span className="text-center text-muted-foreground text-xs">
                     {format.size(selectedBytes)} total
                   </span>
                 </div>
@@ -294,12 +294,13 @@ export default function AttachmentsPage() {
 
         {filteredData.map((attachment) => {
           const isSelected = selected.has(attachment._id);
-          const imageUrl = `https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`;
+          const imageUrl = `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.path}`;
+          const fileUrl = `https://files.chat.asakuri.me/${attachment.path}`;
 
           return (
             <div
               key={attachment._id}
-              className="hover:bg-card/80 group flex flex-col overflow-hidden rounded-md border transition-colors"
+              className="group flex flex-col overflow-hidden rounded-md border transition-colors hover:bg-card/80"
               data-selected={isSelected}
             >
               <div className="relative size-full">
@@ -346,7 +347,7 @@ export default function AttachmentsPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block size-full"
-                    href={imageUrl}
+                    href={fileUrl}
                   >
                     <div className="flex aspect-square size-full items-center justify-center p-2">
                       <FileTextIcon size={64} />
@@ -360,7 +361,7 @@ export default function AttachmentsPage() {
                       <input
                         type="checkbox"
                         aria-label={`Select ${attachment.name}`}
-                        className="bg-background pointer-events-auto size-5 cursor-pointer rounded border"
+                        className="pointer-events-auto size-5 cursor-pointer rounded border bg-background"
                         checked={isSelected}
                         onChange={() => toggleSelect(attachment._id)}
                       />
@@ -373,7 +374,7 @@ export default function AttachmentsPage() {
                     <DeleteAttachmentDialog attachmentId={attachment._id} name={attachment.name}>
                       <Button
                         variant="secondary"
-                        className="hover:bg-destructive pointer-events-auto size-7 transition-colors"
+                        className="pointer-events-auto size-7 transition-colors hover:bg-destructive"
                       >
                         <TrashIcon />
                         <span className="sr-only">Delete {attachment.name}</span>
@@ -395,7 +396,7 @@ export default function AttachmentsPage() {
                     {attachment.name}
                   </p>
 
-                  <span className="text-muted-foreground shrink-0 text-sm">
+                  <span className="shrink-0 text-muted-foreground text-sm">
                     {format.date(attachment._creationTime)}
                   </span>
                 </div>
@@ -412,7 +413,7 @@ export default function AttachmentsPage() {
                 )}
 
                 {!attachment.thread && (
-                  <span className="w-full text-sm select-none">Thread: [Deleted]</span>
+                  <span className="w-full select-none text-sm">Thread: [Deleted]</span>
                 )}
               </div>
             </div>

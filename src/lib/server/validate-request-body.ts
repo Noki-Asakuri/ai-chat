@@ -22,6 +22,7 @@ const attachmentSchema = z.object({
   name: z.string(),
   size: z.number(),
   type: z.enum(["image", "pdf"]),
+  path: z.string().optional(),
 });
 
 const inputSchema = z.object({
@@ -132,17 +133,21 @@ function transformMessages(messages: z.infer<typeof inputSchema>["messages"], us
 
     const parts = message.attachments
       ? message.attachments.map((attachment): Exclude<UserContent[number], string> => {
-          const url = `https://files.chat.asakuri.me/${userId}/${attachment.threadId}/${attachment._id}`;
+          const pathname = attachment.path
+            ? `${attachment.path}`
+            : `${userId}/${attachment.threadId}/${attachment._id}`;
 
           if (attachment.type === "image") {
+            const url = `https://ik.imagekit.io/gmethsnvl/ai-chat/${pathname}`;
             return { type: "image" as const, image: url };
           }
 
           if (attachment.type === "pdf") {
+            const url = `https://files.chat.asakuri.me/${pathname}`;
             return { type: "file" as const, data: url, mediaType: "application/pdf" };
           }
 
-          return { type: "text" as const, text: url };
+          return { type: "text" as const, text: `https://files.chat.asakuri.me/${pathname}` };
         })
       : [];
 

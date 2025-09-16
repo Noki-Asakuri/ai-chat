@@ -25,6 +25,8 @@ export default defineSchema({
     type: v.union(v.literal("image"), v.literal("pdf")),
     source: v.union(v.literal("assistant"), v.literal("user")),
     mimeType: v.optional(v.string()),
+    path: v.optional(v.string()),
+
     userId: v.string(),
     threadId: v.id("threads"),
   })

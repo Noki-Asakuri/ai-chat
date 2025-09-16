@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 
 import { r2 } from "..";
-import { mutation, query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
+import { mutation, query } from "../_generated/server";
+import { validExtensions } from "./files";
 
 export const createAttachment = mutation({
   args: {
@@ -18,7 +19,15 @@ export const createAttachment = mutation({
     const user = await ctx.auth.getUserIdentity();
     if (!user) throw new Error("Not authenticated");
 
-    return await ctx.db.insert("attachments", { ...args, userId: user.subject });
+    const ext = args.mimeType.split("/")[1];
+    const path = `${user.subject}/${args.threadId}/${args.id}.${ext}`;
+
+    if (validExtensions.includes(args.mimeType)) {
+      const docId = await ctx.db.insert("attachments", { ...args, userId: user.subject, path });
+      return { uniqueId: args.id, docId, path };
+    }
+
+    throw new Error("Invalid file type");
   },
 });
 

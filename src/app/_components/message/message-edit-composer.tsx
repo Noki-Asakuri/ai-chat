@@ -37,6 +37,7 @@ type AttachmentOverride = {
   name: string;
   size: number;
   type: "image" | "pdf";
+  path: string;
 };
 
 export function MessageEditComposer({ message, index }: MessageEditComposerProps) {
@@ -124,25 +125,30 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
     // Upload new ones and create attachment docs
     const created = await Promise.all(
       newFiles.map(async (att) => {
-        const createdId = await convexClient.mutation(api.functions.attachments.createAttachment, {
-          id: att.id,
-          name: att.name,
-          size: att.size,
-          type: att.type,
-          threadId: message.threadId,
-          mimeType: att.file.type,
-          source: "user",
-        });
+        const { docId, uniqueId, path } = await convexClient.mutation(
+          api.functions.attachments.createAttachment,
+          {
+            id: att.id,
+            name: att.name,
+            size: att.size,
+            type: att.type,
+            threadId: message.threadId,
+            mimeType: att.file.type,
+            source: "user",
+          },
+        );
 
-        await uploadFile(att.file, message.threadId, createdId);
+        await uploadFile(att.file, message.threadId, uniqueId);
 
         return {
-          _id: createdId,
-          id: att.id,
+          _id: docId,
+          id: uniqueId,
           threadId: message.threadId,
           name: att.name,
           size: att.size,
           type: att.type,
+          mimeType: att.file.type,
+          path,
         };
       }),
     );
@@ -160,6 +166,7 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
         name: a.name,
         size: a.size,
         type: a.type,
+        path: a.path!,
       })),
       ...created,
     ];
@@ -226,7 +233,7 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
   }
 
   return (
-    <div className="bg-muted/40 group-data-[disable-blur=true]/sidebar-provider:bg-muted pointer-events-auto mx-auto w-full max-w-4xl space-y-2 rounded-md border backdrop-blur-md backdrop-saturate-150">
+    <div className="pointer-events-auto mx-auto w-full max-w-4xl space-y-2 rounded-md border bg-muted/40 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-muted">
       <MessageEditAttachments
         existing={message.attachments}
         removed={removed}
@@ -253,7 +260,7 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
             placeholder="Edit your message here..."
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
+            className="!bg-transparent !ring-0 max-h-[250px] w-full resize-none rounded-none border-0 p-0"
             onPaste={(event) => {
               const { items } = event.clipboardData;
               const files = Array.from(items)

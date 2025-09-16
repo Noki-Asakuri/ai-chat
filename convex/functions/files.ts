@@ -10,6 +10,13 @@ const callbacks: R2Callbacks = internal.functions.files;
 
 export { syncMetadata, getMetadata, listMetadata, onSyncMetadata };
 
+export const validExtensions = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+];
 const { syncMetadata, getMetadata, listMetadata, onSyncMetadata } = r2.clientApi<DataModel>({
   callbacks,
   async checkUpload(ctx) {
@@ -19,7 +26,7 @@ const { syncMetadata, getMetadata, listMetadata, onSyncMetadata } = r2.clientApi
 });
 
 export const generateAttachmentUploadUrl = mutation({
-  args: { threadId: v.id("threads"), fileId: v.id("attachments") },
+  args: { threadId: v.id("threads"), fileId: v.string(), mimeType: v.string() },
   handler: async (ctx, args) => {
     const currentUser = await ctx.auth.getUserIdentity();
     if (!currentUser) throw new Error("Not authenticated");
@@ -28,7 +35,13 @@ export const generateAttachmentUploadUrl = mutation({
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== currentUser.subject) throw new Error("Not authorized");
 
-    const key = `${currentUser.subject}/${thread._id}/${args.fileId}`;
+    if (!validExtensions.includes(args.mimeType)) {
+      throw new Error("Invalid file type");
+    }
+
+    const ext = args.mimeType.split("/")[1];
+    const key = `${currentUser.subject}/${thread._id}/${args.fileId}.${ext}`;
+
     return r2.generateUploadUrl(key);
   },
 });

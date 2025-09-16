@@ -22,6 +22,7 @@ export type UserAttachment = {
   size: number;
   file: File;
   type: "image" | "pdf";
+  mimeType: string;
 };
 
 export type ChatMessage = Omit<Doc<"messages">, "attachments"> & {

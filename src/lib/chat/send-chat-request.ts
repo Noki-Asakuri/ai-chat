@@ -177,6 +177,8 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     await navigate(`/threads/${toUUID(threadId)}`);
   }
 
+  const uploadedAttachmentPaths = new Map<Id<"attachments">, string>();
+
   const userMessage = {
     messageId: uuidv4(),
     content: chatInput,
@@ -202,7 +204,7 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
   if (state.attachments.length) {
     await Promise.all(
       state.attachments.map(async (attachment) => {
-        const attachmentId = await convexClient.mutation(
+        const { docId, uniqueId } = await convexClient.mutation(
           api.functions.attachments.createAttachment,
           {
             threadId,
@@ -215,18 +217,16 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
           },
         );
 
-        await uploadFile(attachment.file, threadId, attachmentId);
-        userMessage.attachments.push(attachmentId);
+        const key = await uploadFile(attachment.file, threadId, uniqueId);
+        userMessage.attachments.push(docId);
+        uploadedAttachmentPaths.set(docId, key);
       }),
     );
   }
 
   const assistantMessageId = await convexClient.mutation(
     api.functions.messages.addMessagesToThread,
-    {
-      threadId,
-      messages: [userMessage, assistantMessage],
-    },
+    { threadId, messages: [userMessage, assistantMessage] },
   );
 
   const allMessages = state.messages.map((message) => ({
@@ -241,6 +241,7 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
       name: attachment.name,
       size: attachment.size,
       type: attachment.type,
+      path: attachment.path,
     })),
   }));
 
@@ -250,6 +251,7 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     id: userMessage.messageId,
     attachments: userMessage.attachments.map((attachmentId, index) => {
       const attachment = state.attachments[index];
+      const path = uploadedAttachmentPaths.get(attachmentId);
       if (!attachment) throw new Error("Attachment not found");
 
       return {
@@ -260,6 +262,7 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
         name: attachment.name,
         size: attachment.size,
         type: attachment.type,
+        path,
       };
     }),
   });

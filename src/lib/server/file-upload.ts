@@ -28,7 +28,7 @@ export async function serverUploadFileR2(data: {
     const randomId = crypto.randomUUID();
 
     // Create attachment record first
-    const attachmentId = await serverConvexClient.mutation(
+    const { docId, uniqueId } = await serverConvexClient.mutation(
       api.functions.attachments.createAttachment,
       {
         id: randomId,
@@ -42,7 +42,8 @@ export async function serverUploadFileR2(data: {
     );
 
     logger.info("[Chat] Attachment created", {
-      attachmentId,
+      uniqueId,
+      docId,
       threadId: data.threadId,
       type: data.mediaType,
     });
@@ -53,13 +54,14 @@ export async function serverUploadFileR2(data: {
         logger.info("[Chat] Generating upload URL", {
           attempt,
           maxAttempts,
-          attachmentId,
+          uniqueId,
+          docId,
           threadId: data.threadId,
         });
 
         const { key, url } = await serverConvexClient.mutation(
           api.functions.files.generateAttachmentUploadUrl,
-          { fileId: attachmentId, threadId: data.threadId },
+          { fileId: uniqueId, threadId: data.threadId, mimeType: data.mediaType },
         );
 
         const result = await fetch(url, {
@@ -74,7 +76,8 @@ export async function serverUploadFileR2(data: {
           logger.error("[Chat Error]: Upload attempt failed", {
             attempt,
             maxAttempts,
-            attachmentId,
+            uniqueId,
+            docId,
             threadId: data.threadId,
             status: result.status,
             error: message,
@@ -88,15 +91,17 @@ export async function serverUploadFileR2(data: {
 
         logger.info("[Chat] File uploaded to R2", {
           attempt,
-          attachmentId,
+          uniqueId,
+          docId,
           threadId: data.threadId,
         });
-        return attachmentId;
+        return docId;
       } catch (err) {
         logger.error("[Chat Error]: Upload attempt exception", {
           attempt,
           maxAttempts,
-          attachmentId,
+          uniqueId,
+          docId,
           threadId: data.threadId,
           error: err,
         });
@@ -110,7 +115,8 @@ export async function serverUploadFileR2(data: {
 
     // If we get here, all attempts failed
     logger.error("[Chat Error]: All upload attempts failed", {
-      attachmentId,
+      uniqueId,
+      docId,
       threadId: data.threadId,
       attempts: maxAttempts,
     });

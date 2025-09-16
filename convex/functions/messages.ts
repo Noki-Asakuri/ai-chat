@@ -178,10 +178,12 @@ export const updateMessageById = mutation({
       messageId: args.messageId,
       messageUserId: message?.userId ?? "Message not found",
       status: args.updates.status,
+      threadId: args.threadId,
     });
 
     if (!message) throw new Error("Message not found");
     if (message.userId !== user.subject) throw new Error("Not authorized");
+    if (message.threadId !== args.threadId) throw new Error("Not authorized");
     if (message.status === "error") return;
 
     await ctx.db.patch(args.messageId, { ...args.updates, updatedAt: Date.now() });

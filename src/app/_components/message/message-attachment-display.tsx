@@ -31,6 +31,8 @@ export function MessageAttachmentDisplay({
 
   const baseKey = messageId ?? "no-message";
   function imageUrlFromAttachment(att: Doc<"attachments">): string {
+    if (att.path) return `https://ik.imagekit.io/gmethsnvl/ai-chat/${att.path}`;
+    // Fallback to legacy path
     return `https://ik.imagekit.io/gmethsnvl/ai-chat/${att.userId}/${att.threadId}/${att._id}`;
   }
 
@@ -116,7 +118,7 @@ export function MessageAttachmentDisplay({
 
 function AttachmentPreview({ attachment }: { attachment: Doc<"attachments"> }) {
   if (attachment.type === "image") {
-    const imageUrl = `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.userId}/${attachment.threadId}/${attachment._id}`;
+    const imageUrl = `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.path}`;
 
     return (
       <ImagePreviewDialog
@@ -134,7 +136,7 @@ function AttachmentPreview({ attachment }: { attachment: Doc<"attachments"> }) {
   }
 
   if (attachment.type === "pdf") {
-    const fileUrl = `https://files.chat.asakuri.me/${attachment.userId}/${attachment.threadId}/${attachment._id}`;
+    const fileUrl = `https://files.chat.asakuri.me/${attachment.path}`;
 
     return (
       <a

@@ -26,6 +26,7 @@ export async function retryMessage(
       name: string;
       size: number;
       type: "image" | "pdf";
+      path: string;
     }>;
   },
 ) {

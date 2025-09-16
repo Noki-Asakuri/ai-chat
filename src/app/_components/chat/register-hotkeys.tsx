@@ -51,7 +51,14 @@ export function RegisterHotkeys() {
             let type: "image" | "pdf" = "image";
             if (file.type.includes("pdf")) type = "pdf";
 
-            return { id: uuidv4(), name: file.name, size: file.size, file, type };
+            return {
+              id: uuidv4(),
+              name: file.name,
+              size: file.size,
+              file,
+              type,
+              mimeType: file.type,
+            };
           });
 
           addAttachment(attachments);
