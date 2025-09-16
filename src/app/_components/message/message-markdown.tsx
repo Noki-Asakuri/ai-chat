@@ -167,9 +167,9 @@ const MemoizedMarkdownBlock = memo(
     return (
       <Streamdown
         defaultOrigin="https://*.asakuri.me"
-        allowedImagePrefixes={["files.chat.asakuri.me"]}
+        allowedImagePrefixes={["files.chat.asakuri.me", "ik.imagekit.io"]}
         allowedLinkPrefixes={["*"]}
-        parseIncompleteMarkdown={false}
+        parseIncompleteMarkdown
         rehypePlugins={[rehypeKatex]}
         remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
         children={escapeInvalidMath(content)}
