@@ -153,7 +153,7 @@ function CodeBlock({
 
   if (isInline) {
     return (
-      <TypographyInlineCode className={cn("not-prose", className)} {...props}>
+      <TypographyInlineCode className={className} {...props}>
         {code}
       </TypographyInlineCode>
     );
