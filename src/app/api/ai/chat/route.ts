@@ -231,6 +231,7 @@ export const POST = withAxiom(async (req) => {
       updates: { status: "streaming", resumableStreamId: streamId, model: model.uniqueId },
     });
 
+    const attachmentIds: Id<"attachments">[] = [];
     const metadata = {
       model: model.uniqueId,
       aiProfileId: config.profile?.id ?? undefined,
@@ -247,10 +248,6 @@ export const POST = withAxiom(async (req) => {
 
     const chatStream = createUIMessageStream({
       execute: async ({ writer }) => {
-        let content = "";
-        let reasoning = "";
-        const attachmentIds: Id<"attachments">[] = [];
-
         let reasoningDuration = 0;
         let textDuration = 0;
 
@@ -269,21 +266,13 @@ export const POST = withAxiom(async (req) => {
         for await (const stream of result.fullStream) {
           switch (stream.type) {
             case "reasoning-start":
-              if (hasStartedReasoning) {
-                // OpenAI seperate reasoning part with new 'reasoning-start' event
-                reasoning += "\n\n";
-                continue;
-              }
+              if (hasStartedReasoning) break;
 
               // Start first token time if model return reasoning
               metadata.timeToFirstTokenMs = Date.now() - startTime;
               reasoningDuration = Date.now();
 
               hasStartedReasoning = true;
-              break;
-
-            case "reasoning-delta":
-              reasoning += stream.text;
               break;
 
             case "reasoning-end":
@@ -297,10 +286,6 @@ export const POST = withAxiom(async (req) => {
               if (metadata.timeToFirstTokenMs === 0) {
                 metadata.timeToFirstTokenMs = Date.now() - startTime;
               }
-              break;
-
-            case "text-delta":
-              content += stream.text;
               break;
 
             case "text-end":
@@ -360,9 +345,20 @@ export const POST = withAxiom(async (req) => {
               break;
           }
         }
+      },
+
+      onFinish: ({ responseMessage, isAborted }) => {
+        const content = responseMessage.parts
+          .filter((part) => part.type === "text")
+          .map((part) => part.text)
+          .join("");
+
+        const reasoning = responseMessage.parts
+          .filter((part) => part.type === "reasoning")
+          .map((part) => part.text)
+          .join("\n\n");
 
         type Updates = (typeof api.functions.messages.updateMessageById)["_args"]["updates"];
-
         const updates: Updates = {
           metadata,
           model: model.uniqueId,
@@ -397,15 +393,13 @@ export const POST = withAxiom(async (req) => {
           });
         }
 
-        if (!req.signal.aborted) {
-          const promise = serverConvexClient.mutation(api.functions.messages.updateMessageById, {
-            messageId: assistantMessageId,
-            threadId,
-            updates,
-          });
+        const promise = serverConvexClient.mutation(api.functions.messages.updateMessageById, {
+          messageId: assistantMessageId,
+          threadId,
+          updates,
+        });
 
-          waitUntil(promise);
-        }
+        waitUntil(promise);
       },
     });
 
