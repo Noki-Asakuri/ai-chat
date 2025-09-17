@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { PlusIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { NavLink, useParams } from "react-router";
+import { Navigate, NavLink, useParams } from "react-router";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
@@ -30,7 +30,7 @@ export function Chat() {
   const setIsDragOver = useChatStore((s) => s.setIsDragOver);
   const addAttachment = useChatStore((s) => s.addAttachment);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     enabled: Boolean(threadId),
     ...convexQuery(api.functions.messages.getAllMessagesFromThread, {
       threadId: fromUUID(threadId),
@@ -97,6 +97,8 @@ export function Chat() {
       });
     }
   }
+
+  if (isError) return <Navigate to="/" replace />;
 
   return (
     <main
