@@ -2,9 +2,7 @@ import { api } from "@/convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
-import { ChevronDownIcon } from "lucide-react";
 import { useMemo } from "react";
-
 import { Popover } from "@base-ui-components/react/popover";
 
 import { buttonVariants } from "../ui/button";
@@ -28,9 +26,10 @@ type ModelSelectorProps = {
   value: string;
   onChange?: (id: string) => void;
   triggerId?: string;
+  className?: string;
 };
 
-function ModelSelectorBase({ value, onChange, triggerId }: ModelSelectorProps) {
+function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelectorProps) {
   const storeModel = useChatStore.getState().chatConfig.model;
   const setChatConfig = useChatStore((s) => s.setChatConfig);
 
@@ -69,21 +68,21 @@ function ModelSelectorBase({ value, onChange, triggerId }: ModelSelectorProps) {
       <Popover.Trigger
         id={triggerId}
         className={cn(
-          "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 text-xs",
           buttonVariants({ variant: "ghost" }),
+          "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5",
+          className,
         )}
       >
         {renderTriggerValue(value)}
-        <ChevronDownIcon />
       </Popover.Trigger>
 
       <Popover.Portal>
         <Popover.Positioner sideOffset={8}>
-          <Popover.Popup className="origin-[var(--transform-origin)] rounded-md transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
+          <Popover.Popup className="origin-[var(--transform-origin)] rounded-md transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[starting-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
             <Command
               loop
               value={selectedModel}
-              className="bg-card text-card-foreground h-[400px] w-max min-w-100 border"
+              className="h-[400px] w-max min-w-100 border bg-card text-card-foreground"
             >
               <CommandInput placeholder="Search models..." className="h-9" />
               <CommandList
@@ -131,7 +130,7 @@ function ModelItem({ selected, value, onChange }: ModelSelectorProps & { selecte
       onSelect={onChange}
       data-model-selected={selected}
       title={data.display.unique ?? data.display.name}
-      className="data-[model-selected=true]:!bg-secondary data-[model-selected=true]:!text-secondary-foreground data-[selected=true]:bg-card data-[selected=true]:text-card-foreground data-[selected=true]:border-ring/60 mt-1 cursor-pointer justify-between gap-2 rounded-md border border-transparent px-3 py-1.5 text-sm leading-4 transition-[border-color] outline-none select-none first:mt-0"
+      className="data-[model-selected=true]:!bg-secondary data-[model-selected=true]:!text-secondary-foreground mt-1 cursor-pointer select-none justify-between gap-2 rounded-md border border-transparent px-3 py-1.5 text-sm leading-4 outline-none transition-[border-color] first:mt-0 data-[selected=true]:border-ring/60 data-[selected=true]:bg-card data-[selected=true]:text-card-foreground"
     >
       <div className="flex items-center justify-center gap-2">
         <Icons.provider provider={data.provider} className="size-4" />

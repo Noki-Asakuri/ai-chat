@@ -12,6 +12,7 @@ type EffortSelectorProps = {
   value: string;
   modelId: string;
   onChange?: (effort: ReasoningEffort) => void;
+  className?: string;
 };
 
 export function ChatEffortSelector() {
@@ -44,15 +45,16 @@ export function EffortSelectorBase(props: EffortSelectorProps) {
     <Popover>
       <PopoverTrigger
         className={cn(
-          "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 text-xs capitalize",
           buttonVariants({ variant: "ghost" }),
+          "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 capitalize",
+          props.className,
         )}
       >
         <BrainIcon className="size-4" />
         {props.value}
       </PopoverTrigger>
 
-      <PopoverContent className="bg-card text-card-foreground w-max p-1" includeArrow={false}>
+      <PopoverContent className="w-max bg-card p-1 text-card-foreground" includeArrow={false}>
         <PopoverArrow className="fill-card" />
 
         <div className="flex flex-col gap-1">

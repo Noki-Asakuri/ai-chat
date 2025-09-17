@@ -18,8 +18,8 @@ export function ChatActionButtons() {
       <ChatEffortSelector />
       <ProfileSelectorButton />
 
-      <ChatAttachmentButton />
       <WebSearchButton />
+      <ChatAttachmentButton />
     </div>
   );
 }
@@ -33,7 +33,7 @@ function WebSearchButton() {
       type="button"
       variant="ghost"
       data-active={config.webSearch}
-      className="size-9 border px-2 py-1.5 text-xs data-[active=true]:border-blue-400"
+      className="size-9 cursor-pointer border px-2 py-1.5 text-xs data-[active=true]:border-blue-400"
       hidden={!getModelData(config.model)?.capabilities.webSearch}
       onMouseDown={() => setChatConfig({ webSearch: !config.webSearch })}
       title={config.webSearch ? "Disable Web Search" : "Enable Web Search"}

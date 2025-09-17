@@ -233,7 +233,7 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
   }
 
   return (
-    <div className="pointer-events-auto mx-auto w-full max-w-4xl space-y-2 rounded-md border bg-muted/40 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-muted">
+    <div className="pointer-events-auto mx-auto w-full max-w-4xl space-y-2 rounded-md border border-muted-foreground/40 bg-muted/80 backdrop-blur-md backdrop-saturate-150">
       <MessageEditAttachments
         existing={message.attachments}
         removed={removed}
@@ -283,7 +283,7 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
           </span>
         </div>
 
-        <div className="flex items-end justify-between border-t px-2.5 py-2">
+        <div className="flex items-end justify-between border-muted-foreground/40 border-t px-2.5 py-2">
           <div
             className={cn("flex items-center justify-center gap-2", {
               "pointer-events-none opacity-60": savingPhase !== "idle",
@@ -293,17 +293,23 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
               value={modelId}
               onChange={setModelId}
               triggerId="button-edit-model-selector-trigger"
+              className="border-muted-foreground/40"
             />
 
-            <EffortSelector modelId={modelId} value={effort} onChange={setEffort} />
+            <EffortSelector
+              modelId={modelId}
+              value={effort}
+              onChange={setEffort}
+              className="border-muted-foreground/40"
+            />
 
             <ButtonWithTip
               type="button"
-              variant="secondary"
+              variant="ghost"
               data-active={webSearch}
               disabled={savingPhase !== "idle"}
               className={cn(
-                "size-9 border px-2 py-1.5 text-xs data-[active=true]:border-blue-400 data-[active=true]:bg-blue-500/15",
+                "size-9 cursor-pointer border border-muted-foreground/40 px-2 py-1.5 text-xs data-[active=true]:border-blue-400",
                 { hidden: !canWebSearch },
               )}
               onMouseDown={() => setWebSearch((s) => !s)}
@@ -319,9 +325,9 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
               <>
                 <ButtonWithTip
                   asChild
+                  variant="ghost"
                   title="Upload Image/PDF"
-                  variant="secondary"
-                  className="size-9 border px-2 py-1.5 text-xs"
+                  className="size-9 border border-muted-foreground/40 px-2 py-1.5 text-xs"
                 >
                   <label htmlFor="message-edit-file-upload-bottom" className="cursor-pointer">
                     <FileUpIcon />
