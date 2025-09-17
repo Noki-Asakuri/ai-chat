@@ -248,8 +248,8 @@ export const POST = withAxiom(async (req) => {
 
     const chatStream = createUIMessageStream({
       execute: async ({ writer }) => {
-        let reasoningDuration = 0;
-        let textDuration = 0;
+        let reasoningStartTime = 0;
+        let textStartTime = 0;
 
         writer.merge(
           result.toUIMessageStream({
@@ -260,36 +260,31 @@ export const POST = withAxiom(async (req) => {
           }),
         );
 
-        // OpenAI reasoning return multiple reasoning-start/end events. We only want to count the first one.
-        let hasStartedReasoning = false;
-
         for await (const stream of result.fullStream) {
           switch (stream.type) {
             case "reasoning-start":
-              if (hasStartedReasoning) break;
+              if (metadata.timeToFirstTokenMs === 0) {
+                metadata.timeToFirstTokenMs = Date.now() - startTime;
+                reasoningStartTime = Date.now();
+              }
 
-              // Start first token time if model return reasoning
-              metadata.timeToFirstTokenMs = Date.now() - startTime;
-              reasoningDuration = Date.now();
-
-              hasStartedReasoning = true;
               break;
 
             case "reasoning-end":
               if (metadata.durations.reasoning === 0) {
-                metadata.durations.reasoning = Date.now() - reasoningDuration;
+                metadata.durations.reasoning = Date.now() - reasoningStartTime;
               }
               break;
 
             case "text-start":
-              textDuration = Date.now();
+              textStartTime = Date.now();
               if (metadata.timeToFirstTokenMs === 0) {
                 metadata.timeToFirstTokenMs = Date.now() - startTime;
               }
               break;
 
             case "text-end":
-              metadata.durations.text = Date.now() - textDuration;
+              metadata.durations.text = Date.now() - textStartTime;
               break;
 
             case "file":
@@ -347,7 +342,7 @@ export const POST = withAxiom(async (req) => {
         }
       },
 
-      onFinish: ({ responseMessage, isAborted }) => {
+      onFinish: async ({ responseMessage }) => {
         const content = responseMessage.parts
           .filter((part) => part.type === "text")
           .map((part) => part.text)
@@ -393,13 +388,11 @@ export const POST = withAxiom(async (req) => {
           });
         }
 
-        const promise = serverConvexClient.mutation(api.functions.messages.updateMessageById, {
+        await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
           messageId: assistantMessageId,
           threadId,
           updates,
         });
-
-        waitUntil(promise);
       },
     });
 
