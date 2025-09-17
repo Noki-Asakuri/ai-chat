@@ -5,18 +5,19 @@ import {
   EllipsisIcon,
   GitBranchIcon,
   Loader2Icon,
+  PencilIcon,
   PinIcon,
   PinOffIcon,
-  PencilIcon,
+  RefreshCwIcon,
 } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import { NavLink, useParams } from "react-router";
 
-import { Menu } from "@base-ui-components/react/menu";
 import { Dialog } from "@base-ui-components/react/dialog";
+import { Menu } from "@base-ui-components/react/menu";
 
-import { Input } from "../ui/input";
 import { buttonVariants } from "../ui/button";
+import { Input } from "../ui/input";
 import { ThreadDeleteDialog } from "./thread-delete-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
@@ -36,7 +37,7 @@ export function ThreadItem({ thread }: { thread: Thread }) {
       data-status={thread.status}
       className={cn(
         "group/thread relative flex w-full items-center gap-1 overflow-hidden rounded-md px-2 py-1.5",
-        "text-sidebar-foreground hover:bg-primary/30 transition-colors",
+        "text-sidebar-foreground transition-colors hover:bg-primary/30",
         "[&:has(button[data-popup-open])]:bg-primary/30",
         "data-[active=true]:bg-primary/30",
       )}
@@ -99,6 +100,21 @@ function ThreadActions({ thread }: { thread: Thread }) {
     });
   }
 
+  function regenerateTitle(): void {
+    // Optimistically set the title to "Regenerating" on the server
+    void convexClient.mutation(api.functions.threads.updateThreadTitle, {
+      threadId: thread._id,
+      title: "Regenerating",
+    });
+
+    // Trigger server-side regeneration using the existing updateTitle() pipeline
+    void fetch("/api/threads/regenerate-title", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ threadId: thread._id }),
+    });
+  }
+
   return (
     <>
       <Menu.Root>
@@ -108,14 +124,14 @@ function ThreadActions({ thread }: { thread: Thread }) {
             e.stopPropagation();
             e.preventDefault();
           }}
-          className="pointer-events-auto hidden size-5 items-center justify-center group-hover/thread:flex group-data-[active=true]/thread:flex group-data-[status=streaming]/thread:hidden data-[popup-open]:flex"
+          className="pointer-events-auto hidden size-5 items-center justify-center group-hover/thread:flex data-[popup-open]:flex group-data-[active=true]/thread:flex group-data-[status=streaming]/thread:hidden"
         >
           <EllipsisIcon className="size-4" />
         </Menu.Trigger>
 
         <Menu.Portal>
           <Menu.Positioner side="right" align="center" className="p-1" sideOffset={12}>
-            <Menu.Popup className="bg-sidebar flex w-max origin-[var(--transform-origin)] flex-col overflow-hidden rounded-md border">
+            <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col overflow-hidden rounded-md border bg-sidebar">
               {thread.branchedFrom && (
                 <Menu.Item
                   title="Go to parent thread"
@@ -142,6 +158,18 @@ function ThreadActions({ thread }: { thread: Thread }) {
                 <span className="pointer-events-none">
                   {thread.pinned ? "Unpin Thread" : "Pin Thread"}
                 </span>
+              </Menu.Item>
+
+              <Menu.Item
+                title="Regenerate Title"
+                onClick={regenerateTitle}
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "w-full cursor-pointer justify-start rounded-none",
+                )}
+              >
+                <RefreshCwIcon className="size-4" />
+                <span className="pointer-events-none">Regenerate Title</span>
               </Menu.Item>
 
               <Menu.Item
@@ -180,10 +208,10 @@ function ThreadActions({ thread }: { thread: Thread }) {
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-[opacity] duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:opacity-70" />
           <Dialog.Popup
             finalFocus={menuTriggerRef}
-            className="bg-background fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border p-6 shadow-lg transition-all duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0"
+            className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-[ending-style]:scale-95 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0"
           >
             <div className="mb-2">
-              <h2 className="text-lg font-semibold">Edit thread</h2>
+              <h2 className="font-semibold text-lg">Edit thread</h2>
               <p className="text-muted-foreground text-sm">Update the thread title.</p>
             </div>
 
