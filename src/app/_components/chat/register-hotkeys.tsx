@@ -141,8 +141,16 @@ export function RegisterHotkeys() {
         const targetId = editMessage
           ? "button-edit-model-selector-trigger"
           : "button-chat-model-selector-trigger";
+
         const btn = document.getElementById(targetId) as HTMLButtonElement | null;
         btn?.click();
+
+        // Re-focus the textarea after closing the model selector
+        if (btn?.dataset.popupOpen === "") {
+          const textareId = editMessage ? "textarea-user-message-edit" : "textarea-chat-input";
+          const textarea = document.getElementById(textareId) as HTMLTextAreaElement | null;
+          textarea?.focus();
+        }
       }
 
       if (
