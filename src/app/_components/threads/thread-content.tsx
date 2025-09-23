@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
@@ -115,13 +116,19 @@ function CreateGroupButton() {
 }
 
 function ThreadListWrapper({ query }: { query: string }) {
-  const { data } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
-  if (!data || data.length === 0) return null;
+  const { data, refetch } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
+  if (!data || data.threads.length === 0) return null;
 
-  return <ThreadList data={data} />;
+  return <ThreadList data={data} refresh={() => { void refetch(); }} />;
 }
 
-function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["_returnType"] }) {
+function ThreadList({
+  data,
+  refresh,
+}: {
+  data: (typeof api.functions.groups.listGroups)["_returnType"];
+  refresh: () => void;
+}) {
   const activeDraggingThreadId = useChatStore((state) => state.activeDraggingThread);
   const setActiveDraggingThreadId = useChatStore((state) => state.setActiveDraggingThread);
 
@@ -136,83 +143,149 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
     threadId: null,
   });
 
+  type GroupKey = Id<"groups"> | "none";
+  const [optimistic, setOptimistic] = useState<Record<GroupKey, Array<Doc<"threads">>> | null>(null);
+
+  function snapshotFromData(): Record<GroupKey, Array<Doc<"threads">>> {
+    const map: Record<GroupKey, Array<Doc<"threads">>> = {
+      none: [...data.groupedThreads.none.threads],
+    };
+    for (const g of data.groups) {
+      map[g._id] = [...(data.groupedThreads[g._id]?.threads ?? [])];
+    }
+    return map;
+  }
+
+  function findGroupKeyOf(
+    map: Record<GroupKey, Array<Doc<"threads">>>,
+    threadId: string,
+  ): GroupKey | null {
+    const entries = Object.entries(map) as Array<[GroupKey, Array<Doc<"threads">>]>;
+    for (const [k, list] of entries) {
+      if (list.some((t) => t._id === threadId)) return k;
+    }
+    return null;
+  }
+
+  function ensureOptimistic(): Record<GroupKey, Array<Doc<"threads">>> {
+    if (optimistic) return optimistic;
+    const snap = snapshotFromData();
+    setOptimistic(snap);
+    return snap;
+  }
+
   function handleDragStart(event: DragStartEvent) {
     console.debug("[Thread] Drag start", event.active.id);
-
-    const thread = data.threads.find((thread) => thread._id === event.active.id);
+    const thread = data.threads.find((t) => t._id === event.active.id);
     if (!thread) return;
-
     setActiveDraggingThreadId(thread);
+    // Take a snapshot for local reordering during drag
+    setOptimistic(snapshotFromData());
   }
 
   function handleDragOver(event: DragOverEvent) {
-    console.debug("[Thread] Drag over", event.over?.id);
-
     const { active, over } = event;
     if (!over) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
 
-    // Avoid redundant server calls while hovering the same target
-    if (lastMoveRef.current.overId === overId && lastMoveRef.current.threadId === activeId) {
-      return;
-    }
-
-    // Ignore self-over
     if (overId === activeId) return;
+
+    // Avoid redundant updates while hovering the same target
+    if (lastMoveRef.current.overId === overId && lastMoveRef.current.threadId === activeId) return;
 
     const activeThread = data.threads.find((t) => t._id === activeId);
     if (!activeThread) return;
 
-    // Determine destination group and optional beforeId
-    const overThread = data.threads.find((t) => t._id === overId);
+    const map = ensureOptimistic();
 
-    if (overThread) {
-      // Hovering a thread: move before this thread within its group
-      lastMoveRef.current = { overId, threadId: activeId };
-      void moveThread({
-        threadId: activeThread._id,
-        destination: {
-          groupId: overThread.groupId ?? null,
-          beforeId: overThread._id,
-        },
-      });
-      return;
+    const fromKey = findGroupKeyOf(map, activeId);
+    if (!fromKey) return;
+
+    const overIsThread = data.threads.some((t) => t._id === overId);
+
+    // Create next map with cloned arrays to ensure state updates
+    const next: Record<GroupKey, Array<Doc<"threads">>> = { ...map };
+    const fromList = (map[fromKey] ?? []) as Array<Doc<"threads">>;
+    next[fromKey] = fromList.filter((t) => t._id !== activeId);
+
+    if (overIsThread) {
+      const toKey =
+        findGroupKeyOf(map, overId) ??
+        ((data.threads.find((t) => t._id === overId)?.groupId ?? null) as Id<"groups"> | null) ??
+        "none";
+      const overListBase = toKey === fromKey ? next[toKey] : map[toKey];
+      const overList = (overListBase ?? []) as Array<Doc<"threads">>;
+      const idx = overList.findIndex((t) => t._id === overId);
+      const insertAt = Math.max(0, idx);
+      const activeDoc = activeThread;
+      const newList = [...overList.slice(0, insertAt), activeDoc, ...overList.slice(insertAt)];
+      next[toKey] = newList;
+    } else {
+      const containerKey: GroupKey = overId === "none" ? "none" : (overId as Id<"groups">);
+      const baseList = containerKey === fromKey ? next[containerKey] : map[containerKey];
+      const list = (baseList ?? []) as Array<Doc<"threads">>;
+      next[containerKey] = [...list, activeThread];
     }
-
-    // Hovering a container
-    if (overId === "none") {
-      lastMoveRef.current = { overId, threadId: activeId };
-      void moveThread({
-        threadId: activeThread._id,
-        destination: {
-          groupId: null,
-        },
-      });
-      return;
-    }
-
-    const targetGroup = data.groups.find((g) => g._id === overId);
-    if (!targetGroup) return;
 
     lastMoveRef.current = { overId, threadId: activeId };
-    void moveThread({
-      threadId: activeThread._id,
-      destination: {
-        groupId: targetGroup._id,
-      },
-    });
+    setOptimistic(next);
   }
 
-  function handleDragEnd(_: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     console.debug("[Thread] Drag end");
+    const { active } = event;
+    const activeId = String(active.id);
+
+    const last = lastMoveRef.current;
+    lastMoveRef.current = { overId: null, threadId: null };
     setActiveDraggingThreadId(null);
+
+    if (!last.overId || last.threadId !== activeId) {
+      setOptimistic(null);
+      return;
+    }
+
+    const overId = last.overId;
+
+    const overIsThread = data.threads.some((t) => t._id === overId);
+
+    if (overIsThread) {
+      const groupKey: GroupKey | null =
+        (optimistic ? findGroupKeyOf(optimistic, overId) : null) ??
+        ((data.threads.find((t) => t._id === overId)?.groupId ?? null) as Id<"groups"> | null) ??
+        null;
+
+      const destGroupId: Id<"groups"> | null =
+        groupKey === "none" ? null : (groupKey as Id<"groups"> | null);
+
+      await moveThread({
+        threadId: activeId as Id<"threads">,
+        destination: { groupId: destGroupId, beforeId: overId as Id<"threads"> },
+      });
+    } else if (overId === "none") {
+      await moveThread({
+        threadId: activeId as Id<"threads">,
+        destination: { groupId: null },
+      });
+    } else {
+      await moveThread({
+        threadId: activeId as Id<"threads">,
+        destination: { groupId: overId as Id<"groups"> },
+      });
+    }
+
+    // Refresh server data and drop local optimistic state
+    await Promise.resolve(refresh());
+    setOptimistic(null);
   }
 
   function handleDragCancel(_: DragCancelEvent) {
     console.debug("[Thread] Drag cancel");
+    lastMoveRef.current = { overId: null, threadId: null };
     setActiveDraggingThreadId(null);
+    setOptimistic(null);
   }
 
   return (
@@ -224,16 +297,17 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <ThreadGroup key="none" group={null} threads={data.groupedThreads.none.threads} />
+      <ThreadGroup
+        key="none"
+        group={null}
+        threads={optimistic ? optimistic.none : data.groupedThreads.none.threads}
+      />
 
       {data.groups.map(function renderContainer(group) {
-        return (
-          <ThreadGroup
-            key={group._id}
-            group={group}
-            threads={data.groupedThreads[group._id]?.threads ?? []}
-          />
-        );
+        const key = group._id as Id<"groups">;
+        const groupThreads =
+          optimistic?.[key] ?? data.groupedThreads[key]?.threads ?? [];
+        return <ThreadGroup key={group._id} group={group} threads={groupThreads} />;
       })}
 
       <DragOverlay dropAnimation={null}>
