@@ -1,12 +1,33 @@
 import { api } from "@/convex/_generated/api";
 
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useMutation } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
 import { useDeferredValue, useState } from "react";
 
+import {
+  closestCorners,
+  DndContext,
+  DragOverlay,
+  MouseSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragCancelEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+
+import { ThreadGroup } from "./thread-group";
+import { ThreadItem } from "./thread-items";
+
+import { useChatStore } from "@/lib/chat/store";
 
 export function ThreadContents() {
   const [query, setQuery] = useState<string>("");
@@ -25,7 +46,7 @@ export function ThreadContents() {
         <CreateGroupButton />
       </div>
 
-      <ThreadList query={deferredQuery} />
+      <ThreadListWrapper query={deferredQuery} />
     </>
   );
 }
@@ -34,11 +55,13 @@ function CreateGroupButton() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
 
-  async function onCreate(): Promise<void> {
-    const name = title.trim();
-    if (name.length === 0) return;
+  const createGroup = useMutation(api.functions.groups.createGroup);
 
-    // TODO: Create group
+  async function onCreate(): Promise<void> {
+    const trimmedTitle = title.trim();
+    if (trimmedTitle.length === 0) return;
+
+    await createGroup({ title: trimmedTitle });
 
     setOpen(false);
     setTitle("");
@@ -90,6 +113,72 @@ function CreateGroupButton() {
   );
 }
 
-function ThreadList({ query }: { query: string }) {
-  return null;
+function ThreadListWrapper({ query }: { query: string }) {
+  const { data } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
+  if (!data || data.length === 0) return null;
+
+  return <ThreadList data={data} />;
+}
+
+function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["_returnType"] }) {
+  const activeDraggingThreadId = useChatStore((state) => state.activeDraggingThread);
+  const setActiveDraggingThreadId = useChatStore((state) => state.setActiveDraggingThread);
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8, delay: 100, tolerance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8, delay: 100, tolerance: 5 } }),
+  );
+
+  function handleDragStart(event: DragStartEvent) {
+    console.debug("[Thread] Drag start", event.active.id);
+
+    const thread = data.threads.find((thread) => thread._id === event.active.id);
+    if (!thread) return;
+
+    setActiveDraggingThreadId(thread);
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    console.debug("[Thread] Drag over", event.over?.id);
+
+    const { active, over } = event;
+    if (!over) return;
+  }
+
+  function handleDragEnd(_: DragEndEvent) {
+    console.debug("[Thread] Drag end");
+    setActiveDraggingThreadId(null);
+  }
+
+  function handleDragCancel(_: DragCancelEvent) {
+    console.debug("[Thread] Drag cancel");
+    setActiveDraggingThreadId(null);
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <ThreadGroup key="none" group={null} threads={data.groupedThreads.none.threads} />
+
+      {data.groups.map(function renderContainer(group) {
+        return (
+          <ThreadGroup
+            key={group._id}
+            group={group}
+            threads={data.groupedThreads[group._id]?.threads ?? []}
+          />
+        );
+      })}
+
+      <DragOverlay dropAnimation={null}>
+        {activeDraggingThreadId ? <ThreadItem thread={activeDraggingThreadId} disabled /> : null}
+      </DragOverlay>
+    </DndContext>
+  );
 }

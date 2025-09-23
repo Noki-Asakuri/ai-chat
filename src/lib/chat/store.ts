@@ -1,4 +1,4 @@
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 import { z } from "zod";
 import { create } from "zustand";
@@ -121,8 +121,8 @@ export interface ChatState {
   currentThreadId: Id<"threads"> | null;
   setCurrentThreadId: (id: Id<"threads"> | null) => void;
 
-  activeDraggingThreadId: Id<"threads"> | null;
-  setActiveDraggingThreadId: (id: Id<"threads"> | null) => void;
+  activeDraggingThread: Doc<"threads"> | null;
+  setActiveDraggingThread: (id: Doc<"threads"> | null) => void;
 
   activeStreams: Record<string, true>;
   markStreamStart: (assistantMessageId: string | Id<"messages">) => void;
@@ -195,8 +195,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   threads: [],
   setThreads: (threads) => set({ threads }),
 
-  activeDraggingThreadId: null,
-  setActiveDraggingThreadId: (id) => set({ activeDraggingThreadId: id }),
+  activeDraggingThread: null,
+  setActiveDraggingThread: (doc) => set({ activeDraggingThread: doc }),
 
   threadCommandOpen: false,
   setThreadCommandOpen: (open) =>

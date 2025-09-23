@@ -13,6 +13,9 @@ import {
 import { useRef, useState, useTransition } from "react";
 import { NavLink, useParams } from "react-router";
 
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
 import { Dialog } from "@base-ui-components/react/dialog";
 import { Menu } from "@base-ui-components/react/menu";
 
@@ -26,43 +29,76 @@ import { cn, toUUID } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
 
-export function ThreadItem({ thread }: { thread: Thread }) {
+type ThreadItemProps = {
+  thread: Thread;
+  disabled?: boolean;
+};
+
+export function ThreadItem({ thread, disabled }: ThreadItemProps) {
   const { threadId } = useParams<{ threadId?: string }>();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: thread._id,
+    disabled,
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Prevent navigation if the item was being dragged
+    if (isDragging) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   return (
-    <NavLink
-      to={`/threads/${toUUID(thread._id)}`}
-      title={thread.title}
-      data-active={threadId === toUUID(thread._id)}
-      data-status={thread.status}
-      className={cn(
-        "group/thread relative flex w-full items-center gap-1 overflow-hidden rounded-md px-2 py-1.5",
-        "text-sidebar-foreground transition-colors hover:bg-primary/30",
-        "[&:has(button[data-popup-open])]:bg-primary/30",
-        "data-[active=true]:bg-primary/30",
-      )}
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={
+        isDragging ? "cursor-grabbing border-accent shadow-black/35 shadow-lg" : "cursor-grab"
+      }
     >
-      <div
-        className={cn("flex w-full items-center gap-2", {
-          "group-hover/thread:w-[calc(100%-20px)] group-data-[active=true]/thread:w-[calc(100%-20px)]":
-            thread.status === "complete",
-        })}
+      <NavLink
+        onClick={handleClick}
+        draggable={false}
+        to={`/threads/${toUUID(thread._id)}`}
+        title={thread.title}
+        data-active={threadId === toUUID(thread._id)}
+        data-status={thread.status}
+        className={cn(
+          "group/thread relative flex w-full items-center gap-1 overflow-hidden rounded-md px-2 py-1.5",
+          "text-sidebar-foreground transition-colors hover:bg-primary/30",
+          "[&:has(button[data-popup-open])]:bg-primary/30",
+          "data-[active=true]:bg-primary/30",
+        )}
       >
-        <div className="flex w-full items-center justify-between gap-2">
-          {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
-          <span className="truncate text-sm">{thread.title}</span>
-
-          {thread.status && thread.status !== "complete" && (
-            <div className="inline-block">
-              <Loader2Icon className="size-4 animate-spin" />
-              <span className="sr-only">Streaming...</span>
-            </div>
-          )}
+        <div
+          className={cn("flex w-full items-center gap-2", {
+            "group-hover/thread:w-[calc(100%-20px)] group-data-[active=true]/thread:w-[calc(100%-20px)]":
+              thread.status === "complete",
+          })}
+        >
+          <div className="flex w-full items-center justify-between gap-2">
+            {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
+            <span className="truncate text-sm">{thread.title}</span>
+            {thread.status && thread.status !== "complete" && (
+              <div className="inline-block">
+                <Loader2Icon className="size-4 animate-spin" />
+                <span className="sr-only">Streaming...</span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-
-      <ThreadActions thread={thread} />
-    </NavLink>
+        <ThreadActions thread={thread} />
+      </NavLink>
+    </div>
   );
 }
 
