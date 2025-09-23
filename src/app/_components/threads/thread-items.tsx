@@ -60,18 +60,6 @@ export function ThreadItem({ thread, disabled }: ThreadItemProps) {
         "data-[thread-active=true]:bg-primary/30 [&:has(button[data-popup-open])]:bg-primary/30",
       )}
     >
-      {/* Drag Handle */}
-      <div
-        className={cn(
-          "cursor-grab opacity-0 transition-opacity duration-150 active:cursor-grabbing group-hover/thread:opacity-100",
-          isDragging && "opacity-100",
-        )}
-        {...attributes}
-        {...listeners}
-      >
-        <GripVerticalIcon className="size-4" />
-      </div>
-
       <NavLink
         to={`/threads/${toUUID(thread._id)}`}
         title={thread.title}
@@ -90,7 +78,21 @@ export function ThreadItem({ thread, disabled }: ThreadItemProps) {
         </div>
       </NavLink>
 
-      <ThreadActions thread={thread} />
+      <div className="flex items-center gap-2">
+        <ThreadActions thread={thread} />
+
+        {/* Drag Handle */}
+        <div
+          className={cn(
+            "hidden cursor-grab opacity-0 transition-opacity duration-150 active:cursor-grabbing group-hover/thread:flex group-hover/thread:opacity-100",
+            isDragging && "opacity-100",
+          )}
+          {...attributes}
+          {...listeners}
+        >
+          <GripVerticalIcon className="size-4" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -100,6 +102,7 @@ function ThreadActions({ thread }: { thread: Thread }) {
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(thread.title);
   const [isSaving, startSaving] = useTransition();
+
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
   function toggleThreadPin() {
