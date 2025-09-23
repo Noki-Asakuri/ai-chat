@@ -61,43 +61,35 @@ export function ThreadItem({ thread, disabled }: ThreadItemProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className={
-        isDragging ? "cursor-grabbing border-accent shadow-black/35 shadow-lg" : "cursor-grab"
-      }
+      data-thread-active={threadId === toUUID(thread._id)}
+      data-thread-status={thread.status}
+      className={cn(
+        "group/thread flex items-center justify-between gap-2 overflow-hidden rounded-md px-2 py-1.5",
+        "text-sidebar-foreground transition-colors hover:bg-primary/30",
+        "[&:has(button[data-popup-open])]:bg-primary/30",
+        "data-[thread-active=true]:bg-primary/30",
+        isDragging ? "cursor-grabbing border-accent shadow-black/35 shadow-lg" : "cursor-grab",
+      )}
     >
       <NavLink
-        onClick={handleClick}
-        draggable={false}
         to={`/threads/${toUUID(thread._id)}`}
         title={thread.title}
-        data-active={threadId === toUUID(thread._id)}
-        data-status={thread.status}
-        className={cn(
-          "group/thread relative flex w-full items-center gap-1 overflow-hidden rounded-md px-2 py-1.5",
-          "text-sidebar-foreground transition-colors hover:bg-primary/30",
-          "[&:has(button[data-popup-open])]:bg-primary/30",
-          "data-[active=true]:bg-primary/30",
-        )}
+        className="flex w-full min-w-0 items-center gap-2"
       >
-        <div
-          className={cn("flex w-full items-center gap-2", {
-            "group-hover/thread:w-[calc(100%-20px)] group-data-[active=true]/thread:w-[calc(100%-20px)]":
-              thread.status === "complete",
-          })}
-        >
-          <div className="flex w-full items-center justify-between gap-2">
-            {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
-            <span className="truncate text-sm">{thread.title}</span>
-            {thread.status && thread.status !== "complete" && (
-              <div className="inline-block">
-                <Loader2Icon className="size-4 animate-spin" />
-                <span className="sr-only">Streaming...</span>
-              </div>
-            )}
-          </div>
+        <div className="flex w-full items-center justify-between gap-2">
+          {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
+          <span className="truncate text-sm">{thread.title}</span>
+
+          {thread.status && thread.status !== "complete" && (
+            <div className="inline-block">
+              <Loader2Icon className="size-4 animate-spin" />
+              <span className="sr-only">Streaming...</span>
+            </div>
+          )}
         </div>
-        <ThreadActions thread={thread} />
       </NavLink>
+
+      <ThreadActions thread={thread} />
     </div>
   );
 }
@@ -160,7 +152,7 @@ function ThreadActions({ thread }: { thread: Thread }) {
             e.stopPropagation();
             e.preventDefault();
           }}
-          className="pointer-events-auto hidden size-5 items-center justify-center group-hover/thread:flex data-[popup-open]:flex group-data-[active=true]/thread:flex group-data-[status=streaming]/thread:hidden"
+          className="pointer-events-auto hidden size-5 items-center justify-center group-hover/thread:flex data-[popup-open]:flex group-data-[thread-active=true]/thread:flex group-data-[thread-status=streaming]/thread:hidden"
         >
           <EllipsisIcon className="size-4" />
         </Menu.Trigger>

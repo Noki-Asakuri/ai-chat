@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMutation } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
-import { useDeferredValue, useState } from "react";
+import { useDeferredValue, useRef, useState } from "react";
 
 import {
   closestCorners,
@@ -35,7 +35,7 @@ export function ThreadContents() {
 
   return (
     <>
-      <div className="mx-2 mt-2 flex items-center gap-2">
+      <div className="mt-2 flex flex-col items-center gap-2">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -43,6 +43,7 @@ export function ThreadContents() {
           aria-label="Search threads"
           className="h-8"
         />
+
         <CreateGroupButton />
       </div>
 
@@ -69,7 +70,7 @@ function CreateGroupButton() {
 
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>
+      <Button size="sm" className="w-full" onClick={() => setOpen(true)}>
         New Group
       </Button>
 
@@ -129,6 +130,12 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
     useSensor(PointerSensor, { activationConstraint: { distance: 8, delay: 100, tolerance: 5 } }),
   );
 
+  const moveThread = useMutation(api.functions.groups.moveThread);
+  const lastMoveRef = useRef<{ overId: string | null; threadId: string | null }>({
+    overId: null,
+    threadId: null,
+  });
+
   function handleDragStart(event: DragStartEvent) {
     console.debug("[Thread] Drag start", event.active.id);
 
@@ -143,6 +150,59 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
 
     const { active, over } = event;
     if (!over) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    // Avoid redundant server calls while hovering the same target
+    if (lastMoveRef.current.overId === overId && lastMoveRef.current.threadId === activeId) {
+      return;
+    }
+
+    // Ignore self-over
+    if (overId === activeId) return;
+
+    const activeThread = data.threads.find((t) => t._id === activeId);
+    if (!activeThread) return;
+
+    // Determine destination group and optional beforeId
+    const overThread = data.threads.find((t) => t._id === overId);
+
+    if (overThread) {
+      // Hovering a thread: move before this thread within its group
+      lastMoveRef.current = { overId, threadId: activeId };
+      void moveThread({
+        threadId: activeThread._id,
+        destination: {
+          groupId: overThread.groupId ?? null,
+          beforeId: overThread._id,
+        },
+      });
+      return;
+    }
+
+    // Hovering a container
+    if (overId === "none") {
+      lastMoveRef.current = { overId, threadId: activeId };
+      void moveThread({
+        threadId: activeThread._id,
+        destination: {
+          groupId: null,
+        },
+      });
+      return;
+    }
+
+    const targetGroup = data.groups.find((g) => g._id === overId);
+    if (!targetGroup) return;
+
+    lastMoveRef.current = { overId, threadId: activeId };
+    void moveThread({
+      threadId: activeThread._id,
+      destination: {
+        groupId: targetGroup._id,
+      },
+    });
   }
 
   function handleDragEnd(_: DragEndEvent) {

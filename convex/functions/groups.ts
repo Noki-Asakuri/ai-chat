@@ -40,7 +40,8 @@ export const listGroups = query({
     );
 
     for (const group of groups) {
-      groupedThreads[group._id] = { ...groupedThreads[group._id], group };
+      const existing = groupedThreads[group._id] ?? { group: null, threads: [] };
+      groupedThreads[group._id] = { ...existing, group };
     }
 
     return { groupedThreads, groups, threads, length: threads.length };
@@ -132,6 +133,72 @@ export const reorderGroups = mutation({
       if (g.userId !== user.subject) throw new Error("Not authorized");
       await ctx.db.patch(id, { order: i + 1 });
     }
+    return null;
+  },
+});
+
+/**
+ * Move a thread to a different group or reposition within the same group.
+ * If destination.beforeId is provided, the thread will be placed directly before that thread.
+ * Otherwise the thread will be appended to the end of the destination group.
+ */
+export const moveThread = mutation({
+  args: {
+    threadId: v.id("threads"),
+    destination: v.object({
+      groupId: v.union(v.id("groups"), v.null()),
+      beforeId: v.optional(v.id("threads")),
+    }),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+
+    const t = await ctx.db.get(args.threadId);
+    if (!t) throw new Error("Thread not found");
+    if (t.userId !== user.subject) throw new Error("Not authorized");
+
+    let targetGroupId: Id<"groups"> | null = args.destination.groupId;
+    const beforeId = args.destination.beforeId ?? null;
+
+    if (beforeId) {
+      const before = await ctx.db.get(beforeId);
+      if (!before) throw new Error("Thread not found");
+      if (before.userId !== user.subject) throw new Error("Not authorized");
+      // Ensure consistency: beforeId's group determines destination group when provided
+      targetGroupId = (before.groupId ?? null) as Id<"groups"> | null;
+    }
+
+    let newOrder: number;
+
+    if (beforeId) {
+      const before = (await ctx.db.get(beforeId))!;
+      const beforeOrder = before.order ?? 0;
+
+      const prev = await ctx.db
+        .query("threads")
+        .withIndex("by_userId_groupId_order", (q) =>
+          q.eq("userId", user.subject).eq("groupId", targetGroupId).lt("order", beforeOrder),
+        )
+        .order("desc")
+        .take(1);
+
+      const prevOrder = prev[0]?.order ?? null;
+      newOrder = prevOrder === null ? beforeOrder - 1 : (prevOrder + beforeOrder) / 2;
+    } else {
+      const last = await ctx.db
+        .query("threads")
+        .withIndex("by_userId_groupId_order", (q) =>
+          q.eq("userId", user.subject).eq("groupId", targetGroupId),
+        )
+        .order("desc")
+        .take(1);
+
+      newOrder = (last[0]?.order ?? 0) + 1;
+    }
+
+    await ctx.db.patch(args.threadId, { groupId: targetGroupId, order: newOrder });
     return null;
   },
 });
