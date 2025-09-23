@@ -4,6 +4,7 @@ import {
   DeleteIcon,
   EllipsisIcon,
   GitBranchIcon,
+  GripVerticalIcon,
   Loader2Icon,
   PencilIcon,
   PinIcon,
@@ -47,30 +48,30 @@ export function ThreadItem({ thread, disabled }: ThreadItemProps) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const handleClick = (e: React.MouseEvent) => {
-    // Prevent navigation if the item was being dragged
-    if (isDragging) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  };
-
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
       data-thread-active={threadId === toUUID(thread._id)}
       data-thread-status={thread.status}
       className={cn(
         "group/thread flex items-center justify-between gap-2 overflow-hidden rounded-md px-2 py-1.5",
         "text-sidebar-foreground transition-colors hover:bg-primary/30",
-        "[&:has(button[data-popup-open])]:bg-primary/30",
-        "data-[thread-active=true]:bg-primary/30",
-        isDragging ? "cursor-grabbing border-accent shadow-black/35 shadow-lg" : "cursor-grab",
+        "data-[thread-active=true]:bg-primary/30 [&:has(button[data-popup-open])]:bg-primary/30",
       )}
     >
+      {/* Drag Handle */}
+      <div
+        className={cn(
+          "cursor-grab opacity-0 transition-opacity duration-150 active:cursor-grabbing group-hover/thread:opacity-100",
+          isDragging && "opacity-100",
+        )}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVerticalIcon className="size-4" />
+      </div>
+
       <NavLink
         to={`/threads/${toUUID(thread._id)}`}
         title={thread.title}

@@ -11,21 +11,13 @@ type ThreadGroupProps = {
 };
 
 export function ThreadGroup({ group, threads }: ThreadGroupProps) {
-  const { setNodeRef, isOver } = useDroppable({ id: group?._id ?? "none" });
+  const { setNodeRef } = useDroppable({ id: group?._id ?? "none" });
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-panelBorder bg-panel">
-      <div className="border-panelBorder border-b px-3 py-2.5 font-semibold">
-        {group?.title ?? "Ungrouped"}
-      </div>
+    <div className="flex flex-col gap-2 overflow-hidden rounded-lg">
+      <div className="border-b px-3 py-2.5">{group?.title ?? "Ungrouped"}</div>
 
-      <div
-        ref={setNodeRef}
-        className={cn(
-          "flex flex-col gap-2 p-2.5 transition-all duration-150",
-          isOver && "-outline-offset-[6px]",
-        )}
-      >
+      <div ref={setNodeRef} className="flex flex-col gap-1 transition-all duration-150">
         <SortableContext
           items={threads.map((thread) => thread._id)}
           strategy={verticalListSortingStrategy}

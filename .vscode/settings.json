@@ -14,6 +14,9 @@
   "[html]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
   "editor.codeActionsOnSave": {
     "source.fixAll.biome": "explicit",
     "source.organizeImports.biome": "never"
