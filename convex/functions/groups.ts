@@ -117,13 +117,43 @@ export const deleteGroup = mutation({
 });
 
 /**
- * Reorder a thread to a target group and index, and renumber orders sequentially.
+ * Re-order thread within same group
  */
-export const reorderThread = mutation({
+export const reorderThreadWithinGroup = mutation({
+  args: { threadId: v.id("threads"), toIndex: v.number() },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== user.subject) throw new Error("Not authorized");
+
+    const threadsInGroup = await ctx.db
+      .query("threads")
+      .withIndex("by_userId_groupId_order", (q) =>
+        q.eq("userId", user.subject).eq("groupId", thread.groupId),
+      )
+      .order("asc")
+      .collect();
+
+    // Remove the thread from the list
+    const threads = threadsInGroup.filter((t) => t._id !== args.threadId);
+    // Insert at the new index
+    threads.splice(args.toIndex, 0, thread);
+
+    // Reorder all threads in the group to fill the gap
+    for (let i = 0; i < threads.length; i++) {
+      await ctx.db.patch(threads[i]._id, { order: i });
+    }
+  },
+});
+
+export const moveThreadToGroup = mutation({
   args: {
     threadId: v.id("threads"),
     toGroupId: v.union(v.id("groups"), v.null()),
-    index: v.number(),
+    toIndex: v.number(),
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
@@ -133,61 +163,39 @@ export const reorderThread = mutation({
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.subject) throw new Error("Not authorized");
 
-    const sourceGroupId = thread.groupId ?? null;
-    const destGroupId = args.toGroupId ?? null;
+    const oldIndex = thread.order!;
+    const oldGroupId = thread.groupId;
 
-    // Fetch destination threads (excluding the moving one if same group)
-    const destThreadsAll = await ctx.db
+    const threadsInOldGroup = await ctx.db
       .query("threads")
       .withIndex("by_userId_groupId_order", (q) =>
-        q.eq("userId", user.subject).eq("groupId", destGroupId),
+        q.eq("userId", user.subject).eq("groupId", oldGroupId),
       )
       .order("asc")
       .collect();
 
-    const destThreads = destThreadsAll.filter((t) => t._id !== args.threadId);
+    const threadsInNewGroup = await ctx.db
+      .query("threads")
+      .withIndex("by_userId_groupId_order", (q) =>
+        q.eq("userId", user.subject).eq("groupId", args.toGroupId),
+      )
+      .order("asc")
+      .collect();
 
-    // Compute clamped insertion index
-    const insertIndex = Math.max(0, Math.min(args.index, destThreads.length));
+    // Insert the new thread in new group
+    threadsInNewGroup.splice(args.toIndex, 0, thread);
+    await ctx.db.patch(thread._id, { groupId: args.toGroupId, order: args.toIndex });
 
-    // Insert the moving thread into destination array at the desired position
-    const moving: Doc<"threads"> = { ...thread, groupId: destGroupId };
-    destThreads.splice(insertIndex, 0, moving);
-
-    // Reassign sequential order in destination group
-    for (let i = 0; i < destThreads.length; i++) {
-      const t = destThreads[i]!;
-      const desiredOrder = i + 1;
-      const desiredGroupId = destGroupId;
-      if (t._id === thread._id) {
-        if (t.groupId !== desiredGroupId || t.order !== desiredOrder) {
-          await ctx.db.patch(t._id, { groupId: desiredGroupId, order: desiredOrder });
-        }
-      } else if (t.order !== desiredOrder) {
-        await ctx.db.patch(t._id, { order: desiredOrder });
-      }
+    // Reorder all threads in the new group to fill the gap
+    for (let i = 0; i < threadsInNewGroup.length; i++) {
+      await ctx.db.patch(threadsInNewGroup[i]._id, { order: i });
     }
 
-    // If moved across groups, renumber the source group as well
-    if (destGroupId !== sourceGroupId) {
-      const sourceThreads = await ctx.db
-        .query("threads")
-        .withIndex("by_userId_groupId_order", (q) =>
-          q.eq("userId", user.subject).eq("groupId", sourceGroupId),
-        )
-        .order("asc")
-        .collect();
-
-      // The moving thread is already removed; just resequence
-      for (let i = 0; i < sourceThreads.length; i++) {
-        const t = sourceThreads[i]!;
-        const desiredOrder = i + 1;
-        if (t.order !== desiredOrder) {
-          await ctx.db.patch(t._id, { order: desiredOrder });
-        }
-      }
+    // Remove thread in old group
+    threadsInOldGroup.splice(oldIndex, 1);
+    // Reorder all threads in the old group to fill the gap
+    for (let i = 0; i < threadsInOldGroup.length; i++) {
+      await ctx.db.patch(threadsInOldGroup[i]._id, { order: i });
     }
-
-    return { ok: true as const };
   },
 });

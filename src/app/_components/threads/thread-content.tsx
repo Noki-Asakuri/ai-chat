@@ -1,5 +1,5 @@
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
@@ -21,6 +21,7 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -143,7 +144,7 @@ type ActiveGroupData = SortableData & {
 type PendingDrop = {
   toGroupId: Id<"groups"> | null;
   index: number;
-  kind: "moving" | "re-ordering";
+  kind: "moving-thread" | "re-ordering-thread";
   metadata?: Record<string, unknown>;
 };
 
@@ -151,7 +152,8 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
   const activeDraggingThreadId = useChatStore((state) => state.activeDraggingThread);
   const setActiveDraggingThreadId = useChatStore((state) => state.setActiveDraggingThread);
 
-  const reorderThread = useMutation(api.functions.groups.reorderThread);
+  const reorderThread = useMutation(api.functions.groups.reorderThreadWithinGroup);
+  const moveThreadToGroup = useMutation(api.functions.groups.moveThreadToGroup);
 
   // Optimistic local state for grouped threads while dragging
   const [optimisticGrouped, setOptimisticGrouped] = useState<typeof data.groupedThreads | null>(
@@ -184,6 +186,8 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
     const activeData = event.active.data.current as ActiveThreadData | ActiveGroupData;
     const overData = event.over?.data.current as ActiveThreadData | ActiveGroupData;
 
+    const optimisticGrouped = structuredClone(data.groupedThreads);
+
     reorderLogic: {
       // Re-order within the same group
       if (
@@ -193,7 +197,7 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       ) {
         console.debug("[Dnd]: Re-order within the same group");
         pendingDropRef.current = {
-          kind: "re-ordering",
+          kind: "re-ordering-thread",
           toGroupId: activeData.belongsTo,
           index: overData.sortable.index,
         };
@@ -209,26 +213,35 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       ) {
         console.debug("[Dnd]: Moving to a different group (over thread)");
         pendingDropRef.current = {
-          kind: "moving",
+          kind: "moving-thread",
           toGroupId: overData.belongsTo,
           index: overData.sortable.index,
+          metadata: { type: "thread" },
         };
 
         break reorderLogic;
       }
 
       // Moving to a different group while dragging over a group container
-      if (activeData.type === "thread" && overData.type === "group") {
+      if (
+        activeData.type === "thread" &&
+        overData.type === "group" &&
+        activeData.belongsTo !== overData.groupId
+      ) {
         console.debug("[Dnd]: Moving to a different group (over container)");
         pendingDropRef.current = {
-          kind: "moving",
+          kind: "moving-thread",
           toGroupId: overData.groupId,
           index: 0,
+          metadata: { type: "group" },
         };
 
         break reorderLogic;
       }
     }
+
+    // console.log("[Dnd]: Pending drop", pendingDropRef.current);
+    setOptimisticGrouped(optimisticGrouped);
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -239,11 +252,21 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
 
       console.log("[Dnd]: Reorder", pending, activeId);
 
-      await reorderThread({
-        threadId: activeId,
-        toGroupId: pending.toGroupId,
-        index: pending.index,
-      });
+      switch (pending.kind) {
+        case "re-ordering-thread": {
+          await reorderThread({ threadId: activeId, toIndex: pending.index });
+          break;
+        }
+
+        case "moving-thread": {
+          await moveThreadToGroup({
+            threadId: activeId,
+            toGroupId: pending.toGroupId,
+            toIndex: pending.index,
+          });
+          break;
+        }
+      }
 
       // Success: clear optimistic state; live query will sync
       setOptimisticGrouped(null);
