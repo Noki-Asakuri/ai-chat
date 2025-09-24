@@ -40,6 +40,7 @@ export function ThreadItem({ thread, disabled }: ThreadItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: thread._id,
     disabled,
+    data: { type: "thread", threadId: thread._id, belongsTo: thread.groupId ?? null },
   });
 
   const style: React.CSSProperties = {
@@ -55,7 +56,7 @@ export function ThreadItem({ thread, disabled }: ThreadItemProps) {
       data-thread-active={threadId === toUUID(thread._id)}
       data-thread-status={thread.status}
       className={cn(
-        "group/thread flex items-center justify-between gap-2 overflow-hidden rounded-md px-2 py-1.5",
+        "group/thread flex items-center justify-between gap-2 overflow-hidden rounded-md",
         "text-sidebar-foreground transition-colors hover:bg-primary/30",
         "data-[thread-active=true]:bg-primary/30 [&:has(button[data-popup-open])]:bg-primary/30",
       )}
@@ -63,7 +64,7 @@ export function ThreadItem({ thread, disabled }: ThreadItemProps) {
       <NavLink
         to={`/threads/${toUUID(thread._id)}`}
         title={thread.title}
-        className="flex w-full min-w-0 items-center gap-2"
+        className="flex w-full min-w-0 items-center gap-2 py-1.5 pl-2"
       >
         <div className="flex w-full items-center justify-between gap-2">
           {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
@@ -78,13 +79,13 @@ export function ThreadItem({ thread, disabled }: ThreadItemProps) {
         </div>
       </NavLink>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center">
         <ThreadActions thread={thread} />
 
         {/* Drag Handle */}
         <div
           className={cn(
-            "hidden cursor-grab opacity-0 transition-opacity duration-150 active:cursor-grabbing group-hover/thread:flex group-hover/thread:opacity-100",
+            "hidden cursor-grab px-2 py-1.5 opacity-0 transition-opacity duration-150 active:cursor-grabbing group-hover/thread:flex group-hover/thread:opacity-100",
             isDragging && "opacity-100",
           )}
           {...attributes}

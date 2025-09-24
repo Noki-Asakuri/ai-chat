@@ -116,176 +116,156 @@ function CreateGroupButton() {
 }
 
 function ThreadListWrapper({ query }: { query: string }) {
-  const { data, refetch } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
+  const { data } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
   if (!data || data.threads.length === 0) return null;
 
-  return <ThreadList data={data} refresh={() => { void refetch(); }} />;
+  return <ThreadList data={data} />;
 }
 
-function ThreadList({
-  data,
-  refresh,
-}: {
-  data: (typeof api.functions.groups.listGroups)["_returnType"];
-  refresh: () => void;
-}) {
+type SortableData = {
+  sortable: {
+    containerId: `Sortable-${string}`;
+    index: number;
+    items: Array<Id<"threads">>;
+  };
+};
+type ActiveThreadData = SortableData & {
+  type: "thread";
+  threadId: Id<"threads">;
+  belongsTo: Id<"groups"> | null;
+};
+type ActiveGroupData = SortableData & {
+  type: "group";
+  groupId: Id<"groups"> | null;
+  title: string;
+};
+
+type PendingDrop = {
+  toGroupId: Id<"groups"> | null;
+  index: number;
+  kind: "moving" | "re-ordering";
+  metadata?: Record<string, unknown>;
+};
+
+function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["_returnType"] }) {
   const activeDraggingThreadId = useChatStore((state) => state.activeDraggingThread);
   const setActiveDraggingThreadId = useChatStore((state) => state.setActiveDraggingThread);
+
+  const reorderThread = useMutation(api.functions.groups.reorderThread);
+
+  // Optimistic local state for grouped threads while dragging
+  const [optimisticGrouped, setOptimisticGrouped] = useState<typeof data.groupedThreads | null>(
+    null,
+  );
+  const snapshotRef = useRef<typeof data.groupedThreads | null>(null);
+  const pendingDropRef = useRef<PendingDrop | null>(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8, delay: 100, tolerance: 5 } }),
     useSensor(PointerSensor, { activationConstraint: { distance: 8, delay: 100, tolerance: 5 } }),
   );
 
-  const moveThread = useMutation(api.functions.groups.moveThread);
-  const lastMoveRef = useRef<{ overId: string | null; threadId: string | null }>({
-    overId: null,
-    threadId: null,
-  });
-
-  type GroupKey = Id<"groups"> | "none";
-  const [optimistic, setOptimistic] = useState<Record<GroupKey, Array<Doc<"threads">>> | null>(null);
-
-  function snapshotFromData(): Record<GroupKey, Array<Doc<"threads">>> {
-    const map: Record<GroupKey, Array<Doc<"threads">>> = {
-      none: [...data.groupedThreads.none.threads],
-    };
-    for (const g of data.groups) {
-      map[g._id] = [...(data.groupedThreads[g._id]?.threads ?? [])];
-    }
-    return map;
-  }
-
-  function findGroupKeyOf(
-    map: Record<GroupKey, Array<Doc<"threads">>>,
-    threadId: string,
-  ): GroupKey | null {
-    const entries = Object.entries(map) as Array<[GroupKey, Array<Doc<"threads">>]>;
-    for (const [k, list] of entries) {
-      if (list.some((t) => t._id === threadId)) return k;
-    }
-    return null;
-  }
-
-  function ensureOptimistic(): Record<GroupKey, Array<Doc<"threads">>> {
-    if (optimistic) return optimistic;
-    const snap = snapshotFromData();
-    setOptimistic(snap);
-    return snap;
-  }
+  const grouped = optimisticGrouped ?? data.groupedThreads;
 
   function handleDragStart(event: DragStartEvent) {
     console.debug("[Thread] Drag start", event.active.id);
     const thread = data.threads.find((t) => t._id === event.active.id);
     if (!thread) return;
+
+    snapshotRef.current = optimisticGrouped ?? data.groupedThreads;
     setActiveDraggingThreadId(thread);
-    // Take a snapshot for local reordering during drag
-    setOptimistic(snapshotFromData());
   }
 
   function handleDragOver(event: DragOverEvent) {
-    const { active, over } = event;
-    if (!over) return;
+    const activeId = event.active.id as Id<"threads">;
+    const overId = event.over?.id as Id<"threads"> | Id<"groups"> | "none" | undefined;
+    if (!overId || overId === activeId) return;
 
-    const activeId = String(active.id);
-    const overId = String(over.id);
+    const activeData = event.active.data.current as ActiveThreadData | ActiveGroupData;
+    const overData = event.over?.data.current as ActiveThreadData | ActiveGroupData;
 
-    if (overId === activeId) return;
+    reorderLogic: {
+      // Re-order within the same group
+      if (
+        activeData.type === "thread" &&
+        overData.type === "thread" &&
+        activeData.belongsTo === overData.belongsTo
+      ) {
+        console.debug("[Dnd]: Re-order within the same group");
+        pendingDropRef.current = {
+          kind: "re-ordering",
+          toGroupId: activeData.belongsTo,
+          index: overData.sortable.index,
+        };
 
-    // Avoid redundant updates while hovering the same target
-    if (lastMoveRef.current.overId === overId && lastMoveRef.current.threadId === activeId) return;
+        break reorderLogic;
+      }
 
-    const activeThread = data.threads.find((t) => t._id === activeId);
-    if (!activeThread) return;
+      // Moving to a different group while dragging over a thread
+      if (
+        activeData.type === "thread" &&
+        overData.type === "thread" &&
+        activeData.belongsTo !== overData.belongsTo
+      ) {
+        console.debug("[Dnd]: Moving to a different group (over thread)");
+        pendingDropRef.current = {
+          kind: "moving",
+          toGroupId: overData.belongsTo,
+          index: overData.sortable.index,
+        };
 
-    const map = ensureOptimistic();
+        break reorderLogic;
+      }
 
-    const fromKey = findGroupKeyOf(map, activeId);
-    if (!fromKey) return;
+      // Moving to a different group while dragging over a group container
+      if (activeData.type === "thread" && overData.type === "group") {
+        console.debug("[Dnd]: Moving to a different group (over container)");
+        pendingDropRef.current = {
+          kind: "moving",
+          toGroupId: overData.groupId,
+          index: 0,
+        };
 
-    const overIsThread = data.threads.some((t) => t._id === overId);
-
-    // Create next map with cloned arrays to ensure state updates
-    const next: Record<GroupKey, Array<Doc<"threads">>> = { ...map };
-    const fromList = (map[fromKey] ?? []) as Array<Doc<"threads">>;
-    next[fromKey] = fromList.filter((t) => t._id !== activeId);
-
-    if (overIsThread) {
-      const toKey =
-        findGroupKeyOf(map, overId) ??
-        ((data.threads.find((t) => t._id === overId)?.groupId ?? null) as Id<"groups"> | null) ??
-        "none";
-      const overListBase = toKey === fromKey ? next[toKey] : map[toKey];
-      const overList = (overListBase ?? []) as Array<Doc<"threads">>;
-      const idx = overList.findIndex((t) => t._id === overId);
-      const insertAt = Math.max(0, idx);
-      const activeDoc = activeThread;
-      const newList = [...overList.slice(0, insertAt), activeDoc, ...overList.slice(insertAt)];
-      next[toKey] = newList;
-    } else {
-      const containerKey: GroupKey = overId === "none" ? "none" : (overId as Id<"groups">);
-      const baseList = containerKey === fromKey ? next[containerKey] : map[containerKey];
-      const list = (baseList ?? []) as Array<Doc<"threads">>;
-      next[containerKey] = [...list, activeThread];
+        break reorderLogic;
+      }
     }
-
-    lastMoveRef.current = { overId, threadId: activeId };
-    setOptimistic(next);
   }
 
   async function handleDragEnd(event: DragEndEvent) {
-    console.debug("[Thread] Drag end");
-    const { active } = event;
-    const activeId = String(active.id);
+    try {
+      const activeId = event.active.id as Id<"threads">;
+      const pending = pendingDropRef.current;
+      if (!pending) return;
 
-    const last = lastMoveRef.current;
-    lastMoveRef.current = { overId: null, threadId: null };
-    setActiveDraggingThreadId(null);
+      console.log("[Dnd]: Reorder", pending, activeId);
 
-    if (!last.overId || last.threadId !== activeId) {
-      setOptimistic(null);
-      return;
+      await reorderThread({
+        threadId: activeId,
+        toGroupId: pending.toGroupId,
+        index: pending.index,
+      });
+
+      // Success: clear optimistic state; live query will sync
+      setOptimisticGrouped(null);
+      setActiveDraggingThreadId(null);
+    } catch (error) {
+      console.error("[Thread] Reorder failed", error);
+      // Rollback
+      if (snapshotRef.current) {
+        setOptimisticGrouped(snapshotRef.current);
+      }
+    } finally {
+      pendingDropRef.current = null;
+      snapshotRef.current = null;
     }
-
-    const overId = last.overId;
-
-    const overIsThread = data.threads.some((t) => t._id === overId);
-
-    if (overIsThread) {
-      const groupKey: GroupKey | null =
-        (optimistic ? findGroupKeyOf(optimistic, overId) : null) ??
-        ((data.threads.find((t) => t._id === overId)?.groupId ?? null) as Id<"groups"> | null) ??
-        null;
-
-      const destGroupId: Id<"groups"> | null =
-        groupKey === "none" ? null : (groupKey as Id<"groups"> | null);
-
-      await moveThread({
-        threadId: activeId as Id<"threads">,
-        destination: { groupId: destGroupId, beforeId: overId as Id<"threads"> },
-      });
-    } else if (overId === "none") {
-      await moveThread({
-        threadId: activeId as Id<"threads">,
-        destination: { groupId: null },
-      });
-    } else {
-      await moveThread({
-        threadId: activeId as Id<"threads">,
-        destination: { groupId: overId as Id<"groups"> },
-      });
-    }
-
-    // Refresh server data and drop local optimistic state
-    await Promise.resolve(refresh());
-    setOptimistic(null);
   }
 
   function handleDragCancel(_: DragCancelEvent) {
     console.debug("[Thread] Drag cancel");
-    lastMoveRef.current = { overId: null, threadId: null };
+    setOptimisticGrouped(null);
     setActiveDraggingThreadId(null);
-    setOptimistic(null);
+    pendingDropRef.current = null;
+    snapshotRef.current = null;
   }
 
   return (
@@ -297,16 +277,11 @@ function ThreadList({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <ThreadGroup
-        key="none"
-        group={null}
-        threads={optimistic ? optimistic.none : data.groupedThreads.none.threads}
-      />
+      <ThreadGroup key="none" group={null} threads={grouped.none?.threads ?? []} />
 
       {data.groups.map(function renderContainer(group) {
         const key = group._id as Id<"groups">;
-        const groupThreads =
-          optimistic?.[key] ?? data.groupedThreads[key]?.threads ?? [];
+        const groupThreads = grouped[key]?.threads ?? [];
         return <ThreadGroup key={group._id} group={group} threads={groupThreads} />;
       })}
 

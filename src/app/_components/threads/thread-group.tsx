@@ -1,8 +1,8 @@
-import type { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
-import { cn } from "@/lib/utils";
+
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+
 import { ThreadItem } from "./thread-items";
 
 type ThreadGroupProps = {
@@ -11,7 +11,10 @@ type ThreadGroupProps = {
 };
 
 export function ThreadGroup({ group, threads }: ThreadGroupProps) {
-  const { setNodeRef } = useDroppable({ id: group?._id ?? "none" });
+  const { setNodeRef } = useDroppable({
+    id: group?._id ?? "none",
+    data: { type: "group", groupId: group?._id ?? null, title: group?.title ?? "Ungrouped" },
+  });
 
   return (
     <div className="flex flex-col gap-2 overflow-hidden rounded-lg">
