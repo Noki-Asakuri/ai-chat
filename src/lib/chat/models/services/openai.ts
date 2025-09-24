@@ -66,6 +66,16 @@ export const openai: Record<ModelIdKey, ModelData> = {
       vision: true,
     },
   },
+  "openai/gpt-5-codex": {
+    display: { name: "GPT 5 Codex" },
+    id: "openai/gpt-5-codex",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+    },
+  },
 
   "openai/o3": {
     display: { name: "o3" },
