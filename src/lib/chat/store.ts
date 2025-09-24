@@ -56,6 +56,9 @@ export interface ChatState {
   messages: ChatMessage[];
   setMessages: (messages: ChatMessage[]) => void;
 
+  userCustomization: NonNullable<Doc<"users">["customization"]> | null;
+  setUserCustomization: (customization: NonNullable<Doc<"users">["customization"]> | null) => void;
+
   attachments: UserAttachment[];
   setAttachment: (attachments: UserAttachment[]) => void;
   addAttachment: (attachments: UserAttachment[]) => void;
@@ -144,6 +147,9 @@ export interface ChatState {
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   setMessages: (messages) => set({ messages }),
+
+  userCustomization: null,
+  setUserCustomization: (customization) => set({ userCustomization: customization }),
 
   attachments: [],
   setAttachment: (attachments) => set({ attachments }),

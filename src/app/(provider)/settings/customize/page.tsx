@@ -22,7 +22,7 @@ function LoadingSkeleton() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-2xl font-bold">Customize AI</h2>
+        <h2 className="font-bold text-2xl">Customize AI</h2>
         <p className="text-muted-foreground">
           Customize the assistant's personality to your liking.
         </p>
@@ -46,7 +46,7 @@ function LoadingSkeleton() {
 
         <div className="space-y-2">
           <Label>System instruction (Global)</Label>
-          <Textarea disabled className="bg-input/30 min-h-[200px]" />
+          <Textarea disabled className="min-h-[200px] bg-input/30" />
         </div>
 
         <Button disabled>Save Preferences</Button>
@@ -102,6 +102,7 @@ export default function CustomizePage() {
     const systemInstruction = getFormValue<string>("system-instruction", formData);
     const backgroundImage = getFormValue<File>("background-image", formData);
     const disableBlur = getFormValue<string>("disable-blur", formData) === "on";
+    const showFullCode = getFormValue<string>("show-full-code", formData) === "on";
 
     startTransition(async function () {
       const updates = {
@@ -111,6 +112,7 @@ export default function CustomizePage() {
         systemInstruction,
         backgroundId: undefined as string | undefined,
         disableBlur,
+        showFullCode,
       };
 
       if (backgroundImage instanceof File && backgroundImage.size > 0) {
@@ -134,7 +136,7 @@ export default function CustomizePage() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-2xl font-bold">Customize AI</h2>
+        <h2 className="font-bold text-2xl">Customize AI</h2>
         <p className="text-muted-foreground">
           Customize the assistant's personality to your liking.
         </p>
@@ -195,14 +197,26 @@ export default function CustomizePage() {
         <div className="space-y-2">
           <Label htmlFor="background-image">Background Image</Label>
 
-          <div className="flex items-center gap-2">
-            <Label htmlFor="disable-blur">Disable Blur</Label>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="disable-blur">Disable Blur</Label>
 
-            <ControlledSwitch
-              id="disable-blur"
-              name="disable-blur"
-              defaultChecked={data?.customization?.disableBlur ?? false}
-            />
+              <ControlledSwitch
+                id="disable-blur"
+                name="disable-blur"
+                defaultChecked={data?.customization?.disableBlur ?? false}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Label htmlFor="disable-blur">Show Full Code</Label>
+
+              <ControlledSwitch
+                id="show-full-code"
+                name="show-full-code"
+                defaultChecked={data?.customization?.showFullCode ?? false}
+              />
+            </div>
           </div>
 
           <div className="flex items-start gap-x-2">

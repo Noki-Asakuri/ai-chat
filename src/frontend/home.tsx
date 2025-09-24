@@ -8,21 +8,30 @@ import { RegisterHotkeys } from "@/components/chat/register-hotkeys";
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider } from "@/components/ui/sidebar";
 
+import { useChatStore } from "@/lib/chat/store";
+import { useEffect } from "react";
+
 export default function Home() {
   const defaultOpenSidebar = document.cookie.includes(`${SIDEBAR_COOKIE_NAME}=true`);
+  const setUserCustomization = useChatStore((s) => s.setUserCustomization);
 
-  const user = useQuery(convexQuery(api.functions.users.currentUser, {}));
-  const backgroundImage = user?.data?.customization?.backgroundId
-    ? `url(https://ik.imagekit.io/gmethsnvl/ai-chat/${user.data.customization.backgroundId})`
+  const { data: user } = useQuery({ ...convexQuery(api.functions.users.currentUser, {}) });
+  const backgroundImage = user?.customization?.backgroundId
+    ? `url(https://ik.imagekit.io/gmethsnvl/ai-chat/${user.customization.backgroundId})`
     : undefined;
+
+  useEffect(() => {
+    if (!user) return;
+    setUserCustomization(user.customization);
+  }, [user, setUserCustomization]);
 
   return (
     <>
       <SidebarProvider
         id="sidebar-provider"
-        data-disable-blur={user?.data?.customization?.disableBlur ?? !backgroundImage}
+        data-disable-blur={user?.customization?.disableBlur ?? !backgroundImage}
         style={{ backgroundImage }}
-        className="group/sidebar-provider bg-sidebar -z-[9999] bg-cover bg-fixed bg-center bg-no-repeat"
+        className="group/sidebar-provider -z-[9999] bg-center bg-cover bg-sidebar bg-fixed bg-no-repeat"
         defaultOpen={defaultOpenSidebar}
       >
         <ThreadSidebar />
