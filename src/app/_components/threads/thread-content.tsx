@@ -1,5 +1,5 @@
 import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
@@ -186,7 +186,18 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
     const activeData = event.active.data.current as ActiveThreadData | ActiveGroupData;
     const overData = event.over?.data.current as ActiveThreadData | ActiveGroupData;
 
-    const optimisticGrouped = structuredClone(data.groupedThreads);
+    // Build a mutable draft of grouped threads for optimistic updates
+    const nextGrouped = structuredClone(optimisticGrouped ?? data.groupedThreads);
+
+    const keyOf = (gid: Id<"groups"> | null): Id<"groups"> | "none" => gid ?? "none";
+
+    const ensureContainer = (key: Id<"groups"> | "none") => {
+      if (!nextGrouped[key]) {
+        const groupObj = key === "none" ? null : (data.groups.find((g) => g._id === key) ?? null);
+        nextGrouped[key] = { group: groupObj, threads: [] };
+      }
+      return nextGrouped[key];
+    };
 
     reorderLogic: {
       // Re-order within the same group
@@ -201,6 +212,16 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
           toGroupId: activeData.belongsTo,
           index: overData.sortable.index,
         };
+
+        const key = keyOf(activeData.belongsTo);
+        const container = ensureContainer(key);
+
+        const fromIdx = container.threads.findIndex((t) => t._id === activeId);
+        if (fromIdx === -1) break reorderLogic;
+
+        const toIdx = overData.sortable.index;
+        container.threads = arrayMove(container.threads, fromIdx, toIdx);
+        container.threads = container.threads.map((t, i) => ({ ...t, order: i }));
 
         break reorderLogic;
       }
@@ -219,6 +240,23 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
           metadata: { type: "thread" },
         };
 
+        const fromKey = keyOf(activeData.belongsTo);
+        const toKey = keyOf(overData.belongsTo);
+
+        const fromContainer = ensureContainer(fromKey);
+        const toContainer = ensureContainer(toKey);
+
+        const fromIdx = fromContainer.threads.findIndex((t) => t._id === activeId);
+        if (fromIdx === -1) break reorderLogic;
+
+        const [moved] = fromContainer.threads.splice(fromIdx, 1);
+        const toIdx = Math.min(overData.sortable.index, toContainer.threads.length);
+        const movedUpdated = { ...moved, groupId: toKey === "none" ? null : toKey };
+        toContainer.threads.splice(toIdx, 0, movedUpdated as Doc<"threads">);
+
+        fromContainer.threads = fromContainer.threads.map((t, i) => ({ ...t, order: i }));
+        toContainer.threads = toContainer.threads.map((t, i) => ({ ...t, order: i }));
+
         break reorderLogic;
       }
 
@@ -236,12 +274,27 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
           metadata: { type: "group" },
         };
 
+        const fromKey = keyOf(activeData.belongsTo);
+        const toKey = keyOf(overData.groupId ?? null);
+
+        const fromContainer = ensureContainer(fromKey);
+        const toContainer = ensureContainer(toKey);
+
+        const fromIdx = fromContainer.threads.findIndex((t) => t._id === activeId);
+        if (fromIdx === -1) break reorderLogic;
+
+        const [moved] = fromContainer.threads.splice(fromIdx, 1);
+        const movedUpdated = { ...moved, groupId: toKey === "none" ? null : toKey };
+        toContainer.threads.splice(0, 0, movedUpdated as Doc<"threads">);
+
+        fromContainer.threads = fromContainer.threads.map((t, i) => ({ ...t, order: i }));
+        toContainer.threads = toContainer.threads.map((t, i) => ({ ...t, order: i }));
+
         break reorderLogic;
       }
     }
 
-    // console.log("[Dnd]: Pending drop", pendingDropRef.current);
-    setOptimisticGrouped(optimisticGrouped);
+    setOptimisticGrouped(nextGrouped);
   }
 
   async function handleDragEnd(event: DragEndEvent) {
