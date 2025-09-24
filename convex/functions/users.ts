@@ -123,6 +123,7 @@ export const updateUserCustomization = mutation({
       backgroundId: v.optional(v.union(v.string(), v.null())),
       disableBlur: v.optional(v.boolean()),
       hiddenModels: v.optional(v.array(v.string())),
+      showFullCode: v.optional(v.boolean()),
     }),
   },
   handler: async (ctx, { data }) => {

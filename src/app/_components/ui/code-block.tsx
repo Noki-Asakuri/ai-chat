@@ -107,7 +107,7 @@ const CodeBlockHeader = React.memo(function CodeBlockHeader(props: CodeBlockHead
       </div>
 
       {fileName?.[1] && (
-        <span className="text-primary absolute w-[calc(100%-16px)] text-center text-sm">
+        <span className="absolute w-[calc(100%-16px)] text-center text-primary text-sm">
           {fileName[1]}
         </span>
       )}
@@ -127,8 +127,8 @@ const HighlightPane = React.memo(function HighlightPane(props: {
   );
   const className = React.useMemo(() => {
     return cn(
-      "custom-scroll codeblock w-full overflow-auto px-2 py-2 font-mono text-sm transition-[height] *:!bg-transparent",
-      { "*:text-wrap *:wrap-anywhere": props.wrapline },
+      "custom-scroll codeblock *:!bg-transparent w-full overflow-auto px-2 py-2 font-mono text-sm transition-[height]",
+      { "*:wrap-anywhere *:text-wrap": props.wrapline },
     );
   }, [props.wrapline]);
 
@@ -162,10 +162,11 @@ export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
   language,
   code,
 }: CodeBlockProps) {
+  const defaultOpen = useChatStore((state) => state.userCustomization?.showFullCode ?? false);
   const wrapline = useChatStore((state) => state.wrapline);
   const toggleWrapline = useChatStore((state) => state.toggleWrapline);
 
-  const [expanded, setExpanded] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(defaultOpen);
   const onToggleExpanded = React.useCallback(() => setExpanded((v) => !v), []);
   const onExpandAll = React.useCallback(() => setExpanded(true), []);
 
@@ -194,7 +195,7 @@ export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
   }, [expanded, totalLines]);
 
   return (
-    <div className="codeblock bg-background/80 relative overflow-hidden rounded-md border">
+    <div className="codeblock relative overflow-hidden rounded-md border bg-background/80">
       <div className="pointer-events-none relative flex items-center justify-between border-b px-2 py-1">
         <CodeBlockHeader langKey={langKey} totalLines={totalLines} firstLine={firstLine} />
 
@@ -238,7 +239,7 @@ export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
         <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center">
           <button
             type="button"
-            className="bg-card hover:bg-card/70 pointer-events-auto inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors"
+            className="pointer-events-auto inline-flex cursor-pointer items-center gap-1 rounded-md border bg-card px-2 py-1 text-xs transition-colors hover:bg-card/70"
             onMouseDown={onExpandAll}
           >
             <EllipsisIcon className="size-4" /> {moreCount} more lines
