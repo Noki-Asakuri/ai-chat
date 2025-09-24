@@ -11,9 +11,7 @@ const nextConfig: NextConfig = {
   experimental: {
     useCache: true,
     reactCompiler: true,
-
     clientSegmentCache: true,
-    devtoolSegmentExplorer: true,
   },
 
   skipTrailingSlashRedirect: true,
