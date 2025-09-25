@@ -149,18 +149,22 @@ type PendingDrop = {
   metadata?: Record<string, unknown>;
 };
 
+type GroupThreads = Record<
+  Id<"groups"> | "none",
+  { group: Doc<"groups"> | null; threads: Doc<"threads">[] }
+>;
+
 function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["_returnType"] }) {
-  const activeDraggingThread = useChatStore((state) => state.activeDraggingThread);
-  const setActiveDraggingThreadId = useChatStore((state) => state.setActiveDraggingThread);
+  const activeDraggingItem = useChatStore((state) => state.activeDraggingItem);
+  const setActiveDraggingItem = useChatStore((state) => state.setActiveDraggingItem);
 
   const reorderThread = useMutation(api.functions.groups.reorderThreadWithinGroup);
   const moveThreadToGroup = useMutation(api.functions.groups.moveThreadToGroup);
 
   // Optimistic local state for grouped threads while dragging
-  const [optimisticGrouped, setOptimisticGrouped] = useState<typeof data.groupedThreads | null>(
-    null,
-  );
-  const snapshotRef = useRef<typeof data.groupedThreads | null>(null);
+  const snapshotRef = useRef<GroupThreads | null>(null);
+  const [optimisticGrouped, setOptimisticGrouped] = useState<GroupThreads | null>(null);
+
   const pendingDropRef = useRef<PendingDrop | null>(null);
   const commitAwaitRef = useRef<{
     threadId: Id<"threads">;
@@ -177,11 +181,23 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
 
   function handleDragStart(event: DragStartEvent) {
     console.debug("[Thread] Drag start", event.active.id);
-    const thread = data.threads.find((t) => t._id === event.active.id);
-    if (!thread) return;
 
     snapshotRef.current = optimisticGrouped ?? data.groupedThreads;
-    setActiveDraggingThreadId(thread);
+    const activeData = event.active.data.current as ActiveThreadData | ActiveGroupData;
+
+    switch (activeData.type) {
+      case "thread": {
+        const thread = data.threads.find((t) => t._id === activeData.threadId)!;
+        setActiveDraggingItem({ type: "thread", item: thread });
+        break;
+      }
+
+      case "group": {
+        const group = data.groups.find((g) => g._id === activeData.groupId)!;
+        setActiveDraggingItem({ type: "group", item: group });
+        break;
+      }
+    }
   }
 
   function handleDragOver(event: DragOverEvent) {
@@ -309,6 +325,7 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       }
     }
 
+    console.log(pendingDropRef.current);
     setOptimisticGrouped(nextGrouped);
   }
 
@@ -342,7 +359,7 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
         toGroupId: pending.toGroupId,
         toIndex: pending.index,
       };
-      setActiveDraggingThreadId(null);
+      setActiveDraggingItem(null);
     } catch (error) {
       console.error("[Thread] Reorder failed", error);
       // Rollback
@@ -358,7 +375,7 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
   function handleDragCancel(_: DragCancelEvent) {
     console.debug("[Thread] Drag cancel");
     setOptimisticGrouped(null);
-    setActiveDraggingThreadId(null);
+    setActiveDraggingItem(null);
     pendingDropRef.current = null;
     snapshotRef.current = null;
     commitAwaitRef.current = null;
@@ -398,7 +415,13 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       })}
 
       <DragOverlay modifiers={[restrictToFirstScrollableAncestor, restrictToVerticalAxis]}>
-        {activeDraggingThread ? <ThreadItem thread={activeDraggingThread} disabled /> : null}
+        {activeDraggingItem && activeDraggingItem.type === "thread" && (
+          <ThreadItem thread={activeDraggingItem.item} disabled />
+        )}
+
+        {activeDraggingItem && activeDraggingItem.type === "group" && (
+          <ThreadGroup group={activeDraggingItem.item} threads={[]} />
+        )}
       </DragOverlay>
     </DndContext>
   );

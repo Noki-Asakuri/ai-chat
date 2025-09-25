@@ -124,8 +124,13 @@ export interface ChatState {
   currentThreadId: Id<"threads"> | null;
   setCurrentThreadId: (id: Id<"threads"> | null) => void;
 
-  activeDraggingThread: Doc<"threads"> | null;
-  setActiveDraggingThread: (id: Doc<"threads"> | null) => void;
+  activeDraggingItem:
+    | { type: "thread"; item: Doc<"threads"> }
+    | { type: "group"; item: Doc<"groups"> }
+    | null;
+  setActiveDraggingItem: (
+    item: { type: "thread"; item: Doc<"threads"> } | { type: "group"; item: Doc<"groups"> } | null,
+  ) => void;
 
   activeStreams: Record<string, true>;
   markStreamStart: (assistantMessageId: string | Id<"messages">) => void;
@@ -201,8 +206,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   threads: [],
   setThreads: (threads) => set({ threads }),
 
-  activeDraggingThread: null,
-  setActiveDraggingThread: (doc) => set({ activeDraggingThread: doc }),
+  activeDraggingItem: null,
+  setActiveDraggingItem: (item) => set({ activeDraggingItem: item }),
 
   threadCommandOpen: false,
   setThreadCommandOpen: (open) =>
