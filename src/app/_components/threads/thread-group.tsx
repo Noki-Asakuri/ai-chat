@@ -3,6 +3,8 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
+import { useMemo } from "react";
+
 import { ThreadItem } from "./thread-items";
 
 type ThreadGroupProps = {
@@ -16,7 +18,10 @@ export function ThreadGroup({ group, threads }: ThreadGroupProps) {
     data: { type: "group", groupId: group?._id ?? null, title: group?.title ?? "Ungrouped" },
   });
 
-  const sortedThreads = threads.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const sortedThreads = useMemo(
+    () => [...threads].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [threads],
+  );
 
   return (
     <div className="flex flex-col gap-2 overflow-hidden rounded-lg">

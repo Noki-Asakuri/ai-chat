@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMutation } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
-import { useDeferredValue, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 
 import {
   closestCorners,
@@ -21,6 +21,7 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { arrayMove } from "@dnd-kit/sortable";
 
 import { Button } from "../ui/button";
@@ -149,7 +150,7 @@ type PendingDrop = {
 };
 
 function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["_returnType"] }) {
-  const activeDraggingThreadId = useChatStore((state) => state.activeDraggingThread);
+  const activeDraggingThread = useChatStore((state) => state.activeDraggingThread);
   const setActiveDraggingThreadId = useChatStore((state) => state.setActiveDraggingThread);
 
   const reorderThread = useMutation(api.functions.groups.reorderThreadWithinGroup);
@@ -161,6 +162,11 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
   );
   const snapshotRef = useRef<typeof data.groupedThreads | null>(null);
   const pendingDropRef = useRef<PendingDrop | null>(null);
+  const commitAwaitRef = useRef<{
+    threadId: Id<"threads">;
+    toGroupId: Id<"groups"> | null;
+    toIndex: number;
+  } | null>(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8, delay: 100, tolerance: 5 } }),
@@ -233,12 +239,6 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
         activeData.belongsTo !== overData.belongsTo
       ) {
         console.debug("[Dnd]: Moving to a different group (over thread)");
-        pendingDropRef.current = {
-          kind: "moving-thread",
-          toGroupId: overData.belongsTo,
-          index: overData.sortable.index,
-          metadata: { type: "thread" },
-        };
 
         const fromKey = keyOf(activeData.belongsTo);
         const toKey = keyOf(overData.belongsTo);
@@ -249,10 +249,25 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
         const fromIdx = fromContainer.threads.findIndex((t) => t._id === activeId);
         if (fromIdx === -1) break reorderLogic;
 
+        // If hovering the last item in the target, treat as append-to-end.
+        const baseIndex = overData.sortable.index;
+        const insertIndex =
+          toContainer.threads.length === 0
+            ? 0
+            : baseIndex >= toContainer.threads.length - 1
+              ? toContainer.threads.length
+              : baseIndex;
+
+        pendingDropRef.current = {
+          kind: "moving-thread",
+          toGroupId: overData.belongsTo,
+          index: insertIndex,
+          metadata: { type: "thread" },
+        };
+
         const [moved] = fromContainer.threads.splice(fromIdx, 1);
-        const toIdx = Math.min(overData.sortable.index, toContainer.threads.length);
         const movedUpdated = { ...moved, groupId: toKey === "none" ? null : toKey };
-        toContainer.threads.splice(toIdx, 0, movedUpdated as Doc<"threads">);
+        toContainer.threads.splice(insertIndex, 0, movedUpdated as Doc<"threads">);
 
         fromContainer.threads = fromContainer.threads.map((t, i) => ({ ...t, order: i }));
         toContainer.threads = toContainer.threads.map((t, i) => ({ ...t, order: i }));
@@ -321,8 +336,12 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
         }
       }
 
-      // Success: clear optimistic state; live query will sync
-      setOptimisticGrouped(null);
+      // Success: defer clearing optimistic state until server reflects it
+      commitAwaitRef.current = {
+        threadId: activeId,
+        toGroupId: pending.toGroupId,
+        toIndex: pending.index,
+      };
       setActiveDraggingThreadId(null);
     } catch (error) {
       console.error("[Thread] Reorder failed", error);
@@ -342,7 +361,24 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
     setActiveDraggingThreadId(null);
     pendingDropRef.current = null;
     snapshotRef.current = null;
+    commitAwaitRef.current = null;
   }
+
+  // Wait for live data to reflect the committed reorder/move, then clear optimistic state
+  useEffect(() => {
+    const pending = commitAwaitRef.current;
+    if (!pending) return;
+
+    const key = pending.toGroupId ?? "none";
+    const container = data.groupedThreads[key];
+    if (!container) return;
+
+    const idx = container.threads.findIndex((t) => t._id === pending.threadId);
+    if (idx === pending.toIndex) {
+      setOptimisticGrouped(null);
+      commitAwaitRef.current = null;
+    }
+  }, [data.groupedThreads]);
 
   return (
     <DndContext
@@ -356,13 +392,13 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       <ThreadGroup key="none" group={null} threads={grouped.none?.threads ?? []} />
 
       {data.groups.map(function renderContainer(group) {
-        const key = group._id as Id<"groups">;
+        const key = group._id;
         const groupThreads = grouped[key]?.threads ?? [];
-        return <ThreadGroup key={group._id} group={group} threads={groupThreads} />;
+        return <ThreadGroup key={key} group={group} threads={groupThreads} />;
       })}
 
-      <DragOverlay dropAnimation={null}>
-        {activeDraggingThreadId ? <ThreadItem thread={activeDraggingThreadId} disabled /> : null}
+      <DragOverlay modifiers={[restrictToFirstScrollableAncestor, restrictToVerticalAxis]}>
+        {activeDraggingThread ? <ThreadItem thread={activeDraggingThread} disabled /> : null}
       </DragOverlay>
     </DndContext>
   );

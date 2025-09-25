@@ -84,12 +84,12 @@ export function ThreadItem({ thread, disabled }: ThreadItemProps) {
 
         {/* Drag Handle */}
         <div
-          className={cn(
-            "hidden cursor-grab px-2 py-1.5 opacity-0 transition-opacity duration-150 active:cursor-grabbing group-hover/thread:flex group-hover/thread:opacity-100",
-            isDragging && "opacity-100",
-          )}
           {...attributes}
           {...listeners}
+          className={cn(
+            "cursor-grab px-2 py-1.5 active:cursor-grabbing",
+            (isDragging || disabled) && "cursor-grabbing",
+          )}
         >
           <GripVerticalIcon className="size-4" />
         </div>
