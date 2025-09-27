@@ -58,7 +58,7 @@ export const openai: Record<ModelIdKey, ModelData> = {
   },
   "openai/gpt-5-chat": {
     display: { name: "GPT 5 Chat" },
-    id: "openai/gpt-5-chat-latest",
+    id: "openai/gpt-5-chat",
     altModelIds: ["openai/gpt-5-chat-latest"],
     provider: "openai",
     capabilities: {
