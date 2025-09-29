@@ -26,6 +26,9 @@ export const POST = withAxiom(async (req) => {
 
   const authToken = await user.getToken({ template: "convex" });
 
+  console.log("[Chat] Proxying chat request to", env.API_ENDPOINT);
+  logger.info("[Chat] Proxying chat request to", { userId: user.userId });
+
   const response = await fetch(env.API_ENDPOINT, {
     method: "POST",
     headers: {
@@ -35,6 +38,9 @@ export const POST = withAxiom(async (req) => {
     },
     body: await req.text(),
   });
+
+  console.log("[Chat] Response received", response.status);
+  logger.info("[Chat] Response received", { userId: user.userId, status: response.status });
 
   return new Response(response.body, { status: response.status, headers: response.headers });
 });
