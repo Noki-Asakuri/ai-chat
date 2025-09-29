@@ -1,11 +1,7 @@
-import "server-only";
-
-import { waitUntil } from "@vercel/functions";
-
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { logger } from "../axiom/server";
+import { logger } from "../axiom/logger";
 import { serverConvexClient } from "../convex/server";
 import { tryCatch } from "../utils";
 
@@ -87,7 +83,7 @@ export async function serverUploadFileR2(data: {
         }
 
         // Fire-and-forget metadata sync
-        waitUntil(tryCatch(serverConvexClient.mutation(api.functions.files.syncMetadata, { key })));
+        tryCatch(serverConvexClient.mutation(api.functions.files.syncMetadata, { key }));
 
         logger.info("[Chat] File uploaded to R2", {
           attempt,

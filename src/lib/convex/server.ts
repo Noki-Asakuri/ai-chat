@@ -1,5 +1,3 @@
-import "server-only";
-
 import { ConvexHttpClient } from "convex/browser";
 import { env } from "@/env";
 
