@@ -4,6 +4,7 @@ import { serverConvexClient } from "@/lib/convex/server";
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { logger as honoLogger } from "hono/logger";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 
@@ -44,6 +45,7 @@ const streamContext = createResumableStreamContext({
 const app = new Hono();
 
 app.use(requestId());
+app.use(honoLogger());
 app.use(secureHeaders());
 
 app.use(
