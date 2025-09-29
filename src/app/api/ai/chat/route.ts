@@ -41,7 +41,7 @@ export const POST = withAxiom(async (req) => {
     body: await req.text(),
   });
 
-  return new Response(response.body, response);
+  return new Response(response.body, { status: response.status, headers: response.headers });
 });
 
 export const GET = withAxiom(async (req: NextRequest) => {

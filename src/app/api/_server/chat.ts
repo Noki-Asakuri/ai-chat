@@ -31,8 +31,8 @@ import { env } from "@/env";
 import { serverUploadFileR2 } from "@/lib/server/file-upload";
 
 const publisher = new Redis(env.REDIS_URL);
-const subscriber = new Redis(env.REDIS_URL);
-const cacheRedis = new Redis(env.REDIS_URL);
+const subscriber = publisher.duplicate();
+const cacheRedis = publisher;
 
 const streamContext = createResumableStreamContext({
   waitUntil: async (task: Promise<unknown>) => await task,
@@ -215,7 +215,7 @@ app.post("/api/ai/chat", async (ctx) => {
             }
 
             // Expire after 12h; store raw buffer. Not awaited so it doesn't block the response.
-            saveCache();
+            tryCatch(saveCache());
 
             return { data: buffer, mediaType };
           }),
@@ -265,7 +265,7 @@ app.post("/api/ai/chat", async (ctx) => {
       durations: { request: 0, reasoning: 0, text: 0 },
     } satisfies Doc<"messages">["metadata"];
 
-    updateTitle(messages, threadId);
+    void updateTitle(messages, threadId);
 
     const chatStream = createUIMessageStream({
       execute: async ({ writer }) => {
