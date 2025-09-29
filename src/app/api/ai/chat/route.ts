@@ -67,16 +67,15 @@ export const POST = withAxiom(async (req) => {
     status: response.status,
     error: errorText,
   });
-  serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
-    model: "unknown",
+
+  const error = `Received an error from the server. Please notify the administrator. Status: ${response.status} - ${response.statusText}`;
+  await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
     messageId: body.assistantMessageId,
-    error: `Received an error from the server. Please notify the administrator. Status: ${response.status} - ${response.statusText}`,
+    model: body.config.model || "unknown",
+    error: error,
   });
 
-  return NextResponse.json(
-    { error: { message: "Error: " + response.statusText } },
-    { status: 500 },
-  );
+  return NextResponse.json({ error: { message: error } }, { status: 500 });
 });
 
 export const GET = withAxiom(async (req: NextRequest) => {
