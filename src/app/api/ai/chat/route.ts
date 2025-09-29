@@ -26,12 +26,7 @@ export const POST = withAxiom(async (req) => {
 
   const authToken = await user.getToken({ template: "convex" });
 
-  const url =
-    env.NODE_ENV === "production"
-      ? "https://api.chat.asakuri.me/api/ai/chat"
-      : "http://localhost:3001/api/ai/chat";
-
-  const response = await fetch(url, {
+  const response = await fetch(env.API_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
