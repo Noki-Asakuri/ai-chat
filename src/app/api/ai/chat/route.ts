@@ -8,7 +8,7 @@ import { logger, withAxiom } from "@/lib/axiom/server";
 import { env } from "@/env";
 
 const publisher = new Redis(env.REDIS_URL);
-const subscriber = new Redis(env.REDIS_URL);
+const subscriber = publisher.duplicate();
 
 const streamContext = createResumableStreamContext({
   waitUntil: after,
