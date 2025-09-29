@@ -1,3 +1,5 @@
+import { api } from "@/convex/_generated/api";
+
 import { auth } from "@clerk/nextjs/server";
 import { Redis } from "ioredis";
 import { after, NextResponse, type NextRequest } from "next/server";
@@ -6,6 +8,9 @@ import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { logger, withAxiom } from "@/lib/axiom/server";
 
 import { env } from "@/env";
+import { serverConvexClient } from "@/lib/convex/server";
+import type { RequestBody } from "@/lib/types";
+import { tryCatch } from "@/lib/utils";
 
 const publisher = new Redis(env.REDIS_URL);
 const subscriber = publisher.duplicate();
@@ -25,9 +30,19 @@ export const POST = withAxiom(async (req) => {
   }
 
   const authToken = await user.getToken({ template: "convex" });
+  serverConvexClient.setAuth(authToken!);
 
   console.log("[Chat] Proxying chat request to", env.API_ENDPOINT);
   logger.info("[Chat] Proxying chat request to", { userId: user.userId });
+
+  const [body, bodyError] = await tryCatch((await req.json()) as Promise<RequestBody>);
+  if (bodyError) {
+    logger.error("[Chat Error]: Failed to parse request body!", { error: bodyError });
+    return NextResponse.json(
+      { error: { message: "Failed to parse request body!" } },
+      { status: 400 },
+    );
+  }
 
   const response = await fetch(env.API_ENDPOINT, {
     method: "POST",
@@ -36,13 +51,32 @@ export const POST = withAxiom(async (req) => {
       Authorization: `Bearer ${authToken}`,
       "X-User-Id": user.userId,
     },
-    body: await req.text(),
+    body: JSON.stringify(body),
   });
 
   console.log("[Chat] Response received", response.status);
   logger.info("[Chat] Response received", { userId: user.userId, status: response.status });
 
-  return new Response(response.body, { status: response.status, headers: response.headers });
+  if (response.ok) {
+    return new Response(response.body, { status: response.status, headers: response.headers });
+  }
+
+  const errorText = await response.text();
+  logger.error("[Chat Error]: Received an error from the server!", {
+    userId: user.userId,
+    status: response.status,
+    error: errorText,
+  });
+  serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
+    model: "unknown",
+    messageId: body.assistantMessageId,
+    error: `Received an error from the server. Please notify the administrator. Status: ${response.status} - ${response.statusText}`,
+  });
+
+  return NextResponse.json(
+    { error: { message: "Error: " + response.statusText } },
+    { status: 500 },
+  );
 });
 
 export const GET = withAxiom(async (req: NextRequest) => {

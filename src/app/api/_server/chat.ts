@@ -50,7 +50,7 @@ app.use(
   "/api/*",
   cors({
     origin: env.NODE_ENV === "production" ? "https://chat.asakuri.me" : "http://localhost:3000",
-    allowHeaders: ["Authorization", "Upgrade-Insecure-Requests"],
+    allowHeaders: ["Authorization", "Upgrade-Insecure-Requests", "X-User-Id"],
     allowMethods: ["POST", "GET", "OPTIONS"],
     exposeHeaders: ["Content-Length", "Content-Type"],
     maxAge: 600,
@@ -62,6 +62,9 @@ app.post("/api/ai/chat", async (ctx) => {
   const req = ctx.req;
   const authToken = req.header("Authorization");
   const userId = req.header("X-User-Id");
+
+  console.log("[Chat] Chat request received", { userId });
+  logger.info("[Chat] Chat request received", { userId });
 
   if (!authToken || !userId) {
     logger.error("[Chat Error]: Unauthenticated POST request!");
