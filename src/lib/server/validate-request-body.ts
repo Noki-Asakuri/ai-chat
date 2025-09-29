@@ -59,8 +59,8 @@ const safetySettings = [
   { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_SEXUALLY_EXPLICIT" },
 ];
 
-export async function validateRequestBody(req: Request, userId: string) {
-  const { success, data, error } = inputSchema.safeParse(await req.json());
+export function validateRequestBody(body: Record<string, unknown>, userId: string) {
+  const { success, data, error } = inputSchema.safeParse(body);
   if (!success) throw new Error(z.prettifyError(error));
 
   const { messages, assistantMessageId, threadId, config } = data;
