@@ -4,18 +4,34 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+import { ChevronLeftIcon } from "lucide-react";
 import { useMemo, type ComponentPropsWithRef } from "react";
 
+import { Collapsible } from "@base-ui-components/react/collapsible";
+
+import { SidebarGroup, SidebarGroupLabel } from "../ui/sidebar";
 import { ThreadItem } from "./thread-items";
 
 import { cn } from "@/lib/utils";
+import type { ActiveGroupData, ActiveThreadData } from "./thread-content";
 
 export function UngroupedThreadGroup({ threads }: { threads: Doc<"threads">[] }) {
   return (
-    <div className="flex flex-col gap-2 overflow-hidden rounded-lg">
-      <div className={"border-b border-b-sidebar-border px-2 py-1.5"}>Ungrouped</div>
-      <ThreadGroupDropzone threads={threads} group={null} />
-    </div>
+    <Collapsible.Root defaultOpen>
+      <SidebarGroup className="flex flex-col overflow-hidden rounded-lg">
+        <SidebarGroupLabel asChild className="select-none font-semibold">
+          <Collapsible.Trigger className="group/trigger flex w-full items-center justify-between gap-2">
+            <span>Ungrouped</span>
+
+            <ChevronLeftIcon className="group-data-[panel-open]/trigger:-rotate-90 size-4 transition-[rotate]" />
+          </Collapsible.Trigger>
+        </SidebarGroupLabel>
+
+        <Collapsible.Panel>
+          <ThreadGroupDropzone threads={threads} group={null} />
+        </Collapsible.Panel>
+      </SidebarGroup>
+    </Collapsible.Root>
   );
 }
 
@@ -27,40 +43,58 @@ type ThreadGroupProps = {
 
 export function ThreadGroup({ group, threads, disabled }: ThreadGroupProps) {
   const {
+    active,
     attributes,
     listeners,
     setNodeRef: setSortableRef,
     transform,
     transition,
-    isDragging,
+    isSorting,
   } = useSortable({
     id: group?._id ?? "none",
     disabled,
     data: { type: "group", groupId: group?._id ?? null, title: group?.title ?? "Ungrouped" },
   });
 
+  const activeData = active?.data.current as ActiveGroupData | ActiveThreadData;
+  const isGroupSorting = activeData?.type === "group" && isSorting;
+
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isGroupSorting ? 0.5 : 1,
   };
 
   return (
-    <div style={style} ref={setSortableRef} className="flex flex-col overflow-hidden rounded-lg">
-      <div
-        {...attributes}
-        {...listeners}
-        style={{ cursor: "grab", userSelect: "none", fontWeight: 600, marginBottom: 8 }}
-        className={cn(
-          "border-b border-b-sidebar-border px-2 py-1.5",
-          disabled && "rounded-md border",
-        )}
+    <Collapsible.Root defaultOpen={!disabled}>
+      <SidebarGroup
+        style={style}
+        ref={setSortableRef}
+        className="flex flex-col overflow-hidden rounded-lg"
       >
-        {group?.title ?? "Ungrouped"}
-      </div>
+        <SidebarGroupLabel
+          asChild
+          {...attributes}
+          {...listeners}
+          className={cn("select-none font-semibold", isGroupSorting && "cursor-grab")}
+        >
+          <Collapsible.Trigger className="group/trigger flex w-full items-center justify-between gap-2">
+            <span>{group?.title ?? "Ungrouped"}</span>
 
-      <ThreadGroupDropzone threads={threads} disabled={disabled} group={group} />
-    </div>
+            <ChevronLeftIcon
+              className={cn(
+                "size-4 transition-[rotate]",
+                !isGroupSorting && "group-data-[panel-open]/trigger:-rotate-90",
+              )}
+            />
+          </Collapsible.Trigger>
+        </SidebarGroupLabel>
+
+        <Collapsible.Panel hidden={disabled || isGroupSorting}>
+          <ThreadGroupDropzone threads={threads} disabled={disabled} group={group} />
+        </Collapsible.Panel>
+      </SidebarGroup>
+    </Collapsible.Root>
   );
 }
 

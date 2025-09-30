@@ -131,12 +131,12 @@ type SortableData = {
     items: Array<Id<"threads">>;
   };
 };
-type ActiveThreadData = SortableData & {
+export type ActiveThreadData = SortableData & {
   type: "thread";
   threadId: Id<"threads">;
   belongsTo: Id<"groups"> | null;
 };
-type ActiveGroupData = SortableData & {
+export type ActiveGroupData = SortableData & {
   type: "group";
   groupId: Id<"groups"> | null;
   title: string;
@@ -297,38 +297,6 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
         break reorderLogic;
       }
 
-      // Moving to a different group while dragging over a group container
-      if (
-        activeData.type === "thread" &&
-        overData.type === "group" &&
-        activeData.belongsTo !== overData.groupId
-      ) {
-        console.debug("[Dnd]: Moving to a different group (over container)");
-        pendingDropRef.current = {
-          index: 0,
-          type: "thread",
-          toGroupId: overData.groupId,
-        };
-
-        const fromKey = keyOf(activeData.belongsTo);
-        const toKey = keyOf(overData.groupId ?? null);
-
-        const fromContainer = ensureContainer(fromKey);
-        const toContainer = ensureContainer(toKey);
-
-        const fromIdx = fromContainer.threads.findIndex((t) => t._id === activeId);
-        if (fromIdx === -1) break reorderLogic;
-
-        const [moved] = fromContainer.threads.splice(fromIdx, 1);
-        const movedUpdated = { ...moved, groupId: toKey === "none" ? null : toKey };
-        toContainer.threads.splice(0, 0, movedUpdated as Doc<"threads">);
-
-        fromContainer.threads = fromContainer.threads.map((t, i) => ({ ...t, order: i }));
-        toContainer.threads = toContainer.threads.map((t, i) => ({ ...t, order: i }));
-
-        break reorderLogic;
-      }
-
       if (
         activeData.type === "group" &&
         overData.type === "group" &&
@@ -348,7 +316,6 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       }
     }
 
-    console.log(pendingDropRef.current);
     setOptimisticGrouped(nextGrouped);
     setOptimisticGroups(nextGroups);
   }
@@ -436,10 +403,7 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
         )}
 
         {activeDraggingItem && activeDraggingItem.type === "group" && (
-          <ThreadGroup
-            group={activeDraggingItem.item}
-            threads={grouped[activeDraggingItem.item._id]?.threads ?? []}
-          />
+          <ThreadGroup group={activeDraggingItem.item} threads={[]} disabled />
         )}
       </DragOverlay>
     </DndContext>
