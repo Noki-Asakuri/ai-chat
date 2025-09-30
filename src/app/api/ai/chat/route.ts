@@ -1,6 +1,8 @@
 import { api } from "@/convex/_generated/api";
 
 import { auth } from "@clerk/nextjs/server";
+import { waitUntil } from "@vercel/functions";
+import { consumeStream } from "ai";
 import { Redis } from "ioredis";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
@@ -45,13 +47,12 @@ export const POST = withAxiom(async (req) => {
 
   const response = await fetch(env.API_ENDPOINT, {
     method: "POST",
+    body: JSON.stringify(body),
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${authToken}`,
       "X-User-Id": user.userId,
     },
-    signal: req.signal,
-    body: JSON.stringify(body),
   });
 
   const requestId = response.headers.get("X-Request-Id")!;
@@ -67,23 +68,25 @@ export const POST = withAxiom(async (req) => {
       async start(controller) {
         while (true) {
           const { done, value } = await reader.read();
-          if (done || req.signal.aborted) break;
+          if (done) break;
 
           const text = textDecoder.decode(value, { stream: true });
           controller.enqueue(text);
         }
 
-        if (!req.signal.aborted) controller.enqueue("data: [DONE]\n\n");
         return controller.close();
       },
     });
 
-    const resumeableStream = await streamContext.createNewResumableStream(
+    const [consumableStream, resumeableStream] = readableStream.tee();
+    waitUntil(consumeStream({ stream: consumableStream }));
+
+    const resumeStream = await streamContext.createNewResumableStream(
       requestId,
-      () => readableStream,
+      () => resumeableStream,
     );
 
-    return new Response(resumeableStream, {
+    return new Response(resumeStream, {
       status: response.status,
       headers: {
         connection: "keep-alive",
@@ -133,6 +136,12 @@ export const GET = withAxiom(async (req: NextRequest) => {
     streamId,
     resumeAt ? parseInt(resumeAt) : undefined,
   );
+
+  if (!stream) {
+    logger.error("[Chat Error]: Stream not found!", { streamId, resumeAt });
+    return Response.json({ error: { message: "Stream not found" } }, { status: 404 });
+  }
+
   return new Response(stream, {
     headers: {
       connection: "keep-alive",
