@@ -60,13 +60,17 @@ export const POST = withAxiom(async (req) => {
   logger.info("[Chat] Response received", { userId: user.userId, status: response.status });
 
   if (response.ok) {
+    const textDecoder = new TextDecoder();
     const reader = response.body!.getReader();
+
     const readableStream = new ReadableStream<string>({
       async start(controller) {
         while (true) {
           const { done, value } = await reader.read();
           if (done || req.signal.aborted) break;
-          controller.enqueue("data: " + JSON.stringify(value) + "\n\n");
+
+          const text = textDecoder.decode(value, { stream: true });
+          controller.enqueue(text);
         }
 
         if (!req.signal.aborted) controller.enqueue("data: [DONE]\n\n");
