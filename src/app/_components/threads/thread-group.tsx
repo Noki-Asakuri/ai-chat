@@ -17,7 +17,12 @@ import type { ActiveGroupData, ActiveThreadData } from "./thread-content";
 
 export function UngroupedThreadGroup({ threads }: { threads: Doc<"threads">[] }) {
   return (
-    <Collapsible.Root defaultOpen>
+    <Collapsible.Root
+      defaultOpen
+      data-group="none"
+      data-slot="thread-group-collapsible"
+      data-thread-count={threads.length}
+    >
       <SidebarGroup className="flex flex-col overflow-hidden rounded-lg">
         <SidebarGroupLabel asChild className="select-none font-semibold">
           <Collapsible.Trigger className="group/trigger flex w-full items-center justify-between gap-2">
@@ -60,13 +65,21 @@ export function ThreadGroup({ group, threads, disabled }: ThreadGroupProps) {
   const isGroupSorting = activeData?.type === "group" && isSorting;
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isGroupSorting ? 0.5 : 1,
+    transform: CSS.Transform.toString(transform),
+    opacity: isGroupSorting && activeData.groupId === group?._id ? 0.5 : 1,
   };
 
   return (
-    <Collapsible.Root defaultOpen={!disabled}>
+    <Collapsible.Root
+      key={group?._id}
+      disabled={disabled}
+      defaultOpen={!disabled}
+      data-slot="thread-group-collapsible"
+      data-group={group?._id}
+      data-thread-count={threads.length}
+      data-order={group?.order}
+    >
       <SidebarGroup
         style={style}
         ref={setSortableRef}

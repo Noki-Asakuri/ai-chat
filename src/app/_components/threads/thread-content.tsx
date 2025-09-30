@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMutation } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useDeferredValue, useRef, useState } from "react";
 
 import {
@@ -119,6 +120,7 @@ function CreateGroupButton() {
 
 function ThreadListWrapper({ query }: { query: string }) {
   const { data } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
+
   if (!data || data.threads.length === 0) return null;
 
   return <ThreadList data={data} />;
@@ -162,7 +164,11 @@ type GroupThreads = Record<
 
 type Groups = Doc<"groups">[];
 
-function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["_returnType"] }) {
+type ThreadListProps = {
+  data: (typeof api.functions.groups.listGroups)["_returnType"];
+};
+
+function ThreadList({ data }: ThreadListProps) {
   const activeDraggingItem = useChatStore((state) => state.activeDraggingItem);
   const setActiveDraggingItem = useChatStore((state) => state.setActiveDraggingItem);
 
