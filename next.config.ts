@@ -10,14 +10,14 @@ const nextConfig: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
   experimental: {
     useCache: true,
-    reactCompiler: true,
-
     clientSegmentCache: true,
-    devtoolSegmentExplorer: true,
+    turbopackPersistentCachingForDev: true,
+    turbopackPersistentCachingForBuild: true,
   },
 
-  skipTrailingSlashRedirect: true,
   turbopack: {},
+  reactCompiler: true,
+  skipTrailingSlashRedirect: true,
 
   env: {
     NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
