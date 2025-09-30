@@ -10,6 +10,7 @@ export const env = createEnv({
   server: {
     NODE_ENV: z.enum(["development", "production"]).default("development"),
 
+    API_ENDPOINT: z.string(),
     CONVEX_DEPLOYMENT: z.string(),
 
     PROXY_URL: z.string(),
