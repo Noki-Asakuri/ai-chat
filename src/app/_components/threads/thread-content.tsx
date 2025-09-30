@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMutation } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import { useDeferredValue, useRef, useState } from "react";
 
 import {
   closestCorners,
@@ -143,9 +143,8 @@ type ActiveGroupData = SortableData & {
 };
 
 type PendingDrop = {
-  toGroupId: Id<"groups"> | null;
   index: number;
-  kind: "moving-thread" | "re-ordering-thread";
+  toGroupId: Id<"groups"> | null;
   metadata?: Record<string, unknown>;
 };
 
@@ -166,11 +165,6 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
   const [optimisticGrouped, setOptimisticGrouped] = useState<GroupThreads | null>(null);
 
   const pendingDropRef = useRef<PendingDrop | null>(null);
-  const commitAwaitRef = useRef<{
-    threadId: Id<"threads">;
-    toGroupId: Id<"groups"> | null;
-    toIndex: number;
-  } | null>(null);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8, delay: 100, tolerance: 5 } }),
@@ -230,8 +224,7 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       ) {
         console.debug("[Dnd]: Re-order within the same group");
         pendingDropRef.current = {
-          kind: "re-ordering-thread",
-          toGroupId: activeData.belongsTo,
+          toGroupId: overData.belongsTo,
           index: overData.sortable.index,
         };
 
@@ -275,7 +268,6 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
               : baseIndex;
 
         pendingDropRef.current = {
-          kind: "moving-thread",
           toGroupId: overData.belongsTo,
           index: insertIndex,
           metadata: { type: "thread" },
@@ -299,7 +291,6 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       ) {
         console.debug("[Dnd]: Moving to a different group (over container)");
         pendingDropRef.current = {
-          kind: "moving-thread",
           toGroupId: overData.groupId,
           index: 0,
           metadata: { type: "group" },
@@ -331,21 +322,25 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
 
   async function handleDragEnd(event: DragEndEvent) {
     try {
-      const activeId = event.active.id as Id<"threads">;
+      const activeThread = data.threads.find((t) => t._id === (event.active.id as Id<"threads">));
+      if (!activeThread) return;
+
       const pending = pendingDropRef.current;
       if (!pending) return;
 
-      console.log("[Dnd]: Reorder", pending, activeId);
+      console.log("[Dnd]: Reorder", pending, activeThread);
 
-      switch (pending.kind) {
-        case "re-ordering-thread": {
-          await reorderThread({ threadId: activeId, toIndex: pending.index });
+      switch (true) {
+        case pending.toGroupId === activeThread.groupId: {
+          console.log("[Dnd]: Reorder within group");
+          await reorderThread({ threadId: activeThread._id, toIndex: pending.index });
           break;
         }
 
-        case "moving-thread": {
+        case pending.toGroupId !== activeThread.groupId: {
+          console.log("[Dnd]: Move thread to group");
           await moveThreadToGroup({
-            threadId: activeId,
+            threadId: activeThread._id,
             toGroupId: pending.toGroupId,
             toIndex: pending.index,
           });
@@ -353,19 +348,11 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
         }
       }
 
-      // Success: defer clearing optimistic state until server reflects it
-      commitAwaitRef.current = {
-        threadId: activeId,
-        toGroupId: pending.toGroupId,
-        toIndex: pending.index,
-      };
       setActiveDraggingItem(null);
     } catch (error) {
       console.error("[Thread] Reorder failed", error);
       // Rollback
-      if (snapshotRef.current) {
-        setOptimisticGrouped(snapshotRef.current);
-      }
+      if (snapshotRef.current) setOptimisticGrouped(snapshotRef.current);
     } finally {
       pendingDropRef.current = null;
       snapshotRef.current = null;
@@ -378,24 +365,7 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
     setActiveDraggingItem(null);
     pendingDropRef.current = null;
     snapshotRef.current = null;
-    commitAwaitRef.current = null;
   }
-
-  // Wait for live data to reflect the committed reorder/move, then clear optimistic state
-  useEffect(() => {
-    const pending = commitAwaitRef.current;
-    if (!pending) return;
-
-    const key = pending.toGroupId ?? "none";
-    const container = data.groupedThreads[key];
-    if (!container) return;
-
-    const idx = container.threads.findIndex((t) => t._id === pending.threadId);
-    if (idx === pending.toIndex) {
-      setOptimisticGrouped(null);
-      commitAwaitRef.current = null;
-    }
-  }, [data.groupedThreads]);
 
   return (
     <DndContext
