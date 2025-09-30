@@ -10,11 +10,9 @@ import { secureHeaders } from "hono/secure-headers";
 
 import dedent from "dedent";
 import { Redis } from "ioredis";
-import { createResumableStreamContext } from "resumable-stream/ioredis";
 
 import {
   createUIMessageStream,
-  generateId,
   smoothStream,
   stepCountIs,
   streamText,
@@ -31,42 +29,35 @@ import { fixMarkdownCodeBlocks, tryCatch, tryCatchSync } from "@/lib/utils";
 import { env } from "@/env";
 import { serverUploadFileR2 } from "@/lib/server/file-upload";
 
-const publisher = new Redis(env.REDIS_URL);
-const subscriber = publisher.duplicate();
-const cacheRedis = publisher;
-
-const streamContext = createResumableStreamContext({
-  waitUntil: async (task: Promise<unknown>) => await task,
-  publisher: publisher,
-  subscriber: subscriber,
-  keyPrefix: `${env.NODE_ENV}:resumable-stream`,
-});
+const cacheRedis = new Redis(env.REDIS_URL);
 
 const app = new Hono();
 
-app.use(requestId());
 app.use(honoLogger());
+app.use(requestId());
 app.use(secureHeaders());
 
 app.use(
   "/api/*",
   cors({
     origin: env.NODE_ENV === "production" ? "https://chat.asakuri.me" : "http://localhost:3000",
-    allowHeaders: ["Authorization", "Upgrade-Insecure-Requests", "X-User-Id"],
     allowMethods: ["POST", "GET", "OPTIONS"],
-    exposeHeaders: ["Content-Length", "Content-Type"],
-    maxAge: 600,
+    allowHeaders: ["Authorization", "Upgrade-Insecure-Requests", "X-User-Id"],
+    exposeHeaders: ["Content-Length", "Content-Type", "X-Request-Id"],
+    maxAge: 3600,
     credentials: true,
   }),
 );
 
 app.post("/api/ai/chat", async (ctx) => {
   const req = ctx.req;
-  const authToken = req.header("Authorization");
-  const userId = req.header("X-User-Id");
 
-  console.log("[Chat] Chat request received", { userId });
-  logger.info("[Chat] Chat request received", { userId });
+  const userId = req.header("X-User-Id");
+  const requestId = ctx.get("requestId");
+  const authToken = req.header("Authorization");
+
+  console.log("[Chat] Chat request received", { userId, requestId });
+  logger.info("[Chat] Chat request received", { userId, requestId });
 
   if (!authToken || !userId) {
     logger.error("[Chat Error]: Unauthenticated POST request!");
@@ -163,7 +154,6 @@ app.post("/api/ai/chat", async (ctx) => {
 		`;
     }
 
-    const streamId = generateId();
     const startTime = Date.now();
 
     const result = streamText({
@@ -255,7 +245,7 @@ app.post("/api/ai/chat", async (ctx) => {
     await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
       threadId,
       messageId: assistantMessageId,
-      updates: { status: "streaming", resumableStreamId: streamId, model: model.uniqueId },
+      updates: { status: "streaming", resumableStreamId: requestId, model: model.uniqueId },
     });
 
     const attachmentIds: Id<"attachments">[] = [];
@@ -439,11 +429,6 @@ app.post("/api/ai/chat", async (ctx) => {
       },
     });
 
-    const resumeableStream = await streamContext.createNewResumableStream(
-      streamId,
-      () => readableStream,
-    );
-
     ctx.req.raw.signal.onabort = async () => {
       console.log("[Chat] Chat request aborted");
       logger.error("[Chat Error]: Chat request aborted!", {
@@ -456,7 +441,7 @@ app.post("/api/ai/chat", async (ctx) => {
       await tryCatch(readableStream.cancel(new Error("Chat request aborted")));
     };
 
-    return new Response(resumeableStream, {
+    return new Response(readableStream, {
       headers: {
         connection: "keep-alive",
         "Cache-Control": "no-cache",

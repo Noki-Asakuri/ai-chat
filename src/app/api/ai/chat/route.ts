@@ -5,9 +5,8 @@ import { Redis } from "ioredis";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 
-import { logger, withAxiom } from "@/lib/axiom/server";
-
 import { env } from "@/env";
+import { logger, withAxiom } from "@/lib/axiom/server";
 import { serverConvexClient } from "@/lib/convex/server";
 import type { RequestBody } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
@@ -51,14 +50,44 @@ export const POST = withAxiom(async (req) => {
       Authorization: `Bearer ${authToken}`,
       "X-User-Id": user.userId,
     },
+    signal: req.signal,
     body: JSON.stringify(body),
   });
+
+  const requestId = response.headers.get("X-Request-Id")!;
 
   console.log("[Chat] Response received", response.status);
   logger.info("[Chat] Response received", { userId: user.userId, status: response.status });
 
   if (response.ok) {
-    return new Response(response.body, { status: response.status, headers: response.headers });
+    const reader = response.body!.getReader();
+    const readableStream = new ReadableStream<string>({
+      async start(controller) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done || req.signal.aborted) break;
+          controller.enqueue("data: " + JSON.stringify(value) + "\n\n");
+        }
+
+        if (!req.signal.aborted) controller.enqueue("data: [DONE]\n\n");
+        return controller.close();
+      },
+    });
+
+    const resumeableStream = await streamContext.createNewResumableStream(
+      requestId,
+      () => readableStream,
+    );
+
+    return new Response(resumeableStream, {
+      status: response.status,
+      headers: {
+        connection: "keep-alive",
+        "Cache-Control": "no-cache",
+        "Transfer-Encoding": "chunked",
+        "Content-Type": "text/event-stream",
+      },
+    });
   }
 
   const errorText = await response.text();
