@@ -27,7 +27,9 @@ export function ThreadGroup({ group, threads, disabled }: ThreadGroupProps) {
 
   return (
     <div className="flex flex-col gap-2 overflow-hidden rounded-lg">
-      <div className="border-b px-3 py-2.5">{group?.title ?? "Ungrouped"}</div>
+      <div className="border-b border-b-sidebar-border px-2 py-1.5">
+        {group?.title ?? "Ungrouped"}
+      </div>
 
       {!disabled && (
         <div ref={setNodeRef} className="flex flex-col gap-1 transition-all duration-150">
@@ -41,7 +43,7 @@ export function ThreadGroup({ group, threads, disabled }: ThreadGroupProps) {
           </SortableContext>
 
           {sortedThreads.length === 0 && (
-            <div className="px-0.5 py-1.5 text-muted-foreground text-sm">Drop here</div>
+            <div className="px-1.5 py-1.5 text-muted-foreground text-sm">Drop here</div>
           )}
         </div>
       )}

@@ -22,7 +22,7 @@ export function ThreadSidebar() {
         </NavLink>
       </SidebarHeader>
 
-      <SidebarContent className="flex flex-1 flex-col gap-2">
+      <SidebarContent className="flex flex-1 flex-col">
         <ThreadContents />
       </SidebarContent>
 

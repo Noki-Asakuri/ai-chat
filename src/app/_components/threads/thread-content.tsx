@@ -376,13 +376,14 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <ThreadGroup key="none" group={null} threads={grouped.none?.threads ?? []} />
-
       {data.groups.map(function renderContainer(group) {
         const key = group._id;
         const groupThreads = grouped[key]?.threads ?? [];
+
         return <ThreadGroup key={key} group={group} threads={groupThreads} />;
       })}
+
+      <ThreadGroup key="none" group={null} threads={grouped.none?.threads ?? []} />
 
       <DragOverlay modifiers={[restrictToFirstScrollableAncestor, restrictToVerticalAxis]}>
         {activeDraggingItem && activeDraggingItem.type === "thread" && (
