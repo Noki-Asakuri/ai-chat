@@ -22,12 +22,12 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { arrayMove } from "@dnd-kit/sortable";
+import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
-import { ThreadGroup } from "./thread-group";
+import { ThreadGroup, UngroupedThreadGroup } from "./thread-group";
 import { ThreadItem } from "./thread-items";
 
 import { useChatStore } from "@/lib/chat/store";
@@ -142,27 +142,38 @@ type ActiveGroupData = SortableData & {
   title: string;
 };
 
-type PendingDrop = {
+type PendingDropThread = {
+  type: "thread";
   index: number;
   toGroupId: Id<"groups"> | null;
-  metadata?: Record<string, unknown>;
 };
+
+type PendingDropGroup = {
+  type: "group";
+  index: number;
+};
+
+type PendingDrop = PendingDropThread | PendingDropGroup;
 
 type GroupThreads = Record<
   Id<"groups"> | "none",
   { group: Doc<"groups"> | null; threads: Doc<"threads">[] }
 >;
 
+type Groups = Doc<"groups">[];
+
 function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["_returnType"] }) {
   const activeDraggingItem = useChatStore((state) => state.activeDraggingItem);
   const setActiveDraggingItem = useChatStore((state) => state.setActiveDraggingItem);
 
-  const reorderThread = useMutation(api.functions.groups.reorderThreadWithinGroup);
   const moveThreadToGroup = useMutation(api.functions.groups.moveThreadToGroup);
+  const reorderThread = useMutation(api.functions.groups.reorderThreadWithinGroup);
+  const moveGroupToIndex = useMutation(api.functions.groups.moveGroupToIndex);
 
   // Optimistic local state for grouped threads while dragging
   const snapshotRef = useRef<GroupThreads | null>(null);
   const [optimisticGrouped, setOptimisticGrouped] = useState<GroupThreads | null>(null);
+  const [optimisticGroups, setOptimisticGroups] = useState<Groups | null>(null);
 
   const pendingDropRef = useRef<PendingDrop | null>(null);
 
@@ -172,6 +183,7 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
   );
 
   const grouped = optimisticGrouped ?? data.groupedThreads;
+  const groups = optimisticGroups ?? data.groups;
 
   function handleDragStart(event: DragStartEvent) {
     console.debug("[Thread] Drag start", event.active.id);
@@ -204,6 +216,7 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
 
     // Build a mutable draft of grouped threads for optimistic updates
     const nextGrouped = structuredClone(optimisticGrouped ?? data.groupedThreads);
+    let nextGroups = [...(optimisticGroups ?? data.groups)];
 
     const keyOf = (gid: Id<"groups"> | null): Id<"groups"> | "none" => gid ?? "none";
 
@@ -224,6 +237,7 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       ) {
         console.debug("[Dnd]: Re-order within the same group");
         pendingDropRef.current = {
+          type: "thread",
           toGroupId: overData.belongsTo,
           index: overData.sortable.index,
         };
@@ -268,9 +282,9 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
               : baseIndex;
 
         pendingDropRef.current = {
-          toGroupId: overData.belongsTo,
+          type: "thread",
           index: insertIndex,
-          metadata: { type: "thread" },
+          toGroupId: overData.belongsTo,
         };
 
         const [moved] = fromContainer.threads.splice(fromIdx, 1);
@@ -291,9 +305,9 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       ) {
         console.debug("[Dnd]: Moving to a different group (over container)");
         pendingDropRef.current = {
-          toGroupId: overData.groupId,
           index: 0,
-          metadata: { type: "group" },
+          type: "thread",
+          toGroupId: overData.groupId,
         };
 
         const fromKey = keyOf(activeData.belongsTo);
@@ -314,36 +328,63 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
 
         break reorderLogic;
       }
+
+      if (
+        activeData.type === "group" &&
+        overData.type === "group" &&
+        activeData.sortable.index !== overData.sortable.index
+      ) {
+        console.debug("[Dnd]: Re-order groups");
+        pendingDropRef.current = {
+          type: "group",
+          index: overData.sortable.index,
+        };
+
+        const fromIdx = activeData.sortable.index;
+        const toIdx = overData.sortable.index;
+        nextGroups = arrayMove(nextGroups, fromIdx, toIdx);
+
+        break reorderLogic;
+      }
     }
 
     console.log(pendingDropRef.current);
     setOptimisticGrouped(nextGrouped);
+    setOptimisticGroups(nextGroups);
   }
 
   async function handleDragEnd(event: DragEndEvent) {
     try {
-      const activeThread = data.threads.find((t) => t._id === (event.active.id as Id<"threads">));
-      if (!activeThread) return;
-
       const pending = pendingDropRef.current;
       if (!pending) return;
 
-      console.log("[Dnd]: Reorder", pending, activeThread);
+      const activeItems = pending.type === "group" ? data.groups : data.threads;
+      const item = activeItems.find((t) => t._id === (event.active.id as Id<"groups" | "threads">));
+
+      if (!item) return;
+
+      console.log("[Dnd]: Reorder", pending, item);
 
       switch (true) {
-        case pending.toGroupId === activeThread.groupId: {
+        case pending.type === "thread" && "groupId" in item && pending.toGroupId === item.groupId: {
           console.log("[Dnd]: Reorder within group");
-          await reorderThread({ threadId: activeThread._id, toIndex: pending.index });
+          await reorderThread({ threadId: item._id, toIndex: pending.index });
           break;
         }
 
-        case pending.toGroupId !== activeThread.groupId: {
+        case pending.type === "thread" && "groupId" in item && pending.toGroupId !== item.groupId: {
           console.log("[Dnd]: Move thread to group");
           await moveThreadToGroup({
-            threadId: activeThread._id,
+            threadId: item._id,
             toGroupId: pending.toGroupId,
             toIndex: pending.index,
           });
+          break;
+        }
+
+        case pending.type === "group": {
+          console.log("[Dnd]: Move group");
+          await moveGroupToIndex({ groupId: item._id as Id<"groups">, toIndex: pending.index });
           break;
         }
       }
@@ -353,6 +394,7 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       console.error("[Thread] Reorder failed", error);
       // Rollback
       if (snapshotRef.current) setOptimisticGrouped(snapshotRef.current);
+      setOptimisticGroups(data.groups);
     } finally {
       pendingDropRef.current = null;
       snapshotRef.current = null;
@@ -362,6 +404,7 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
   function handleDragCancel(_: DragCancelEvent) {
     console.debug("[Thread] Drag cancel");
     setOptimisticGrouped(null);
+    setOptimisticGroups(null);
     setActiveDraggingItem(null);
     pendingDropRef.current = null;
     snapshotRef.current = null;
@@ -376,14 +419,16 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      {data.groups.map(function renderContainer(group) {
-        const key = group._id;
-        const groupThreads = grouped[key]?.threads ?? [];
+      <SortableContext items={groups.map((g) => g._id)} strategy={verticalListSortingStrategy}>
+        {groups.map(function renderContainer(group) {
+          const key = group._id;
+          const groupThreads = grouped[key]?.threads ?? [];
 
-        return <ThreadGroup key={key} group={group} threads={groupThreads} />;
-      })}
+          return <ThreadGroup key={key} group={group} threads={groupThreads} />;
+        })}
+      </SortableContext>
 
-      <ThreadGroup key="none" group={null} threads={grouped.none?.threads ?? []} />
+      <UngroupedThreadGroup threads={grouped.none?.threads ?? []} />
 
       <DragOverlay modifiers={[restrictToFirstScrollableAncestor, restrictToVerticalAxis]}>
         {activeDraggingItem && activeDraggingItem.type === "thread" && (
@@ -391,7 +436,10 @@ function ThreadList({ data }: { data: (typeof api.functions.groups.listGroups)["
         )}
 
         {activeDraggingItem && activeDraggingItem.type === "group" && (
-          <ThreadGroup group={activeDraggingItem.item} threads={[]} />
+          <ThreadGroup
+            group={activeDraggingItem.item}
+            threads={grouped[activeDraggingItem.item._id]?.threads ?? []}
+          />
         )}
       </DragOverlay>
     </DndContext>

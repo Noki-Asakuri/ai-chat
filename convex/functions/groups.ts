@@ -221,3 +221,35 @@ export const moveThreadToGroup = mutation({
     }
   },
 });
+
+export const moveGroupToIndex = mutation({
+  args: { groupId: v.id("groups"), toIndex: v.number() },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+
+    const group = await ctx.db.get(args.groupId);
+    if (!group) throw new Error("Group not found");
+    if (group.userId !== user.subject) throw new Error("Not authorized");
+
+    const groups = await ctx.db
+      .query("groups")
+      .withIndex("by_userId_order", (q) => q.eq("userId", user.subject))
+      .order("asc")
+      .collect();
+
+    // Remove the group from the list
+    const filtered = groups.filter((g) => g._id !== args.groupId);
+    // Clamp target index to [0, groups.length] so dropping at the end appends
+    const insertIndex = Math.max(0, Math.min(args.toIndex, filtered.length));
+    // Insert at the new index
+    filtered.splice(insertIndex, 0, group);
+
+    // Reorder all groups to fill the gap
+    for (let i = 0; i < filtered.length; i++) {
+      const group = filtered[i];
+      if (!group) continue;
+      await ctx.db.patch(group._id, { order: i });
+    }
+  },
+});
