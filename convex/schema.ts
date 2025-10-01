@@ -85,6 +85,13 @@ export default defineSchema({
         finishReason: v.string(),
         totalTokens: v.number(),
         thinkingTokens: v.number(),
+        usages: v.optional(
+          v.object({
+            inputTokens: v.number(),
+            outputTokens: v.number(),
+            reasoningTokens: v.number(),
+          }),
+        ),
         // New optional metric: time to first token in milliseconds
         timeToFirstTokenMs: v.optional(v.number()),
 

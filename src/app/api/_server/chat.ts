@@ -257,6 +257,7 @@ app.post("/api/ai/chat", async (ctx) => {
       totalTokens: 0,
       thinkingTokens: 0,
       timeToFirstTokenMs: 0,
+      usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
       durations: { request: 0, reasoning: 0, text: 0 },
     } satisfies Doc<"messages">["metadata"];
 
@@ -344,14 +345,21 @@ app.post("/api/ai/chat", async (ctx) => {
               metadata.totalTokens = stream.totalUsage.outputTokens ?? 0;
               metadata.thinkingTokens = stream.totalUsage.reasoningTokens ?? 0;
 
+              metadata.usages.inputTokens = stream.totalUsage.inputTokens ?? 0;
+              metadata.usages.outputTokens = stream.totalUsage.outputTokens ?? 0;
+              metadata.usages.reasoningTokens = stream.totalUsage.reasoningTokens ?? 0;
+
               if (model.id.startsWith("openai/gpt-5")) {
                 // OpenAI GPT 5 output token also includes the reasoning tokens
                 // In case AI SDK change and remove reasoning tokens from output
                 // Then we revert back to original total tokens
-                metadata.totalTokens = Math.min(
+                const actualOutputTokens = Math.min(
                   metadata.totalTokens - metadata.thinkingTokens,
                   metadata.totalTokens,
                 );
+
+                metadata.totalTokens = actualOutputTokens;
+                metadata.usages.outputTokens = actualOutputTokens;
               }
               break;
           }

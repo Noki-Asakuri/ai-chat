@@ -31,33 +31,31 @@ export const backfillThreads = migrations.define({
 });
 
 /**
- * Backfill message-derived statistics for each user:
- * - User messages: increment user count, words, per-thread, per-day
- * - Assistant completed messages: increment assistant count, words, per-thread, per-day, model counts, AI profile counts
- * System or non-completed assistant messages are ignored to match live behavior.
+ * Backfill message-derived statistics for each message:
+ * - Backfill usage stats for completed assistant messages
  */
 export const backfillMessages = migrations.define({
   table: "messages",
   migrateOne: async (ctx, message) => {
-    const base = {
-      userId: message.userId,
-      threadId: message.threadId,
-      content: message.content,
-      createdAt: message.createdAt,
-    };
-
-    if (message.role === "user") {
-      await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, base);
-      return;
-    }
-
     if (message.role === "assistant" && message.status === "complete") {
-      await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
-        ...base,
-        modelUniqueId: message.model,
-        aiProfileId: message.metadata?.aiProfileId,
+      await ctx.runMutation(internal.functions.messages.backfillMessageUsageStats, {
+        messageId: message._id,
       });
     }
+
+    // This no longer needed to be backfill, but keep it here unless we need another migration.
+    // if (message.role === "user") {
+    //   await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, base);
+    //   return;
+    // }
+
+    // if (message.role === "assistant" && message.status === "complete") {
+    //   await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
+    //     ...base,
+    //     modelUniqueId: message.model,
+    //     aiProfileId: message.metadata?.aiProfileId,
+    //   });
+    // }
   },
 });
 

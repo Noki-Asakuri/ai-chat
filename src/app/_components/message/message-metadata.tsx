@@ -4,7 +4,15 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
-import { BoltIcon, BrainIcon, ClockIcon, HourglassIcon, InfoIcon, ZapIcon } from "lucide-react";
+import {
+  BoltIcon,
+  BrainIcon,
+  ClockIcon,
+  HourglassIcon,
+  InfoIcon,
+  QuoteIcon,
+  ZapIcon,
+} from "lucide-react";
 
 import { Icons } from "@/components/ui/icons";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -35,6 +43,11 @@ export function MessageMetadata({ metadata, params, model }: MessageMetadataProp
     params?.effort &&
     params.effort !== "medium";
 
+  // Backward-compat for old messages without usages
+  const inputTokens = metadata.usages?.inputTokens ?? 0;
+  const outputTokens = metadata.usages?.outputTokens ?? metadata.totalTokens;
+  const reasoningTokens = metadata.usages?.reasoningTokens ?? metadata.thinkingTokens;
+
   return (
     <div className="flex h-full w-full items-center justify-between">
       <div className="flex h-10.5 items-center justify-center gap-2 rounded-md border bg-background/80 p-2 backdrop-blur-md backdrop-saturate-150">
@@ -52,26 +65,35 @@ export function MessageMetadata({ metadata, params, model }: MessageMetadataProp
           <PopoverArrow className="fill-card" />
 
           <div className="grid grid-cols-1 gap-x-4 gap-y-2">
-            <div data-slot="medatadata-tok-per-sec" className="flex items-center gap-2">
+            <div data-slot="metadata-tok-per-sec" className="flex items-center gap-2">
               <ZapIcon className="size-4" />
               <span>Speed: {tokPerSec} tok/sec</span>
             </div>
 
-            <div data-slot="medatadata-total-tokens" className="flex items-center gap-2">
+            <div
+              data-slot="metadata-input-tokens"
+              className="flex items-center gap-2"
+              hidden={inputTokens === 0}
+            >
+              <QuoteIcon className="size-4" />
+              <span>Input: {format.number(inputTokens)} Tokens</span>
+            </div>
+
+            <div data-slot="metadata-total-tokens" className="flex items-center gap-2">
               <BoltIcon className="size-4" />
-              <span>Comsume: {format.number(metadata.totalTokens)} Tokens</span>
+              <span>Consume: {format.number(outputTokens)} Tokens</span>
             </div>
 
             <div
-              data-slot="medatadata-thinking-tokens"
+              data-slot="metadata-thinking-tokens"
               className="flex items-center gap-2"
-              hidden={metadata.thinkingTokens === 0}
+              hidden={reasoningTokens === 0}
             >
               <BrainIcon className="size-4" />
-              <span>Thinking: {format.number(metadata.thinkingTokens)} Tokens</span>
+              <span>Reasoning: {format.number(reasoningTokens)} Tokens</span>
             </div>
 
-            <div data-slot="medatadata-duration" className="flex items-center gap-2">
+            <div data-slot="metadata-duration" className="flex items-center gap-2">
               <HourglassIcon className="size-4" />
               <span>Duration: {format.time(metadata.duration / 1000)}</span>
             </div>

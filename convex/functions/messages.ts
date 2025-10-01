@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import { mutation, query } from "../_generated/server";
+import { internalMutation, mutation, query } from "../_generated/server";
 
 export const getAllMessagesFromThread = query({
   args: { threadId: v.optional(v.id("threads")) },
@@ -269,5 +269,25 @@ export const retryChatMessage = mutation({
         updatedAt: Date.now(),
       }),
     ]);
+  },
+});
+
+export const backfillMessageUsageStats = internalMutation({
+  args: { messageId: v.id("messages") },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message || !message.metadata) return;
+
+    const reasoningTokens = message.metadata?.thinkingTokens ?? 0;
+    const outputTokens = message.metadata?.totalTokens ?? 0;
+
+    await ctx.db.patch(message._id, {
+      metadata: {
+        ...message.metadata,
+        totalTokens: outputTokens,
+        thinkingTokens: reasoningTokens,
+        usages: { inputTokens: 0, outputTokens, reasoningTokens },
+      },
+    });
   },
 });
