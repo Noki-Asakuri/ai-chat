@@ -549,6 +549,7 @@ process.on("SIGTERM", () => {
   }, 250);
 });
 
+console.log("[Server] Starting server...", { commitSha, env: env.NODE_ENV, port: 3001 });
 export default {
   port: 3001,
   fetch: app.fetch,
