@@ -238,24 +238,30 @@ export const moveThreadToGroup = mutation({
     ]);
 
     // Insert the new thread in new group
-    const insertIndex = Math.max(0, Math.min(args.toIndex, threadsInNewGroup.length));
+    const insertIndex =
+      args.toGroupId === null ? 0 : Math.max(0, Math.min(args.toIndex, threadsInNewGroup.length));
+
     threadsInNewGroup.splice(insertIndex, 0, thread);
     await ctx.db.patch(thread._id, { groupId: args.toGroupId, order: insertIndex });
 
-    // Reorder all threads in the new group to fill the gap
-    for (let i = 0; i < threadsInNewGroup.length; i++) {
-      const thread = threadsInNewGroup[i];
-      if (!thread) continue;
-      await ctx.db.patch(thread._id, { order: i });
+    if (args.toGroupId !== null) {
+      // Reorder all threads in the new group to fill the gap
+      for (let i = 0; i < threadsInNewGroup.length; i++) {
+        const thread = threadsInNewGroup[i];
+        if (!thread) continue;
+        await ctx.db.patch(thread._id, { order: i });
+      }
     }
 
-    // Remove thread in old group
-    threadsInOldGroup.splice(oldIndex, 1);
-    // Reorder all threads in the old group to fill the gap
-    for (let i = 0; i < threadsInOldGroup.length; i++) {
-      const thread = threadsInOldGroup[i];
-      if (!thread) continue;
-      await ctx.db.patch(thread._id, { order: i });
+    if (oldGroupId !== null) {
+      // Remove thread in old group
+      threadsInOldGroup.splice(oldIndex, 1);
+      // Reorder all threads in the old group to fill the gap
+      for (let i = 0; i < threadsInOldGroup.length; i++) {
+        const thread = threadsInOldGroup[i];
+        if (!thread) continue;
+        await ctx.db.patch(thread._id, { order: i });
+      }
     }
   },
 });

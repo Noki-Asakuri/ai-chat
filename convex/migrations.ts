@@ -17,16 +17,19 @@ export const migrations = new Migrations<DataModel>(components.migrations);
 export const run = migrations.runner();
 
 /**
- * Backfill thread counts: increments stats.stats.threads per user's thread.
- * This mirrors the live increment added at
- * - messages.addMessagesToThread() when a thread is auto-created
+ * Backfill thread order and groupId.
+ * - Set order to 0 where missing
+ * - Set groupId to null where missing
  */
 export const backfillThreads = migrations.define({
   table: "threads",
   migrateOne: async (ctx, thread) => {
-    await ctx.runMutation(internal.functions.userStats.incrementThreads, {
-      userId: thread.userId,
-    });
+    // await ctx.runMutation(internal.functions.userStats.incrementThreads, {
+    //   userId: thread.userId,
+    // });
+
+    if (thread.order === undefined) await ctx.db.patch(thread._id, { order: 0 });
+    if (thread.groupId === undefined) await ctx.db.patch(thread._id, { groupId: null });
   },
 });
 
