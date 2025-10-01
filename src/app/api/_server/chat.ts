@@ -10,6 +10,8 @@ import { secureHeaders } from "hono/secure-headers";
 
 import dedent from "dedent";
 import { Redis } from "ioredis";
+import fs from "node:fs";
+import path from "node:path";
 
 import {
   createUIMessageStream,
@@ -31,11 +33,39 @@ import { serverUploadFileR2 } from "@/lib/server/file-upload";
 
 const cacheRedis = new Redis(env.REDIS_URL);
 
+// Server lifecycle + observability
+const serverStartedAt = Date.now();
+let shuttingDown = false;
+let activeRequests = 0;
+let activeStreams = 0;
+
+function getCommitSha() {
+  // Prefer explicit env provided via Docker build/run
+  const envSha = process.env.GIT_COMMIT_SHA || process.env.COMMIT_SHA;
+  if (envSha && envSha.length > 0) return envSha;
+
+  return "unknown";
+}
+
 const app = new Hono();
+const commitSha = getCommitSha();
 
 app.use(honoLogger());
 app.use(requestId());
 app.use(secureHeaders());
+
+// Graceful-drain aware middleware: block new requests during shutdown and track in-flight work
+app.use("*", async (ctx, next) => {
+  if (shuttingDown) {
+    const message = "Server is shutting down, please retry in a moment.";
+    return ctx.json({ message: { message } }, 503);
+  }
+
+  activeRequests++;
+  await tryCatch(next());
+
+  activeRequests = Math.max(0, activeRequests - 1);
+});
 
 app.use(
   "/api/*",
@@ -48,6 +78,22 @@ app.use(
     credentials: true,
   }),
 );
+
+// Index route: uptime + current git commit sha
+app.get("/", (ctx) => {
+  const payload = {
+    status: "ok" as const,
+    uptimeSeconds: Math.round(process.uptime()),
+    startedAt: new Date(serverStartedAt).toISOString(),
+    commitSha,
+    shuttingDown,
+    inFlight: activeRequests + activeStreams,
+  };
+  return ctx.json(payload);
+});
+
+// Health check route for Docker/K8s
+app.get("/health", (ctx) => ctx.text("OK"));
 
 app.post("/api/ai/chat", async (ctx) => {
   const req = ctx.req;
@@ -420,20 +466,35 @@ app.post("/api/ai/chat", async (ctx) => {
       },
     });
 
+    // Track long-lived SSE stream as in-flight work for graceful shutdown
+    let streamEnded = false;
+    const markStreamEnded = () => {
+      if (!streamEnded) {
+        streamEnded = true;
+        activeStreams = Math.max(0, activeStreams - 1);
+      }
+    };
+
+    activeStreams++;
+
     const reader = chatStream.getReader();
     const readableStream = new ReadableStream<string>({
       async start(controller) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done || ctx.req.raw.signal.aborted) break;
-          controller.enqueue("data: " + JSON.stringify(value) + "\n\n");
-        }
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done || ctx.req.raw.signal.aborted) break;
+            controller.enqueue("data: " + JSON.stringify(value) + "\n\n");
+          }
 
-        if (!ctx.req.raw.signal.aborted) {
-          controller.enqueue("data: [DONE]\n\n");
+          if (!ctx.req.raw.signal.aborted) {
+            controller.enqueue("data: [DONE]\n\n");
+          }
+        } finally {
+          // Ensure we count the stream as finished regardless of how it ends
+          markStreamEnded();
+          controller.close();
         }
-
-        return controller.close();
       },
     });
 
@@ -447,6 +508,7 @@ app.post("/api/ai/chat", async (ctx) => {
       });
 
       await tryCatch(readableStream.cancel(new Error("Chat request aborted")));
+      markStreamEnded();
     };
 
     return new Response(readableStream, {
@@ -465,6 +527,26 @@ app.post("/api/ai/chat", async (ctx) => {
 
     return new Response("Error: " + error.message, { status: 500 });
   }
+});
+
+process.on("SIGTERM", () => {
+  shuttingDown = true;
+  logger.info("[Server] SIGTERM received. Draining in-flight requests...", {
+    inFlight: activeRequests + activeStreams,
+  });
+
+  const start = Date.now();
+  const deadlineMs = 30_000;
+
+  const interval = setInterval(() => {
+    const inFlight = activeRequests + activeStreams;
+    if (inFlight === 0 || Date.now() - start > deadlineMs) {
+      clearInterval(interval);
+      logger.info("[Server] Exiting process", { inFlight, waitedMs: Date.now() - start });
+      // Exit with success to signal graceful shutdown
+      process.exit(0);
+    }
+  }, 250);
 });
 
 export default {
