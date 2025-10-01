@@ -26,7 +26,7 @@ export function UngroupedThreadGroup({ threads, hasGroups }: UngroupedThreadGrou
 
   return (
     <div ref={setDropRef} data-slot="thread-ungrouped-dropzone">
-      {hasGroups && <hr className="border-sidebar-border" />}
+      {hasGroups && <hr className="my-1.5 border-sidebar-border" />}
 
       {Object.entries(groupedThreads).map(function renderItem([title, threads]) {
         const groupKey = `thread-ungrouped-group-${title}`;

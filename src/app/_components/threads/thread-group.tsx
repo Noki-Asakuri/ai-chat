@@ -113,9 +113,8 @@ export function ThreadGroupDropzone(props: ThreadGroupDropzoneProps) {
       ref={setDropRef}
       data-group={props.group?._id}
       data-slot="thread-group-dropzone"
-      className="flex flex-col gap-1 rounded-md border border-transparent"
     >
-      <SidebarGroupContent>
+      <SidebarGroupContent className="flex flex-col gap-1">
         <SortableContext
           items={props.threads.map((thread) => thread._id)}
           strategy={verticalListSortingStrategy}
