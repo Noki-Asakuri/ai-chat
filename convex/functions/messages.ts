@@ -158,6 +158,13 @@ export const updateMessageById = mutation({
           durations: v.optional(
             v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
           ),
+          usages: v.optional(
+            v.object({
+              inputTokens: v.number(),
+              outputTokens: v.number(),
+              reasoningTokens: v.number(),
+            }),
+          ),
         }),
       ),
       modelParams: v.optional(
