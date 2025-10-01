@@ -98,15 +98,14 @@ To get a local copy up and running, follow these simple steps.
   - [ ] OpenAI GPT Image 1
 - [x] Sub-model params (for model using reasoning effort 'high', 'medium', 'low')
 - [x] Switch to using same format from budget to effort for Gemini models (low: 10%, medium: 25%, high: 50%)
-- [ ] Custom grouping of threads
+- [x] Custom grouping of threads
   - [x] Drag and drop threads to group them
   - [x] Create new group
-  - [ ] Rename group
+  - [x] Rename group
   - [x] Delete group
-  - [ ] Reorder groups
+  - [x] Reorder groups
   - [x] Reorder threads within group
   - [x] Reorder threads between groups
-  - [ ] Pin group to top
 
 ## License
 
