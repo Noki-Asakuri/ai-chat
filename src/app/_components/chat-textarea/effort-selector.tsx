@@ -28,18 +28,17 @@ export function EffortSelectorBase(props: EffortSelectorProps) {
   const setChatConfig = useChatStore((state) => state.setChatConfig);
   const modelData = getModelData(props.modelId);
 
+  const shouldHideSelector =
+    typeof modelData.capabilities.reasoning === "undefined" ||
+    modelData.capabilities.reasoning === "always" ||
+    modelData.capabilities.reasoning === false;
+
   function handleChange(effort: ReasoningEffort) {
     if (props.onChange) props.onChange(effort);
     else setChatConfig({ effort });
   }
 
-  if (
-    typeof modelData.capabilities.reasoning === "undefined" ||
-    modelData.capabilities.reasoning === "always" ||
-    modelData.capabilities.reasoning === false
-  ) {
-    return null;
-  }
+  if (shouldHideSelector) return null;
 
   return (
     <Popover>
