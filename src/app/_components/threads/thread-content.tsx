@@ -51,6 +51,7 @@ export function ThreadContents() {
         <CreateGroupButton />
       </div>
 
+      <hr className="border-sidebar-border" />
       <ThreadListWrapper query={deferredQuery} />
     </>
   );
@@ -430,34 +431,40 @@ function ThreadList({ data }: ThreadListProps) {
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
+    <div
+      data-slot="thread-dnd-container"
+      className="custom-scroll flex flex-col overflow-y-auto pr-2.5"
+      style={{ scrollbarGutter: "stable both-edges" }}
     >
-      <SortableContext items={groups.map((g) => g._id)} strategy={verticalListSortingStrategy}>
-        {groups.map(function renderContainer(group) {
-          const key = group._id;
-          const groupThreads = grouped[key]?.threads ?? [];
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <SortableContext items={groups.map((g) => g._id)} strategy={verticalListSortingStrategy}>
+          {groups.map(function renderContainer(group) {
+            const key = group._id;
+            const groupThreads = grouped[key]?.threads ?? [];
 
-          return <ThreadGroup key={key} group={group} threads={groupThreads} />;
-        })}
-      </SortableContext>
+            return <ThreadGroup key={key} group={group} threads={groupThreads} />;
+          })}
+        </SortableContext>
 
-      <UngroupedThreadGroup threads={grouped.none.threads ?? []} />
+        <UngroupedThreadGroup threads={grouped.none.threads ?? []} hasGroups={groups.length > 0} />
 
-      <DragOverlay modifiers={[restrictToFirstScrollableAncestor, restrictToVerticalAxis]}>
-        {activeDraggingItem && activeDraggingItem.type === "thread" && (
-          <ThreadItem thread={activeDraggingItem.item} disabled isOverlay />
-        )}
+        <DragOverlay modifiers={[restrictToFirstScrollableAncestor, restrictToVerticalAxis]}>
+          {activeDraggingItem && activeDraggingItem.type === "thread" && (
+            <ThreadItem thread={activeDraggingItem.item} disabled isOverlay />
+          )}
 
-        {activeDraggingItem && activeDraggingItem.type === "group" && (
-          <ThreadGroup group={activeDraggingItem.item} threads={[]} disabled isOverlay />
-        )}
-      </DragOverlay>
-    </DndContext>
+          {activeDraggingItem && activeDraggingItem.type === "group" && (
+            <ThreadGroup group={activeDraggingItem.item} threads={[]} disabled isOverlay />
+          )}
+        </DragOverlay>
+      </DndContext>
+    </div>
   );
 }

@@ -11,7 +11,12 @@ import { ThreadItem } from "./thread-items";
 
 import { groupByDate } from "@/lib/threads/group-by-date";
 
-export function UngroupedThreadGroup({ threads }: { threads: Doc<"threads">[] }) {
+type UngroupedThreadGroupProps = {
+  threads: Doc<"threads">[];
+  hasGroups: boolean;
+};
+
+export function UngroupedThreadGroup({ threads, hasGroups }: UngroupedThreadGroupProps) {
   const { setNodeRef: setDropRef } = useDroppable({
     id: "none",
     data: { type: "group", groupId: null, title: "Ungrouped" },
@@ -21,7 +26,7 @@ export function UngroupedThreadGroup({ threads }: { threads: Doc<"threads">[] })
 
   return (
     <div ref={setDropRef} data-slot="thread-ungrouped-dropzone">
-      <hr className="border-sidebar-border" />
+      {hasGroups && <hr className="border-sidebar-border" />}
 
       {Object.entries(groupedThreads).map(function renderItem([title, threads]) {
         const groupKey = `thread-ungrouped-group-${title}`;
