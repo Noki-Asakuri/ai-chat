@@ -104,7 +104,7 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
   );
 }
 
-function ThreadActions({ thread, draggable }: { thread: Thread; draggable?: boolean }) {
+function ThreadActions({ thread }: { thread: Thread }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(thread.title);
