@@ -9,15 +9,16 @@ import { type ComponentPropsWithRef } from "react";
 
 import { Collapsible } from "@base-ui-components/react/collapsible";
 
-import { SidebarGroup, SidebarGroupLabel } from "../ui/sidebar";
+import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from "../ui/sidebar";
 
 import type { ActiveGroupData, ActiveThreadData } from "./thread-content";
+import { ThreadGroupActions } from "./thread-group-actions";
 import { ThreadItem } from "./thread-items";
 
 import { cn } from "@/lib/utils";
 
 type ThreadGroupProps = {
-  group: Doc<"groups"> | null;
+  group: Doc<"groups">;
   threads: Doc<"threads">[];
   disabled?: boolean;
   isOverlay?: boolean;
@@ -57,24 +58,31 @@ export function ThreadGroup({ group, threads, disabled, isOverlay }: ThreadGroup
       data-thread-count={threads.length}
       data-order={group?.order}
     >
-      <SidebarGroup style={style} ref={setSortableRef} className="flex flex-col rounded-lg">
-        <SidebarGroupLabel
-          asChild
-          {...attributes}
-          {...listeners}
-          className={cn("select-none font-semibold", isGroupSorting && "cursor-grab")}
-        >
-          <Collapsible.Trigger className="group/trigger flex w-full items-center justify-between gap-2">
-            <span>{group?.title ?? "Ungrouped"}</span>
+      <SidebarGroup style={style} ref={setSortableRef} className="flex">
+        <div className="flex items-center justify-between gap-2">
+          <SidebarGroupLabel
+            {...attributes}
+            {...listeners}
+            asChild
+            className="select-none font-semibold"
+          >
+            <span>{group?.title}</span>
+          </SidebarGroupLabel>
 
-            <ChevronLeftIcon
-              className={cn(
-                "size-4 transition-[rotate]",
-                !isGroupSorting && "group-data-[panel-open]/trigger:-rotate-90",
-              )}
-            />
-          </Collapsible.Trigger>
-        </SidebarGroupLabel>
+          <div className="flex items-center gap-2">
+            <ThreadGroupActions group={group} />
+
+            <Collapsible.Trigger className="group/trigger flex w-full items-center justify-between gap-2">
+              <ChevronLeftIcon
+                className={cn(
+                  "size-4 transition-[rotate]",
+                  !isGroupSorting && "group-data-[panel-open]/trigger:-rotate-90",
+                  isGroupSorting && "cursor-grab",
+                )}
+              />
+            </Collapsible.Trigger>
+          </div>
+        </div>
 
         <ThreadGroupDropzone
           group={group}
@@ -107,18 +115,20 @@ export function ThreadGroupDropzone(props: ThreadGroupDropzoneProps) {
       data-slot="thread-group-dropzone"
       className="flex flex-col gap-1 rounded-md border border-transparent"
     >
-      <SortableContext
-        items={props.threads.map((thread) => thread._id)}
-        strategy={verticalListSortingStrategy}
-      >
-        {props.threads.map(function renderItem(thread) {
-          return <ThreadItem key={thread._id} thread={thread} />;
-        })}
-      </SortableContext>
+      <SidebarGroupContent>
+        <SortableContext
+          items={props.threads.map((thread) => thread._id)}
+          strategy={verticalListSortingStrategy}
+        >
+          {props.threads.map(function renderItem(thread) {
+            return <ThreadItem key={thread._id} thread={thread} />;
+          })}
+        </SortableContext>
 
-      {props.threads.length === 0 && (
-        <div className="px-1.5 py-1.5 text-muted-foreground text-sm">Drop here</div>
-      )}
+        {props.threads.length === 0 && (
+          <div className="px-1.5 py-1.5 text-muted-foreground text-sm">Drop here</div>
+        )}
+      </SidebarGroupContent>
     </Collapsible.Panel>
   );
 }

@@ -91,15 +91,8 @@ export const deleteGroup = mutation({
     if (!group) throw new Error("Group not found");
     if (group.userId !== user.subject) throw new Error("Not authorized");
 
-    // Determine current max order among ungrouped threads
-    const lastUngroupedPromise = ctx.db
-      .query("threads")
-      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.subject).eq("groupId", null))
-      .order("desc")
-      .take(1);
-
     // Move threads from this group to ungrouped with increasing order
-    const threadsInGroupPromise = ctx.db
+    const threadsInGroup = await ctx.db
       .query("threads")
       .withIndex("by_userId_groupId_order", (q) =>
         q.eq("userId", user.subject).eq("groupId", args.groupId),
@@ -107,19 +100,31 @@ export const deleteGroup = mutation({
       .order("asc")
       .collect();
 
-    const [lastUngrouped, threadsInGroup] = await Promise.all([
-      lastUngroupedPromise,
-      threadsInGroupPromise,
-    ]);
-
-    let nextOrder = (lastUngrouped[0]?.order ?? 0) + 1;
-
     for (const t of threadsInGroup) {
-      await ctx.db.patch(t._id, { groupId: null, order: nextOrder++ });
+      await ctx.db.patch(t._id, { groupId: null, order: 0 });
     }
 
     // Delete the group
     await ctx.db.delete(args.groupId);
+    return null;
+  },
+});
+
+/**
+ * Update a group's title.
+ */
+export const updateGroupTitle = mutation({
+  args: { groupId: v.id("groups"), title: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+
+    const group = await ctx.db.get(args.groupId);
+    if (!group) throw new Error("Group not found");
+    if (group.userId !== user.subject) throw new Error("Not authorized");
+
+    await ctx.db.patch(args.groupId, { title: args.title.trim() });
     return null;
   },
 });
@@ -155,6 +160,39 @@ export const reorderThreadWithinGroup = mutation({
     // Reorder all threads in the group to fill the gap
     for (let i = 0; i < threads.length; i++) {
       const thread = threads[i];
+      if (!thread) continue;
+      await ctx.db.patch(thread._id, { order: i });
+    }
+  },
+});
+
+export const removeGroupId = mutation({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
+
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== user.subject) throw new Error("Not authorized");
+
+    if (thread.groupId === null) return;
+
+    await ctx.db.patch(args.threadId, { groupId: null, order: 0 });
+
+    const threadsInOldGroup = await ctx.db
+      .query("threads")
+      .withIndex("by_userId_groupId_order", (q) =>
+        q.eq("userId", user.subject).eq("groupId", thread.groupId),
+      )
+      .order("asc")
+      .collect();
+
+    // Remove thread in old group
+    threadsInOldGroup.splice(thread.order!, 1);
+    // Reorder all threads in the old group to fill the gap
+    for (let i = 0; i < threadsInOldGroup.length; i++) {
+      const thread = threadsInOldGroup[i];
       if (!thread) continue;
       await ctx.db.patch(thread._id, { order: i });
     }

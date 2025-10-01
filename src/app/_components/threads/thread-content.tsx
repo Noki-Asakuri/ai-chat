@@ -172,6 +172,7 @@ function ThreadList({ data }: ThreadListProps) {
   const activeDraggingItem = useChatStore((state) => state.activeDraggingItem);
   const setActiveDraggingItem = useChatStore((state) => state.setActiveDraggingItem);
 
+  const removeGroupId = useMutation(api.functions.groups.removeGroupId);
   const moveThreadToGroup = useMutation(api.functions.groups.moveThreadToGroup);
   const reorderThread = useMutation(api.functions.groups.reorderThreadWithinGroup);
   const moveGroupToIndex = useMutation(api.functions.groups.moveGroupToIndex);
@@ -377,6 +378,11 @@ function ThreadList({ data }: ThreadListProps) {
       console.log("[Dnd]: Reorder", pending, item);
 
       switch (true) {
+        case pending.type === "thread" && "groupId" in item && pending.toGroupId === null: {
+          await removeGroupId({ threadId: item._id });
+          break;
+        }
+
         case pending.type === "thread" && "groupId" in item && pending.toGroupId === item.groupId: {
           console.log("[Dnd]: Reorder within group");
           await reorderThread({ threadId: item._id, toIndex: pending.index });
