@@ -55,7 +55,9 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
     <div
       ref={setNodeRef}
       style={style}
+      data-thread-id={thread._id}
       data-thread-active={threadId === toUUID(thread._id)}
+      data-thread-index={thread.order}
       data-thread-status={thread.status}
       data-is-dragging={isDragging || isOverlay}
       className={cn(
@@ -109,6 +111,7 @@ function ThreadActions({ thread }: { thread: Thread }) {
   const [isSaving, startSaving] = useTransition();
 
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   function toggleThreadPin() {
     console.debug("[Thread] Pin thread", thread);
@@ -167,8 +170,8 @@ function ThreadActions({ thread }: { thread: Thread }) {
         </Menu.Trigger>
 
         <Menu.Portal>
-          <Menu.Positioner side="right" align="center" className="p-1" sideOffset={12}>
-            <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col overflow-hidden rounded-md border bg-sidebar">
+          <Menu.Positioner side="right" align="center" className="p-1" sideOffset={42}>
+            <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col overflow-hidden rounded-md border bg-sidebar/60 backdrop-blur-md backdrop-saturate-150">
               {thread.branchedFrom && (
                 <Menu.Item
                   title="Go to parent thread"
@@ -183,19 +186,25 @@ function ThreadActions({ thread }: { thread: Thread }) {
                 </Menu.Item>
               )}
 
-              <Menu.Item
-                title={thread.pinned ? "Unpin Thread" : "Pin Thread"}
-                onClick={toggleThreadPin}
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  "w-full cursor-pointer justify-start rounded-none",
-                )}
-              >
-                {thread.pinned ? <PinOffIcon className="size-4" /> : <PinIcon className="size-4" />}
-                <span className="pointer-events-none">
-                  {thread.pinned ? "Unpin Thread" : "Pin Thread"}
-                </span>
-              </Menu.Item>
+              {thread.groupId === null && (
+                <Menu.Item
+                  title={thread.pinned ? "Unpin Thread" : "Pin Thread"}
+                  onClick={toggleThreadPin}
+                  className={cn(
+                    buttonVariants({ variant: "ghost" }),
+                    "w-full cursor-pointer justify-start rounded-none",
+                  )}
+                >
+                  {thread.pinned ? (
+                    <PinOffIcon className="size-4" />
+                  ) : (
+                    <PinIcon className="size-4" />
+                  )}
+                  <span className="pointer-events-none">
+                    {thread.pinned ? "Unpin Thread" : "Pin Thread"}
+                  </span>
+                </Menu.Item>
+              )}
 
               <Menu.Item
                 title="Regenerate Title"
@@ -214,6 +223,8 @@ function ThreadActions({ thread }: { thread: Thread }) {
                 onClick={() => {
                   setEditTitle(thread.title);
                   setEditOpen(true);
+
+                  inputRef.current?.focus();
                 }}
                 className={cn(
                   buttonVariants({ variant: "ghost" }),
@@ -254,10 +265,10 @@ function ThreadActions({ thread }: { thread: Thread }) {
 
             <form className="mt-3 space-y-4" onSubmit={(e) => e.preventDefault()}>
               <Input
+                ref={inputRef}
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
                 placeholder="Thread title"
-                autoFocus
               />
 
               <div className="flex justify-end gap-2">
