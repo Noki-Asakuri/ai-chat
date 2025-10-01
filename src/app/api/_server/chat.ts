@@ -10,8 +10,7 @@ import { secureHeaders } from "hono/secure-headers";
 
 import dedent from "dedent";
 import { Redis } from "ioredis";
-import fs from "node:fs";
-import path from "node:path";
+import { execSync } from "node:child_process";
 
 import {
   createUIMessageStream,
@@ -43,6 +42,17 @@ function getCommitSha() {
   // Prefer explicit env provided via Docker build/run
   const envSha = process.env.GIT_COMMIT_SHA || process.env.COMMIT_SHA;
   if (envSha && envSha.length > 0) return envSha;
+
+  // Fallback to git command (requires .git directory available in image)
+  try {
+    const out = execSync("git rev-parse --short=12 HEAD", {
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    const sha = out.toString("utf8").trim();
+    if (sha) return sha;
+  } catch {
+    // ignore and fall through
+  }
 
   return "unknown";
 }

@@ -5,6 +5,15 @@ RUN bun install --production --frozen-lockfile
 
 FROM oven/bun:latest AS runner
 WORKDIR /app
+
+# Install curl, git, and CA certificates (Ubuntu/Debian)
+USER root
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends curl ca-certificates git; \
+    rm -rf /var/lib/apt/lists/*
+USER bun
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 EXPOSE 3001
