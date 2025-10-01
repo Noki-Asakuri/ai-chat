@@ -9,49 +9,28 @@
     "moduleDetection": "force",
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
+
     /* Strictness */
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "checkJs": true,
+
     /* Bundled projects */
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "ES2022"
-    ],
+    "lib": ["dom", "dom.iterable", "ES2022"],
     "noEmit": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "plugins": [{ "name": "next" }],
     "incremental": true,
+
     /* Path Aliases */
     "paths": {
-      "@/convex/*": [
-        "./convex/*"
-      ],
-      "@/components/*": [
-        "./src/app/_components/*"
-      ],
-      "@/*": [
-        "./src/*"
-      ]
+      "@/convex/*": ["./convex/*"],
+      "@/components/*": ["./src/app/_components/*"],
+      "@/*": ["./src/*"]
     }
   },
-  "exclude": [
-    "node_modules",
-    "public",
-    "convex"
-  ],
-  "include": [
-    "next-env.d.ts",
-    "lucide-react.d.ts",
-    "src",
-    ".next/types/**/*.ts",
-    "next.config.ts"
-  ]
+  "exclude": ["node_modules", "public", "convex"],
+  "include": ["next-env.d.ts", "lucide-react.d.ts", "src", ".next/types/**/*.ts", "next.config.ts"]
 }

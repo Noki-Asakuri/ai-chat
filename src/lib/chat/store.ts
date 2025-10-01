@@ -99,9 +99,6 @@ export interface ChatState {
   chatConfig: ReturnType<typeof getChatConfigFromLS>;
   setChatConfig: (config: Partial<ReturnType<typeof getChatConfigFromLS>>) => void;
 
-  abortController: AbortController;
-  setAbortController: (controller: AbortController) => void;
-
   chatInput: string;
   setChatInput: (input: string | ((prev: string) => string)) => void;
 
@@ -126,6 +123,14 @@ export interface ChatState {
   // Parallel streaming support
   currentThreadId: Id<"threads"> | null;
   setCurrentThreadId: (id: Id<"threads"> | null) => void;
+
+  activeDraggingItem:
+    | { type: "thread"; item: Doc<"threads"> }
+    | { type: "group"; item: Doc<"groups"> }
+    | null;
+  setActiveDraggingItem: (
+    item: { type: "thread"; item: Doc<"threads"> } | { type: "group"; item: Doc<"groups"> } | null,
+  ) => void;
 
   activeStreams: Record<string, true>;
   markStreamStart: (assistantMessageId: string | Id<"messages">) => void;
@@ -201,6 +206,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   threads: [],
   setThreads: (threads) => set({ threads }),
 
+  activeDraggingItem: null,
+  setActiveDraggingItem: (item) => set({ activeDraggingItem: item }),
+
   threadCommandOpen: false,
   setThreadCommandOpen: (open) =>
     set((state) => ({
@@ -262,9 +270,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   isDragOver: false,
   setIsDragOver: (isDragOver) => set({ isDragOver }),
-
-  abortController: new AbortController(),
-  setAbortController: (abortController) => set({ abortController }),
 
   chatInput: getInitialChatInput(),
   setChatInput: (input) => {

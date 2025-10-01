@@ -2,6 +2,12 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  groups: defineTable({
+    title: v.string(),
+    order: v.number(),
+    userId: v.string(),
+  }).index("by_userId_order", ["userId", "order"]),
+
   threads: defineTable({
     title: v.string(),
     userId: v.string(),
@@ -9,12 +15,16 @@ export default defineSchema({
     pinned: v.optional(v.boolean()),
     branchedFrom: v.optional(v.id("threads")),
 
+    groupId: v.optional(v.union(v.id("groups"), v.null())),
+    order: v.optional(v.number()),
+
     status: v.optional(
       v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
     ),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_updatedAt", ["userId", "updatedAt"])
+    .index("by_userId_groupId_order", ["userId", "groupId", "order"])
     .index("by_userId_pinned_updatedAt", ["userId", "pinned", "updatedAt"])
     .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "pinned"] }),
 

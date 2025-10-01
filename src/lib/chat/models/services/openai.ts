@@ -58,11 +58,21 @@ export const openai: Record<ModelIdKey, ModelData> = {
   },
   "openai/gpt-5-chat": {
     display: { name: "GPT 5 Chat" },
-    id: "openai/gpt-5-chat-latest",
+    id: "openai/gpt-5-chat",
     altModelIds: ["openai/gpt-5-chat-latest"],
     provider: "openai",
     capabilities: {
       webSearch: true,
+      vision: true,
+    },
+  },
+  "openai/gpt-5-codex": {
+    display: { name: "GPT 5 Codex" },
+    id: "openai/gpt-5-codex",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
       vision: true,
     },
   },

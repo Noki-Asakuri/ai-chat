@@ -4,6 +4,7 @@ import {
   DeleteIcon,
   EllipsisIcon,
   GitBranchIcon,
+  GripVerticalIcon,
   Loader2Icon,
   PencilIcon,
   PinIcon,
@@ -13,11 +14,15 @@ import {
 import { useRef, useState, useTransition } from "react";
 import { NavLink, useParams } from "react-router";
 
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
 import { Dialog } from "@base-ui-components/react/dialog";
 import { Menu } from "@base-ui-components/react/menu";
 
 import { buttonVariants } from "../ui/button";
 import { Input } from "../ui/input";
+
 import { ThreadDeleteDialog } from "./thread-delete-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
@@ -26,27 +31,47 @@ import { cn, toUUID } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
 
-export function ThreadItem({ thread }: { thread: Thread }) {
+type ThreadItemProps = {
+  thread: Thread;
+  disabled?: boolean;
+  isOverlay?: boolean;
+};
+
+export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
   const { threadId } = useParams<{ threadId?: string }>();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: thread._id,
+    disabled,
+    data: { type: "thread", threadId: thread._id, belongsTo: thread.groupId ?? null },
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging || isOverlay ? 0.5 : 1,
+  };
 
   return (
-    <NavLink
-      to={`/threads/${toUUID(thread._id)}`}
-      title={thread.title}
-      data-active={threadId === toUUID(thread._id)}
-      data-status={thread.status}
+    <div
+      ref={setNodeRef}
+      style={style}
+      data-thread-id={thread._id}
+      data-thread-active={threadId === toUUID(thread._id)}
+      data-thread-index={thread.order}
+      data-thread-status={thread.status}
+      data-is-dragging={isDragging || isOverlay}
+      data-slot="thread-item"
       className={cn(
-        "group/thread relative flex w-full items-center gap-1 overflow-hidden rounded-md px-2 py-1.5",
+        "group/thread flex items-center justify-between gap-2 overflow-hidden rounded-md",
         "text-sidebar-foreground transition-colors hover:bg-primary/30",
-        "[&:has(button[data-popup-open])]:bg-primary/30",
-        "data-[active=true]:bg-primary/30",
+        "data-[thread-active=true]:bg-primary/30 [&:has(button[data-popup-open])]:bg-primary/30",
+        "data-[is-dragging=true]:bg-primary/30",
       )}
     >
-      <div
-        className={cn("flex w-full items-center gap-2", {
-          "group-hover/thread:w-[calc(100%-20px)] group-data-[active=true]/thread:w-[calc(100%-20px)]":
-            thread.status === "complete",
-        })}
+      <NavLink
+        to={`/threads/${toUUID(thread._id)}`}
+        title={thread.title}
+        className="flex w-full min-w-0 items-center gap-2 py-1.5 pl-2"
       >
         <div className="flex w-full items-center justify-between gap-2">
           {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
@@ -59,10 +84,23 @@ export function ThreadItem({ thread }: { thread: Thread }) {
             </div>
           )}
         </div>
-      </div>
+      </NavLink>
 
-      <ThreadActions thread={thread} />
-    </NavLink>
+      <div className="flex items-center">
+        <ThreadActions thread={thread} />
+
+        <div
+          {...attributes}
+          {...listeners}
+          className={cn(
+            "cursor-grab px-2 py-1.5 active:cursor-grabbing",
+            (isDragging || disabled) && "cursor-grabbing",
+          )}
+        >
+          <GripVerticalIcon className="size-4" />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -71,7 +109,9 @@ function ThreadActions({ thread }: { thread: Thread }) {
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(thread.title);
   const [isSaving, startSaving] = useTransition();
+
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   function toggleThreadPin() {
     console.debug("[Thread] Pin thread", thread);
@@ -124,14 +164,14 @@ function ThreadActions({ thread }: { thread: Thread }) {
             e.stopPropagation();
             e.preventDefault();
           }}
-          className="pointer-events-auto hidden size-5 items-center justify-center group-hover/thread:flex data-[popup-open]:flex group-data-[active=true]/thread:flex group-data-[status=streaming]/thread:hidden"
+          className="pointer-events-auto hidden size-5 items-center justify-center group-hover/thread:flex data-[popup-open]:flex group-data-[thread-active=true]/thread:flex group-data-[thread-status=streaming]/thread:hidden"
         >
           <EllipsisIcon className="size-4" />
         </Menu.Trigger>
 
         <Menu.Portal>
-          <Menu.Positioner side="right" align="center" className="p-1" sideOffset={12}>
-            <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col overflow-hidden rounded-md border bg-sidebar">
+          <Menu.Positioner side="right" align="center" className="p-1" sideOffset={42}>
+            <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col overflow-hidden rounded-md border bg-sidebar/60 backdrop-blur-md backdrop-saturate-150">
               {thread.branchedFrom && (
                 <Menu.Item
                   title="Go to parent thread"
@@ -146,19 +186,25 @@ function ThreadActions({ thread }: { thread: Thread }) {
                 </Menu.Item>
               )}
 
-              <Menu.Item
-                title={thread.pinned ? "Unpin Thread" : "Pin Thread"}
-                onClick={toggleThreadPin}
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  "w-full cursor-pointer justify-start rounded-none",
-                )}
-              >
-                {thread.pinned ? <PinOffIcon className="size-4" /> : <PinIcon className="size-4" />}
-                <span className="pointer-events-none">
-                  {thread.pinned ? "Unpin Thread" : "Pin Thread"}
-                </span>
-              </Menu.Item>
+              {thread.groupId === null && (
+                <Menu.Item
+                  title={thread.pinned ? "Unpin Thread" : "Pin Thread"}
+                  onClick={toggleThreadPin}
+                  className={cn(
+                    buttonVariants({ variant: "ghost" }),
+                    "w-full cursor-pointer justify-start rounded-none",
+                  )}
+                >
+                  {thread.pinned ? (
+                    <PinOffIcon className="size-4" />
+                  ) : (
+                    <PinIcon className="size-4" />
+                  )}
+                  <span className="pointer-events-none">
+                    {thread.pinned ? "Unpin Thread" : "Pin Thread"}
+                  </span>
+                </Menu.Item>
+              )}
 
               <Menu.Item
                 title="Regenerate Title"
@@ -177,6 +223,8 @@ function ThreadActions({ thread }: { thread: Thread }) {
                 onClick={() => {
                   setEditTitle(thread.title);
                   setEditOpen(true);
+
+                  inputRef.current?.focus();
                 }}
                 className={cn(
                   buttonVariants({ variant: "ghost" }),
@@ -217,10 +265,10 @@ function ThreadActions({ thread }: { thread: Thread }) {
 
             <form className="mt-3 space-y-4" onSubmit={(e) => e.preventDefault()}>
               <Input
+                ref={inputRef}
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
                 placeholder="Thread title"
-                autoFocus
               />
 
               <div className="flex justify-end gap-2">
