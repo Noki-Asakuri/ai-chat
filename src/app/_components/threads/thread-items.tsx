@@ -60,6 +60,7 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
       data-thread-index={thread.order}
       data-thread-status={thread.status}
       data-is-dragging={isDragging || isOverlay}
+      data-slot="thread-item"
       className={cn(
         "group/thread flex items-center justify-between gap-2 overflow-hidden rounded-md",
         "text-sidebar-foreground transition-colors hover:bg-primary/30",
@@ -88,7 +89,6 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
       <div className="flex items-center">
         <ThreadActions thread={thread} />
 
-        {/* Drag Handle */}
         <div
           {...attributes}
           {...listeners}
@@ -104,7 +104,7 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
   );
 }
 
-function ThreadActions({ thread }: { thread: Thread }) {
+function ThreadActions({ thread, draggable }: { thread: Thread; draggable?: boolean }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(thread.title);

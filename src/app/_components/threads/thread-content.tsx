@@ -178,8 +178,9 @@ function ThreadList({ data }: ThreadListProps) {
 
   // Optimistic local state for grouped threads while dragging
   const snapshotRef = useRef<GroupThreads | null>(null);
-  const [optimisticGrouped, setOptimisticGrouped] = useState<GroupThreads | null>(null);
+
   const [optimisticGroups, setOptimisticGroups] = useState<Groups | null>(null);
+  const [optimisticGrouped, setOptimisticGrouped] = useState<GroupThreads | null>(null);
 
   const pendingDropRef = useRef<PendingDrop | null>(null);
 
@@ -400,6 +401,8 @@ function ThreadList({ data }: ThreadListProps) {
       }
 
       setActiveDraggingItem(null);
+      setOptimisticGrouped(null);
+      setOptimisticGroups(null);
     } catch (error) {
       console.error("[Thread] Reorder failed", error);
       // Rollback
@@ -438,7 +441,7 @@ function ThreadList({ data }: ThreadListProps) {
         })}
       </SortableContext>
 
-      <UngroupedThreadGroup threads={grouped.none?.threads ?? []} />
+      <UngroupedThreadGroup threads={grouped.none.threads ?? []} />
 
       <DragOverlay modifiers={[restrictToFirstScrollableAncestor, restrictToVerticalAxis]}>
         {activeDraggingItem && activeDraggingItem.type === "thread" && (
