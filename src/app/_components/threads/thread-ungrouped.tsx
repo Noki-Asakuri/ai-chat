@@ -20,15 +20,8 @@ export function UngroupedThreadGroup({ threads }: { threads: Doc<"threads">[] })
   const groupedThreads = groupByDate(threads);
 
   return (
-    <div>
-      <hr className="mb-3 border-sidebar-border" />
-
-      <div
-        ref={setDropRef}
-        className="select-none rounded-md border border-sidebar-border border-dotted py-1 text-center text-muted-foreground"
-      >
-        To ungroup, drop here
-      </div>
+    <div ref={setDropRef} data-slot="thread-ungrouped-dropzone">
+      <hr className="border-sidebar-border" />
 
       {Object.entries(groupedThreads).map(function renderItem([title, threads]) {
         const groupKey = `thread-ungrouped-group-${title}`;
