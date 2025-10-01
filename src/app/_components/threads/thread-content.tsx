@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useMutation } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { useDeferredValue, useRef, useState } from "react";
 
 import {
@@ -28,8 +27,9 @@ import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-ki
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
-import { ThreadGroup, UngroupedThreadGroup } from "./thread-group";
+import { ThreadGroup } from "./thread-group";
 import { ThreadItem } from "./thread-items";
+import { UngroupedThreadGroup } from "./thread-ungrouped";
 
 import { useChatStore } from "@/lib/chat/store";
 
@@ -213,12 +213,15 @@ function ThreadList({ data }: ThreadListProps) {
   }
 
   function handleDragOver(event: DragOverEvent) {
+    console.debug("[Thread] Drag over", event.over?.id, event.active.data, event.over?.data);
+
     const activeId = event.active.id as Id<"threads">;
     const overId = event.over?.id as Id<"threads"> | Id<"groups"> | "none" | undefined;
-    if (!overId || overId === activeId) return;
 
     const activeData = event.active.data.current as ActiveThreadData | ActiveGroupData;
     const overData = event.over?.data.current as ActiveThreadData | ActiveGroupData;
+
+    if (!overId || overId === activeId) return;
 
     // Build a mutable draft of grouped threads for optimistic updates
     const nextGrouped = structuredClone(optimisticGrouped ?? data.groupedThreads);
@@ -303,6 +306,38 @@ function ThreadList({ data }: ThreadListProps) {
         break reorderLogic;
       }
 
+      // Moving to a different group while dragging over a group container
+      if (
+        activeData.type === "thread" &&
+        overData.type === "group" &&
+        activeData.belongsTo !== overData.groupId
+      ) {
+        console.debug("[Dnd]: Moving to a different group (over container)");
+        pendingDropRef.current = {
+          index: 0,
+          type: "thread",
+          toGroupId: overData.groupId,
+        };
+
+        const fromKey = keyOf(activeData.belongsTo);
+        const toKey = keyOf(overData.groupId ?? null);
+
+        const fromContainer = ensureContainer(fromKey);
+        const toContainer = ensureContainer(toKey);
+
+        const fromIdx = fromContainer.threads.findIndex((t) => t._id === activeId);
+        if (fromIdx === -1) break reorderLogic;
+
+        const [moved] = fromContainer.threads.splice(fromIdx, 1);
+        const movedUpdated = { ...moved, groupId: toKey === "none" ? null : toKey };
+        toContainer.threads.splice(0, 0, movedUpdated as Doc<"threads">);
+
+        fromContainer.threads = fromContainer.threads.map((t, i) => ({ ...t, order: i }));
+        toContainer.threads = toContainer.threads.map((t, i) => ({ ...t, order: i }));
+
+        break reorderLogic;
+      }
+
       if (
         activeData.type === "group" &&
         overData.type === "group" &&
@@ -327,6 +362,8 @@ function ThreadList({ data }: ThreadListProps) {
   }
 
   async function handleDragEnd(event: DragEndEvent) {
+    console.debug("[Thread] Drag end", event.active.id);
+
     try {
       const pending = pendingDropRef.current;
       if (!pending) return;
@@ -405,11 +442,11 @@ function ThreadList({ data }: ThreadListProps) {
 
       <DragOverlay modifiers={[restrictToFirstScrollableAncestor, restrictToVerticalAxis]}>
         {activeDraggingItem && activeDraggingItem.type === "thread" && (
-          <ThreadItem thread={activeDraggingItem.item} disabled />
+          <ThreadItem thread={activeDraggingItem.item} disabled isOverlay />
         )}
 
         {activeDraggingItem && activeDraggingItem.type === "group" && (
-          <ThreadGroup group={activeDraggingItem.item} threads={[]} disabled />
+          <ThreadGroup group={activeDraggingItem.item} threads={[]} disabled isOverlay />
         )}
       </DragOverlay>
     </DndContext>

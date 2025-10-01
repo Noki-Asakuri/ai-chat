@@ -5,48 +5,25 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 
 import { ChevronLeftIcon } from "lucide-react";
-import { useMemo, type ComponentPropsWithRef } from "react";
+import { type ComponentPropsWithRef } from "react";
 
 import { Collapsible } from "@base-ui-components/react/collapsible";
 
 import { SidebarGroup, SidebarGroupLabel } from "../ui/sidebar";
+
+import type { ActiveGroupData, ActiveThreadData } from "./thread-content";
 import { ThreadItem } from "./thread-items";
 
 import { cn } from "@/lib/utils";
-import type { ActiveGroupData, ActiveThreadData } from "./thread-content";
-
-export function UngroupedThreadGroup({ threads }: { threads: Doc<"threads">[] }) {
-  return (
-    <Collapsible.Root
-      defaultOpen
-      data-group="none"
-      data-slot="thread-group-collapsible"
-      data-thread-count={threads.length}
-    >
-      <SidebarGroup className="flex flex-col overflow-hidden rounded-lg">
-        <SidebarGroupLabel asChild className="select-none font-semibold">
-          <Collapsible.Trigger className="group/trigger flex w-full items-center justify-between gap-2">
-            <span>Ungrouped</span>
-
-            <ChevronLeftIcon className="group-data-[panel-open]/trigger:-rotate-90 size-4 transition-[rotate]" />
-          </Collapsible.Trigger>
-        </SidebarGroupLabel>
-
-        <Collapsible.Panel>
-          <ThreadGroupDropzone threads={threads} group={null} />
-        </Collapsible.Panel>
-      </SidebarGroup>
-    </Collapsible.Root>
-  );
-}
 
 type ThreadGroupProps = {
   group: Doc<"groups"> | null;
   threads: Doc<"threads">[];
   disabled?: boolean;
+  isOverlay?: boolean;
 };
 
-export function ThreadGroup({ group, threads, disabled }: ThreadGroupProps) {
+export function ThreadGroup({ group, threads, disabled, isOverlay }: ThreadGroupProps) {
   const {
     active,
     attributes,
@@ -80,11 +57,7 @@ export function ThreadGroup({ group, threads, disabled }: ThreadGroupProps) {
       data-thread-count={threads.length}
       data-order={group?.order}
     >
-      <SidebarGroup
-        style={style}
-        ref={setSortableRef}
-        className="flex flex-col overflow-hidden rounded-lg"
-      >
+      <SidebarGroup style={style} ref={setSortableRef} className="flex flex-col rounded-lg">
         <SidebarGroupLabel
           asChild
           {...attributes}
@@ -103,9 +76,11 @@ export function ThreadGroup({ group, threads, disabled }: ThreadGroupProps) {
           </Collapsible.Trigger>
         </SidebarGroupLabel>
 
-        <Collapsible.Panel hidden={disabled || isGroupSorting}>
-          <ThreadGroupDropzone threads={threads} disabled={disabled} group={group} />
-        </Collapsible.Panel>
+        <ThreadGroupDropzone
+          group={group}
+          threads={threads}
+          isHidden={isOverlay || disabled || isGroupSorting}
+        />
       </SidebarGroup>
     </Collapsible.Root>
   );
@@ -114,40 +89,36 @@ export function ThreadGroup({ group, threads, disabled }: ThreadGroupProps) {
 type ThreadGroupDropzoneProps = ComponentPropsWithRef<"div"> & {
   group: Doc<"groups"> | null;
   threads: Doc<"threads">[];
-  disabled?: boolean;
+  isHidden?: boolean;
 };
 
-function ThreadGroupDropzone(props: ThreadGroupDropzoneProps) {
+export function ThreadGroupDropzone(props: ThreadGroupDropzoneProps) {
   const { setNodeRef: setDropRef } = useDroppable({
     id: props.group?._id ?? "none",
-    data: {
-      type: "group",
-      groupId: props.group?._id ?? null,
-      title: props.group?.title ?? "Ungrouped",
-    },
+    data: { type: "group", groupId: props.group?._id, title: props.group?.title },
   });
 
-  const sortedThreads = useMemo(
-    () => [...props.threads].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    [props.threads],
-  );
-
-  if (props.disabled) return null;
+  if (props.isHidden) return null;
 
   return (
-    <div ref={setDropRef} className="flex flex-col gap-1 transition-all duration-150">
+    <Collapsible.Panel
+      ref={setDropRef}
+      data-group={props.group?._id}
+      data-slot="thread-group-dropzone"
+      className="flex flex-col gap-1 rounded-md border border-transparent"
+    >
       <SortableContext
-        items={sortedThreads.map((thread) => thread._id)}
+        items={props.threads.map((thread) => thread._id)}
         strategy={verticalListSortingStrategy}
       >
-        {sortedThreads.map(function renderItem(thread) {
+        {props.threads.map(function renderItem(thread) {
           return <ThreadItem key={thread._id} thread={thread} />;
         })}
       </SortableContext>
 
-      {sortedThreads.length === 0 && (
+      {props.threads.length === 0 && (
         <div className="px-1.5 py-1.5 text-muted-foreground text-sm">Drop here</div>
       )}
-    </div>
+    </Collapsible.Panel>
   );
 }

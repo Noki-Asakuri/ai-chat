@@ -22,6 +22,7 @@ import { Menu } from "@base-ui-components/react/menu";
 
 import { buttonVariants } from "../ui/button";
 import { Input } from "../ui/input";
+
 import { ThreadDeleteDialog } from "./thread-delete-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
@@ -33,9 +34,10 @@ const convexClient = getConvexReactClient();
 type ThreadItemProps = {
   thread: Thread;
   disabled?: boolean;
+  isOverlay?: boolean;
 };
 
-export function ThreadItem({ thread, disabled }: ThreadItemProps) {
+export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
   const { threadId } = useParams<{ threadId?: string }>();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: thread._id,
@@ -46,7 +48,7 @@ export function ThreadItem({ thread, disabled }: ThreadItemProps) {
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging || isOverlay ? 0.5 : 1,
   };
 
   return (
@@ -55,10 +57,12 @@ export function ThreadItem({ thread, disabled }: ThreadItemProps) {
       style={style}
       data-thread-active={threadId === toUUID(thread._id)}
       data-thread-status={thread.status}
+      data-is-dragging={isDragging || isOverlay}
       className={cn(
         "group/thread flex items-center justify-between gap-2 overflow-hidden rounded-md",
         "text-sidebar-foreground transition-colors hover:bg-primary/30",
         "data-[thread-active=true]:bg-primary/30 [&:has(button[data-popup-open])]:bg-primary/30",
+        "data-[is-dragging=true]:bg-primary/30",
       )}
     >
       <NavLink
