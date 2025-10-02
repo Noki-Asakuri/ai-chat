@@ -116,7 +116,7 @@ function ThreadCommandDialog() {
           </CommandLoading>
         )}
 
-        {!isLoading && (
+        {!isLoading && query.length > 1 && (
           <>
             <CommandEmpty>No results found for "{query}".</CommandEmpty>
 
