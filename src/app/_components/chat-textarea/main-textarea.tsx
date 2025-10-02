@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef } from "react";
-import { toast } from "sonner";
-import { v4 as uuidv4 } from "uuid";
-
 import { api } from "@/convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
+
+import { useCallback, useEffect, useRef } from "react";
+import { toast } from "sonner";
+import { v4 as uuidv4 } from "uuid";
 
 import { Textarea } from "../ui/textarea";
 
@@ -19,17 +19,12 @@ import { useChatStore } from "@/lib/chat/store";
 export function ChatTextarea() {
   const parentRef = useRef<HTMLDivElement>(null);
 
-  const setTextareaHeight = useChatStore((state) => state.setTextareaHeight);
+  const onResize = useCallback((entries: ResizeObserverEntry[]) => {
+    const entry = entries[0];
+    if (!entry) return;
 
-  const onResize = useCallback(
-    (entries: ResizeObserverEntry[]) => {
-      const entry = entries[0];
-      if (!entry) return;
-
-      setTextareaHeight(entry.target.clientHeight);
-    },
-    [setTextareaHeight],
-  );
+    useChatStore.getState().setTextareaHeight(entry.target.clientHeight);
+  }, []);
 
   useEffect(() => {
     if (!parentRef.current) return;
@@ -72,9 +67,6 @@ function InputTextArea() {
   const input = useChatStore((state) => state.chatInput);
   const { submitChatMessage } = useChatRequest();
 
-  const setChatInput = useChatStore((state) => state.setChatInput);
-  const addAttachment = useChatStore((state) => state.addAttachment);
-
   function handleAddAttachments({ files }: { files: File[] }) {
     const acceptFiles = files.filter(
       (file) => file.type.includes("image") || file.type.includes("pdf"),
@@ -88,7 +80,7 @@ function InputTextArea() {
         return { id: uuidv4(), name: file.name, size: file.size, file, type, mimeType: file.type };
       });
 
-      addAttachment(attachments);
+      useChatStore.getState().addAttachment(attachments);
     }
 
     if (acceptFiles.length < files.length) {
@@ -111,7 +103,7 @@ function InputTextArea() {
         aria-label="Type your message here..."
         placeholder="Type your message here..."
         value={input}
-        onChange={(event) => setChatInput(event.target.value)}
+        onChange={(event) => useChatStore.getState().setChatInput(event.target.value)}
         data-slot="textarea-chat-input"
         className="!bg-transparent !ring-0 max-h-[250px] w-full resize-none rounded-none border-0 p-0"
         onPaste={(event) => {

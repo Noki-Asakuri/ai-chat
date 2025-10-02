@@ -13,6 +13,7 @@ import { useChatStore } from "@/lib/chat/store";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useShallow } from "zustand/shallow";
 
 type MessageProps = {
   message: ChatMessage;
@@ -21,13 +22,17 @@ type MessageProps = {
 };
 
 export function Message({ message, index, isLast }: MessageProps) {
-  const overlay = useChatStore((state) => state.assistantMessages[message._id]);
-  const editMessage = useChatStore((state) => state.editMessage);
-  const popupRetryMessageId = useChatStore((state) => state.popupRetryMessageId);
-  const textareaHeight = useChatStore((state) => state.textareaHeight);
+  const { editMessage, lastUserMessageHeight, overlay, popupRetryMessageId, textareaHeight } =
+    useChatStore(
+      useShallow((state) => ({
+        overlay: state.assistantMessages[message._id],
+        editMessage: state.editMessage,
+        popupRetryMessageId: state.popupRetryMessageId,
+        textareaHeight: state.textareaHeight,
+        lastUserMessageHeight: state.lastUserMessageHeight ?? 114,
+      })),
+    );
 
-  const lastUserMessageHeight = useChatStore((state) => state.lastUserMessageHeight) ?? 114;
-  const setMessageHeight = useChatStore((state) => state.setMessageHeight);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
 
   const userMessageHeight =
@@ -48,18 +53,18 @@ export function Message({ message, index, isLast }: MessageProps) {
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const h = Math.round(entry.contentRect.height);
-        setMessageHeight(h);
+        useChatStore.getState().setMessageHeight(h);
       }
     });
 
     // init and observe
-    setMessageHeight(el.clientHeight);
+    useChatStore.getState().setMessageHeight(el.clientHeight);
     ro.observe(el);
 
     return () => {
       ro.disconnect();
     };
-  }, [isLast, message.role, setMessageHeight]);
+  }, [isLast, message.role]);
 
   const renderMessage =
     message.role === "assistant" && message.status === "streaming" && overlay ? overlay : message;
@@ -105,7 +110,7 @@ function MessageLoading({ model }: { model: ChatMessage["model"] }) {
   const modelData = getModelData(model || "google/gemini-2.5-flash");
 
   return (
-    <div className="bg-background/80 flex h-11 w-full shrink-0 items-center gap-2 rounded-md border px-4 py-2 backdrop-blur-md backdrop-saturate-150">
+    <div className="flex h-11 w-full shrink-0 items-center gap-2 rounded-md border bg-background/80 px-4 py-2 backdrop-blur-md backdrop-saturate-150">
       <div className="flex gap-2">
         <div className="flex items-center justify-center gap-2">
           <Icons.provider provider={modelData?.provider} className="size-5 rounded-md" />

@@ -1,4 +1,5 @@
 import { BrainIcon, SignalHighIcon, SignalLowIcon, SignalMediumIcon } from "lucide-react";
+import { useShallow } from "zustand/shallow";
 
 import { Button, buttonVariants } from "../ui/button";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -16,7 +17,9 @@ type EffortSelectorProps = {
 };
 
 export function ChatEffortSelector() {
-  const config = useChatStore((state) => state.chatConfig);
+  const config = useChatStore(
+    useShallow((state) => ({ effort: state.chatConfig.effort, model: state.chatConfig.model })),
+  );
   return <EffortSelectorBase value={config.effort} modelId={config.model} />;
 }
 
@@ -25,7 +28,6 @@ export function EffortSelector(props: EffortSelectorProps) {
 }
 
 export function EffortSelectorBase(props: EffortSelectorProps) {
-  const setChatConfig = useChatStore((state) => state.setChatConfig);
   const modelData = getModelData(props.modelId);
 
   const shouldHideSelector =
@@ -35,7 +37,7 @@ export function EffortSelectorBase(props: EffortSelectorProps) {
 
   function handleChange(effort: ReasoningEffort) {
     if (props.onChange) props.onChange(effort);
-    else setChatConfig({ effort });
+    else useChatStore.getState().setChatConfig({ effort });
   }
 
   if (shouldHideSelector) return null;

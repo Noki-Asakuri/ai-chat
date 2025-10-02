@@ -54,10 +54,8 @@ export function WelcomeScreen() {
   const chatInput = useChatStore((state) => state.chatInput.length);
   const textareaHeight = useChatStore((state) => state.textareaHeight);
 
-  const setChatInput = useChatStore((state) => state.setChatInput);
-
   const handlePromptClick = (prompt: string) => {
-    setChatInput(prompt);
+    useChatStore.getState().setChatInput(prompt);
 
     setTimeout(() => {
       const textarea = document.getElementById("textarea-chat-input");
@@ -74,13 +72,13 @@ export function WelcomeScreen() {
       className="pointer-events-none absolute flex w-full flex-col items-center justify-center transition-opacity"
     >
       <div className="mx-auto max-w-2xl space-y-4 text-center">
-        <h1 className="text-foreground text-4xl font-light">
+        <h1 className="font-light text-4xl text-foreground">
           How can I help you, <span className="capitalize">{user?.username}</span>?
         </h1>
 
         <div className="w-full px-4 md:min-w-[650px]">
           <Tabs defaultValue="create">
-            <TabsList className="bg-muted/70 group-data-[disable-blur=true]/sidebar-provider:bg-muted pointer-events-auto z-10 w-full backdrop-blur-md backdrop-saturate-150">
+            <TabsList className="pointer-events-auto z-10 w-full bg-muted/70 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-muted">
               {categories.map((category) => (
                 <Tab key={category.topic} value={category.topic} className="h-10">
                   <category.icon className="size-4" />
@@ -96,7 +94,7 @@ export function WelcomeScreen() {
                     <button
                       key={index}
                       onClick={() => handlePromptClick(prompt)}
-                      className="hover:bg-muted/40 bg-muted/70 group-data-[disable-blur=true]/sidebar-provider:bg-muted hover:group-data-[disable-blur=true]/sidebar-provider:bg-muted/80 pointer-events-auto flex items-center justify-center rounded-md px-4 py-2 text-sm text-pretty backdrop-blur-md backdrop-saturate-150 transition-colors md:min-w-max md:justify-start md:text-base"
+                      className="pointer-events-auto flex items-center justify-center text-pretty rounded-md bg-muted/70 px-4 py-2 text-sm backdrop-blur-md backdrop-saturate-150 transition-colors hover:bg-muted/40 group-data-[disable-blur=true]/sidebar-provider:bg-muted hover:group-data-[disable-blur=true]/sidebar-provider:bg-muted/80 md:min-w-max md:justify-start md:text-base"
                     >
                       {prompt}
                     </button>

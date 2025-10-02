@@ -11,8 +11,6 @@ import { format } from "@/lib/utils";
 
 export function ChatAttachmentButton() {
   const model = useChatStore((state) => state.chatConfig.model);
-  const addAttachment = useChatStore((state) => state.addAttachment);
-
   const hasImageVision = getModelData(model)?.capabilities.vision;
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -20,13 +18,13 @@ export function ChatAttachmentButton() {
     if (!file) return;
 
     let type: "image" | "pdf" = "image";
-    if (file.type.includes("pdf")) {
-      type = "pdf";
-    }
+    if (file.type.includes("pdf")) type = "pdf";
 
-    addAttachment([
-      { id: uuidv4(), type, name: file.name, size: file.size, file, mimeType: file.type },
-    ]);
+    useChatStore
+      .getState()
+      .addAttachment([
+        { id: uuidv4(), type, name: file.name, size: file.size, file, mimeType: file.type },
+      ]);
   }
 
   if (!hasImageVision) return null;
@@ -111,8 +109,6 @@ export function ChatAttachmentDisplay() {
 }
 
 function AttachmentPreview({ attachment, images }: { attachment: Preview; images: Preview[] }) {
-  const removeAttachment = useChatStore((state) => state.removeAttachment);
-
   // Prepare carousel images for dialog (image-only)
   const carouselImages =
     images.map((img) => ({
@@ -121,6 +117,7 @@ function AttachmentPreview({ attachment, images }: { attachment: Preview; images
       name: img.name,
       size: img.size,
     })) ?? [];
+
   const initialIndex = Math.max(
     0,
     images.findIndex((img) => img.id === attachment.id),
@@ -161,7 +158,7 @@ function AttachmentPreview({ attachment, images }: { attachment: Preview; images
           <span className="w-max">{format.size(attachment.size)}</span>
           <button
             className="flex w-10 cursor-pointer items-center justify-center rounded-md border border-destructive bg-destructive/60 p-0"
-            onMouseDown={() => removeAttachment(attachment.id)}
+            onMouseDown={() => useChatStore.getState().removeAttachment(attachment.id)}
           >
             <XIcon className="size-4" />
           </button>

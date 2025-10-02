@@ -1,4 +1,5 @@
 import { GlobeIcon } from "lucide-react";
+import { useShallow } from "zustand/shallow";
 
 import { ButtonWithTip } from "../ui/button";
 
@@ -23,8 +24,12 @@ export function ChatActionButtons() {
 }
 
 function WebSearchButton() {
-  const config = useChatStore((state) => state.chatConfig);
-  const setChatConfig = useChatStore((state) => state.setChatConfig);
+  const config = useChatStore(
+    useShallow((state) => ({
+      webSearch: state.chatConfig.webSearch,
+      model: state.chatConfig.model,
+    })),
+  );
 
   return (
     <ButtonWithTip
@@ -33,7 +38,7 @@ function WebSearchButton() {
       data-active={config.webSearch}
       className="size-9 cursor-pointer border px-2 py-1.5 text-xs data-[active=true]:border-blue-400"
       hidden={!getModelData(config.model)?.capabilities.webSearch}
-      onMouseDown={() => setChatConfig({ webSearch: !config.webSearch })}
+      onMouseDown={() => useChatStore.getState().setChatConfig({ webSearch: !config.webSearch })}
       title={config.webSearch ? "Disable Web Search" : "Enable Web Search"}
     >
       <GlobeIcon className={cn("transition-colors", { "stroke-blue-400": config.webSearch })} />

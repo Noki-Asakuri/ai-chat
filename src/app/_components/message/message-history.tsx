@@ -6,10 +6,9 @@ import { useChatStore } from "@/lib/chat/store";
 
 export function MessageHistory() {
   const messages = useChatStore((state) => state.messages);
-  const setScrollPosition = useChatStore((state) => state.setScrollPosition);
-  const abortController = useRef<AbortController>(new AbortController());
-
   const textareaHeight = useChatStore((state) => state.textareaHeight);
+
+  const abortController = useRef<AbortController>(new AbortController());
 
   // Outer scrollable container (with overflow-y-scroll)
   const outerScrollRef = useRef<HTMLDivElement>(null);
@@ -33,15 +32,15 @@ export function MessageHistory() {
     if (!scroller) return;
 
     if (scroller.scrollHeight === scroller.clientHeight && scroller.scrollTop === 0) {
-      setScrollPosition(null);
+      useChatStore.getState().setScrollPosition(null);
     } else if (scroller.scrollTop === 0 && scroller.scrollHeight > scroller.clientHeight) {
-      setScrollPosition("top");
+      useChatStore.getState().setScrollPosition("top");
     } else if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 50) {
-      setScrollPosition("bottom");
+      useChatStore.getState().setScrollPosition("bottom");
     } else {
-      setScrollPosition("middle");
+      useChatStore.getState().setScrollPosition("middle");
     }
-  }, [setScrollPosition]);
+  }, []);
 
   // Observe inner content size changes to maintain stick-to-bottom when autoScroll is enabled.
   const onResize = useCallback(
@@ -131,13 +130,13 @@ export function MessageHistory() {
 
     // Update position state
     if (scroller.scrollHeight === scroller.clientHeight && scroller.scrollTop === 0) {
-      setScrollPosition(null);
+      useChatStore.getState().setScrollPosition(null);
     } else if (scroller.scrollTop === 0 && scroller.scrollHeight > scroller.clientHeight) {
-      setScrollPosition("top");
+      useChatStore.getState().setScrollPosition("top");
     } else if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 1) {
-      setScrollPosition("bottom");
+      useChatStore.getState().setScrollPosition("bottom");
     } else {
-      setScrollPosition("middle");
+      useChatStore.getState().setScrollPosition("middle");
     }
   }
 

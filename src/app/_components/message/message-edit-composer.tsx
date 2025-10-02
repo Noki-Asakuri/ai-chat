@@ -22,6 +22,7 @@ import { getConvexReactClient } from "@/lib/convex/client";
 import { uploadFile } from "@/lib/convex/uploadFiles";
 import type { ChatMessage, UserAttachment } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useShallow } from "zustand/shallow";
 
 const convexClient = getConvexReactClient();
 
@@ -41,9 +42,14 @@ type AttachmentOverride = {
 };
 
 export function MessageEditComposer({ message, index }: MessageEditComposerProps) {
-  const chatConfig = useChatStore((s) => s.chatConfig);
-  const setEditMessage = useChatStore((s) => s.setEditMessage);
   const assistantMessage = useChatStore((s) => s.messages[index + 1]);
+  const chatConfig = useChatStore(
+    useShallow((state) => ({
+      model: state.chatConfig.model,
+      effort: state.chatConfig.effort,
+      webSearch: state.chatConfig.webSearch,
+    })),
+  );
 
   const { retryMessage } = useChatRequest();
 
@@ -208,14 +214,14 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
         attachmentsOverride,
       });
 
-      setEditMessage(null);
+      useChatStore.getState().setEditMessage(null);
     } finally {
       setSavingPhase("idle");
     }
   }
 
   function handleCancel() {
-    setEditMessage(null);
+    useChatStore.getState().setEditMessage(null);
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {

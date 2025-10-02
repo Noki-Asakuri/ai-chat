@@ -15,10 +15,8 @@ export function RegisterHotkeys() {
   const navigate = useNavigate();
   const editMessage = useChatStore((state) => state.editMessage);
 
-  const setEditMessage = useChatStore((state) => state.setEditMessage);
-  const setThreadCommandOpen = useChatStore((state) => state.setThreadCommandOpen);
-  const addAttachment = useChatStore((state) => state.addAttachment);
-  const setChatInput = useChatStore((state) => state.setChatInput);
+  const { setEditMessage, setThreadCommandOpen, addAttachment, setChatInput } =
+    useChatStore.getState();
 
   useEffect(() => {
     function onPaste(event: ClipboardEvent) {

@@ -15,15 +15,14 @@ type MessageActionButtonsProps = {
 };
 
 export function MessageActionButtons({ index, message }: MessageActionButtonsProps) {
-  const setEditMessage = useChatStore((state) => state.setEditMessage);
   const editMessage = useChatStore((state) => state.editMessage);
-
   const { retryMessage, branchOffThreadMessage } = useChatRequest();
 
   async function handleEditMessage() {
     if (message.role === "assistant") return;
     if (editMessage?._id === message._id) {
-      setEditMessage(null);
+      useChatStore.getState().setEditMessage(null);
+
       if (editMessage.content !== message.content) {
         await retryMessage(index, {
           editedUserMessage: { _id: editMessage._id, content: editMessage.content },
@@ -32,11 +31,11 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
       return;
     }
 
-    setEditMessage({ _id: message._id, content: message.content });
+    useChatStore.getState().setEditMessage({ _id: message._id, content: message.content });
   }
 
   return (
-    <div className="bg-background/80 flex items-center gap-0.5 rounded-md border p-1 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
+    <div className="flex items-center gap-0.5 rounded-md border bg-background/80 p-1 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
       <CopyButton className="size-8" side="bottom" content={message.content} />
 
       {message.role === "assistant" && (
@@ -58,7 +57,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
             variant="ghost"
             side="bottom"
             disabled={message.status === "pending"}
-            onMouseDown={() => setEditMessage(null)}
+            onMouseDown={() => useChatStore.getState().setEditMessage(null)}
             className={cn("hidden size-8", { flex: editMessage?._id === message._id })}
             title="Cancel Edit"
           >

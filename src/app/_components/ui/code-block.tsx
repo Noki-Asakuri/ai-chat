@@ -162,9 +162,8 @@ export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
   language,
   code,
 }: CodeBlockProps) {
-  const defaultOpen = useChatStore((state) => state.userCustomization?.showFullCode ?? false);
   const wrapline = useChatStore((state) => state.wrapline);
-  const toggleWrapline = useChatStore((state) => state.toggleWrapline);
+  const defaultOpen = useChatStore((state) => state.userCustomization?.showFullCode ?? false);
 
   const [expanded, setExpanded] = React.useState(defaultOpen);
   const onToggleExpanded = React.useCallback(() => setExpanded((v) => !v), []);
@@ -218,7 +217,7 @@ export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
             side="top"
             variant="ghost"
             className="size-8"
-            onMouseDown={toggleWrapline}
+            onMouseDown={useChatStore.getState().toggleWrapline}
           >
             {wrapline ? <TextIcon className="size-4" /> : <WrapTextIcon className="size-4" />}
           </ButtonWithTip>

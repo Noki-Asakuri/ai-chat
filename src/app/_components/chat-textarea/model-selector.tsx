@@ -2,8 +2,8 @@ import { api } from "@/convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
-import { useMemo } from "react";
 import { Popover } from "@base-ui-components/react/popover";
+import { useMemo } from "react";
 
 import { buttonVariants } from "../ui/button";
 import {
@@ -31,8 +31,6 @@ type ModelSelectorProps = {
 
 function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelectorProps) {
   const storeModel = useChatStore.getState().chatConfig.model;
-  const setChatConfig = useChatStore((s) => s.setChatConfig);
-
   const selectedModel = value ?? storeModel;
 
   const { data } = useQuery(convexQuery(api.functions.users.currentUser, {}));
@@ -49,7 +47,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
 
   function handleChange(model: string) {
     if (onChange) onChange(model);
-    else setChatConfig({ model });
+    else useChatStore.getState().setChatConfig({ model });
   }
 
   function renderTriggerValue(value: string) {
@@ -113,7 +111,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
 }
 
 export function ChatModelSelector() {
-  const { model: storeModel } = useChatStore((state) => state.chatConfig);
+  const storeModel = useChatStore((state) => state.chatConfig.model);
   return <ModelSelectorBase value={storeModel} triggerId="button-chat-model-selector-trigger" />;
 }
 

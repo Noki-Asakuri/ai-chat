@@ -13,7 +13,6 @@ import { useEffect } from "react";
 
 export default function Home() {
   const defaultOpenSidebar = document.cookie.includes(`${SIDEBAR_COOKIE_NAME}=true`);
-  const setUserCustomization = useChatStore((s) => s.setUserCustomization);
 
   const { data: user } = useQuery({ ...convexQuery(api.functions.users.currentUser, {}) });
   const backgroundImage = user?.customization?.backgroundId
@@ -21,9 +20,8 @@ export default function Home() {
     : undefined;
 
   useEffect(() => {
-    if (!user) return;
-    setUserCustomization(user.customization);
-  }, [user, setUserCustomization]);
+    if (user) useChatStore.getState().setUserCustomization(user.customization);
+  }, [user]);
 
   return (
     <>

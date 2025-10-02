@@ -27,7 +27,6 @@ import { getConvexReactClient } from "@/lib/convex/client";
 const convexClient = getConvexReactClient();
 
 export function ThreadCommand() {
-  const setThreadCommandOpen = useChatStore((state) => state.setThreadCommandOpen);
   const threadCommandOpen = useChatStore((state) => state.threadCommandOpen);
 
   return (
@@ -38,13 +37,13 @@ export function ThreadCommand() {
         variant="ghost"
         title="Search Threads"
         data-expanded={threadCommandOpen}
-        onClick={() => setThreadCommandOpen(true)}
+        onClick={() => useChatStore.getState().setThreadCommandOpen(true)}
         className="h-7 rounded-md border px-2 py-1 opacity-100 transition-opacity"
       >
         <SearchIcon />
         <span>Search Threads...</span>
 
-        <kbd className="bg-muted text-muted-foreground pointer-events-none ml-8 inline-flex h-4 items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100 select-none">
+        <kbd className="pointer-events-none ml-8 inline-flex h-4 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] text-muted-foreground opacity-100">
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
@@ -87,7 +86,6 @@ function PinThread() {
 function ThreadCommandDialog() {
   const defaultThreads = useChatStore((state) => state.threads);
   const threadCommandOpen = useChatStore((state) => state.threadCommandOpen);
-  const setThreadCommandOpen = useChatStore((state) => state.setThreadCommandOpen);
 
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 1000);
@@ -102,7 +100,10 @@ function ThreadCommandDialog() {
   const groupedThreads = groupByDate(isLoading ? [] : (data ?? []));
 
   return (
-    <CommandDialog open={threadCommandOpen} onOpenChange={setThreadCommandOpen}>
+    <CommandDialog
+      open={threadCommandOpen}
+      onOpenChange={useChatStore.getState().setThreadCommandOpen}
+    >
       <CommandInput placeholder="Search threads..." value={query} onValueChange={setQuery} />
 
       <CommandList className="custom-scroll max-h-[400px]">
@@ -138,7 +139,6 @@ type ThreadCommandGroupProps = {
 
 function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
   const navigate = useNavigate();
-  const setThreadCommandOpen = useChatStore((state) => state.setThreadCommandOpen);
 
   if (threads.length === 0) return null;
 
@@ -151,13 +151,13 @@ function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
           className="!p-0"
           onSelect={async () => {
             await navigate(`/threads/${toUUID(thread._id)}`);
-            setThreadCommandOpen(false);
+            useChatStore.getState().setThreadCommandOpen(false);
           }}
         >
           <NavLink
             title={thread.title}
             className="w-full truncate px-2 py-1.5"
-            onClick={() => setThreadCommandOpen(false)}
+            onClick={() => useChatStore.getState().setThreadCommandOpen(false)}
             to={{ pathname: `/threads/${toUUID(thread._id)}` }}
           >
             {thread.title}

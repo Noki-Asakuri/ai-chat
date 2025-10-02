@@ -170,9 +170,6 @@ type ThreadListProps = {
 };
 
 function ThreadList({ data }: ThreadListProps) {
-  const activeDraggingItem = useChatStore((state) => state.activeDraggingItem);
-  const setActiveDraggingItem = useChatStore((state) => state.setActiveDraggingItem);
-
   const removeGroupId = useMutation(api.functions.groups.removeGroupId);
   const moveThreadToGroup = useMutation(api.functions.groups.moveThreadToGroup);
   const reorderThread = useMutation(api.functions.groups.reorderThreadWithinGroup);
@@ -203,13 +200,13 @@ function ThreadList({ data }: ThreadListProps) {
     switch (activeData.type) {
       case "thread": {
         const thread = data.threads.find((t) => t._id === activeData.threadId)!;
-        setActiveDraggingItem({ type: "thread", item: thread });
+        useChatStore.getState().setActiveDraggingItem({ type: "thread", item: thread });
         break;
       }
 
       case "group": {
         const group = data.groups.find((g) => g._id === activeData.groupId)!;
-        setActiveDraggingItem({ type: "group", item: group });
+        useChatStore.getState().setActiveDraggingItem({ type: "group", item: group });
         break;
       }
     }
@@ -407,9 +404,9 @@ function ThreadList({ data }: ThreadListProps) {
         }
       }
 
-      setActiveDraggingItem(null);
       setOptimisticGrouped(null);
       setOptimisticGroups(null);
+      useChatStore.getState().setActiveDraggingItem(null);
     } catch (error) {
       console.error("[Thread] Reorder failed", error);
       // Rollback
@@ -425,7 +422,8 @@ function ThreadList({ data }: ThreadListProps) {
     console.debug("[Thread] Drag cancel");
     setOptimisticGrouped(null);
     setOptimisticGroups(null);
-    setActiveDraggingItem(null);
+    useChatStore.getState().setActiveDraggingItem(null);
+
     pendingDropRef.current = null;
     snapshotRef.current = null;
   }
@@ -454,17 +452,24 @@ function ThreadList({ data }: ThreadListProps) {
         </SortableContext>
 
         <UngroupedThreadGroup threads={grouped.none.threads ?? []} hasGroups={groups.length > 0} />
-
-        <DragOverlay modifiers={[restrictToFirstScrollableAncestor, restrictToVerticalAxis]}>
-          {activeDraggingItem && activeDraggingItem.type === "thread" && (
-            <ThreadItem thread={activeDraggingItem.item} disabled isOverlay />
-          )}
-
-          {activeDraggingItem && activeDraggingItem.type === "group" && (
-            <ThreadGroup group={activeDraggingItem.item} threads={[]} disabled isOverlay />
-          )}
-        </DragOverlay>
+        <ThreadDraggingOverlay />
       </DndContext>
     </div>
+  );
+}
+
+function ThreadDraggingOverlay() {
+  const activeDraggingItem = useChatStore((state) => state.activeDraggingItem);
+
+  return (
+    <DragOverlay modifiers={[restrictToFirstScrollableAncestor, restrictToVerticalAxis]}>
+      {activeDraggingItem && activeDraggingItem.type === "thread" && (
+        <ThreadItem thread={activeDraggingItem.item} disabled isOverlay />
+      )}
+
+      {activeDraggingItem && activeDraggingItem.type === "group" && (
+        <ThreadGroup group={activeDraggingItem.item} threads={[]} disabled isOverlay />
+      )}
+    </DragOverlay>
   );
 }

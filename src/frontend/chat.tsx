@@ -27,8 +27,6 @@ export function Chat() {
   const { threadId } = useParams<{ threadId: Id<"threads"> }>();
 
   const isDragOver = useChatStore((s) => s.isDragOver);
-  const setIsDragOver = useChatStore((s) => s.setIsDragOver);
-  const addAttachment = useChatStore((s) => s.addAttachment);
 
   const { data, isLoading, isError } = useQuery({
     enabled: Boolean(threadId),
@@ -82,7 +80,7 @@ export function Chat() {
         return { id: uuidv4(), name: file.name, size: file.size, file, type, mimeType: file.type };
       });
 
-      addAttachment(attachments);
+      useChatStore.getState().addAttachment(attachments);
     }
 
     if (acceptFiles.length < files.length) {
@@ -104,7 +102,7 @@ export function Chat() {
 
         if (!draggingFiles) return;
         dragCounterRef.current += 1;
-        setIsDragOver(true);
+        useChatStore.getState().setIsDragOver(true);
       }}
       onDragOver={(event) => {
         const types = event.dataTransfer?.types ?? [];
@@ -112,7 +110,7 @@ export function Chat() {
 
         if (!draggingFiles) return;
         event.preventDefault();
-        if (!isDragOver) setIsDragOver(true);
+        if (!isDragOver) useChatStore.getState().setIsDragOver(true);
       }}
       onDragLeave={(event) => {
         const types = event.dataTransfer?.types ?? [];
@@ -120,7 +118,7 @@ export function Chat() {
 
         if (!draggingFiles) return;
         dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
-        if (dragCounterRef.current === 0) setIsDragOver(false);
+        if (dragCounterRef.current === 0) useChatStore.getState().setIsDragOver(false);
       }}
       onDrop={(event) => {
         event.preventDefault();
@@ -133,13 +131,13 @@ export function Chat() {
         // Avoid double-handling when dropping directly on the textarea (it has its own onDrop)
         if (path.some((t) => t instanceof Element && t.id === "textarea-chat-input")) {
           dragCounterRef.current = 0;
-          setIsDragOver(false);
+          useChatStore.getState().setIsDragOver(false);
           return;
         }
 
         const files = Array.from(event.dataTransfer.files ?? []);
         dragCounterRef.current = 0;
-        setIsDragOver(false);
+        useChatStore.getState().setIsDragOver(false);
         if (files.length > 0) {
           handleAddAttachments(files);
         }
