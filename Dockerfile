@@ -1,7 +1,7 @@
 FROM oven/bun:latest AS deps
 WORKDIR /app
 COPY bun.lock package.json ./
-RUN bun install --production --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --production --frozen-lockfile
 
 FROM oven/bun:latest AS runner
 WORKDIR /app
