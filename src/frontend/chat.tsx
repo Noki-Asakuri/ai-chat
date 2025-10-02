@@ -37,12 +37,6 @@ export function Chat() {
     }),
   });
 
-  // Track the currently active thread in the store so only it renders live streams
-  useEffect(() => {
-    const state = chatStore.getState();
-    state.setCurrentThreadId(fromUUID(threadId) ?? null);
-  }, [threadId]);
-
   useEffect(() => {
     const state = chatStore.getState();
     if (!data?.messages || data.messages.length === 0) return state.resetState();

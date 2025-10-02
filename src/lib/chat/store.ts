@@ -120,10 +120,6 @@ export interface ChatState {
   lastUserMessageHeight?: number | null;
   setMessageHeight: (height?: number | null) => void;
 
-  // Parallel streaming support
-  currentThreadId: Id<"threads"> | null;
-  setCurrentThreadId: (id: Id<"threads"> | null) => void;
-
   activeDraggingItem:
     | { type: "thread"; item: Doc<"threads"> }
     | { type: "group"; item: Doc<"groups"> }
@@ -214,10 +210,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((state) => ({
       threadCommandOpen: typeof open === "function" ? open(state.threadCommandOpen) : open,
     })),
-
-  // Parallel streaming support
-  currentThreadId: null,
-  setCurrentThreadId: (id) => set({ currentThreadId: id }),
 
   activeStreams: {},
   hasActiveStream: (assistantMessageId) => Boolean(get().activeStreams[assistantMessageId]),

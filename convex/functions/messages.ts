@@ -10,7 +10,7 @@ export const getAllMessagesFromThread = query({
     const user = await ctx.auth.getUserIdentity();
 
     if (!user) throw new Error("Not authenticated");
-    if (!args.threadId) return { messages: [], thread: null };
+    if (!args.threadId) throw new Error("Thread ID is required");
 
     const thread = await ctx.db.get(args.threadId);
     if (thread?.userId !== user.subject) throw new Error("Not authorized");
@@ -26,9 +26,13 @@ export const getAllMessagesFromThread = query({
     const messages = await Promise.all(
       messagesFromThread.map(async (message) => {
         const attachmentDocs = await Promise.all(
-          (message.attachments ?? []).map((attachmentId) => ctx.db.get(attachmentId)),
+          (message.attachments ?? []).map((attachmentId) =>
+            ctx.db.get(attachmentId),
+          ),
         );
-        const attachments = attachmentDocs.filter((a): a is Doc<"attachments"> => a !== null);
+        const attachments = attachmentDocs.filter(
+          (a): a is Doc<"attachments"> => a !== null,
+        );
 
         return { ...message, attachments };
       }),
@@ -64,7 +68,11 @@ export const addMessagesToThread = mutation({
         messageId: v.string(),
         role: v.union(v.literal("assistant"), v.literal("user")),
         content: v.string(),
-        status: v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
+        status: v.union(
+          v.literal("pending"),
+          v.literal("complete"),
+          v.literal("streaming"),
+        ),
         model: v.string(),
 
         createdAt: v.number(),
@@ -92,12 +100,15 @@ export const addMessagesToThread = mutation({
 
       if (message.role === "assistant") assistantMessageId = data;
       if (message.role === "user") {
-        await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
-          userId: user.subject,
-          threadId: args.threadId,
-          content: message.content,
-          createdAt: message.createdAt,
-        });
+        await ctx.runMutation(
+          internal.functions.userStats.incrementOnUserMessage,
+          {
+            userId: user.subject,
+            threadId: args.threadId,
+            content: message.content,
+            createdAt: message.createdAt,
+          },
+        );
       }
     }
 
@@ -123,7 +134,10 @@ export const updateErrorMessage = mutation({
       updatedAt: Date.now(),
     });
 
-    await ctx.db.patch(message.threadId, { updatedAt: Date.now(), status: "complete" });
+    await ctx.db.patch(message.threadId, {
+      updatedAt: Date.now(),
+      status: "complete",
+    });
   },
 });
 
@@ -133,14 +147,24 @@ export const updateMessageById = mutation({
     messageId: v.id("messages"),
     updates: v.object({
       status: v.optional(
-        v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
+        v.union(
+          v.literal("pending"),
+          v.literal("complete"),
+          v.literal("streaming"),
+        ),
       ),
       content: v.optional(v.string()),
       reasoning: v.optional(v.string()),
       model: v.optional(v.string()),
       resumableStreamId: v.optional(v.union(v.string(), v.null())),
       sources: v.optional(
-        v.array(v.object({ id: v.string(), title: v.optional(v.string()), url: v.string() })),
+        v.array(
+          v.object({
+            id: v.string(),
+            title: v.optional(v.string()),
+            url: v.string(),
+          }),
+        ),
       ),
       // Allow exact attachment list updates for a message (unlink/link only)
       attachments: v.optional(v.array(v.id("attachments"))),
@@ -156,7 +180,11 @@ export const updateMessageById = mutation({
           // Attach AI profile reference in metadata as well
           aiProfileId: v.optional(v.id("ai_profiles")),
           durations: v.optional(
-            v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
+            v.object({
+              request: v.number(),
+              reasoning: v.number(),
+              text: v.number(),
+            }),
           ),
           usages: v.optional(
             v.object({
@@ -170,7 +198,9 @@ export const updateMessageById = mutation({
       modelParams: v.optional(
         v.object({
           webSearchEnabled: v.optional(v.boolean()),
-          effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+          effort: v.optional(
+            v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+          ),
         }),
       ),
     }),
@@ -193,29 +223,39 @@ export const updateMessageById = mutation({
     if (message.threadId !== args.threadId) throw new Error("Not authorized");
     if (message.status === "error") return;
 
-    await ctx.db.patch(args.messageId, { ...args.updates, updatedAt: Date.now() });
+    await ctx.db.patch(args.messageId, {
+      ...args.updates,
+      updatedAt: Date.now(),
+    });
     if (args.threadId) {
       await ctx.db.patch(args.threadId, {
         updatedAt: Date.now(),
-        ...(args.updates.status !== undefined ? { status: args.updates.status } : {}),
+        ...(args.updates.status !== undefined
+          ? { status: args.updates.status }
+          : {}),
       });
     }
 
-    const becameComplete = message.status !== "complete" && args.updates.status === "complete";
+    const becameComplete =
+      message.status !== "complete" && args.updates.status === "complete";
 
     if (message.role === "assistant" && becameComplete) {
       const content = args.updates.content ?? message.content ?? "";
       const modelUniqueId = args.updates.model ?? message.model ?? "";
-      const aiProfileId = args.updates.metadata?.aiProfileId ?? message.metadata?.aiProfileId;
+      const aiProfileId =
+        args.updates.metadata?.aiProfileId ?? message.metadata?.aiProfileId;
 
-      await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
-        userId: user.subject,
-        threadId: message.threadId,
-        content,
-        modelUniqueId,
-        createdAt: message.createdAt,
-        ...(aiProfileId ? { aiProfileId } : {}),
-      });
+      await ctx.runMutation(
+        internal.functions.userStats.incrementOnAssistantComplete,
+        {
+          userId: user.subject,
+          threadId: message.threadId,
+          content,
+          modelUniqueId,
+          createdAt: message.createdAt,
+          ...(aiProfileId ? { aiProfileId } : {}),
+        },
+      );
     }
   },
 });
@@ -225,7 +265,10 @@ export const retryChatMessage = mutation({
     threadId: v.id("threads"),
     assistantMessageId: v.id("messages"),
     model: v.optional(v.string()),
-    userMessage: v.object({ messageId: v.id("messages"), content: v.optional(v.string()) }),
+    userMessage: v.object({
+      messageId: v.id("messages"),
+      content: v.optional(v.string()),
+    }),
   },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();

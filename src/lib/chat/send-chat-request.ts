@@ -47,7 +47,6 @@ export async function sendChatRequest(
   threadId: Id<"threads">,
 ) {
   const state = chatStore.getState();
-
   state.markStreamStart(assistantMessageId);
 
   let abortController = state.getController(assistantMessageId);
@@ -98,16 +97,7 @@ export async function sendChatRequest(
         }
 
         content = fixMarkdownCodeBlocks(content);
-
-        // Only live-render the stream in the currently active thread
-        if (state.currentThreadId && state.currentThreadId === threadId) {
-          state.setAssistantMessage({
-            id: assistantMessageId,
-            content,
-            reasoning,
-            metadata,
-          });
-        }
+        state.setAssistantMessage({ id: assistantMessageId, content, reasoning, metadata });
       },
     });
   } catch (rawError) {
