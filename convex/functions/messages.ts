@@ -10,7 +10,7 @@ export const getAllMessagesFromThread = query({
     const user = await ctx.auth.getUserIdentity();
 
     if (!user) throw new Error("Not authenticated");
-    if (!args.threadId) throw new Error("Thread ID is required");
+    if (!args.threadId) return null;
 
     const thread = await ctx.db.get(args.threadId);
     if (thread?.userId !== user.subject) throw new Error("Not authorized");
@@ -26,14 +26,9 @@ export const getAllMessagesFromThread = query({
     const messages = await Promise.all(
       messagesFromThread.map(async (message) => {
         const attachmentDocs = await Promise.all(
-          (message.attachments ?? []).map((attachmentId) =>
-            ctx.db.get(attachmentId),
-          ),
+          (message.attachments ?? []).map((attachmentId) => ctx.db.get(attachmentId)),
         );
-        const attachments = attachmentDocs.filter(
-          (a): a is Doc<"attachments"> => a !== null,
-        );
-
+        const attachments = attachmentDocs.filter((a): a is Doc<"attachments"> => a !== null);
         return { ...message, attachments };
       }),
     );
@@ -68,11 +63,7 @@ export const addMessagesToThread = mutation({
         messageId: v.string(),
         role: v.union(v.literal("assistant"), v.literal("user")),
         content: v.string(),
-        status: v.union(
-          v.literal("pending"),
-          v.literal("complete"),
-          v.literal("streaming"),
-        ),
+        status: v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
         model: v.string(),
 
         createdAt: v.number(),
@@ -100,15 +91,12 @@ export const addMessagesToThread = mutation({
 
       if (message.role === "assistant") assistantMessageId = data;
       if (message.role === "user") {
-        await ctx.runMutation(
-          internal.functions.userStats.incrementOnUserMessage,
-          {
-            userId: user.subject,
-            threadId: args.threadId,
-            content: message.content,
-            createdAt: message.createdAt,
-          },
-        );
+        await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
+          userId: user.subject,
+          threadId: args.threadId,
+          content: message.content,
+          createdAt: message.createdAt,
+        });
       }
     }
 
@@ -147,11 +135,7 @@ export const updateMessageById = mutation({
     messageId: v.id("messages"),
     updates: v.object({
       status: v.optional(
-        v.union(
-          v.literal("pending"),
-          v.literal("complete"),
-          v.literal("streaming"),
-        ),
+        v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
       ),
       content: v.optional(v.string()),
       reasoning: v.optional(v.string()),
@@ -198,9 +182,7 @@ export const updateMessageById = mutation({
       modelParams: v.optional(
         v.object({
           webSearchEnabled: v.optional(v.boolean()),
-          effort: v.optional(
-            v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
-          ),
+          effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
         }),
       ),
     }),
@@ -230,32 +212,25 @@ export const updateMessageById = mutation({
     if (args.threadId) {
       await ctx.db.patch(args.threadId, {
         updatedAt: Date.now(),
-        ...(args.updates.status !== undefined
-          ? { status: args.updates.status }
-          : {}),
+        ...(args.updates.status !== undefined ? { status: args.updates.status } : {}),
       });
     }
 
-    const becameComplete =
-      message.status !== "complete" && args.updates.status === "complete";
+    const becameComplete = message.status !== "complete" && args.updates.status === "complete";
 
     if (message.role === "assistant" && becameComplete) {
       const content = args.updates.content ?? message.content ?? "";
       const modelUniqueId = args.updates.model ?? message.model ?? "";
-      const aiProfileId =
-        args.updates.metadata?.aiProfileId ?? message.metadata?.aiProfileId;
+      const aiProfileId = args.updates.metadata?.aiProfileId ?? message.metadata?.aiProfileId;
 
-      await ctx.runMutation(
-        internal.functions.userStats.incrementOnAssistantComplete,
-        {
-          userId: user.subject,
-          threadId: message.threadId,
-          content,
-          modelUniqueId,
-          createdAt: message.createdAt,
-          ...(aiProfileId ? { aiProfileId } : {}),
-        },
-      );
+      await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
+        userId: user.subject,
+        threadId: message.threadId,
+        content,
+        modelUniqueId,
+        createdAt: message.createdAt,
+        ...(aiProfileId ? { aiProfileId } : {}),
+      });
     }
   },
 });
