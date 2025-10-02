@@ -28,7 +28,7 @@ export function Chat() {
 
   const isDragOver = useChatStore((s) => s.isDragOver);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, isEnabled } = useQuery({
     enabled: Boolean(threadId),
     ...convexQuery(api.functions.messages.getAllMessagesFromThread, {
       threadId: fromUUID(threadId),
@@ -90,7 +90,7 @@ export function Chat() {
     }
   }
 
-  if (isError) return <Navigate to="/" replace />;
+  if (isError && !isEnabled) return <Navigate to="/" replace />;
 
   return (
     <main
@@ -144,7 +144,7 @@ export function Chat() {
       }}
     >
       <WelcomeScreen />
-      <MessageRenderer thread={data?.thread} isLoading={isLoading} />
+      <MessageRenderer thread={data?.thread} isLoading={isLoading && !isEnabled} />
       <ChatTextarea />
 
       {/* Global drop overlay for the chat section (excludes the sidebar) */}
@@ -163,13 +163,12 @@ export function Chat() {
   );
 }
 
-function MessageRenderer({
-  thread,
-  isLoading,
-}: {
+type MessageRendererProps = {
   thread?: Doc<"threads"> | null;
   isLoading: boolean;
-}) {
+};
+
+function MessageRenderer({ thread, isLoading }: MessageRendererProps) {
   const { state } = useSidebar();
 
   return (
@@ -202,20 +201,13 @@ function MessageRenderer({
   );
 }
 
-function ThreadTitle({
-  thread,
-  isLoading,
-}: {
+type ThreadTitleProps = {
   thread?: Doc<"threads"> | null;
   isLoading: boolean;
-}) {
-  if (isLoading) {
-    return <Skeleton className="h-4 w-80" />;
-  }
+};
 
-  if (!thread) {
-    return <p className="text-muted-foreground text-sm">New Thread</p>;
-  }
-
+function ThreadTitle({ thread, isLoading }: ThreadTitleProps) {
+  if (isLoading) return <Skeleton className="h-4 w-80" />;
+  if (!thread) return <p className="text-muted-foreground text-sm">New Thread</p>;
   return <p className="truncate text-muted-foreground text-sm">{thread.title}</p>;
 }

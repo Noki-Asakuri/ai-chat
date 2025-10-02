@@ -74,8 +74,8 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
   const { data: modelInfo, model } = modelData;
 
   const providerOptions = {
-    google: { safetySettings } as GoogleGenerativeAIProviderOptions,
     openai: { store: false } as OpenAIResponsesProviderOptions,
+    google: { safetySettings } as GoogleGenerativeAIProviderOptions,
   };
 
   providerOptions.google.thinkingConfig = {
@@ -105,12 +105,12 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
   if (config?.webSearch) {
     switch (modelInfo.provider) {
       case "google":
-        tools.google_search = google.tools.googleSearch({});
         tools.url_context = google.tools.urlContext({});
+        tools.google_search = google.tools.googleSearch({});
         break;
 
       case "openai":
-        tools.web_search_preview = openai.tools.webSearch({ searchContextSize: "high" });
+        tools.web_search_preview = openai.tools.webSearch({});
         break;
     }
   }
