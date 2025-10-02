@@ -60,8 +60,8 @@ function getCommitSha() {
 const app = new Hono();
 const commitSha = getCommitSha();
 
-app.use(honoLogger());
 app.use(requestId());
+app.use(honoLogger());
 app.use(secureHeaders());
 
 // Graceful-drain aware middleware: block new requests during shutdown and track in-flight work
