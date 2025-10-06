@@ -57,11 +57,16 @@ export function MessageMetadata({ metadata, params, model }: MessageMetadataProp
       </div>
 
       <Popover>
-        <PopoverTrigger className="flex h-10 w-10 shrink-0 items-center justify-center">
+        <PopoverTrigger className="flex size-8 shrink-0 items-center justify-center rounded-full border bg-background/80 p-0 backdrop-blur-md backdrop-saturate-150">
           <InfoIcon className="size-4" />
         </PopoverTrigger>
 
-        <PopoverContent className="w-max bg-card p-2 text-sm" align="end" includeArrow={false}>
+        <PopoverContent
+          className="w-max bg-card p-2 text-sm"
+          align="end"
+          sideOffset={12}
+          includeArrow={false}
+        >
           <PopoverArrow className="fill-card" />
 
           <div className="grid grid-cols-1 gap-x-4 gap-y-2">

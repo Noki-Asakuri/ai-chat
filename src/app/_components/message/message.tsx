@@ -97,7 +97,7 @@ export function Message({ message, index, isLast }: MessageProps) {
         {isLoading ? (
           <MessageLoading model={message.model} />
         ) : (
-          <MessageInner message={message} index={index} />
+          <MessageInner message={message} index={index} isLast={isLast} />
         )}
 
         {message.role === "user" && <UserAvatar />}
@@ -123,7 +123,7 @@ function MessageLoading({ model }: { model: ChatMessage["model"] }) {
   );
 }
 
-function MessageInner({ message, index }: Omit<MessageProps, "isLast">) {
+function MessageInner({ message, index, isLast }: MessageProps) {
   const isMobile = useIsMobile();
 
   const editMessage = useChatStore((state) => state.editMessage);
@@ -153,7 +153,12 @@ function MessageInner({ message, index }: Omit<MessageProps, "isLast">) {
       )}
 
       {!(message.role === "user" && editMessage?._id === message._id) && (
-        <MessageFooter message={message} index={index} renderMessage={renderMessage} />
+        <MessageFooter
+          message={message}
+          index={index}
+          renderMessage={renderMessage}
+          isLast={isLast}
+        />
       )}
     </div>
   );
