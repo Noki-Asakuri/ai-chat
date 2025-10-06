@@ -198,6 +198,7 @@ export const updateMessageById = mutation({
       messageUserId: message?.userId ?? "Message not found",
       status: args.updates.status,
       threadId: args.threadId,
+      messageThreadId: message?.threadId ?? "Message not found",
     });
 
     if (!message) throw new Error("Message not found");

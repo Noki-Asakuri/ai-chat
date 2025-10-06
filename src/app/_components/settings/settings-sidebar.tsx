@@ -35,8 +35,9 @@ export function SettingsSidebar() {
         </Avatar>
 
         <div className="text-center">
-          <h1 className="text-xl font-semibold capitalize">{data?.username}</h1>
+          <h1 className="font-semibold text-xl capitalize">{data?.username}</h1>
           <p className="text-muted-foreground">{data?.emailAddress}</p>
+
           <Button variant="ghost" size="sm" className="mt-2 capitalize">
             Free Plan
           </Button>
@@ -65,7 +66,7 @@ export function SettingsSidebar() {
               value={(usage.used * 100) / usage.base}
             >
               <Meter.Track className="block h-4 w-full overflow-hidden rounded-md border">
-                <Meter.Indicator className="bg-accent block transition-all duration-500" />
+                <Meter.Indicator className="block bg-accent transition-all duration-500" />
               </Meter.Track>
 
               <Meter.Value className="col-start-2 m-0 text-right text-sm leading-5">
@@ -85,26 +86,30 @@ export function SettingsSidebar() {
           <ul className="space-y-2">
             <li className="flex justify-between">
               <span>Search Threads</span>
-              <kbd className="bg-muted rounded-md border px-2 py-1 text-xs">Ctrl K</kbd>
+              <kbd className="rounded-md border bg-muted px-2 py-1 text-xs">Ctrl K</kbd>
             </li>
 
             <li className="flex justify-between">
               <span>Toggle Sidebar</span>
-              <kbd className="bg-muted rounded-md border px-2 py-1 text-xs">Ctrl B</kbd>
+              <kbd className="rounded-md border bg-muted px-2 py-1 text-xs">Ctrl B</kbd>
             </li>
 
             <li className="flex justify-between">
               <span>New Chat</span>
-              <kbd className="bg-muted rounded-md border px-2 py-1 text-xs">Ctrl Shift O</kbd>
+              <kbd className="rounded-md border bg-muted px-2 py-1 text-xs">Ctrl Shift O</kbd>
             </li>
 
             <li className="flex justify-between">
               <span>Open Model Picker</span>
-              <kbd className="bg-muted rounded-md border px-2 py-1 text-xs">Ctrl M</kbd>
+              <kbd className="rounded-md border bg-muted px-2 py-1 text-xs">Ctrl M</kbd>
             </li>
           </ul>
         </CardContent>
       </Card>
+
+      <span className="block w-full text-center text-muted-foreground text-xs">
+        User ID: {data?.userId.slice(5)}
+      </span>
     </aside>
   );
 }

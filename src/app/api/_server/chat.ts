@@ -21,7 +21,7 @@ import {
   type Experimental_DownloadFunction,
 } from "ai";
 
-import { logger } from "@/lib/axiom/logger";
+import { logger as baseLogger } from "@/lib/axiom/logger";
 import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
 import { validateRequestBody } from "@/lib/server/validate-request-body";
@@ -37,6 +37,23 @@ const serverStartedAt = Date.now();
 let shuttingDown = false;
 let activeRequests = 0;
 let activeStreams = 0;
+
+type LogParams = Parameters<typeof baseLogger.info>;
+
+const logger = {
+  info: function (...args: LogParams) {
+    console.log(...args);
+    baseLogger.info(...args);
+  },
+  error: function (...args: LogParams) {
+    console.error(...args);
+    baseLogger.error(...args);
+  },
+  warn: function (...args: LogParams) {
+    console.warn(...args);
+    baseLogger.warn(...args);
+  },
+};
 
 function getCommitSha() {
   // Prefer explicit env provided via Docker build/run
@@ -112,7 +129,6 @@ app.post("/api/ai/chat", async (ctx) => {
   const requestId = ctx.get("requestId");
   const authToken = req.header("Authorization");
 
-  console.log("[Chat] Chat request received", { userId, requestId });
   logger.info("[Chat] Chat request received", { userId, requestId });
 
   if (!authToken || !userId) {
@@ -238,7 +254,6 @@ app.post("/api/ai/chat", async (ctx) => {
 
             const hit = Boolean(cachedBuffer) && Boolean(cachedMediaType);
 
-            console.log({ url: url.toString(), isUrlSupportedByModel, hit: hit ? "HIT" : "MISS" });
             logger.info(`[Chat Cache] ${url}`, {
               url,
               isUrlSupportedByModel,
@@ -278,7 +293,6 @@ app.post("/api/ai/chat", async (ctx) => {
         // Skip proxy-related type validation errors as they are expected during proxy configuration
         if (err.name === "AI_TypeValidationError" && err.message.includes("proxy-")) return;
 
-        console.error("[Chat] Error:", err);
         logger.error("[Chat Error]: " + err.message, {
           userId: userId,
           threadId,
@@ -370,7 +384,6 @@ app.post("/api/ai/chat", async (ctx) => {
               if (attachmentId) {
                 attachmentIds.push(attachmentId);
 
-                console.log("File received", stream.file.mediaType, attachmentId);
                 logger.info("[Chat] File received", {
                   userId: userId,
                   threadId,
@@ -448,13 +461,18 @@ app.post("/api/ai/chat", async (ctx) => {
           modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
         };
 
-        console.log("[Chat] Chat request completed!", { userId: userId });
         logger.info("[Chat] Chat request completed!", {
           userId: userId,
           threadId,
           assistantMessageId,
           model: model.uniqueId,
           metadata,
+          requestId,
+          dataLength: {
+            content: updates.content?.length ?? 0,
+            reasoning: updates.reasoning?.length ?? 0,
+            attachments: attachmentIds.length,
+          },
         });
 
         if (updates.content?.length === 0) {
@@ -497,9 +515,7 @@ app.post("/api/ai/chat", async (ctx) => {
             controller.enqueue("data: " + JSON.stringify(value) + "\n\n");
           }
 
-          if (!ctx.req.raw.signal.aborted) {
-            controller.enqueue("data: [DONE]\n\n");
-          }
+          if (!ctx.req.raw.signal.aborted) controller.enqueue("data: [DONE]\n\n");
         } finally {
           // Ensure we count the stream as finished regardless of how it ends
           markStreamEnded();
@@ -509,12 +525,12 @@ app.post("/api/ai/chat", async (ctx) => {
     });
 
     ctx.req.raw.signal.onabort = async () => {
-      console.log("[Chat] Chat request aborted");
       logger.error("[Chat Error]: Chat request aborted!", {
         userId: userId,
         threadId,
         assistantMessageId,
         model: model.uniqueId,
+        requestId,
       });
 
       await tryCatch(readableStream.cancel(new Error("Chat request aborted")));
@@ -531,9 +547,7 @@ app.post("/api/ai/chat", async (ctx) => {
     });
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
-
-    console.error("[Chat] Error:", error);
-    logger.error("[Chat Error]: " + error.message);
+    logger.error("[Chat Error]: " + error.message, error);
 
     return new Response("Error: " + error.message, { status: 500 });
   }
