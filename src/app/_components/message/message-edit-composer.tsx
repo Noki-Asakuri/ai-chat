@@ -179,7 +179,6 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
 
     // Write exact list to user message (unlink/link only, no file deletion)
     await convexClient.mutation(api.functions.messages.updateMessageById, {
-      threadId: message.threadId,
       messageId: message._id,
       updates: { attachments: finalIds },
     });

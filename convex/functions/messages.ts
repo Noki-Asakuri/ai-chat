@@ -10,7 +10,7 @@ export const getAllMessagesFromThread = query({
     const user = await ctx.auth.getUserIdentity();
 
     if (!user) throw new Error("Not authenticated");
-    if (!args.threadId) return null;
+    if (!args.threadId) return { messages: [], thread: null };
 
     const thread = await ctx.db.get(args.threadId);
     if (thread?.userId !== user.subject) throw new Error("Not authorized");
@@ -131,7 +131,6 @@ export const updateErrorMessage = mutation({
 
 export const updateMessageById = mutation({
   args: {
-    threadId: v.id("threads"),
     messageId: v.id("messages"),
     updates: v.object({
       status: v.optional(
@@ -197,21 +196,17 @@ export const updateMessageById = mutation({
       messageId: args.messageId,
       messageUserId: message?.userId ?? "Message not found",
       status: args.updates.status,
-      threadId: args.threadId,
       messageThreadId: message?.threadId ?? "Message not found",
     });
 
     if (!message) throw new Error("Message not found");
-    if (message.userId !== user.subject) throw new Error("Not authorized");
-    if (message.threadId !== args.threadId) throw new Error("Not authorized");
+    if (message.userId !== user.subject) throw new Error("User not authorized");
     if (message.status === "error") return;
 
-    await ctx.db.patch(args.messageId, {
-      ...args.updates,
-      updatedAt: Date.now(),
-    });
-    if (args.threadId) {
-      await ctx.db.patch(args.threadId, {
+    await ctx.db.patch(args.messageId, { ...args.updates, updatedAt: Date.now() });
+
+    if (message.threadId) {
+      await ctx.db.patch(message.threadId, {
         updatedAt: Date.now(),
         ...(args.updates.status !== undefined ? { status: args.updates.status } : {}),
       });

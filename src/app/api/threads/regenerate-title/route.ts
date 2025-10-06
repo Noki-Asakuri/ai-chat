@@ -38,12 +38,25 @@ export const POST = withAxiom(async (req) => {
       { threadId },
     );
 
+    if (messages.length === 0) {
+      logger.error("[Regenerate Title]: No messages found for thread", {
+        userId: user.userId,
+        threadId,
+      });
+
+      return NextResponse.json(
+        { error: { message: "No messages found for thread" } },
+        { status: 400 },
+      );
+    }
+
     const firstUser = messages.find((m) => m.role === "user");
     if (!firstUser || !firstUser.content) {
       logger.error("[Regenerate Title]: No user message found for thread", {
         userId: user.userId,
         threadId,
       });
+
       return NextResponse.json(
         { error: { message: "No user message found for thread" } },
         { status: 400 },

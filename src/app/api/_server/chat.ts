@@ -313,7 +313,6 @@ app.post("/api/ai/chat", async (ctx) => {
     });
 
     await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
-      threadId,
       messageId: assistantMessageId,
       updates: { status: "streaming", resumableStreamId: requestId, model: model.uniqueId },
     });
@@ -488,7 +487,6 @@ app.post("/api/ai/chat", async (ctx) => {
 
         await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
           messageId: assistantMessageId,
-          threadId,
           updates,
         });
       },
