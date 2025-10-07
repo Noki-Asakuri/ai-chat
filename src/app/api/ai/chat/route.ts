@@ -56,43 +56,27 @@ export const POST = withAxiom(async (req) => {
   });
 
   const requestId = response.headers.get("X-Request-Id")!;
+  const contentType = response.headers.get("Content-Type")!;
 
-  console.log("[Chat] Response received", response.status);
-  logger.info("[Chat] Response received", { userId: user.userId, status: response.status });
+  const obj = { userId: user.userId, status: response.status, contentType, requestId };
 
-  if (response.ok) {
-    const textDecoder = new TextDecoder();
-    const reader = response.body!.getReader();
+  console.log("[Chat] Response received", obj);
+  logger.info("[Chat] Response received", obj);
 
-    const readableStream = new ReadableStream<string>({
-      async start(controller) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+  if (response.ok || contentType === "text/event-stream") {
+    const textDecoderStream = new TextDecoderStream("utf-8");
+    const textStream = response.body!.pipeThrough(textDecoderStream);
 
-          const text = textDecoder.decode(value, { stream: true });
-          controller.enqueue(text);
-        }
-
-        return controller.close();
-      },
-    });
-
-    const [consumableStream, resumeableStream] = readableStream.tee();
+    const [consumableStream, responseStream] = textStream.tee();
     waitUntil(consumeStream({ stream: consumableStream }));
 
-    const resumeStream = await streamContext.createNewResumableStream(
-      requestId,
-      () => resumeableStream,
-    );
-
-    return new Response(resumeStream, {
+    return new Response(responseStream, {
       status: response.status,
       headers: {
         connection: "keep-alive",
         "Cache-Control": "no-cache",
         "Transfer-Encoding": "chunked",
-        "Content-Type": "text/event-stream",
+        "Content-Type": contentType,
       },
     });
   }
@@ -119,7 +103,7 @@ export const GET = withAxiom(async (req: NextRequest) => {
 
   if (!user.userId) {
     logger.error("[Chat Error]: Unauthenticated GET request!");
-    return NextResponse.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
+    return new Response(null, { status: 204 });
   }
 
   const streamId = req.nextUrl.searchParams.get("streamId");
@@ -127,7 +111,7 @@ export const GET = withAxiom(async (req: NextRequest) => {
 
   if (!streamId) {
     logger.error("[Chat Error]: Missing streamId!", { streamId, resumeAt });
-    return Response.json({ error: { message: "Missing streamId" } }, { status: 400 });
+    return new Response(null, { status: 204 });
   }
 
   logger.info("[Chat] Resuming chat streaming!", { streamId, resumeAt, userId: user.userId });
@@ -139,7 +123,7 @@ export const GET = withAxiom(async (req: NextRequest) => {
 
   if (!stream) {
     logger.error("[Chat Error]: Stream not found!", { streamId, resumeAt });
-    return Response.json({ error: { message: "Stream not found" } }, { status: 404 });
+    return new Response(null, { status: 204 });
   }
 
   return new Response(stream, {

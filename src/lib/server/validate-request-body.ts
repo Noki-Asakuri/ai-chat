@@ -72,6 +72,8 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
   if (modelError) throw new Error(`Invalid model: ${modelError.message}`);
 
   const { data: modelInfo, model } = modelData;
+  const tools: ToolSet = {};
+  const transformedMessages = transformMessages(messages, userId);
 
   const providerOptions = {
     openai: { store: false } as OpenAIResponsesProviderOptions,
@@ -94,25 +96,28 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
       effort === "high" ? 20_000 : effort === "medium" ? 10_000 : 1_024;
   }
 
-  if (modelInfo.capabilities.generateImage) {
-    delete providerOptions.google.thinkingConfig;
-    providerOptions.google.responseModalities = ["TEXT", "IMAGE"];
-  }
+  switch (modelInfo.provider) {
+    case "google":
+      if (modelInfo.capabilities.generateImage) {
+        delete providerOptions.google.thinkingConfig;
+        providerOptions.google.responseModalities = ["TEXT", "IMAGE"];
+      }
 
-  const tools: ToolSet = {};
-  const transformedMessages = transformMessages(messages, userId);
-
-  if (config?.webSearch) {
-    switch (modelInfo.provider) {
-      case "google":
+      if (config?.webSearch) {
         tools.url_context = google.tools.urlContext({});
         tools.google_search = google.tools.googleSearch({});
-        break;
+      }
+      break;
 
-      case "openai":
-        tools.web_search_preview = openai.tools.webSearch({});
-        break;
-    }
+    case "openai":
+      if (modelInfo.capabilities.generateImage) {
+        tools.imageGeneration = openai.tools.imageGeneration({});
+      }
+
+      if (config?.webSearch) {
+        tools.webSearch = openai.tools.webSearch({});
+      }
+      break;
   }
 
   return {

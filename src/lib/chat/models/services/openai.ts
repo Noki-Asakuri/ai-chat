@@ -31,6 +31,7 @@ export const openai: Record<ModelIdKey, ModelData> = {
     id: "openai/gpt-5",
     provider: "openai",
     capabilities: {
+      generateImage: true,
       webSearch: true,
       reasoning: true,
       vision: true,
@@ -41,6 +42,7 @@ export const openai: Record<ModelIdKey, ModelData> = {
     id: "openai/gpt-5-mini",
     provider: "openai",
     capabilities: {
+      generateImage: true,
       webSearch: true,
       reasoning: true,
       vision: true,
@@ -71,6 +73,17 @@ export const openai: Record<ModelIdKey, ModelData> = {
     id: "openai/gpt-5-codex",
     provider: "openai",
     capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+    },
+  },
+  "openai/gpt-5-pro": {
+    display: { name: "GPT 5 Pro" },
+    id: "openai/gpt-5-pro",
+    provider: "openai",
+    capabilities: {
+      generateImage: true,
       webSearch: true,
       reasoning: true,
       vision: true,

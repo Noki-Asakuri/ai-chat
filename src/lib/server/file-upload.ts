@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { logger } from "../axiom/logger";
+import { logger } from "@/app/api/_server/chat";
 import { serverConvexClient } from "../convex/server";
 import { tryCatch } from "../utils";
 
@@ -11,10 +11,6 @@ export async function serverUploadFileR2(data: {
   mediaType: string;
 }): Promise<Id<"attachments"> | null> {
   const maxAttempts = 3;
-  console.log("[Chat] Uploading file to R2", {
-    threadId: data.threadId,
-    mediaType: data.mediaType,
-  });
   logger.info("[Chat] Uploading file to R2", {
     threadId: data.threadId,
     mediaType: data.mediaType,
