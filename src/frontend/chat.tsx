@@ -5,7 +5,7 @@ import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
 import { PlusIcon } from "lucide-react";
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Navigate, NavLink, useParams } from "react-router";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
@@ -34,8 +34,6 @@ export function Chat() {
       threadId: fromUUID(threadId),
     }),
   });
-
-  useEffectEvent(() => {});
 
   useEffect(() => {
     const state = chatStore.getState();
