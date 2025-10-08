@@ -292,7 +292,7 @@ app.post("/api/ai/chat", async (ctx) => {
     durations: { request: 0, reasoning: 0, text: 0 },
   } satisfies Doc<"messages">["metadata"];
 
-  void updateTitle(messages, threadId);
+  void updateTitle({ messages, threadId, serverConvexClient });
 
   let reasoningStartTime = 0;
   let textStartTime = 0;
@@ -335,9 +335,10 @@ app.post("/api/ai/chat", async (ctx) => {
 
         case "file":
           const attachmentId = await serverUploadFileR2({
+            threadId,
             buffer: part.file.uint8Array,
             mediaType: part.file.mediaType,
-            threadId,
+            serverConvexClient,
           });
 
           if (attachmentId) attachmentIds.push(attachmentId);

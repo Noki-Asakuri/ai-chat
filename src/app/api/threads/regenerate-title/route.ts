@@ -6,7 +6,7 @@ import { waitUntil } from "@vercel/functions";
 import { NextResponse } from "next/server";
 
 import { logger, withAxiom } from "@/lib/axiom/server";
-import { serverConvexClient } from "@/lib/convex/server";
+import { createServerConvexClient } from "@/lib/convex/server";
 import { updateTitle } from "@/lib/server/update-title";
 
 export const POST = withAxiom(async (req) => {
@@ -18,7 +18,7 @@ export const POST = withAxiom(async (req) => {
     }
 
     const authToken = await user.getToken({ template: "convex" });
-    serverConvexClient.setAuth(authToken!);
+    const serverConvexClient = createServerConvexClient(authToken!);
 
     const body = (await req.json()) as { threadId?: Id<"threads"> };
     const threadId = body?.threadId;
@@ -67,7 +67,7 @@ export const POST = withAxiom(async (req) => {
       { role: "user", content: firstUser.content },
     ];
 
-    waitUntil(updateTitle(input, threadId));
+    waitUntil(updateTitle({ threadId, messages: input, serverConvexClient }));
 
     return NextResponse.json({ ok: true });
   } catch (err) {

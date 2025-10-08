@@ -4,14 +4,19 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { generateText } from "ai";
 
-import { serverConvexClient } from "../convex/server";
+import { type ServerConvexClient } from "../convex/server";
 import { registry } from "./model-registry";
 import dedent from "dedent";
 
-export async function updateTitle(
-  messages: { role: string; content: string }[],
-  threadId: Id<"threads">,
-) {
+export async function updateTitle({
+  messages,
+  threadId,
+  serverConvexClient,
+}: {
+  threadId: Id<"threads">;
+  messages: { role: string; content: string }[];
+  serverConvexClient: ServerConvexClient;
+}) {
   if (messages.length > 1 || !messages[0] || !threadId) return;
   console.debug("[Server] Updating thread title", threadId);
 

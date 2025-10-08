@@ -9,7 +9,7 @@ import { createResumableStreamContext } from "resumable-stream/ioredis";
 
 import { env } from "@/env";
 import { logger, withAxiom } from "@/lib/axiom/server";
-import { serverConvexClient } from "@/lib/convex/server";
+import { createServerConvexClient } from "@/lib/convex/server";
 import type { RequestBody } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
 
@@ -31,7 +31,7 @@ export const POST = withAxiom(async (req) => {
   }
 
   const authToken = await user.getToken({ template: "convex" });
-  serverConvexClient.setAuth(authToken!);
+  const serverConvexClient = createServerConvexClient(authToken!);
 
   console.log("[Chat] Proxying chat request to", env.API_ENDPOINT);
   logger.info("[Chat] Proxying chat request to", { userId: user.userId });

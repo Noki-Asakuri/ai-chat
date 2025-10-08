@@ -2,13 +2,14 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { logger } from "@/app/api/_server/chat";
-import { serverConvexClient } from "../convex/server";
+import { type ServerConvexClient } from "../convex/server";
 import { tryCatch } from "../utils";
 
 export async function serverUploadFileR2(data: {
   buffer: Uint8Array;
   threadId: Id<"threads">;
   mediaType: string;
+  serverConvexClient: ServerConvexClient;
 }): Promise<Id<"attachments"> | null> {
   const maxAttempts = 3;
   logger.info("[Chat] Uploading file to R2", {
@@ -20,7 +21,7 @@ export async function serverUploadFileR2(data: {
     const randomId = crypto.randomUUID();
 
     // Create attachment record first
-    const { docId, uniqueId } = await serverConvexClient.mutation(
+    const { docId, uniqueId } = await data.serverConvexClient.mutation(
       api.functions.attachments.createAttachment,
       {
         id: randomId,
@@ -51,7 +52,7 @@ export async function serverUploadFileR2(data: {
           threadId: data.threadId,
         });
 
-        const { key, url } = await serverConvexClient.mutation(
+        const { key, url } = await data.serverConvexClient.mutation(
           api.functions.files.generateAttachmentUploadUrl,
           { fileId: uniqueId, threadId: data.threadId, mimeType: data.mediaType },
         );
@@ -79,7 +80,7 @@ export async function serverUploadFileR2(data: {
         }
 
         // Fire-and-forget metadata sync
-        tryCatch(serverConvexClient.mutation(api.functions.files.syncMetadata, { key }));
+        tryCatch(data.serverConvexClient.mutation(api.functions.files.syncMetadata, { key }));
 
         logger.info("[Chat] File uploaded to R2", {
           attempt,
