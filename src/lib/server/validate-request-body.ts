@@ -111,7 +111,10 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
 
     case "openai":
       if (modelInfo.capabilities.generateImage) {
-        tools.image_generation = openai.tools.imageGeneration({});
+        tools.image_generation = openai.tools.imageGeneration({
+          outputFormat: "webp",
+          quality: "high",
+        });
       }
 
       if (config?.webSearch && modelInfo.capabilities.webSearch) {

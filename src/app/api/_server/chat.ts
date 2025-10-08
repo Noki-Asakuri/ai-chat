@@ -333,6 +333,25 @@ app.post("/api/ai/chat", async (ctx) => {
           metadata.durations.text = Date.now() - textStartTime;
           break;
 
+        case "tool-result": {
+          if (part.toolName !== "image_generation") break;
+
+          const base64Image = part.output.result;
+          const buffer = Buffer.from(base64Image, "base64");
+
+          if (buffer.length === 0) break;
+
+          const attachmentId = await serverUploadFileR2({
+            threadId,
+            buffer,
+            mediaType: "image/webp",
+            serverConvexClient,
+          });
+
+          if (attachmentId) attachmentIds.push(attachmentId);
+          break;
+        }
+
         case "file":
           const attachmentId = await serverUploadFileR2({
             threadId,
@@ -375,7 +394,7 @@ app.post("/api/ai/chat", async (ctx) => {
           break;
       }
 
-      return metadata;
+      return null;
     },
 
     async onFinish({ responseMessage }) {

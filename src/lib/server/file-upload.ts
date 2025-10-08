@@ -39,6 +39,7 @@ export async function serverUploadFileR2(data: {
       docId,
       threadId: data.threadId,
       type: data.mediaType,
+      size: data.buffer.length,
     });
 
     // Retry the upload flow up to maxAttempts
