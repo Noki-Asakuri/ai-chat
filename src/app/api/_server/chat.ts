@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { serverConvexClient } from "@/lib/convex/server";
+import { createServerConvexClient } from "@/lib/convex/server";
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -142,7 +142,7 @@ app.post("/api/ai/chat", async (ctx) => {
   }
 
   const body = await req.json();
-  serverConvexClient.setAuth(authToken.replace("Bearer ", ""));
+  const serverConvexClient = createServerConvexClient(authToken.replace("Bearer ", ""));
 
   const [requestBody, validateError] = tryCatchSync(() => validateRequestBody(body, userId));
   if (validateError) {
