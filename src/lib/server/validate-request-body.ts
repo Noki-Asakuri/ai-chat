@@ -103,7 +103,7 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
         providerOptions.google.responseModalities = ["TEXT", "IMAGE"];
       }
 
-      if (config?.webSearch) {
+      if (config?.webSearch && modelInfo.capabilities.webSearch) {
         tools.url_context = google.tools.urlContext({});
         tools.google_search = google.tools.googleSearch({});
       }
@@ -111,11 +111,11 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
 
     case "openai":
       if (modelInfo.capabilities.generateImage) {
-        tools.imageGeneration = openai.tools.imageGeneration({});
+        tools.image_generation = openai.tools.imageGeneration({});
       }
 
-      if (config?.webSearch) {
-        tools.webSearch = openai.tools.webSearch({});
+      if (config?.webSearch && modelInfo.capabilities.webSearch) {
+        tools.web_search = openai.tools.webSearch({});
       }
       break;
   }
