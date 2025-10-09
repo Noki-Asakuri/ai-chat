@@ -68,6 +68,7 @@ export const addMessagesToThread = mutation({
 
         createdAt: v.number(),
         updatedAt: v.number(),
+        attachments: v.optional(v.array(v.id("attachments"))),
 
         modelParams: v.optional(
           v.object({
@@ -75,8 +76,6 @@ export const addMessagesToThread = mutation({
             effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
           }),
         ),
-
-        attachments: v.optional(v.array(v.id("attachments"))),
       }),
     ),
   },
