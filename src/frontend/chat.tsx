@@ -89,7 +89,7 @@ export function Chat() {
     }
   }
 
-  if (isError) return <Navigate to="/" replace />;
+  if (isError && threadId) return <Navigate to="/" replace />;
 
   return (
     <main

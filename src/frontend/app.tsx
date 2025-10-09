@@ -23,11 +23,19 @@ const router = createBrowserRouter([
       { index: true, element: Chat },
       { path: "threads/:threadId", element: Chat },
     ],
-    ErrorBoundary: () => {
+    ErrorBoundary() {
       const pathname = usePathname();
 
-      if (pathname.startsWith("/threads")) return <Navigate to={pathname} replace />;
-      return <Navigate to="/" />;
+      switch (true) {
+        case pathname.startsWith("/threads"):
+          return <Navigate to={pathname} replace />;
+
+        case pathname === "/":
+          return;
+
+        default:
+          return <Navigate to="/" replace />;
+      }
     },
   },
 ]);
@@ -73,7 +81,7 @@ function NewVersionToast() {
         </button>
 
         <button
-          className="bg-destructive text-destructive-foreground flex cursor-pointer items-center justify-center rounded-md border p-1.5 text-sm hover:underline"
+          className="flex cursor-pointer items-center justify-center rounded-md border bg-destructive p-1.5 text-destructive-foreground text-sm hover:underline"
           onClick={() => window.location.reload()}
         >
           Refresh Now
