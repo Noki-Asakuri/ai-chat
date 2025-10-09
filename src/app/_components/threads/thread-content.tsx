@@ -123,26 +123,32 @@ function CreateGroupButton() {
 const LOCAL_THREAD_STORAGE_KEY = "local-threads-groups";
 
 function ThreadListWrapper({ query }: { query: string }) {
-  const [localData, setLocalData] = useLocalStorage(
-    LOCAL_THREAD_STORAGE_KEY,
-    {} as (typeof api.functions.groups.listGroups)["_returnType"],
-  );
+  // const [localData, setLocalData] = useLocalStorage(
+  //   LOCAL_THREAD_STORAGE_KEY,
+  //   {} as (typeof api.functions.groups.listGroups)["_returnType"],
+  // );
 
-  const { data: listGroupsData } = useQuery({
-    ...convexQuery(api.functions.groups.listGroups, {}),
-    placeholderData: localData,
-  });
+  // const { data: listGroupsData } = useQuery({
+  //   ...convexQuery(api.functions.groups.listGroups, {}),
+  //   placeholderData: localData,
+  // });
 
-  const updateLocalStorage = useEffectEvent((data: NonNullable<typeof listGroupsData>) => {
-    setLocalData(data);
-  });
+  // const updateLocalStorage = useEffectEvent((data: NonNullable<typeof listGroupsData>) => {
+  //   setLocalData(data);
+  // });
 
-  useEffect(() => {
-    if (!listGroupsData || listGroupsData.threads.length === 0) return;
-    updateLocalStorage(listGroupsData);
-  }, [listGroupsData]);
+  // useEffect(() => {
+  //   if (!listGroupsData || listGroupsData.threads.length === 0) return;
+  //   updateLocalStorage(listGroupsData);
+  // }, [listGroupsData]);
 
-  return <ThreadList data={listGroupsData ?? localData} />;
+  // return <ThreadList data={listGroupsData ?? localData} />;
+
+  const { data } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
+
+  if (!data || data.threads.length === 0) return null;
+
+  return <ThreadList data={data} />;
 }
 
 type SortableData = {
