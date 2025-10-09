@@ -11,8 +11,8 @@ const nextConfig: NextConfig = {
   experimental: {
     useCache: true,
     clientSegmentCache: true,
-    turbopackPersistentCachingForDev: true,
-    turbopackPersistentCachingForBuild: true,
+    turbopackFileSystemCacheForDev: true,
+    turbopackFileSystemCacheForBuild: true,
   },
 
   turbopack: {},

@@ -246,14 +246,10 @@ app.post("/api/ai/chat", async (ctx) => {
     stopWhen: stepCountIs(5),
 
     experimental_transform: smoothStream({ delayInMs: 10, chunking: "line" }),
-    experimental_download: (options) => {
-      return Promise.all(options.map((option) => handleFileCaching(option)));
-    },
+    experimental_download: (options) => Promise.all(options.map(handleFileCaching)),
 
     async onError({ error }) {
       const err = error as AISDKError;
-      // Skip proxy-related type validation errors as they are expected during proxy configuration
-      if (err.name === "AI_TypeValidationError" && err.message.includes("proxy-")) return;
 
       logger.error("[Chat Error]: " + err.message, {
         userId: userId,
@@ -279,7 +275,6 @@ app.post("/api/ai/chat", async (ctx) => {
     updates: { status: "streaming", resumableStreamId: requestId, model: model.uniqueId },
   });
 
-  const attachmentIds: Id<"attachments">[] = [];
   const metadata = {
     model: model.uniqueId,
     aiProfileId: config.profile?.id ?? undefined,
@@ -297,17 +292,16 @@ app.post("/api/ai/chat", async (ctx) => {
   let reasoningStartTime = 0;
   let textStartTime = 0;
 
-  return result.toUIMessageStreamResponse({
-    sendFinish: true,
-    sendReasoning: true,
+  const attachmentPromises: Promise<Id<"attachments"> | null>[] = [];
 
+  return result.toUIMessageStreamResponse({
     generateMessageId: () => requestId,
     consumeSseStream: async ({ stream }) => {
       logger.info("[Chat] Creating resumable stream", { userId, requestId, threadId });
       await streamContext.createNewResumableStream(requestId, () => stream);
     },
 
-    async messageMetadata({ part }) {
+    messageMetadata: ({ part }) => {
       switch (part.type) {
         case "reasoning-start":
           if (metadata.timeToFirstTokenMs === 0) {
@@ -341,26 +335,26 @@ app.post("/api/ai/chat", async (ctx) => {
 
           if (buffer.length === 0) break;
 
-          const attachmentId = await serverUploadFileR2({
+          const promise = serverUploadFileR2({
             threadId,
-            buffer,
+            buffer: buffer,
             mediaType: "image/webp",
             serverConvexClient,
           });
 
-          if (attachmentId) attachmentIds.push(attachmentId);
+          attachmentPromises.push(promise);
           break;
         }
 
         case "file":
-          const attachmentId = await serverUploadFileR2({
+          const promise = serverUploadFileR2({
             threadId,
             buffer: part.file.uint8Array,
             mediaType: part.file.mediaType,
             serverConvexClient,
           });
 
-          if (attachmentId) attachmentIds.push(attachmentId);
+          attachmentPromises.push(promise);
           break;
 
         case "finish-step":
@@ -397,7 +391,12 @@ app.post("/api/ai/chat", async (ctx) => {
       return null;
     },
 
-    async onFinish({ responseMessage }) {
+    async onFinish({ responseMessage, isAborted }) {
+      if (isAborted) {
+        logger.info("[Chat] Request was aborted by the client", { userId, threadId, requestId });
+        return;
+      }
+
       const content = responseMessage.parts
         .filter((part) => part.type === "text")
         .map((part) => part.text)
@@ -407,6 +406,10 @@ app.post("/api/ai/chat", async (ctx) => {
         .filter((part) => part.type === "reasoning")
         .map((part) => part.text)
         .join("\n\n");
+
+      const attachmentIds = await Promise.all(attachmentPromises).then((ids) =>
+        ids.filter((id): id is Id<"attachments"> => id !== null),
+      );
 
       type Updates = (typeof api.functions.messages.updateMessageById)["_args"]["updates"];
       const updates: Updates = {
