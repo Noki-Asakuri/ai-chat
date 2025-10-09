@@ -123,11 +123,15 @@ function CreateGroupButton() {
 const LOCAL_THREAD_STORAGE_KEY = "local-threads-groups";
 
 function ThreadListWrapper({ query }: { query: string }) {
-  const { data: listGroupsData } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
   const [localData, setLocalData] = useLocalStorage(
     LOCAL_THREAD_STORAGE_KEY,
-    (listGroupsData ?? {}) as typeof listGroupsData,
+    {} as (typeof api.functions.groups.listGroups)["_returnType"],
   );
+
+  const { data: listGroupsData } = useQuery({
+    ...convexQuery(api.functions.groups.listGroups, {}),
+    placeholderData: localData,
+  });
 
   const updateLocalStorage = useEffectEvent((data: NonNullable<typeof listGroupsData>) => {
     setLocalData(data);
