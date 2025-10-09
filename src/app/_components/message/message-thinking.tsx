@@ -1,5 +1,5 @@
 import { Collapsible } from "@base-ui-components/react/collapsible";
-import { BrainIcon, ChevronRightIcon, Loader2Icon } from "lucide-react";
+import { BrainIcon, ChevronRightIcon } from "lucide-react";
 
 import { MemoizedMarkdown } from "../message/message-markdown";
 
@@ -26,22 +26,23 @@ function getLatestHeading(text: string) {
 }
 
 export function ThinkingToggle({ messageId, status, message }: ThinkingToggleProps) {
+  if (typeof message.reasoning !== "string" || status === "error") return null;
+
+  const hasReasoningContent = message.reasoning.length > 0;
   const isGeneratingInitialResponse = status === "streaming" && message.content.length === 0;
-  if (!message.reasoning || status === "error") return null;
 
   return (
     <div data-slot="thinking-toggle" className="px-1.5">
       <Collapsible.Root
         defaultOpen={false}
-        className="bg-card mb-2 w-full rounded-md border backdrop-blur-md backdrop-contrast-150"
+        className="mb-2 w-full rounded-md border bg-card backdrop-blur-md backdrop-contrast-150"
       >
-        <Collapsible.Trigger className="group flex w-full items-center justify-between px-4 py-2 font-medium outline-none">
+        <Collapsible.Trigger
+          disabled={!hasReasoningContent}
+          className="group flex w-full items-center justify-between px-4 py-2 font-medium outline-none"
+        >
           <div className="group flex items-center gap-2">
-            {isGeneratingInitialResponse ? (
-              <Loader2Icon className="text-muted-foreground size-5 shrink-0 animate-spin" />
-            ) : (
-              <BrainIcon className="size-5" />
-            )}
+            <BrainIcon className="size-5" />
 
             <p>
               Thinking{" "}
@@ -53,19 +54,40 @@ export function ThinkingToggle({ messageId, status, message }: ThinkingTogglePro
             </p>
           </div>
 
-          {isGeneratingInitialResponse ? (
-            <span className="text-muted-foreground/70 text-sm font-semibold">
-              {getLatestHeading(message.reasoning)}
-            </span>
-          ) : (
-            <ChevronRightIcon className="text-muted-foreground size-5 shrink-0 transition-[rotate] duration-400 ease-out group-data-[panel-open]:rotate-90" />
-          )}
+          <ThinkingSummary
+            reasoning={message.reasoning}
+            hasReasoningContent={hasReasoningContent}
+            isGeneratingInitialResponse={isGeneratingInitialResponse}
+          />
         </Collapsible.Trigger>
 
-        <Collapsible.Panel className="h-[var(--collapsible-panel-height)] space-y-4 p-4 transition-[height] ease-out data-[ending-style]:h-0 data-[starting-style]:h-0">
-          <MemoizedMarkdown id={messageId + "-thinking"} content={message.reasoning} />
-        </Collapsible.Panel>
+        {hasReasoningContent && (
+          <Collapsible.Panel className="h-[var(--collapsible-panel-height)] space-y-4 p-4 transition-[height] ease-out data-[ending-style]:h-0 data-[starting-style]:h-0">
+            <MemoizedMarkdown id={messageId + "-thinking"} content={message.reasoning} />
+          </Collapsible.Panel>
+        )}
       </Collapsible.Root>
     </div>
   );
+}
+
+type ThinkingSummaryProps = {
+  reasoning: string;
+  hasReasoningContent: boolean;
+  isGeneratingInitialResponse: boolean;
+};
+
+function ThinkingSummary({
+  reasoning,
+  hasReasoningContent,
+  isGeneratingInitialResponse,
+}: ThinkingSummaryProps) {
+  if (!isGeneratingInitialResponse) {
+    return (
+      <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground transition-[rotate] duration-400 ease-out group-data-[panel-open]:rotate-90" />
+    );
+  }
+
+  const content = hasReasoningContent ? getLatestHeading(reasoning) : "...";
+  return <span className="font-semibold text-muted-foreground/70 text-sm">{content}</span>;
 }

@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useShallow } from "zustand/shallow";
 
 import { Icons } from "../ui/icons";
 
@@ -13,7 +14,6 @@ import { useChatStore } from "@/lib/chat/store";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useShallow } from "zustand/shallow";
 
 type MessageProps = {
   message: ChatMessage;
@@ -22,16 +22,14 @@ type MessageProps = {
 };
 
 export function Message({ message, index, isLast }: MessageProps) {
-  const { editMessage, lastUserMessageHeight, overlay, popupRetryMessageId, textareaHeight } =
-    useChatStore(
-      useShallow((state) => ({
-        overlay: state.assistantMessages[message._id],
-        editMessage: state.editMessage,
-        popupRetryMessageId: state.popupRetryMessageId,
-        textareaHeight: state.textareaHeight,
-        lastUserMessageHeight: state.lastUserMessageHeight ?? 114,
-      })),
-    );
+  const { editMessage, lastUserMessageHeight, popupRetryMessageId, textareaHeight } = useChatStore(
+    useShallow((state) => ({
+      editMessage: state.editMessage,
+      popupRetryMessageId: state.popupRetryMessageId,
+      textareaHeight: state.textareaHeight,
+      lastUserMessageHeight: state.lastUserMessageHeight ?? 114,
+    })),
+  );
 
   const containerRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -66,14 +64,6 @@ export function Message({ message, index, isLast }: MessageProps) {
     };
   }, [isLast, message.role]);
 
-  const renderMessage =
-    message.role === "assistant" && message.status === "streaming" && overlay ? overlay : message;
-
-  const isLoading =
-    (message.status === "streaming" || message.status === "pending") &&
-    !renderMessage.content &&
-    !renderMessage.reasoning;
-
   return (
     <div
       ref={containerRef}
@@ -94,7 +84,7 @@ export function Message({ message, index, isLast }: MessageProps) {
         data-streaming={message.status === "streaming" || message.status === "pending"}
         data-open={popupRetryMessageId === message._id || editMessage?._id === message._id}
       >
-        {isLoading ? (
+        {message.status === "pending" ? (
           <MessageLoading model={message.model} />
         ) : (
           <MessageInner message={message} index={index} isLast={isLast} />
