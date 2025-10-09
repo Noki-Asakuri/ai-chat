@@ -13,7 +13,6 @@ type MessageFooterProps = {
 
 export function MessageFooter({ index, isLast, message, renderMessage }: MessageFooterProps) {
   const isFinished = message.status === "complete" || message.status === "error";
-  if (!isFinished) return null;
 
   return (
     <div
@@ -25,7 +24,8 @@ export function MessageFooter({ index, isLast, message, renderMessage }: Message
         },
       )}
     >
-      <MessageActionButtons index={index} message={message} />
+      {isFinished && <MessageActionButtons index={index} message={message} />}
+
       <MessageMetadata
         model={message.model}
         params={message.modelParams}

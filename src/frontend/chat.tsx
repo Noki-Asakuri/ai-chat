@@ -61,7 +61,6 @@ export function Chat() {
         `/api/ai/chat?streamId=${lastMessage.resumableStreamId}`,
         undefined,
         lastMessage._id,
-        lastMessage.threadId,
       );
       resumeRef.current = false;
     }

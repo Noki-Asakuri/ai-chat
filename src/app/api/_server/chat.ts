@@ -272,7 +272,12 @@ app.post("/api/ai/chat", async (ctx) => {
 
   await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
     messageId: assistantMessageId,
-    updates: { status: "streaming", resumableStreamId: requestId, model: model.uniqueId },
+    updates: {
+      status: "streaming",
+      model: model.uniqueId,
+      resumableStreamId: requestId,
+      modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
+    },
   });
 
   const metadata = {

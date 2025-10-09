@@ -44,7 +44,6 @@ export async function sendChatRequest(
   url: string | URL,
   init: RequestInit | undefined,
   assistantMessageId: Id<"messages">,
-  threadId: Id<"threads">,
 ) {
   const state = chatStore.getState();
   state.markStreamStart(assistantMessageId);
@@ -186,6 +185,10 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     role: "assistant" as const,
     status: "pending" as const,
     model: state.chatConfig.model ?? "",
+    modelParams: {
+      webSearchEnabled: state.chatConfig.webSearch,
+      effort: state.chatConfig.effort,
+    },
     createdAt: Date.now(),
     updatedAt: Date.now(),
     attachments: [] as Id<"attachments">[],
@@ -268,7 +271,6 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     "/api/ai/chat",
     { method: "POST", body: JSON.stringify(body) },
     assistantMessageId!,
-    threadId,
   );
 }
 

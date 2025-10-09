@@ -81,11 +81,13 @@ export function Message({ message, index, isLast }: MessageProps) {
         data-id={message.messageId}
         data-status={message.status}
         data-model={message.model}
+        data-web-search={message.modelParams?.webSearchEnabled ?? false}
+        data-effort={message.modelParams?.effort}
         data-streaming={message.status === "streaming" || message.status === "pending"}
         data-open={popupRetryMessageId === message._id || editMessage?._id === message._id}
       >
         {message.status === "pending" ? (
-          <MessageLoading model={message.model} />
+          <MessageLoading model={message.model} params={message.modelParams} />
         ) : (
           <MessageInner message={message} index={index} isLast={isLast} />
         )}
@@ -96,15 +98,29 @@ export function Message({ message, index, isLast }: MessageProps) {
   );
 }
 
-function MessageLoading({ model }: { model: ChatMessage["model"] }) {
+type MessageLoadingProps = {
+  model: ChatMessage["model"];
+  params: ChatMessage["modelParams"];
+};
+
+function MessageLoading({ model, params }: MessageLoadingProps) {
   const modelData = getModelData(model || "google/gemini-2.5-flash");
+
+  const showEffort =
+    typeof modelData.capabilities.reasoning === "boolean" &&
+    modelData.capabilities.reasoning === true &&
+    params?.effort &&
+    params.effort !== "medium";
 
   return (
     <div className="flex h-11 w-full shrink-0 items-center gap-2 rounded-md border bg-background/80 px-4 py-2 backdrop-blur-md backdrop-saturate-150">
       <div className="flex gap-2">
         <div className="flex items-center justify-center gap-2">
           <Icons.provider provider={modelData?.provider} className="size-5 rounded-md" />
-          <span>{modelData?.display.name}: </span>
+          <span>
+            {modelData?.display.name}{" "}
+            {showEffort && <span className="text-sm capitalize">({params?.effort})</span>}:{" "}
+          </span>
         </div>
 
         <span>Waiting for server response...</span>
@@ -144,10 +160,10 @@ function MessageInner({ message, index, isLast }: MessageProps) {
 
       {!(message.role === "user" && editMessage?._id === message._id) && (
         <MessageFooter
-          message={message}
           index={index}
-          renderMessage={renderMessage}
           isLast={isLast}
+          message={message}
+          renderMessage={renderMessage}
         />
       )}
     </div>

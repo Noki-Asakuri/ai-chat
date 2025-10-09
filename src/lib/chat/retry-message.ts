@@ -61,6 +61,10 @@ export async function retryMessage(
     threadId,
     assistantMessageId: assistantMessage._id,
     model: model,
+    modelParams: {
+      webSearchEnabled: options?.webSearch ?? state.chatConfig.webSearch,
+      effort: options?.effort ?? state.chatConfig.effort,
+    },
     userMessage: {
       messageId: state.messages[userMessageIndex]!._id,
       content: editedUserMessage?.content,
@@ -94,6 +98,5 @@ export async function retryMessage(
     "/api/ai/chat",
     { method: "POST", body: JSON.stringify(body) },
     assistantMessage._id,
-    threadId,
   );
 }
