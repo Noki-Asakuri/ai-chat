@@ -7,7 +7,7 @@ import { useMutation } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
 import { useLocalStorage } from "@uidotdev/usehooks";
-import { useDeferredValue, useEffect, useEffectEvent, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 
 import {
   closestCorners,
@@ -122,32 +122,26 @@ function CreateGroupButton() {
 
 const LOCAL_THREAD_STORAGE_KEY = "local-threads-groups";
 
-function ThreadListWrapper({ query }: { query: string }) {
-  // const [localData, setLocalData] = useLocalStorage(
-  //   LOCAL_THREAD_STORAGE_KEY,
-  //   {} as (typeof api.functions.groups.listGroups)["_returnType"],
-  // );
+function ThreadListWrapper({}: { query: string }) {
+  const [localData] = useLocalStorage(
+    LOCAL_THREAD_STORAGE_KEY,
+    {} as (typeof api.functions.groups.listGroups)["_returnType"],
+  );
 
-  // const { data: listGroupsData } = useQuery({
-  //   ...convexQuery(api.functions.groups.listGroups, {}),
-  //   placeholderData: localData,
-  // });
+  const { data: listGroupsData } = useQuery({
+    ...convexQuery(api.functions.groups.listGroups, {}),
+    placeholderData: localData,
+  });
 
-  // const updateLocalStorage = useEffectEvent((data: NonNullable<typeof listGroupsData>) => {
-  //   setLocalData(data);
-  // });
+  useEffect(() => {
+    if (!listGroupsData || listGroupsData.threads.length === 0) {
+      return localStorage.removeItem(LOCAL_THREAD_STORAGE_KEY);
+    }
 
-  // useEffect(() => {
-  //   if (!listGroupsData || listGroupsData.threads.length === 0) return;
-  //   updateLocalStorage(listGroupsData);
-  // }, [listGroupsData]);
+    localStorage.setItem(LOCAL_THREAD_STORAGE_KEY, JSON.stringify(listGroupsData));
+  }, [listGroupsData]);
 
-  // return <ThreadList data={listGroupsData ?? localData} />;
-
-  const { data } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
-  if (!data || data.threads.length === 0) return null;
-
-  return <ThreadList data={data} />;
+  return <ThreadList data={listGroupsData ?? localData} />;
 }
 
 type SortableData = {
