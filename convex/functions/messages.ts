@@ -69,6 +69,13 @@ export const addMessagesToThread = mutation({
         createdAt: v.number(),
         updatedAt: v.number(),
 
+        modelParams: v.optional(
+          v.object({
+            webSearchEnabled: v.optional(v.boolean()),
+            effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+          }),
+        ),
+
         attachments: v.optional(v.array(v.id("attachments"))),
       }),
     ),

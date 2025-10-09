@@ -173,7 +173,11 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     content: chatInput,
     role: "user" as const,
     status: "complete" as const,
-    model: "",
+    model: state.chatConfig.model ?? "",
+    modelParams: {
+      webSearchEnabled: state.chatConfig.webSearch,
+      effort: state.chatConfig.effort,
+    },
     createdAt: Date.now(),
     updatedAt: Date.now(),
     attachments: [] as Id<"attachments">[],
