@@ -145,7 +145,6 @@ function ThreadListWrapper({ query }: { query: string }) {
   // return <ThreadList data={listGroupsData ?? localData} />;
 
   const { data } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
-
   if (!data || data.threads.length === 0) return null;
 
   return <ThreadList data={data} />;
