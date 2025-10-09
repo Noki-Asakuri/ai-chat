@@ -6,7 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useMutation } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
-import { useDeferredValue, useRef, useState } from "react";
+import { useLocalStorage } from "@uidotdev/usehooks";
+import { useDeferredValue, useEffect, useEffectEvent, useRef, useState } from "react";
 
 import {
   closestCorners,
@@ -119,12 +120,25 @@ function CreateGroupButton() {
   );
 }
 
+const LOCAL_THREAD_STORAGE_KEY = "local-threads-groups";
+
 function ThreadListWrapper({ query }: { query: string }) {
-  const { data } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
+  const { data: listGroupsData } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
+  const [localData, setLocalData] = useLocalStorage(
+    LOCAL_THREAD_STORAGE_KEY,
+    (listGroupsData ?? {}) as typeof listGroupsData,
+  );
 
-  if (!data || data.threads.length === 0) return null;
+  const updateLocalStorage = useEffectEvent((data: NonNullable<typeof listGroupsData>) => {
+    setLocalData(data);
+  });
 
-  return <ThreadList data={data} />;
+  useEffect(() => {
+    if (!listGroupsData || listGroupsData.threads.length === 0) return;
+    updateLocalStorage(listGroupsData);
+  }, [listGroupsData]);
+
+  return <ThreadList data={listGroupsData ?? localData} />;
 }
 
 type SortableData = {
