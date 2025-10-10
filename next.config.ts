@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
     useCache: true,
     clientSegmentCache: true,
     turbopackFileSystemCacheForDev: true,
-    turbopackFileSystemCacheForBuild: true
+    turbopackFileSystemCacheForBuild: true,
   },
 
   turbopack: {},
