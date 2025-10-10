@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { Dialog } from "@base-ui-components/react/dialog";
 import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router";
+import { useLocalStorage } from "@uidotdev/usehooks";
 
 import {
   closestCorners,
@@ -112,18 +113,17 @@ function CreateGroupButton() {
 
 const LOCAL_STORAGE_KEY = "local-threads-cache";
 function ThreadListWrapper() {
-  const localData = JSON.parse(
-    localStorage.getItem(LOCAL_STORAGE_KEY) ?? "{}",
-  ) as ListGroupedThreads;
-
+  const [localData, setLocalData] = useLocalStorage<ListGroupData | null>(LOCAL_STORAGE_KEY);
   const data = useQuery(api.functions.groups.listGroups);
 
   useEffect(() => {
-    if (data) localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+    if (data) setLocalData(data);
   }, [data]);
 
-  if ((!data || data.length === 0) && (!localData || localData.length === 0)) return null;
-  return <ThreadList data={data ?? localData} />;
+  if (data) return <ThreadList data={data} />;
+  if (localData) return <ThreadList data={localData} />;
+
+  return null;
 }
 
 type SortableData = {
@@ -164,10 +164,10 @@ type GroupThreads = Record<
 
 type Groups = Doc<"groups">[];
 
-type ListGroupedThreads = (typeof api.functions.groups.listGroups)["_returnType"];
+type ListGroupData = (typeof api.functions.groups.listGroups)["_returnType"];
 
 type ThreadListProps = {
-  data: ListGroupedThreads;
+  data: ListGroupData;
 };
 
 function ThreadList({ data }: ThreadListProps) {
