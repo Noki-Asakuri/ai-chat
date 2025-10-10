@@ -1,12 +1,11 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
-import { convexQuery } from "@convex-dev/react-query";
-import { useQuery } from "@tanstack/react-query";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
-import { useDeferredValue, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { NavLink } from "react-router";
 
 import {
   closestCorners,
@@ -34,25 +33,17 @@ import { UngroupedThreadGroup } from "./thread-ungrouped";
 import { useChatStore } from "@/lib/chat/store";
 
 export function ThreadContents() {
-  const [query, setQuery] = useState<string>("");
-  const deferredQuery = useDeferredValue(query);
-
   return (
     <>
-      <div className="mt-2 flex flex-col items-center gap-2">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search threads..."
-          aria-label="Search threads"
-          className="h-8"
-        />
-
+      <div className="mt-2 flex items-center gap-2 *:flex-1">
+        <Button size="sm" variant="secondary" asChild>
+          <NavLink to="/">New Chat</NavLink>
+        </Button>
         <CreateGroupButton />
       </div>
 
       <hr className="border-sidebar-border" />
-      <ThreadListWrapper query={deferredQuery} />
+      <ThreadListWrapper />
     </>
   );
 }
@@ -75,7 +66,7 @@ function CreateGroupButton() {
 
   return (
     <>
-      <Button size="sm" className="w-full" onClick={() => setOpen(true)}>
+      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
         New Group
       </Button>
 
@@ -119,11 +110,20 @@ function CreateGroupButton() {
   );
 }
 
-function ThreadListWrapper({}: { query: string }) {
-  const { data } = useQuery(convexQuery(api.functions.groups.listGroups, {}));
-  if (!data) return null;
+const LOCAL_STORAGE_KEY = "local-threads-cache";
+function ThreadListWrapper() {
+  const localData = JSON.parse(
+    localStorage.getItem(LOCAL_STORAGE_KEY) ?? "{}",
+  ) as ListGroupedThreads;
 
-  return <ThreadList data={data} />;
+  const data = useQuery(api.functions.groups.listGroups);
+
+  useEffect(() => {
+    if (data) localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+  }, [data]);
+
+  if ((!data || data.length === 0) && (!localData || localData.length === 0)) return null;
+  return <ThreadList data={data ?? localData} />;
 }
 
 type SortableData = {
@@ -164,8 +164,10 @@ type GroupThreads = Record<
 
 type Groups = Doc<"groups">[];
 
+type ListGroupedThreads = (typeof api.functions.groups.listGroups)["_returnType"];
+
 type ThreadListProps = {
-  data: (typeof api.functions.groups.listGroups)["_returnType"];
+  data: ListGroupedThreads;
 };
 
 function ThreadList({ data }: ThreadListProps) {
