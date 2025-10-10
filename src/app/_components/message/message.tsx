@@ -147,6 +147,7 @@ function MessageInner({ message, index, isLast }: MessageProps) {
       })}
     >
       <ThinkingToggle
+        model={message.model}
         status={message.status}
         messageId={message.messageId}
         message={renderMessage}

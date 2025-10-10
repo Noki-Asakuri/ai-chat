@@ -3,11 +3,13 @@ import { BrainIcon, ChevronRightIcon } from "lucide-react";
 
 import { MemoizedMarkdown } from "../message/message-markdown";
 
+import { getModelData } from "@/lib/chat/models";
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
 
 type ThinkingToggleProps = {
   messageId: string;
+  model: ChatMessage["model"];
   status: ChatMessage["status"];
   message: {
     content: string;
@@ -25,11 +27,14 @@ function getLatestHeading(text: string) {
   return lastMatch?.[1];
 }
 
-export function ThinkingToggle({ messageId, status, message }: ThinkingToggleProps) {
+export function ThinkingToggle({ messageId, model, status, message }: ThinkingToggleProps) {
   if (typeof message.reasoning !== "string" || status === "error") return null;
 
   const hasReasoningContent = message.reasoning.length > 0;
   const isGeneratingInitialResponse = status === "streaming" && message.content.length === 0;
+  const isReasoningModel = getModelData(model).capabilities.reasoning;
+
+  if (!isReasoningModel) return null;
 
   return (
     <div data-slot="thinking-toggle" className="px-1.5">
