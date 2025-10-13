@@ -90,9 +90,13 @@ export const POST = withAxiom(async (req) => {
 
   const error = `Received an error from the server. Please notify the administrator. Status: ${response.status} - ${response.statusText}`;
   await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
-    messageId: body.assistantMessageId,
-    model: body.config.model || "unknown",
     error: error,
+    messageId: body.assistantMessageId,
+    model: body?.config?.model || "unknown",
+    modelParams: {
+      effort: body?.config?.effort ?? "medium",
+      webSearchEnabled: body?.config?.webSearch ?? false,
+    },
   });
 
   return NextResponse.json({ error: { message: error } }, { status: 500 });

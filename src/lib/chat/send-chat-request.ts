@@ -115,6 +115,10 @@ export async function sendChatRequest(
     await convexClient.mutation(api.functions.messages.updateErrorMessage, {
       error: errorMessage,
       model: state.chatConfig.model,
+      modelParams: {
+        webSearchEnabled: state.chatConfig.webSearch,
+        effort: state.chatConfig.effort,
+      },
       messageId: assistantMessageId,
     });
   } finally {
@@ -296,8 +300,12 @@ export async function abortChatRequest() {
   }
 
   await convexClient.mutation(api.functions.messages.updateErrorMessage, {
-    model: state.chatConfig.model,
     messageId: lastMessage._id,
+    model: state.chatConfig.model,
+    modelParams: {
+      webSearchEnabled: state.chatConfig.webSearch,
+      effort: state.chatConfig.effort,
+    },
     error: "User have aborted the request.",
   });
 

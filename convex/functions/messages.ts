@@ -111,7 +111,12 @@ export const addMessagesToThread = mutation({
 });
 
 export const updateErrorMessage = mutation({
-  args: { messageId: v.id("messages"), error: v.string(), model: v.string() },
+  args: {
+    messageId: v.id("messages"),
+    error: v.string(),
+    model: v.string(),
+    modelParams: AISDKModelParams,
+  },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
     if (!user) throw new Error("Not authenticated");
@@ -124,6 +129,7 @@ export const updateErrorMessage = mutation({
       status: "error",
       error: args.error,
       model: args.model,
+      modelParams: args.modelParams,
       resumableStreamId: null,
       updatedAt: Date.now(),
     });

@@ -172,8 +172,9 @@ app.post("/api/ai/chat", async (ctx) => {
 
   if (!usage.allowed) {
     await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
-      error: `Monthly message limit reached (${usage.used}/${usage.base}).`,
       model: model.uniqueId,
+      error: `Monthly message limit reached (${usage.used}/${usage.base}).`,
+      modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
       messageId: assistantMessageId,
     });
 
@@ -266,6 +267,7 @@ app.post("/api/ai/chat", async (ctx) => {
       await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
         error: err.message,
         model: model.uniqueId,
+        modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
         messageId: assistantMessageId,
       });
     },
