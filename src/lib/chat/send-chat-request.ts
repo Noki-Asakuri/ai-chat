@@ -9,11 +9,12 @@ import { getConvexReactClient } from "../convex/client";
 import { uploadFile } from "../convex/uploadFiles";
 
 import { branchOffThreadMessage } from "./action-branch-off";
+import { convertV4MessageToV5 } from "./conversion";
 import { processChatStream } from "./process-stream";
 import { retryMessage } from "./retry-message";
 import { chatStore } from "./store";
 
-import type { ChatMessage, ChatRequest } from "../types";
+import type { ChatMessage, ChatRequestBody } from "../types";
 import { fixMarkdownCodeBlocks, fromUUID, toUUID, tryCatch } from "../utils";
 
 const convexClient = getConvexReactClient();
@@ -95,8 +96,13 @@ export async function sendChatRequest(
             break;
         }
 
+        const v5Message = convertV4MessageToV5(
+          { id: assistantMessageId, role: "assistant", content, reasoning },
+          0,
+        );
+
         content = fixMarkdownCodeBlocks(content);
-        state.setAssistantMessage({ id: assistantMessageId, content, reasoning, metadata });
+        state.setAssistantMessage({ id: assistantMessageId, parts: v5Message.parts, metadata });
       },
     });
   } catch (rawError) {
@@ -154,13 +160,6 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     // ignore if window not available
   }
 
-  // Force UI to stick to bottom on user send action
-  try {
-    window.dispatchEvent(new Event("chat:force-scroll-bottom"));
-  } catch {
-    // ignore if window not available
-  }
-
   if (!threadId) {
     threadId = await convexClient.mutation(api.functions.threads.createThread, {});
     await navigate(`/threads/${toUUID(threadId)}`);
@@ -168,27 +167,38 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
 
   const uploadedAttachmentPaths = new Map<Id<"attachments">, string>();
 
-  const userMessage = {
+  type CreateMessage =
+    (typeof api.functions.messages.addMessagesToThread)["_args"]["messages"][number];
+
+  const userMessage: CreateMessage = {
     messageId: uuidv4(),
     content: chatInput,
     role: "user" as const,
     status: "complete" as const,
-    model: "",
+    model: state.chatConfig.model,
+    parts: convertV4MessageToV5({ id: uuidv4(), role: "user", content: chatInput }, 0).parts,
+    modelParams: {
+      webSearchEnabled: state.chatConfig.webSearch,
+      effort: state.chatConfig.effort,
+    },
+
     createdAt: Date.now(),
     updatedAt: Date.now(),
     attachments: [] as Id<"attachments">[],
   };
 
-  const assistantMessage = {
+  const assistantMessage: CreateMessage = {
     messageId: uuidv4(),
     content: "",
     role: "assistant" as const,
     status: "pending" as const,
-    model: state.chatConfig.model ?? "",
+    model: state.chatConfig.model,
+    parts: [],
     modelParams: {
       webSearchEnabled: state.chatConfig.webSearch,
       effort: state.chatConfig.effort,
     },
+
     createdAt: Date.now(),
     updatedAt: Date.now(),
     attachments: [] as Id<"attachments">[],
@@ -244,7 +254,7 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     id: userMessage.messageId,
     attachments: userMessage.attachments.map((attachmentId, index) => {
       const attachment = state.attachments[index];
-      const path = uploadedAttachmentPaths.get(attachmentId);
+      const path = uploadedAttachmentPaths.get(attachmentId)!;
       if (!attachment) throw new Error("Attachment not found");
 
       return {
@@ -260,17 +270,17 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     }),
   });
 
-  const body: ChatRequest = {
+  const body: ChatRequestBody = {
     threadId,
     messages: allMessages,
     config: state.chatConfig,
-    assistantMessageId: assistantMessageId!,
+    assistantMessageId,
   };
 
   await sendChatRequest(
     "/api/ai/chat",
     { method: "POST", body: JSON.stringify(body) },
-    assistantMessageId!,
+    assistantMessageId,
   );
 }
 

@@ -1,22 +1,18 @@
-import type { Doc, Id } from "@/convex/_generated/dataModel";
-import type { RequestBody } from "@/lib/server/validate-request-body";
+import type { Doc } from "@/convex/_generated/dataModel";
+import type { ChatRequestBody } from "@/lib/server/validate-request-body";
 
-export type Thread = Doc<"threads">;
+type Thread = Doc<"threads">;
 
-export type ReasoningEffort = "low" | "medium" | "high";
-export type ThinkingBudget = number;
+type ReasoningEffort = "low" | "medium" | "high";
+type ThinkingBudget = number;
 
-export type { RequestBody };
-
-export type ChatRequest = RequestBody;
-
-export type InputMessage = {
+type InputMessage = {
   messageId: string;
   content: string;
   role: "assistant" | "user" | "system";
 };
 
-export type UserAttachment = {
+type UserAttachment = {
   id: string;
   name: string;
   size: number;
@@ -25,6 +21,16 @@ export type UserAttachment = {
   mimeType: string;
 };
 
-export type ChatMessage = Omit<Doc<"messages">, "attachments"> & {
+type ChatMessage = Omit<Doc<"messages">, "attachments"> & {
   attachments: Doc<"attachments">[];
+};
+
+export type {
+  ChatMessage,
+  ChatRequestBody,
+  InputMessage,
+  ReasoningEffort,
+  ThinkingBudget,
+  Thread,
+  UserAttachment,
 };

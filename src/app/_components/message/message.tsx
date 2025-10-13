@@ -1,4 +1,5 @@
-import * as React from "react";
+import { useChat } from "@ai-sdk/react";
+import { useEffect, useRef } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { Icons } from "../ui/icons";
@@ -6,14 +7,10 @@ import { Icons } from "../ui/icons";
 import { MessageContent } from "./message-content";
 import { MessageEditComposer } from "./message-edit-composer";
 import { MessageFooter } from "./message-footer";
-import { ThinkingToggle } from "./message-thinking";
-import { UserAvatar } from "./user-avatar";
 
 import { getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
-import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 type MessageProps = {
   message: ChatMessage;
@@ -31,7 +28,7 @@ export function Message({ message, index, isLast }: MessageProps) {
     })),
   );
 
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const userMessageHeight =
     lastUserMessageHeight > window.innerHeight ? 114 : lastUserMessageHeight;
@@ -43,7 +40,7 @@ export function Message({ message, index, isLast }: MessageProps) {
       : "auto";
 
   // Keep assistant min-height in sync with live changes to the most recent user message
-  React.useEffect(() => {
+  useEffect(() => {
     if (!(message.role === "user" && isLast)) return;
     const el = containerRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
@@ -68,32 +65,26 @@ export function Message({ message, index, isLast }: MessageProps) {
     <div
       ref={containerRef}
       style={{ minHeight }}
-      data-slot="message-wrapper"
+      data-slot="message"
+      className="group flex flex-col gap-2"
+      key={message.messageId}
+      data-index={index}
+      data-islast={isLast}
+      data-role={message.role}
+      data-model={message.model}
+      data-id={message.messageId}
+      data-status={message.status}
       data-height={lastUserMessageHeight}
+      data-effort={message.modelParams?.effort}
+      data-web-search={message.modelParams?.webSearchEnabled ?? false}
+      data-streaming={message.status === "streaming" || message.status === "pending"}
+      data-open={popupRetryMessageId === message._id || editMessage?._id === message._id}
     >
-      <div
-        data-slot="message"
-        className="group flex gap-2"
-        key={message.messageId}
-        data-index={index}
-        data-islast={isLast}
-        data-role={message.role}
-        data-id={message.messageId}
-        data-status={message.status}
-        data-model={message.model}
-        data-web-search={message.modelParams?.webSearchEnabled ?? false}
-        data-effort={message.modelParams?.effort}
-        data-streaming={message.status === "streaming" || message.status === "pending"}
-        data-open={popupRetryMessageId === message._id || editMessage?._id === message._id}
-      >
-        {message.status === "pending" ? (
-          <MessageLoading model={message.model} params={message.modelParams} />
-        ) : (
-          <MessageInner message={message} index={index} isLast={isLast} />
-        )}
-
-        {message.role === "user" && <UserAvatar />}
-      </div>
+      {message.status === "pending" ? (
+        <MessageLoading model={message.model} params={message.modelParams} />
+      ) : (
+        <MessageInner message={message} index={index} isLast={isLast} />
+      )}
     </div>
   );
 }
@@ -130,36 +121,24 @@ function MessageLoading({ model, params }: MessageLoadingProps) {
 }
 
 function MessageInner({ message, index, isLast }: MessageProps) {
-  const isMobile = useIsMobile();
-
   const editMessage = useChatStore((state) => state.editMessage);
   const overlay = useChatStore((state) => state.assistantMessages[message._id]);
 
   const renderMessage =
     message.role === "assistant" && message.status === "streaming" && overlay ? overlay : message;
 
-  return (
-    <div
-      className={cn("relative flex grow-0 flex-col gap-2", "[&:has(.codeblock)]:w-full", {
-        "w-full": message.role === "assistant" || editMessage?._id === message._id || isMobile,
-        "mx-0 max-w-[calc(100%-44px-8px)] md:ml-auto":
-          message.role === "user" && editMessage?._id !== message._id && !isMobile,
-      })}
-    >
-      <ThinkingToggle
-        model={message.model}
-        status={message.status}
-        messageId={message.messageId}
-        message={renderMessage}
-      />
+  const shouldShowFooter = editMessage?._id !== message._id;
+  const isUserMessageEdit = message.role === "user" && editMessage?._id === message._id;
 
-      {message.role === "user" && editMessage?._id === message._id ? (
+  return (
+    <>
+      {isUserMessageEdit ? (
         <MessageEditComposer message={message} index={index} />
       ) : (
-        <MessageContent content={renderMessage.content} message={message} />
+        <MessageContent parts={renderMessage.parts} message={message} />
       )}
 
-      {!(message.role === "user" && editMessage?._id === message._id) && (
+      {shouldShowFooter && (
         <MessageFooter
           index={index}
           isLast={isLast}
@@ -167,6 +146,6 @@ function MessageInner({ message, index, isLast }: MessageProps) {
           renderMessage={renderMessage}
         />
       )}
-    </div>
+    </>
   );
 }

@@ -76,14 +76,11 @@ export const deleteAttachment = mutation({
 
       const filtered = current.filter((id) => id !== args.attachmentId);
       if (filtered.length !== current.length) {
-        // If nothing left, keep as empty array to be explicit
         await ctx.db.patch(message._id, { attachments: filtered });
       }
     }
 
-    // Delete file from R2 and remove the attachment document
-    const key = `${attachment.userId}/${attachment.threadId}/${attachment._id}`;
-    await r2.deleteObject(ctx, key);
+    await r2.deleteObject(ctx, attachment.path);
     await ctx.db.delete(args.attachmentId);
   },
 });
@@ -133,6 +130,7 @@ export const deleteAttachments = mutation({
         const current = message.attachments ?? [];
         if (current.length === 0) continue;
         const filtered = current.filter((id) => !ids.has(id));
+
         if (filtered.length !== current.length) {
           await ctx.db.patch(message._id, { attachments: filtered });
         }
@@ -142,8 +140,7 @@ export const deleteAttachments = mutation({
     // Delete files from R2 and remove attachment documents
     await Promise.all(
       owned.map(async (a) => {
-        const key = `${a.userId}/${a.threadId}/${a._id}`;
-        await r2.deleteObject(ctx, key);
+        await r2.deleteObject(ctx, a.path);
         await ctx.db.delete(a._id);
       }),
     );

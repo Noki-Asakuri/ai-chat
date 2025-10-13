@@ -1,6 +1,150 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+const providerMetadata = v.optional(v.record(v.string(), v.record(v.string(), v.any())));
+const state = v.optional(v.union(v.literal("done"), v.literal("streaming")));
+
+export const AISDKParts = v.array(
+  v.union(
+    v.object({ type: v.literal("step-start") }),
+    v.object({ type: v.literal("text"), text: v.string(), providerMetadata, state }),
+    v.object({ type: v.literal("reasoning"), text: v.string(), providerMetadata, state }),
+    v.object({
+      type: v.literal("file"),
+      url: v.string(),
+      mediaType: v.string(),
+      filename: v.optional(v.string()),
+    }),
+    v.object({
+      type: v.literal("source-url"),
+      sourceId: v.string(),
+      url: v.string(),
+      title: v.optional(v.string()),
+      providerMetadata,
+    }),
+    v.object({
+      type: v.literal("source-document"),
+      sourceId: v.string(),
+      mediaType: v.string(),
+      title: v.string(),
+      filename: v.optional(v.string()),
+      providerMetadata,
+    }),
+    v.object({
+      type: v.literal("dynamic-tool"),
+      state: v.literal("input-streaming"),
+      toolName: v.string(),
+      toolCallId: v.string(),
+      input: v.any(),
+      output: v.optional(v.any()),
+      errorText: v.optional(v.string()),
+    }),
+    v.object({
+      type: v.literal("dynamic-tool"),
+      state: v.literal("input-available"),
+      toolName: v.string(),
+      toolCallId: v.string(),
+      input: v.any(),
+      output: v.optional(v.any()),
+      errorText: v.optional(v.string()),
+      callProviderMetadata: providerMetadata,
+    }),
+    v.object({
+      type: v.literal("dynamic-tool"),
+      state: v.literal("output-available"),
+      toolName: v.string(),
+      toolCallId: v.string(),
+      input: v.any(),
+      output: v.any(),
+      errorText: v.optional(v.string()),
+      callProviderMetadata: providerMetadata,
+    }),
+    v.object({
+      type: v.literal("dynamic-tool"),
+      state: v.literal("output-error"),
+      toolName: v.string(),
+      toolCallId: v.string(),
+      input: v.any(),
+      output: v.optional(v.any()),
+      errorText: v.string(),
+      callProviderMetadata: providerMetadata,
+    }),
+    v.object({
+      type: v.literal(`tool-${v.string()}`),
+      state: v.literal("input-streaming"),
+      toolCallId: v.string(),
+      input: v.any(),
+      providerExecuted: v.optional(v.boolean()),
+      output: v.optional(v.any()),
+      errorText: v.optional(v.string()),
+    }),
+    v.object({
+      type: v.literal(`tool-${v.string()}`),
+      state: v.literal("input-available"),
+      toolCallId: v.string(),
+      input: v.any(),
+      providerExecuted: v.optional(v.boolean()),
+      output: v.optional(v.any()),
+      errorText: v.optional(v.string()),
+      callProviderMetadata: providerMetadata,
+    }),
+    v.object({
+      type: v.literal(`tool-${v.string()}`),
+      state: v.literal("output-available"),
+      toolCallId: v.string(),
+      input: v.any(),
+      providerExecuted: v.optional(v.boolean()),
+      output: v.any(),
+      errorText: v.optional(v.string()),
+      callProviderMetadata: providerMetadata,
+      preliminary: v.optional(v.boolean()),
+    }),
+    v.object({
+      type: v.literal(`tool-${v.string()}`),
+      state: v.literal("output-error"),
+      toolCallId: v.string(),
+      input: v.any(),
+      providerExecuted: v.optional(v.boolean()),
+      output: v.optional(v.any()),
+      errorText: v.string(),
+      callProviderMetadata: providerMetadata,
+    }),
+  ),
+);
+
+export const AISDKMetadata = v.object({
+  model: v.string(),
+  finishReason: v.string(),
+  usages: v.object({
+    inputTokens: v.number(),
+    outputTokens: v.number(),
+    reasoningTokens: v.number(),
+  }),
+  timeToFirstTokenMs: v.optional(v.number()),
+  aiProfileId: v.optional(v.id("ai_profiles")),
+  durations: v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
+
+  /**
+   * @deprecated Deprecated fields, which will be removed in a future migration.
+   * Optional for existing data and migration purposes only.
+   */
+  duration: v.optional(v.number()),
+  totalTokens: v.optional(v.number()),
+  thinkingTokens: v.optional(v.number()),
+});
+
+export const AISDKModelParams = v.object({
+  webSearchEnabled: v.optional(v.boolean()),
+  effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+});
+
+export const status = v.union(
+  v.literal("pending"),
+  v.literal("streaming"),
+  v.literal("complete"),
+  v.literal("error"),
+);
+
 export default defineSchema({
   groups: defineTable({
     title: v.string(),
@@ -12,15 +156,13 @@ export default defineSchema({
     title: v.string(),
     userId: v.string(),
     updatedAt: v.number(),
-    pinned: v.optional(v.boolean()),
+    pinned: v.boolean(),
     branchedFrom: v.optional(v.id("threads")),
 
-    groupId: v.optional(v.union(v.id("groups"), v.null())),
-    order: v.optional(v.number()),
+    groupId: v.union(v.id("groups"), v.null()),
+    order: v.number(),
 
-    status: v.optional(
-      v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
-    ),
+    status: status,
   })
     .index("by_userId", ["userId"])
     .index("by_userId_updatedAt", ["userId", "updatedAt"])
@@ -34,8 +176,8 @@ export default defineSchema({
     size: v.number(),
     type: v.union(v.literal("image"), v.literal("pdf")),
     source: v.union(v.literal("assistant"), v.literal("user")),
-    mimeType: v.optional(v.string()),
-    path: v.optional(v.string()),
+    mimeType: v.string(),
+    path: v.string(),
 
     userId: v.string(),
     threadId: v.id("threads"),
@@ -52,57 +194,20 @@ export default defineSchema({
     reasoning: v.optional(v.string()),
     error: v.optional(v.string()),
 
+    parts: v.optional(AISDKParts),
+
     model: v.string(),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("complete"),
-      v.literal("streaming"),
-      v.literal("error"),
-    ),
+    status: status,
 
     role: v.union(v.literal("assistant"), v.literal("user")),
     resumableStreamId: v.optional(v.union(v.string(), v.null())),
 
-    modelParams: v.optional(
-      v.object({
-        webSearchEnabled: v.optional(v.boolean()),
-        effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
-      }),
-    ),
+    metadata: v.optional(AISDKMetadata),
+    modelParams: v.optional(AISDKModelParams),
+    attachments: v.array(v.id("attachments")),
 
     createdAt: v.number(),
     updatedAt: v.number(),
-
-    sources: v.optional(
-      v.array(v.object({ id: v.string(), title: v.optional(v.string()), url: v.string() })),
-    ),
-
-    attachments: v.optional(v.array(v.id("attachments"))),
-    metadata: v.optional(
-      v.object({
-        model: v.optional(v.string()),
-        duration: v.number(),
-        finishReason: v.string(),
-        totalTokens: v.number(),
-        thinkingTokens: v.number(),
-        usages: v.optional(
-          v.object({
-            inputTokens: v.number(),
-            outputTokens: v.number(),
-            reasoningTokens: v.number(),
-          }),
-        ),
-        // New optional metric: time to first token in milliseconds
-        timeToFirstTokenMs: v.optional(v.number()),
-
-        // Reference to AI profile applied when generating this message
-        aiProfileId: v.optional(v.id("ai_profiles")),
-
-        durations: v.optional(
-          v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
-        ),
-      }),
-    ),
   })
     .index("by_userId_threadId", ["userId", "threadId"])
     .index("by_threadId", ["threadId"])
@@ -161,7 +266,6 @@ export default defineSchema({
       threads: v.number(),
       words: v.number(),
       messages: v.object({ assistant: v.number(), user: v.number() }),
-      // Split word counts by role for UI cards; kept optional for backward compatibility
       wordsByRole: v.optional(v.object({ assistant: v.number(), user: v.number() })),
     }),
 

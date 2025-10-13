@@ -10,7 +10,7 @@ import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { env } from "@/env";
 import { logger, withAxiom } from "@/lib/axiom/server";
 import { createServerConvexClient } from "@/lib/convex/server";
-import type { RequestBody } from "@/lib/types";
+import type { ChatRequestBody } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
 
 const publisher = new Redis(env.REDIS_URL);
@@ -36,7 +36,7 @@ export const POST = withAxiom(async (req) => {
   console.log("[Chat] Proxying chat request to", env.API_ENDPOINT);
   logger.info("[Chat] Proxying chat request to", { userId: user.userId });
 
-  const [body, bodyError] = await tryCatch((await req.json()) as Promise<RequestBody>);
+  const [body, bodyError] = await tryCatch((await req.json()) as Promise<ChatRequestBody>);
   if (bodyError) {
     logger.error("[Chat Error]: Failed to parse request body!", { error: bodyError });
     return NextResponse.json(

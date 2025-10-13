@@ -2,9 +2,16 @@
 
 import { useConvexAuth } from "convex/react";
 
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-router";
+import { usePathname as useNextPathname, useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  RouterProvider,
+  useLocation,
+  useNavigate,
+} from "react-router";
 import { toast } from "sonner";
 
 import { LoadingPage } from "@/components/loading-page";
@@ -13,10 +20,11 @@ import Home from "./home";
 
 import { useVersionWatcher } from "@/lib/hooks/use-version-watcher";
 
-const Chat = <Home />;
+const Chat = <ChatPage />;
 
 const router = createBrowserRouter([
   {
+    id: "root",
     path: "/",
     Component: RootLayout,
     children: [
@@ -24,7 +32,7 @@ const router = createBrowserRouter([
       { path: "threads/:threadId", element: Chat },
     ],
     ErrorBoundary() {
-      const pathname = usePathname();
+      const pathname = useNextPathname();
 
       switch (true) {
         case pathname.startsWith("/threads"):
@@ -42,6 +50,28 @@ const router = createBrowserRouter([
 
 export default function App() {
   return <RouterProvider router={router} />;
+}
+
+function ChatPage() {
+  const hasRunned = useRef(false);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const nextPathname = useNextPathname();
+
+  useEffect(() => {
+    if (hasRunned.current) return;
+
+    console.log("ChatPage", nextPathname, location.pathname, nextPathname !== location.pathname);
+
+    if (nextPathname !== location.pathname) {
+      navigate(nextPathname, { replace: true });
+    }
+
+    hasRunned.current = true;
+  }, [nextPathname, location.pathname, navigate]);
+
+  return <Home />;
 }
 
 function RootLayout() {

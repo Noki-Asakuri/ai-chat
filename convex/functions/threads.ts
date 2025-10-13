@@ -14,9 +14,13 @@ export const createThread = mutation({
     });
 
     return await ctx.db.insert("threads", {
-      updatedAt: Date.now() + 1,
-      userId: user.subject,
       title: args.title ?? "New Chat",
+      pinned: false,
+      status: "complete",
+      userId: user.subject,
+      updatedAt: Date.now() + 1,
+      groupId: null,
+      order: 0,
     });
   },
 });
@@ -42,8 +46,12 @@ export const branchThread = mutation({
     const newThreadId = await ctx.db.insert("threads", {
       updatedAt: Date.now() + 1,
       userId: user.subject,
+      status: "complete",
+      pinned: false,
       title: thread.title,
       branchedFrom: args.threadId,
+      groupId: null,
+      order: 0,
     });
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

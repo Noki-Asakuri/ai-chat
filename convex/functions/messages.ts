@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
-import type { Doc, Id } from "../_generated/dataModel";
+import type { Doc } from "../_generated/dataModel";
 import { internalMutation, mutation, query } from "../_generated/server";
+import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
 export const getAllMessagesFromThread = query({
   args: { threadId: v.optional(v.id("threads")) },
@@ -60,22 +61,23 @@ export const addMessagesToThread = mutation({
     threadId: v.id("threads"),
     messages: v.array(
       v.object({
+        model: v.string(),
+        content: v.string(),
         messageId: v.string(),
         role: v.union(v.literal("assistant"), v.literal("user")),
-        content: v.string(),
-        status: v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
-        model: v.string(),
+
+        status: status,
+        parts: AISDKParts,
+        metadata: v.optional(AISDKMetadata),
 
         createdAt: v.number(),
         updatedAt: v.number(),
-        attachments: v.optional(v.array(v.id("attachments"))),
+        attachments: v.array(v.id("attachments")),
 
-        modelParams: v.optional(
-          v.object({
-            webSearchEnabled: v.optional(v.boolean()),
-            effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
-          }),
-        ),
+        modelParams: v.object({
+          webSearchEnabled: v.optional(v.boolean()),
+          effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+        }),
       }),
     ),
   },
@@ -87,24 +89,26 @@ export const addMessagesToThread = mutation({
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.subject) throw new Error("Not authorized");
 
-    let assistantMessageId: Id<"messages"> | undefined;
-    for (const message of args.messages) {
-      const data = await ctx.db.insert("messages", {
+    const [userMessage, assistantMessage] = args.messages as [
+      (typeof args.messages)[0],
+      (typeof args.messages)[1],
+    ];
+
+    const [, assistantMessageId] = await Promise.all([
+      ctx.db.insert("messages", { threadId: args.threadId, userId: user.subject, ...userMessage }),
+      ctx.db.insert("messages", {
         threadId: args.threadId,
         userId: user.subject,
-        ...message,
-      });
+        ...assistantMessage,
+      }),
+    ]);
 
-      if (message.role === "assistant") assistantMessageId = data;
-      if (message.role === "user") {
-        await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
-          userId: user.subject,
-          threadId: args.threadId,
-          content: message.content,
-          createdAt: message.createdAt,
-        });
-      }
-    }
+    await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
+      userId: user.subject,
+      threadId: args.threadId,
+      content: userMessage.content,
+      createdAt: userMessage.createdAt,
+    });
 
     return assistantMessageId;
   },
@@ -139,57 +143,16 @@ export const updateMessageById = mutation({
   args: {
     messageId: v.id("messages"),
     updates: v.object({
-      status: v.optional(
-        v.union(v.literal("pending"), v.literal("complete"), v.literal("streaming")),
-      ),
+      status: v.optional(status),
+      model: v.optional(v.string()),
       content: v.optional(v.string()),
       reasoning: v.optional(v.string()),
-      model: v.optional(v.string()),
       resumableStreamId: v.optional(v.union(v.string(), v.null())),
-      sources: v.optional(
-        v.array(
-          v.object({
-            id: v.string(),
-            title: v.optional(v.string()),
-            url: v.string(),
-          }),
-        ),
-      ),
-      // Allow exact attachment list updates for a message (unlink/link only)
-      attachments: v.optional(v.array(v.id("attachments"))),
 
-      metadata: v.optional(
-        v.object({
-          model: v.string(),
-          duration: v.number(),
-          finishReason: v.string(),
-          totalTokens: v.number(),
-          thinkingTokens: v.number(),
-          timeToFirstTokenMs: v.optional(v.number()),
-          // Attach AI profile reference in metadata as well
-          aiProfileId: v.optional(v.id("ai_profiles")),
-          durations: v.optional(
-            v.object({
-              request: v.number(),
-              reasoning: v.number(),
-              text: v.number(),
-            }),
-          ),
-          usages: v.optional(
-            v.object({
-              inputTokens: v.number(),
-              outputTokens: v.number(),
-              reasoningTokens: v.number(),
-            }),
-          ),
-        }),
-      ),
-      modelParams: v.optional(
-        v.object({
-          webSearchEnabled: v.optional(v.boolean()),
-          effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
-        }),
-      ),
+      parts: v.optional(AISDKParts),
+      metadata: v.optional(AISDKMetadata),
+      modelParams: v.optional(AISDKModelParams),
+      attachments: v.optional(v.array(v.id("attachments"))),
     }),
   },
   handler: async (ctx, args) => {
@@ -274,12 +237,13 @@ export const retryChatMessage = mutation({
       )
       .collect();
 
-    if (args.userMessage.content) {
-      await ctx.db.patch(args.userMessage.messageId, {
-        content: args.userMessage.content,
-        updatedAt: Date.now(),
-      });
-    }
+    const userUpdates: Partial<Doc<"messages">> = {
+      model: args.model ?? assistantMessage.model ?? "",
+      updatedAt: Date.now(),
+    };
+
+    if (args.userMessage.content) userUpdates.content = args.userMessage.content;
+    await ctx.db.patch(args.userMessage.messageId, userUpdates);
 
     for (const message of deleteMessages) {
       await ctx.db.delete(message._id);
@@ -292,8 +256,8 @@ export const retryChatMessage = mutation({
         status: "pending",
         content: "",
         reasoning: "",
+        parts: [],
         metadata: undefined,
-        sources: undefined,
         resumableStreamId: null,
         error: undefined,
         modelParams: args.modelParams ?? assistantMessage.modelParams ?? {},
@@ -311,16 +275,11 @@ export const backfillMessageUsageStats = internalMutation({
     const message = await ctx.db.get(args.messageId);
     if (!message || !message.metadata) return;
 
-    const reasoningTokens = message.metadata?.thinkingTokens ?? 0;
-    const outputTokens = message.metadata?.totalTokens ?? 0;
+    const reasoningTokens = message.metadata?.usages.reasoningTokens ?? 0;
+    const outputTokens = message.metadata?.usages.outputTokens ?? 0;
 
     await ctx.db.patch(message._id, {
-      metadata: {
-        ...message.metadata,
-        totalTokens: outputTokens,
-        thinkingTokens: reasoningTokens,
-        usages: { inputTokens: 0, outputTokens, reasoningTokens },
-      },
+      metadata: { ...message.metadata, usages: { inputTokens: 0, outputTokens, reasoningTokens } },
     });
   },
 });

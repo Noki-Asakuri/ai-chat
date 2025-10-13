@@ -12,7 +12,7 @@ export function getSendPreference(): SendPreference {
     () => JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}") as SendPreference,
   );
 
-  if (error || !sendPreference.pref) {
+  if (error || !sendPreference.pref || !["enter", "ctrlEnter"].includes(sendPreference.pref)) {
     return { pref: "enter" };
   }
 

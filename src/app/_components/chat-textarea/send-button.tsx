@@ -20,6 +20,11 @@ export function ChatSendButton() {
     pref: "enter",
   });
 
+  async function handleSend() {
+    if (isStreaming) await abortChatRequest();
+    else await submitChatMessage();
+  }
+
   return (
     <Menu.Root open={open} onOpenChange={setOpen}>
       <div
@@ -32,7 +37,7 @@ export function ChatSendButton() {
           variant="none"
           title={isStreaming ? "Abort Request" : "Send Message"}
           className="flex h-full flex-1 cursor-pointer items-center gap-2 p-0"
-          onClick={() => (isStreaming ? abortChatRequest() : submitChatMessage())}
+          onClick={handleSend}
         >
           {isStreaming ? (
             <SquareIcon className="size-4" />

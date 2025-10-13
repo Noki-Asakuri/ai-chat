@@ -52,15 +52,10 @@ type PopoverInfoProps = {
 function PopoverInfo({ metadata }: PopoverInfoProps) {
   if (!metadata) return null;
 
-  const tokPerSec =
-    (metadata.durations?.text ?? metadata.duration) > 0
-      ? (metadata.totalTokens / ((metadata.durations?.text ?? metadata.duration) / 1000)).toFixed(2)
-      : 0;
-
-  // Backward-compat for old messages without usages
-  const inputTokens = metadata.usages?.inputTokens ?? 0;
-  const outputTokens = metadata.usages?.outputTokens ?? metadata.totalTokens;
-  const reasoningTokens = metadata.usages?.reasoningTokens ?? metadata.thinkingTokens;
+  const tokPerSec = (
+    (metadata.usages.outputTokens + metadata.usages.reasoningTokens) /
+    (metadata.durations.text / 1000)
+  ).toFixed(2);
 
   return (
     <Popover>
@@ -85,29 +80,29 @@ function PopoverInfo({ metadata }: PopoverInfoProps) {
           <div
             data-slot="metadata-input-tokens"
             className="flex items-center gap-2"
-            hidden={inputTokens === 0}
+            hidden={metadata.usages.inputTokens === 0}
           >
             <QuoteIcon className="size-4" />
-            <span>Input: {format.number(inputTokens)} Tokens</span>
+            <span>Input: {format.number(metadata.usages.inputTokens)} Tokens</span>
           </div>
 
           <div data-slot="metadata-total-tokens" className="flex items-center gap-2">
             <BoltIcon className="size-4" />
-            <span>Consume: {format.number(outputTokens)} Tokens</span>
+            <span>Consume: {format.number(metadata.usages.outputTokens)} Tokens</span>
           </div>
 
           <div
             data-slot="metadata-thinking-tokens"
             className="flex items-center gap-2"
-            hidden={reasoningTokens === 0}
+            hidden={metadata.usages.reasoningTokens === 0}
           >
             <BrainIcon className="size-4" />
-            <span>Reasoning: {format.number(reasoningTokens)} Tokens</span>
+            <span>Reasoning: {format.number(metadata.usages.reasoningTokens)} Tokens</span>
           </div>
 
           <div data-slot="metadata-duration" className="flex items-center gap-2">
             <HourglassIcon className="size-4" />
-            <span>Duration: {format.time(metadata.duration / 1000)}</span>
+            <span>Duration: {format.time(metadata.durations.request / 1000)}</span>
           </div>
 
           <div

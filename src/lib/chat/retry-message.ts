@@ -3,9 +3,9 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { sendChatRequest } from "./send-chat-request";
 import { chatStore } from "./store";
-import { firstNonEmptyOrLast } from "../utils";
 
-import type { ChatRequest, ReasoningEffort } from "../types";
+import type { ChatRequestBody, ReasoningEffort } from "../types";
+import { firstNonEmptyOrLast } from "../utils";
 
 import { getConvexReactClient } from "@/lib/convex/client";
 
@@ -57,6 +57,8 @@ export async function retryMessage(
     state.chatConfig.model,
   );
 
+  state.setChatConfig({ model });
+
   await convexClient.mutation(api.functions.messages.retryChatMessage, {
     threadId,
     assistantMessageId: assistantMessage._id,
@@ -87,7 +89,7 @@ export async function retryMessage(
     webSearch: options?.webSearch ?? state.chatConfig.webSearch,
   };
 
-  const body: ChatRequest = {
+  const body: ChatRequestBody = {
     threadId,
     assistantMessageId: assistantMessage._id,
     messages: allMessages,

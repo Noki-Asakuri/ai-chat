@@ -77,15 +77,13 @@ export interface ChatState {
     string,
     {
       id: string;
-      content: string;
-      reasoning: string;
+      parts: ChatMessage["parts"];
       metadata: ChatMessage["metadata"];
     }
   >;
   setAssistantMessage: (message: {
     id: string | Id<"messages">;
-    content?: string;
-    reasoning?: string;
+    parts: ChatMessage["parts"];
     metadata?: ChatMessage["metadata"];
   }) => void;
   clearAssistantMessage: (assistantMessageId: string | Id<"messages">) => void;
@@ -163,12 +161,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setAssistantMessage: (message) =>
     set((state) => {
       const id = message.id;
-      const prev = state.assistantMessages[id] ?? {
-        id,
-        content: "",
-        reasoning: "",
-        metadata: undefined,
-      };
+      const prev = state.assistantMessages[id] ?? { id, parts: [], metadata: undefined };
 
       return {
         assistantMessages: { ...state.assistantMessages, [id]: { ...prev, ...message, id } },
@@ -283,14 +276,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setDataFromConvex: (messages, status) =>
     set((state) => {
       const previews = { ...state.previewImages };
+
       for (const m of messages) {
         const key = String(m._id);
+
         if ((previews[key]?.length ?? 0) > 0 && (m.attachments?.length ?? 0) > 0) {
           delete previews[key];
         }
       }
       return { messages, status, previewImages: previews };
     }),
+
   resetState: () =>
     set(() => ({
       messages: [],

@@ -44,6 +44,7 @@ export function Chat() {
 
     console.debug("[Convex] Syncing messages from Convex", { data, threadId: threadIdLocal });
     state.setDataFromConvex(data.messages, lastMessage.status ?? "complete");
+    state.setChatConfig({ model: lastMessage.model });
 
     if (
       lastMessage?.resumableStreamId &&

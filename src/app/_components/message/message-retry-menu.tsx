@@ -36,6 +36,9 @@ type GroupedModels = Partial<Record<Provider, ModelWithId[]>>;
 export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupProps) {
   const { retryMessage } = useChatRequest();
   const [open, setOpen] = React.useState(false);
+  const [isPending, startTransition] = React.useTransition();
+
+  const pendingRetry = isPending || message.status === "pending";
 
   const modelsByProvider = AllModelIds.reduce<GroupedModels>((acc, modelId) => {
     const model = ModelsData[modelId]!;
@@ -52,45 +55,45 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
 
   // Left click: immediately retry with the same model.
   function handleMouseDown(event: React.MouseEvent<HTMLButtonElement>) {
-    if (message.status === "pending") return;
+    if (pendingRetry) return;
 
     // 0 = primary/left button
     if (event.button === 0) {
       event.preventDefault();
       event.stopPropagation();
-      void retryMessage(index, { modelId: message.model, effort: message.modelParams?.effort });
+
+      startTransition(async () => {
+        await retryMessage(index, { modelId: message.model, effort: message.modelParams?.effort });
+      });
     }
   }
 
   // Right click: show the retry menu (model picker).
   function handleContextMenu(event: React.MouseEvent<HTMLButtonElement>) {
-    if (message.status === "pending") return;
+    if (pendingRetry) return;
+
     event.preventDefault();
     event.stopPropagation();
     setPopupOpen(true);
   }
 
-  // Prevent BaseUI Menu from opening on left-click; we control open state manually.
-  function handleClickCapture(event: React.MouseEvent<HTMLButtonElement>) {
-    if (message.status === "pending") return;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    // 0 = primary/left button
-    if (event.button === 0) setPopupOpen(false);
-  }
-
   return (
-    <Menu.Root open={open} onOpenChange={setPopupOpen}>
+    <Menu.Root
+      open={open}
+      onOpenChange={function onChangeOpen(open, eventDetails) {
+        // Prevent BaseUI Menu from opening on left-click; we control open state manually.
+        if (eventDetails.reason === "trigger-press") {
+          eventDetails.cancel();
+          return;
+        }
+
+        setPopupOpen(open);
+      }}
+    >
       <Menu.Trigger
-        render={ButtonWithTip}
-        // @ts-expect-error BaseUI doesn't forward props correctly
-        side="bottom"
-        variant="ghost"
         title="Retry Message"
-        disabled={message.status === "pending"}
-        onClickCapture={handleClickCapture}
+        render={<ButtonWithTip side="bottom" variant="ghost" />}
+        disabled={pendingRetry}
         onMouseDown={handleMouseDown}
         onContextMenu={handleContextMenu}
         {...props}

@@ -26,11 +26,13 @@ export function MessageFooter({ index, isLast, message, renderMessage }: Message
     >
       {isFinished && <MessageActionButtons index={index} message={message} />}
 
-      <MessageMetadata
-        model={message.model}
-        params={message.modelParams}
-        metadata={renderMessage.metadata}
-      />
+      {message.role === "assistant" && (
+        <MessageMetadata
+          metadata={renderMessage.metadata}
+          params={message.modelParams}
+          model={message.model}
+        />
+      )}
     </div>
   );
 }

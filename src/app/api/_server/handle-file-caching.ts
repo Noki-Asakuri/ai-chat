@@ -20,7 +20,7 @@ export async function handleFileCaching({ url }: InputType): Promise<OutputType>
   const hit = Boolean(cachedBuffer) && Boolean(cachedMediaType);
 
   logger.info(`[Chat Cache] ${url}`, {
-    url,
+    url: url.toString(),
     status: hit ? "HIT" : "MISS",
     cacheKey,
   });

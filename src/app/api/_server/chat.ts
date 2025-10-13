@@ -23,6 +23,7 @@ import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
 import { validateRequestBody } from "@/lib/server/validate-request-body";
 import { fixMarkdownCodeBlocks, tryCatch, tryCatchSync } from "@/lib/utils";
+import { convertV4MessageToV5 } from "@/lib/chat/conversion";
 
 import { env } from "@/env";
 
@@ -285,8 +286,6 @@ app.post("/api/ai/chat", async (ctx) => {
     aiProfileId: config.profile?.id ?? undefined,
     duration: 0,
     finishReason: "",
-    totalTokens: 0,
-    thinkingTokens: 0,
     timeToFirstTokenMs: 0,
     usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
     durations: { request: 0, reasoning: 0, text: 0 },
@@ -297,9 +296,10 @@ app.post("/api/ai/chat", async (ctx) => {
   let reasoningStartTime = 0;
   let textStartTime = 0;
 
-  const attachmentPromises: Promise<Id<"attachments"> | null>[] = [];
+  const v5Messages = messages.map(convertV4MessageToV5);
 
   return result.toUIMessageStreamResponse({
+    originalMessages: v5Messages,
     generateMessageId: () => requestId,
     consumeSseStream: async ({ stream }) => {
       logger.info("[Chat] Creating resumable stream", { userId, requestId, threadId });
@@ -332,36 +332,6 @@ app.post("/api/ai/chat", async (ctx) => {
           metadata.durations.text = Date.now() - textStartTime;
           break;
 
-        case "tool-result": {
-          if (part.toolName !== "image_generation") break;
-
-          const base64Image = part.output.result;
-          const buffer = Buffer.from(base64Image, "base64");
-
-          if (buffer.length === 0) break;
-
-          const promise = serverUploadFileR2({
-            threadId,
-            buffer: buffer,
-            mediaType: "image/webp",
-            serverConvexClient,
-          });
-
-          attachmentPromises.push(promise);
-          break;
-        }
-
-        case "file":
-          const promise = serverUploadFileR2({
-            threadId,
-            buffer: part.file.uint8Array,
-            mediaType: part.file.mediaType,
-            serverConvexClient,
-          });
-
-          attachmentPromises.push(promise);
-          break;
-
         case "finish-step":
           metadata.model = part.response.modelId;
           metadata.finishReason = part.finishReason;
@@ -371,9 +341,6 @@ app.post("/api/ai/chat", async (ctx) => {
           break;
 
         case "finish":
-          metadata.totalTokens = part.totalUsage.outputTokens ?? 0;
-          metadata.thinkingTokens = part.totalUsage.reasoningTokens ?? 0;
-
           metadata.usages.inputTokens = part.totalUsage.inputTokens ?? 0;
           metadata.usages.outputTokens = part.totalUsage.outputTokens ?? 0;
           metadata.usages.reasoningTokens = part.totalUsage.reasoningTokens ?? 0;
@@ -383,17 +350,16 @@ app.post("/api/ai/chat", async (ctx) => {
             // In case AI SDK change and remove reasoning tokens from output
             // Then we revert back to original total tokens
             const actualOutputTokens = Math.min(
-              metadata.totalTokens - metadata.thinkingTokens,
-              metadata.totalTokens,
+              metadata.usages.outputTokens - metadata.usages.reasoningTokens,
+              metadata.usages.outputTokens,
             );
 
-            metadata.totalTokens = actualOutputTokens;
             metadata.usages.outputTokens = actualOutputTokens;
           }
-          break;
+          return metadata;
       }
 
-      return null;
+      return;
     },
 
     async onFinish({ responseMessage, isAborted }) {
@@ -412,15 +378,32 @@ app.post("/api/ai/chat", async (ctx) => {
         .map((part) => part.text)
         .join("\n\n");
 
-      const attachmentIds = await Promise.all(attachmentPromises).then((ids) =>
-        ids.filter((id): id is Id<"attachments"> => id !== null),
-      );
+      const parts = responseMessage.parts;
+      const fileParts = parts.filter((part) => part.type === "file");
+
+      const attachmentIds: Id<"attachments">[] = [];
+      const generatedFiles = (await result.files).map(async (file, index) => {
+        const data = await serverUploadFileR2({
+          threadId,
+          buffer: file.uint8Array,
+          mediaType: file.mediaType,
+          serverConvexClient,
+        });
+
+        if (!data) return;
+
+        attachmentIds.push(data.attachmentDocId);
+        fileParts[index]!.url = data.filePathname;
+      });
+
+      await Promise.all(generatedFiles);
 
       type Updates = (typeof api.functions.messages.updateMessageById)["_args"]["updates"];
       const updates: Updates = {
         metadata,
         model: model.uniqueId,
         resumableStreamId: null,
+        parts: parts,
         status: "complete" as const,
 
         attachments: attachmentIds,
@@ -439,9 +422,9 @@ app.post("/api/ai/chat", async (ctx) => {
         metadata,
         requestId,
         dataLength: {
-          content: updates.content?.length ?? 0,
-          reasoning: updates.reasoning?.length ?? 0,
-          attachments: attachmentIds.length,
+          content: updates.content?.length,
+          reasoning: updates.reasoning?.length,
+          attachments: updates.attachments?.length,
         },
       });
 

@@ -4,26 +4,14 @@ import { memo, useMemo } from "react";
 import { isInlineCode, type Element } from "react-shiki";
 import { Streamdown } from "streamdown";
 
+import { harden as rehypeHarden } from "rehype-harden";
 import rehypeKatex from "rehype-katex";
+import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
-import { cn } from "@/lib/utils";
-
 import { ShikiCodeBlock } from "../ui/code-block";
-import {
-  TypographyBlockquote,
-  TypographyH1,
-  TypographyH2,
-  TypographyH3,
-  TypographyH4,
-  TypographyInlineCode,
-  TypographyTable,
-  TypographyTableTD,
-  TypographyTableTH,
-  TypographyTableTHead,
-  TypographyTableTR,
-} from "../ui/typography";
+import { TypographyInlineCode } from "../ui/typography";
 
 function escapeInvalidMath(text: string): string {
   const len: number = text.length;
@@ -151,44 +139,32 @@ function CodeBlock({
   const isInline = node ? isInlineCode(node) : undefined;
   const language = /language-(\w+)/.exec(className ?? "")?.[1];
 
-  if (isInline) {
-    return (
-      <TypographyInlineCode className={className} {...props}>
-        {code}
-      </TypographyInlineCode>
-    );
-  }
-
+  if (isInline) return <TypographyInlineCode className={className} children={code} {...props} />;
   return <ShikiCodeBlock language={language ?? "plaintext"} code={code} />;
 }
 
-const MemoizedMarkdownBlock = memo(
-  ({ content }: { content: string }) => {
+export const MemoizedMarkdownBlock = memo(
+  ({ content, isStreaming }: { content: string; isStreaming?: boolean }) => {
     return (
       <Streamdown
-        defaultOrigin="https://*.asakuri.me"
-        allowedImagePrefixes={["files.chat.asakuri.me", "ik.imagekit.io"]}
-        allowedLinkPrefixes={["*"]}
+        isAnimating={isStreaming}
         parseIncompleteMarkdown
-        rehypePlugins={[rehypeKatex]}
+        rehypePlugins={[
+          [
+            rehypeHarden,
+            {
+              allowedLinkPrefixes: ["*"],
+              defaultOrigin: "https://*.asakuri.me",
+              allowedImagePrefixes: ["https://files.chat.asakuri.me", "https://ik.imagekit.io"],
+            },
+          ],
+          rehypeRaw,
+          [rehypeKatex, { errorColor: "var(--color-muted-foreground)" }],
+        ]}
         remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
+        remarkRehypeOptions={{ allowDangerousHtml: true }}
         children={escapeInvalidMath(content)}
-        components={{
-          code: CodeBlock,
-          pre: ({ children }) => children,
-
-          h1: TypographyH1,
-          h2: TypographyH2,
-          h3: TypographyH3,
-          h4: TypographyH4,
-          blockquote: TypographyBlockquote,
-
-          table: TypographyTable,
-          thead: TypographyTableTHead,
-          th: TypographyTableTH,
-          tr: TypographyTableTR,
-          td: TypographyTableTD,
-        }}
+        components={{ code: CodeBlock }}
       />
     );
   },
@@ -197,16 +173,25 @@ const MemoizedMarkdownBlock = memo(
 
 MemoizedMarkdownBlock.displayName = "MemoizedMarkdownBlock";
 
-function parseMarkdownIntoBlocks(markdown: string): string[] {
+function parseContentToBlocks(markdown: string): string[] {
   const tokens = marked.lexer(markdown);
   return tokens.map((token) => token.raw);
 }
 
-export const MemoizedMarkdown = memo(({ content, id }: { content: string; id: string }) => {
-  const blocks = useMemo(() => parseMarkdownIntoBlocks(content), [content]);
-  return blocks.map((block, index) => (
-    <MemoizedMarkdownBlock content={block} key={`${id}-block_${index}`} />
-  ));
+type MarkdownProps = { content: string; id: string; isStreaming?: boolean };
+
+export const MemoizedMarkdown = memo(({ content, id, isStreaming }: MarkdownProps) => {
+  const blocks = useMemo(() => parseContentToBlocks(content), [content]);
+  return blocks.map((block, index) => {
+    if (block.trim().length === 0) return null;
+    return (
+      <MemoizedMarkdownBlock
+        content={block}
+        isStreaming={isStreaming}
+        key={`${id}-block_${index}`}
+      />
+    );
+  });
 });
 
 MemoizedMarkdown.displayName = "MemoizedMarkdown";

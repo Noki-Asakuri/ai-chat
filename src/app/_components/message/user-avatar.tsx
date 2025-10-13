@@ -8,7 +8,7 @@ export function UserAvatar() {
   return (
     <Avatar className="size-11 shrink-0 rounded-md border">
       {user && <AvatarImage src={user.imageUrl} alt={user.username!} />}
-      <AvatarFallback className="bg-muted size-full rounded-md">You</AvatarFallback>
+      <AvatarFallback className="size-full rounded-md bg-muted">You</AvatarFallback>
     </Avatar>
   );
 }

@@ -49,7 +49,7 @@ const inputSchema = z.object({
     .prefault({}),
 });
 
-export type RequestBody = z.infer<typeof inputSchema>;
+export type ChatRequestBody = z.infer<typeof inputSchema>;
 
 const safetySettings = [
   { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_HARASSMENT" },

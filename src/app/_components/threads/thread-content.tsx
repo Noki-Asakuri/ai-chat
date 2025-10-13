@@ -452,7 +452,7 @@ function ThreadList({ data }: ThreadListProps) {
           })}
         </SortableContext>
 
-        <UngroupedThreadGroup threads={grouped.none.threads ?? []} hasGroups={groups.length > 0} />
+        <UngroupedThreadGroup threads={grouped.none?.threads ?? []} hasGroups={groups.length > 0} />
         <ThreadDraggingOverlay />
       </DndContext>
     </div>

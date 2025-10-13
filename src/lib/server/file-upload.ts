@@ -5,12 +5,19 @@ import { logger } from "@/app/api/_server/chat";
 import { type ServerConvexClient } from "../convex/server";
 import { tryCatch } from "../utils";
 
-export async function serverUploadFileR2(data: {
+type UploadFileR2 = {
   buffer: Uint8Array;
   threadId: Id<"threads">;
   mediaType: string;
   serverConvexClient: ServerConvexClient;
-}): Promise<Id<"attachments"> | null> {
+};
+
+type UploadFileR2Response = {
+  attachmentDocId: Id<"attachments">;
+  filePathname: string;
+};
+
+export async function serverUploadFileR2(data: UploadFileR2): Promise<UploadFileR2Response | null> {
   const maxAttempts = 3;
   logger.info("[Chat] Uploading file to R2", {
     threadId: data.threadId,
@@ -89,7 +96,7 @@ export async function serverUploadFileR2(data: {
           docId,
           threadId: data.threadId,
         });
-        return docId;
+        return { attachmentDocId: docId, filePathname: key };
       } catch (err) {
         logger.error("[Chat Error]: Upload attempt exception", {
           attempt,
