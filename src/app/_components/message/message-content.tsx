@@ -3,10 +3,10 @@ import {
   MessageAvatar,
   MessageContent as MessageContentElement,
 } from "../ui/ai-elements/message";
-import { Reasoning, ReasoningContent, ReasoningTrigger } from "../ui/ai-elements/reasoning";
 
 import { MessageAttachmentDisplay } from "./message-attachment-display";
 import { MemoizedMarkdownBlock } from "./message-markdown";
+import { MessageReasoning } from "./message-reasoning";
 
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
@@ -29,51 +29,40 @@ export function MessageContent({ message, parts }: MessageContentProps) {
 
   if (!parts || parts.length === 0) return null;
 
-  return parts?.map((part, i) => {
-    switch (part.type) {
-      case "reasoning":
-        return (
-          <Reasoning
+  const reasoningParts = parts.filter((p) => p.type === "reasoning");
+  const textParts = parts.filter((p) => p.type === "text");
+
+  return (
+    <>
+      <MessageReasoning
+        messageId={message._id}
+        metadata={message.metadata}
+        parts={reasoningParts}
+        model={message.model}
+        status={message.status}
+      />
+
+      <Message from={message.role} className="relative items-start">
+        {textParts.map((part, i) => (
+          <MessageContentElement
             key={`${message._id}-${i}`}
-            isStreaming={message.status === "streaming"}
-            duration={message.metadata?.durations?.reasoning}
-            defaultOpen={false}
+            className="backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
           >
-            <ReasoningTrigger className="w-max rounded-md bg-background/80 p-2 backdrop-blur-md backdrop-contrast-150" />
-            <ReasoningContent
-              messageId={message._id}
-              className="w-full space-y-3 rounded-md border bg-card/80 p-3 backdrop-blur-md backdrop-contrast-150"
-            >
-              {part.text}
-            </ReasoningContent>
-          </Reasoning>
-        );
+            <MemoizedMarkdownBlock
+              content={part.text}
+              isStreaming={message.status === "streaming"}
+            />
 
-      case "text":
-        return (
-          <Message from={message.role} key={`${message._id}-${i}`} className="relative items-start">
-            <MessageContentElement
-              variant="contained"
-              className="backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
-            >
-              <MemoizedMarkdownBlock
-                content={part.text}
-                isStreaming={message.status === "streaming"}
-              />
+            <MessageAttachmentDisplay attachments={message.attachments} messageId={message._id} />
+          </MessageContentElement>
+        ))}
 
-              <MessageAttachmentDisplay attachments={message.attachments} messageId={message._id} />
-            </MessageContentElement>
-
-            {message.role === "user" && (
-              <MessageAvatar className={!isMobile ? "-right-13 absolute top-0" : ""} />
-            )}
-          </Message>
-        );
-
-      default:
-        return null;
-    }
-  });
+        {message.role === "user" && (
+          <MessageAvatar className={!isMobile ? "-right-13 absolute top-0" : ""} />
+        )}
+      </Message>
+    </>
+  );
 }
 
 function MessageError({ message }: { message: string }) {
