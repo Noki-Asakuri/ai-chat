@@ -74,7 +74,7 @@ export default function ModelsPage() {
 
   const list = useMemo(() => {
     return AllModelIds.slice()
-      .sort()
+      .sort((a, b) => a.localeCompare(b))
       .filter((id) => {
         const d = getModelData(id);
         const text = `${d.display.unique ?? d.display.name} ${d.provider}`.toLowerCase();
@@ -121,7 +121,7 @@ export default function ModelsPage() {
       </div>
 
       {/* Sticky header with search + save actions */}
-      <div className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 backdrop-blur">
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-end gap-2 border-b pt-2 pb-3">
           <div className="flex flex-1 flex-col gap-2">
             <Label htmlFor="model-search">Search models</Label>
@@ -159,7 +159,7 @@ export default function ModelsPage() {
                   <Icons.provider provider={d.provider} className="size-5" />
                   <div className="flex flex-col leading-tight">
                     <span className="text-sm">{d.display.unique ?? d.display.name}</span>
-                    <span className="text-muted-foreground text-xs">{providerName}</span>
+                    <span className="text-xs text-muted-foreground">{providerName}</span>
                   </div>
                 </div>
 

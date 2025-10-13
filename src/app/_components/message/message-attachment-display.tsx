@@ -1,6 +1,8 @@
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 import { FileIcon } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
@@ -90,7 +92,8 @@ export function MessageAttachmentDisplay({
         images={compactImages}
         initialIndex={Math.max(0, initialIndexWithinList)}
       >
-        <img
+        <Image
+          unoptimized
           alt={att ? "Attachment" : "Attachment preview"}
           className="size-full rounded-md border object-cover"
           src={src}
@@ -130,7 +133,12 @@ function AttachmentPreview({ attachment }: { attachment: Doc<"attachments"> }) {
           size: attachment.size,
         }}
       >
-        <img alt="Attachment" className="size-full rounded-md border object-cover" src={imageUrl} />
+        <Image
+          unoptimized
+          src={imageUrl}
+          alt="Attachment"
+          className="size-full rounded-md border object-cover"
+        />
       </ImagePreviewDialog>
     );
   }
@@ -139,7 +147,7 @@ function AttachmentPreview({ attachment }: { attachment: Doc<"attachments"> }) {
     const fileUrl = `https://files.chat.asakuri.me/${attachment.path}`;
 
     return (
-      <a
+      <Link
         href={fileUrl}
         target="_blank"
         rel="noopener noreferrer"
@@ -151,7 +159,7 @@ function AttachmentPreview({ attachment }: { attachment: Doc<"attachments"> }) {
           <span className="truncate text-sm">{attachment.name}</span>
           <span className="text-xs">{format.size(attachment.size)}</span>
         </div>
-      </a>
+      </Link>
     );
   }
 

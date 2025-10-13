@@ -126,7 +126,7 @@ export const ReasoningTrigger = memo(({ className, children, ...props }: Reasoni
   return (
     <Collapsible.Trigger
       className={cn(
-        "flex w-full items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground",
+        "flex w-full items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground",
         className,
       )}
       {...props}
@@ -149,24 +149,22 @@ export type ReasoningContentProps = ComponentProps<typeof Collapsible.Panel> & {
   children: string;
 };
 
-export const ReasoningContent = memo(
-  ({ className, messageId, children, ...props }: ReasoningContentProps) => {
-    const { isStreaming } = useReasoning();
+export const ReasoningContent = memo(({ className, children, ...props }: ReasoningContentProps) => {
+  const { isStreaming } = useReasoning();
 
-    return (
-      <Collapsible.Panel
-        className={cn(
-          "mt-2 text-sm",
-          "group-data-[closed]:fade-out-0 group-data-[closed]:slide-out-to-top-2 group-data-[open]:slide-in-from-top-2 text-foreground outline-none group-data-[closed]:animate-out group-data-[open]:animate-in",
-          className,
-        )}
-        {...props}
-      >
-        <MemoizedMarkdownBlock content={children} isStreaming={isStreaming} />
-      </Collapsible.Panel>
-    );
-  },
-);
+  return (
+    <Collapsible.Panel
+      className={cn(
+        "mt-2 text-sm",
+        "text-foreground outline-none group-data-[closed]:animate-out group-data-[closed]:fade-out-0 group-data-[closed]:slide-out-to-top-2 group-data-[open]:animate-in group-data-[open]:slide-in-from-top-2",
+        className,
+      )}
+      {...props}
+    >
+      <MemoizedMarkdownBlock content={children} isStreaming={isStreaming} />
+    </Collapsible.Panel>
+  );
+});
 
 Reasoning.displayName = "Reasoning";
 ReasoningTrigger.displayName = "ReasoningTrigger";

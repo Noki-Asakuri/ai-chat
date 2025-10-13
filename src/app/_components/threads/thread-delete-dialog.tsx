@@ -18,7 +18,6 @@ import {
 
 import { getConvexReactClient } from "@/lib/convex/client";
 import type { Thread } from "@/lib/types";
-import { CheckIcon } from "lucide-react";
 
 type ThreadDeleteDialogProps = {
   threadId: Thread["_id"];

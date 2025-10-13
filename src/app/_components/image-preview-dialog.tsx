@@ -1,13 +1,13 @@
 import { Dialog } from "@base-ui-components/react/dialog";
 import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
   ExternalLinkIcon,
   ImagesIcon,
   LoaderCircleIcon,
   XIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
 } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -239,7 +239,7 @@ export function ImagePreviewDialog({
           <div className="absolute top-4 right-4 flex h-10 items-center gap-2">
             <div
               data-hidden={!activeImage.src}
-              className="bg-muted/80 flex gap-2 rounded-md border p-1 data-[hidden=true]:hidden"
+              className="flex gap-2 rounded-md border bg-muted/80 p-1 data-[hidden=true]:hidden"
             >
               <DownloadImageButton image={activeImage} />
 
@@ -274,7 +274,7 @@ export function ImagePreviewDialog({
               </ButtonWithTip>
             </div>
 
-            <div className="bg-muted/80 rounded-md border p-1">
+            <div className="rounded-md border bg-muted/80 p-1">
               <Dialog.Close
                 render={<ButtonWithTip variant={"ghost"} />}
                 title="Close"
@@ -292,7 +292,7 @@ export function ImagePreviewDialog({
               <>
                 <button
                   type="button"
-                  className="pointer-events-auto absolute left-4 top-1/2 -translate-y-1/2 rounded-full border bg-muted/80 p-2"
+                  className="pointer-events-auto absolute top-1/2 left-4 -translate-y-1/2 rounded-full border bg-muted/80 p-2"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     setCurrentIndex((i) => i - 1);
@@ -304,7 +304,7 @@ export function ImagePreviewDialog({
                 </button>
                 <button
                   type="button"
-                  className="pointer-events-auto absolute right-4 top-1/2 -translate-y-1/2 rounded-full border bg-muted/80 p-2"
+                  className="pointer-events-auto absolute top-1/2 right-4 -translate-y-1/2 rounded-full border bg-muted/80 p-2"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     setCurrentIndex((i) => i + 1);

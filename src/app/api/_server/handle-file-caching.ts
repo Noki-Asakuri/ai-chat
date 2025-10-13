@@ -45,7 +45,7 @@ export async function handleFileCaching({ url }: InputType): Promise<OutputType>
   }
 
   // Expire after 12h; store raw buffer. Not awaited so it doesn't block the response.
-  tryCatch(saveCache());
+  void tryCatch(saveCache());
 
   return { data: buffer, mediaType };
 }

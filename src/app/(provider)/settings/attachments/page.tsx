@@ -45,7 +45,7 @@ function LoadingSkeleton() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-bold text-2xl">Attachments</h2>
+        <h2 className="text-2xl font-bold">Attachments</h2>
         <p className="text-muted-foreground">View and manage your attachments.</p>
       </div>
 
@@ -193,11 +193,11 @@ export default function AttachmentsPage() {
     <div className="space-y-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="font-bold text-2xl">Attachments</h2>
+          <h2 className="text-2xl font-bold">Attachments</h2>
           <p className="text-muted-foreground">View and manage your attachments.</p>
         </div>
 
-        <div className="text-muted-foreground text-sm">
+        <div className="text-sm text-muted-foreground">
           <span className="font-medium">{totals.count}</span> attachments •{" "}
           <span className="font-medium">{format.size(totals.bytes)} total</span>
         </div>
@@ -208,7 +208,7 @@ export default function AttachmentsPage() {
           <div className="relative w-full max-w-md sm:max-w-[unset]">
             <SearchIcon
               size={16}
-              className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-muted-foreground"
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
             />
 
             <Input
@@ -254,8 +254,8 @@ export default function AttachmentsPage() {
             {selectionMode && (
               <div className="flex items-center gap-2">
                 <div className="flex w-max flex-col leading-tight">
-                  <span className="text-muted-foreground text-sm">{selected.size} selected</span>
-                  <span className="text-center text-muted-foreground text-xs">
+                  <span className="text-sm text-muted-foreground">{selected.size} selected</span>
+                  <span className="text-center text-xs text-muted-foreground">
                     {format.size(selectedBytes)} total
                   </span>
                 </div>
@@ -343,16 +343,16 @@ export default function AttachmentsPage() {
                     />
                   </ImagePreviewDialog>
                 ) : (
-                  <a
+                  <Link
+                    href={fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block size-full"
-                    href={fileUrl}
                   >
                     <div className="flex aspect-square size-full items-center justify-center p-2">
                       <FileTextIcon size={64} />
                     </div>
-                  </a>
+                  </Link>
                 )}
 
                 <div className="pointer-events-none absolute top-0 left-0 flex size-full items-start justify-between gap-2 p-2">
@@ -396,7 +396,7 @@ export default function AttachmentsPage() {
                     {attachment.name}
                   </p>
 
-                  <span className="shrink-0 text-muted-foreground text-sm">
+                  <span className="shrink-0 text-sm text-muted-foreground">
                     {format.date(attachment._creationTime)}
                   </span>
                 </div>
@@ -413,7 +413,7 @@ export default function AttachmentsPage() {
                 )}
 
                 {!attachment.thread && (
-                  <span className="w-full select-none text-sm">Thread: [Deleted]</span>
+                  <span className="w-full text-sm select-none">Thread: [Deleted]</span>
                 )}
               </div>
             </div>

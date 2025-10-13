@@ -139,8 +139,12 @@ function CodeBlock({
   const isInline = node ? isInlineCode(node) : undefined;
   const language = /language-(\w+)/.exec(className ?? "")?.[1];
 
-  if (isInline) return <TypographyInlineCode className={className} children={code} {...props} />;
-  return <ShikiCodeBlock language={language ?? "plaintext"} code={code} />;
+  if (!isInline) return <ShikiCodeBlock language={language ?? "plaintext"} code={code} />;
+  return (
+    <TypographyInlineCode className={className} {...props}>
+      {code}
+    </TypographyInlineCode>
+  );
 }
 
 export const MemoizedMarkdownBlock = memo(
@@ -163,9 +167,10 @@ export const MemoizedMarkdownBlock = memo(
         ]}
         remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
         remarkRehypeOptions={{ allowDangerousHtml: true }}
-        children={escapeInvalidMath(content)}
         components={{ code: CodeBlock }}
-      />
+      >
+        {escapeInvalidMath(content)}
+      </Streamdown>
     );
   },
   (prevProps, nextProps) => prevProps.content === nextProps.content,

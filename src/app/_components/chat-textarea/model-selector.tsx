@@ -41,7 +41,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
 
   const visibleModels = useMemo(() => {
     return AllModelIds.slice()
-      .sort()
+      .sort((a, b) => a.localeCompare(b))
       .filter((id) => !hidden.includes(id));
   }, [hidden]);
 
@@ -67,7 +67,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
         id={triggerId}
         className={cn(
           buttonVariants({ variant: "ghost" }),
-          "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5",
+          "flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 hover:!bg-primary/15",
           className,
         )}
       >
@@ -76,7 +76,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
 
       <Popover.Portal>
         <Popover.Positioner sideOffset={8}>
-          <Popover.Popup className="origin-[var(--transform-origin)] rounded-md transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[starting-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+          <Popover.Popup className="origin-[var(--transform-origin)] rounded-md transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
             <Command
               loop
               value={selectedModel}
@@ -128,7 +128,7 @@ function ModelItem({ selected, value, onChange }: ModelSelectorProps & { selecte
       onSelect={onChange}
       data-model-selected={selected}
       title={data.display.unique ?? data.display.name}
-      className="data-[model-selected=true]:!bg-secondary data-[model-selected=true]:!text-secondary-foreground mt-1 cursor-pointer select-none justify-between gap-2 rounded-md border border-transparent px-3 py-1.5 text-sm leading-4 outline-none transition-[border-color] first:mt-0 data-[selected=true]:border-ring/60 data-[selected=true]:bg-card data-[selected=true]:text-card-foreground"
+      className="mt-1 cursor-pointer justify-between gap-2 rounded-md border border-transparent px-3 py-1.5 text-sm leading-4 transition-[border-color] outline-none select-none first:mt-0 data-[model-selected=true]:!bg-secondary data-[model-selected=true]:!text-secondary-foreground data-[selected=true]:border-ring/60 data-[selected=true]:bg-card data-[selected=true]:text-card-foreground"
     >
       <div className="flex items-center justify-center gap-2">
         <Icons.provider provider={data.provider} className="size-4" />

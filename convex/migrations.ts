@@ -1,3 +1,4 @@
+// oxlint-disable no-unused-vars
 import { Migrations } from "@convex-dev/migrations";
 
 import { components, internal } from "./_generated/api";

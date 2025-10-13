@@ -63,7 +63,7 @@ const languageDisplayName: Record<
 type CodeBlockProps = { language?: string | null; code: string };
 
 const LINE_CLAMP = 15;
-const FILE_NAME_RE = /(?:^|.*[\/\\])([A-Za-z0-9._-]+\.[A-Za-z0-9]+)(?=[^A-Za-z0-9._-]*$)/;
+const FILE_NAME_RE = /(?:^|.*[/\\])([A-Za-z0-9._-]+\.[A-Za-z0-9]+)(?=[^A-Za-z0-9._-]*$)/;
 
 const transformersOnce = [transformerColorizedBrackets()];
 
@@ -103,11 +103,11 @@ const CodeBlockHeader = React.memo(function CodeBlockHeader(props: CodeBlockHead
       <div className="flex items-center justify-center gap-1.5">
         {Icon && <Icon className="size-5 rounded-sm" />}
         <span className="capitalize">{languageData?.name ?? props.langKey}</span>
-        <span className="text-primary text-xs">{props.totalLines} lines</span>
+        <span className="text-xs text-primary">{props.totalLines} lines</span>
       </div>
 
       {fileName?.[1] && (
-        <span className="absolute w-[calc(100%-16px)] text-center text-primary text-sm">
+        <span className="absolute w-[calc(100%-16px)] text-center text-sm text-primary">
           {fileName[1]}
         </span>
       )}
@@ -143,9 +143,10 @@ const HighlightPane = React.memo(function HighlightPane(props: {
     return (
       <pre
         className={className}
-        children={props.code}
         style={{ scrollbarGutter: "stable both-edges", height: props.height }}
-      />
+      >
+        {props.code}
+      </pre>
     );
   }
 

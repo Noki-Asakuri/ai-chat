@@ -133,7 +133,7 @@ export const updateUserCustomization = mutation({
     const user = await userByExternalId(ctx, userId.subject);
     if (!user) throw new Error("User not found");
 
-    await ctx.db.patch(user._id, { customization: { ...(user.customization ?? {}), ...data } });
+    await ctx.db.patch(user._id, { customization: { ...user.customization, ...data } });
   },
 });
 
@@ -148,6 +148,6 @@ export const currentUser = query({
 
     // Ensure hiddenModels is always defined for clients
     const hiddenModels = user.customization?.hiddenModels ?? [];
-    return { ...user, customization: { ...(user.customization ?? {}), hiddenModels } };
+    return { ...user, customization: { ...user.customization, hiddenModels } };
   },
 });

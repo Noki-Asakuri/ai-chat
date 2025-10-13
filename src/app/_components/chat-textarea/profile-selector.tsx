@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { BrainIcon, CheckIcon, PlusIcon, SearchIcon, SquareUserIcon, XIcon } from "lucide-react";
+import { CheckIcon, PlusIcon, SearchIcon, SquareUserIcon, XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -48,7 +48,7 @@ export function ProfileSelectorButton() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         className={cn(
-          "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 text-xs",
+          "flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 text-xs hover:!bg-primary/15",
           buttonVariants({ variant: "ghost" }),
         )}
       >
@@ -66,7 +66,7 @@ export function ProfileSelectorButton() {
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div className="relative flex-1" role="search">
-              <SearchIcon className="-translate-y-1/2 absolute top-1/2 left-2 size-4 text-muted-foreground" />
+              <SearchIcon className="absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -109,7 +109,7 @@ export function ProfileSelectorButton() {
                   <XIcon className="size-4" />
                   <span className="truncate font-medium">No Profile</span>
                 </span>
-                <span className="line-clamp-1 text-muted-foreground text-xs">
+                <span className="line-clamp-1 text-xs text-muted-foreground">
                   Default profile, no system prompt
                 </span>
               </div>
@@ -134,7 +134,7 @@ export function ProfileSelectorButton() {
                 >
                   <div className="flex min-w-0 flex-col">
                     <span className="truncate font-medium">{p.name}</span>
-                    <span className="line-clamp-1 text-muted-foreground text-xs">
+                    <span className="line-clamp-1 text-xs text-muted-foreground">
                       {p.systemPrompt}
                     </span>
                   </div>
@@ -145,7 +145,7 @@ export function ProfileSelectorButton() {
             })}
 
             {data?.length === 0 && (
-              <div className="px-3 py-6 text-center text-muted-foreground text-sm">
+              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
                 No profiles found.
               </div>
             )}

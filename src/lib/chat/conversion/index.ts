@@ -31,6 +31,7 @@ type V4SourcePart = Extract<V4Part, { type: "source" }>;
 type V4FilePart = Extract<V4Part, { type: "file" }>;
 
 // Type guards
+// oxlint-disable-next-line no-unused-vars
 function isV4Message(msg: V4Message | MyUIMessage): msg is V4Message {
   return (
     "toolInvocations" in msg ||

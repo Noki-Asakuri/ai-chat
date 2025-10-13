@@ -88,7 +88,7 @@ export async function serverUploadFileR2(data: UploadFileR2): Promise<UploadFile
         }
 
         // Fire-and-forget metadata sync
-        tryCatch(data.serverConvexClient.mutation(api.functions.files.syncMetadata, { key }));
+        void tryCatch(data.serverConvexClient.mutation(api.functions.files.syncMetadata, { key }));
 
         logger.info("[Chat] File uploaded to R2", {
           attempt,

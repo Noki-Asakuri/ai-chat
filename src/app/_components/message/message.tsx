@@ -1,4 +1,3 @@
-import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef } from "react";
 import { useShallow } from "zustand/shallow";
 

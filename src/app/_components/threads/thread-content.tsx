@@ -74,10 +74,10 @@ function CreateGroupButton() {
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-[opacity] duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:opacity-70" />
-          <Dialog.Popup className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-[ending-style]:scale-95 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0">
             <div className="mb-2">
-              <h2 className="font-semibold text-lg">Create group</h2>
-              <p className="text-muted-foreground text-sm">Enter a group name.</p>
+              <h2 className="text-lg font-semibold">Create group</h2>
+              <p className="text-sm text-muted-foreground">Enter a group name.</p>
             </div>
 
             <form
@@ -118,7 +118,7 @@ function ThreadListWrapper() {
 
   useEffect(() => {
     if (data) setLocalData(data);
-  }, [data]);
+  }, [data, setLocalData]);
 
   if (data) return <ThreadList data={data} />;
   if (localData) return <ThreadList data={localData} />;

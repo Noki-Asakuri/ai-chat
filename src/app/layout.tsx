@@ -48,7 +48,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${mainFont.variable} ${codeFont.variable} antialiased`}>
       <head>
         {process.env.ENABLE_REACT_SCAN && (
-          <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+          <script defer src="https://unpkg.com/react-scan/dist/auto.global.js" />
         )}
       </head>
 

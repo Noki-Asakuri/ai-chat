@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
   experimental: {
     useCache: true,
     clientSegmentCache: true,
+    enablePrerenderSourceMaps: true,
     turbopackFileSystemCacheForDev: true,
     turbopackFileSystemCacheForBuild: true,
   },

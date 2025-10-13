@@ -178,7 +178,7 @@ export default function AiProfilesPage() {
 
       <div className="flex items-center justify-between gap-2">
         <div className="relative w-full max-w-md">
-          <SearchIcon className="text-muted-foreground absolute top-1/2 left-2 size-4 -translate-y-1/2" />
+          <SearchIcon className="absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -199,9 +199,9 @@ export default function AiProfilesPage() {
       <div className="block sm:hidden">{SortControl}</div>
 
       {isPending ? (
-        <p className="text-muted-foreground text-sm">Loading profiles…</p>
+        <p className="text-sm text-muted-foreground">Loading profiles…</p>
       ) : profiles.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No profiles found.</p>
+        <p className="text-sm text-muted-foreground">No profiles found.</p>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {profiles.map((p) => (
@@ -253,7 +253,7 @@ export default function AiProfilesPage() {
                 }}
               />
 
-              <span className="text-muted-foreground text-xs">PNG, JPG, or WebP.</span>
+              <span className="text-xs text-muted-foreground">PNG, JPG, or WebP.</span>
             </label>
           </div>
 
@@ -335,18 +335,13 @@ function ProfileCard({
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete “{profile.name}”?</AlertDialogTitle>
               </AlertDialogHeader>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-muted-foreground">
                 This action cannot be undone. This will permanently delete this AI profile.
               </p>
+
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => {
-                    void onDelete(profile._id);
-                  }}
-                >
-                  Delete
-                </AlertDialogAction>
+                <AlertDialogAction onClick={() => onDelete(profile._id)}>Delete</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -361,10 +356,10 @@ function ProfileCard({
             className="h-16 w-16 shrink-0 rounded-md object-cover"
           />
         ) : (
-          <div className="bg-muted h-16 w-16 shrink-0 rounded-md" />
+          <div className="h-16 w-16 shrink-0 rounded-md bg-muted" />
         )}
 
-        <div className="text-foreground/80 text-sm">{shortDesc || "No description"}</div>
+        <div className="text-sm text-foreground/80">{shortDesc || "No description"}</div>
       </CardContent>
     </Card>
   );

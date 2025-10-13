@@ -65,7 +65,7 @@ function ChatPage() {
     console.log("ChatPage", nextPathname, location.pathname, nextPathname !== location.pathname);
 
     if (nextPathname !== location.pathname) {
-      navigate(nextPathname, { replace: true });
+      void navigate(nextPathname, { replace: true });
     }
 
     hasRunned.current = true;
@@ -111,7 +111,7 @@ function NewVersionToast() {
         </button>
 
         <button
-          className="flex cursor-pointer items-center justify-center rounded-md border bg-destructive p-1.5 text-destructive-foreground text-sm hover:underline"
+          className="flex cursor-pointer items-center justify-center rounded-md border bg-destructive p-1.5 text-sm text-destructive-foreground hover:underline"
           onClick={() => window.location.reload()}
         >
           Refresh Now
