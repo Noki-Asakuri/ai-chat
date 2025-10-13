@@ -16,11 +16,18 @@ export const migrations = new Migrations<DataModel>(components.migrations);
  */
 export const run = migrations.runner();
 
-// export const backfillThreads = migrations.define({
-//   table: "threads",
-//   migrateOne: async (ctx, thread) => {
-//     if (thread.pinned === undefined) await ctx.db.patch(thread._id, { pinned: false });
+// export const backfillMessages = migrations.define({
+//   table: "messages",
+//   migrateOne: async (ctx, data) => {
+//     if (!data.metadata) return;
+//     const updates = structuredClone(data.metadata);
+
+//     if (typeof updates?.totalTokens === "number") delete updates.totalTokens;
+//     if (typeof updates?.thinkingTokens === "number") delete updates.thinkingTokens;
+
+//     await ctx.db.patch(data._id, { metadata: updates });
 //   },
 // });
 
-// export const runAll = migrations.runner([internal.migrations.backfillThreads]);
+// export const runBackfillMessages = migrations.runner([internal.migrations.backfillMessages]);
+// export const runAll = migrations.runner([internal.migrations.backfillMessages]);

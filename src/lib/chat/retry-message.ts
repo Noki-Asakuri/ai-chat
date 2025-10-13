@@ -19,6 +19,7 @@ export async function retryMessage(
     modelId?: string;
     effort?: ReasoningEffort;
     webSearch?: boolean;
+
     attachmentsOverride?: Array<{
       _id: Id<"attachments">;
       id: string;

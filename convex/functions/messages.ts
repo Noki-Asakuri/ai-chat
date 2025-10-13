@@ -68,16 +68,12 @@ export const addMessagesToThread = mutation({
 
         status: status,
         parts: AISDKParts,
+        modelParams: AISDKModelParams,
         metadata: v.optional(AISDKMetadata),
 
         createdAt: v.number(),
         updatedAt: v.number(),
         attachments: v.array(v.id("attachments")),
-
-        modelParams: v.object({
-          webSearchEnabled: v.optional(v.boolean()),
-          effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
-        }),
       }),
     ),
   },
@@ -204,13 +200,10 @@ export const retryChatMessage = mutation({
   args: {
     threadId: v.id("threads"),
     assistantMessageId: v.id("messages"),
+
     model: v.optional(v.string()),
-    modelParams: v.optional(
-      v.object({
-        webSearchEnabled: v.optional(v.boolean()),
-        effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
-      }),
-    ),
+    modelParams: v.optional(AISDKModelParams),
+
     userMessage: v.object({
       messageId: v.id("messages"),
       content: v.optional(v.string()),
@@ -237,9 +230,12 @@ export const retryChatMessage = mutation({
       )
       .collect();
 
+    const defaultModelParams = { effort: "medium", webSearchEnabled: false } as const;
+
     const userUpdates: Partial<Doc<"messages">> = {
-      model: args.model ?? assistantMessage.model ?? "",
       updatedAt: Date.now(),
+      model: args.model ?? assistantMessage.model ?? "",
+      modelParams: args.modelParams ?? assistantMessage.modelParams ?? defaultModelParams,
     };
 
     if (args.userMessage.content) userUpdates.content = args.userMessage.content;
@@ -250,7 +246,7 @@ export const retryChatMessage = mutation({
     }
 
     await Promise.all([
-      ctx.db.patch(args.threadId, { updatedAt: Date.now() }),
+      ctx.db.patch(args.threadId, { status: "pending", updatedAt: Date.now() }),
       ctx.db.patch(args.assistantMessageId, {
         messageId: crypto.randomUUID(),
         status: "pending",
@@ -260,7 +256,7 @@ export const retryChatMessage = mutation({
         metadata: undefined,
         resumableStreamId: null,
         error: undefined,
-        modelParams: args.modelParams ?? assistantMessage.modelParams ?? {},
+        modelParams: args.modelParams ?? assistantMessage.modelParams ?? defaultModelParams,
         model: args.model ?? assistantMessage.model ?? "",
         attachments: [],
         updatedAt: Date.now(),

@@ -4,10 +4,9 @@ import { z } from "zod";
 
 export const metadataSchema = z.object({
   model: z.string(),
-  duration: z.number(),
   finishReason: z.string(),
-
   timeToFirstTokenMs: z.number(),
+
   durations: z.object({ request: z.number(), reasoning: z.number(), text: z.number() }),
   usages: z.object({
     inputTokens: z.number(),

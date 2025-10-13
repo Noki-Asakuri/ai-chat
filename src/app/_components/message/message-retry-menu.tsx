@@ -63,7 +63,10 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
       event.stopPropagation();
 
       startTransition(async () => {
-        await retryMessage(index, { modelId: message.model, effort: message.modelParams?.effort });
+        await retryMessage(index, {
+          modelId: message.model,
+          effort: message.modelParams?.effort ?? "medium",
+        });
       });
     }
   }
@@ -103,7 +106,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
 
       <Menu.Portal>
         <Menu.Positioner className="outline-none" sideOffset={8} align="center" side="top">
-          <Menu.Popup className="flex w-50 origin-[var(--transform-origin)] flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[starting-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+          <Menu.Popup className="flex w-50 origin-[var(--transform-origin)] flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
             <MenuArrow className="fill-card" />
 
             <Menu.Item
@@ -142,7 +145,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
 
                   <Menu.Portal>
                     <Menu.Positioner side="right" align="center" className="p-1" sideOffset={12}>
-                      <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[starting-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+                      <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
                         <MenuArrow className="fill-card" />
 
                         {models?.map((model) => (
@@ -227,7 +230,7 @@ function EffortSelector(props: ModelProviderPickerProps) {
           sideOffset={12}
           side={props.messageRole === "user" ? "left" : "right"}
         >
-          <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[starting-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+          <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
             <MenuArrow className="fill-card" />
 
             <div className="flex flex-col gap-1">

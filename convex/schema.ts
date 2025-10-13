@@ -4,6 +4,20 @@ import { v } from "convex/values";
 const providerMetadata = v.optional(v.record(v.string(), v.record(v.string(), v.any())));
 const state = v.optional(v.union(v.literal("done"), v.literal("streaming")));
 
+export const effort = v.union(
+  v.literal("minimal"),
+  v.literal("low"),
+  v.literal("medium"),
+  v.literal("high"),
+);
+
+export const status = v.union(
+  v.literal("pending"),
+  v.literal("streaming"),
+  v.literal("complete"),
+  v.literal("error"),
+);
+
 export const AISDKParts = v.array(
   v.union(
     v.object({ type: v.literal("step-start") }),
@@ -120,30 +134,15 @@ export const AISDKMetadata = v.object({
     outputTokens: v.number(),
     reasoningTokens: v.number(),
   }),
-  timeToFirstTokenMs: v.optional(v.number()),
+  timeToFirstTokenMs: v.number(),
   aiProfileId: v.optional(v.id("ai_profiles")),
   durations: v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
-
-  /**
-   * @deprecated Deprecated fields, which will be removed in a future migration.
-   * Optional for existing data and migration purposes only.
-   */
-  duration: v.optional(v.number()),
-  totalTokens: v.optional(v.number()),
-  thinkingTokens: v.optional(v.number()),
 });
 
 export const AISDKModelParams = v.object({
-  webSearchEnabled: v.optional(v.boolean()),
-  effort: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+  webSearchEnabled: v.boolean(),
+  effort: effort,
 });
-
-export const status = v.union(
-  v.literal("pending"),
-  v.literal("streaming"),
-  v.literal("complete"),
-  v.literal("error"),
-);
 
 export default defineSchema({
   groups: defineTable({
@@ -194,7 +193,7 @@ export default defineSchema({
     reasoning: v.optional(v.string()),
     error: v.optional(v.string()),
 
-    parts: v.optional(AISDKParts),
+    parts: AISDKParts,
 
     model: v.string(),
     status: status,
@@ -238,18 +237,16 @@ export default defineSchema({
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
 
-    customization: v.optional(
-      v.object({
-        name: v.optional(v.string()),
-        occupation: v.optional(v.string()),
-        traits: v.optional(v.array(v.string())),
-        systemInstruction: v.optional(v.string()),
-        backgroundId: v.optional(v.union(v.string(), v.null())),
-        disableBlur: v.optional(v.boolean()),
-        hiddenModels: v.optional(v.array(v.string())),
-        showFullCode: v.optional(v.boolean()),
-      }),
-    ),
+    customization: v.object({
+      name: v.optional(v.string()),
+      occupation: v.optional(v.string()),
+      traits: v.optional(v.array(v.string())),
+      systemInstruction: v.optional(v.string()),
+      backgroundId: v.optional(v.union(v.string(), v.null())),
+      disableBlur: v.optional(v.boolean()),
+      hiddenModels: v.optional(v.array(v.string())),
+      showFullCode: v.optional(v.boolean()),
+    }),
   }).index("by_userId", ["userId"]),
 
   usages: defineTable({
@@ -266,7 +263,7 @@ export default defineSchema({
       threads: v.number(),
       words: v.number(),
       messages: v.object({ assistant: v.number(), user: v.number() }),
-      wordsByRole: v.optional(v.object({ assistant: v.number(), user: v.number() })),
+      wordsByRole: v.object({ assistant: v.number(), user: v.number() }),
     }),
 
     modelCounts: v.record(v.string(), v.number()),

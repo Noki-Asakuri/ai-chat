@@ -284,7 +284,6 @@ app.post("/api/ai/chat", async (ctx) => {
   const metadata = {
     model: model.uniqueId,
     aiProfileId: config.profile?.id ?? undefined,
-    duration: 0,
     finishReason: "",
     timeToFirstTokenMs: 0,
     usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
@@ -335,9 +334,7 @@ app.post("/api/ai/chat", async (ctx) => {
         case "finish-step":
           metadata.model = part.response.modelId;
           metadata.finishReason = part.finishReason;
-
-          metadata.duration = Date.now() - startTime;
-          metadata.durations.request = metadata.duration;
+          metadata.durations.request = Date.now() - startTime;
           break;
 
         case "finish":

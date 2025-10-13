@@ -38,15 +38,12 @@ const inputSchema = z.object({
     }),
   ),
 
-  config: z
-    .object({
-      model: z.string(),
-      webSearch: z.boolean().optional(),
-      effort: z.enum(["low", "medium", "high"]).default("medium"),
-      profile: z.object({ id: aiProfileIdSchema.nullable(), systemPrompt: z.string() }),
-    })
-    .partial()
-    .prefault({}),
+  config: z.object({
+    model: z.string(),
+    webSearch: z.boolean().default(false),
+    effort: z.enum(["minimal", "low", "medium", "high"]).default("medium"),
+    profile: z.object({ id: aiProfileIdSchema.nullable(), systemPrompt: z.string() }).optional(),
+  }),
 });
 
 export type ChatRequestBody = z.infer<typeof inputSchema>;

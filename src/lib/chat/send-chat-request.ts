@@ -15,7 +15,7 @@ import { retryMessage } from "./retry-message";
 import { chatStore } from "./store";
 
 import type { ChatMessage, ChatRequestBody } from "../types";
-import { fixMarkdownCodeBlocks, fromUUID, toUUID, tryCatch } from "../utils";
+import { fixMarkdownCodeBlocks, fromUUID, toUUID, tryCatch, tryCatchSync } from "../utils";
 
 const convexClient = getConvexReactClient();
 
@@ -153,12 +153,9 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
   state.setAttachment([]);
   state.setEditMessage(null);
 
-  // Force UI to stick to bottom on user send action
-  try {
+  tryCatchSync(() => {
     window.dispatchEvent(new Event("chat:force-scroll-bottom"));
-  } catch {
-    // ignore if window not available
-  }
+  });
 
   if (!threadId) {
     threadId = await convexClient.mutation(api.functions.threads.createThread, {});
@@ -175,8 +172,8 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     content: chatInput,
     role: "user" as const,
     status: "complete" as const,
-    model: state.chatConfig.model,
     parts: convertV4MessageToV5({ id: uuidv4(), role: "user", content: chatInput }, 0).parts,
+    model: state.chatConfig.model,
     modelParams: {
       webSearchEnabled: state.chatConfig.webSearch,
       effort: state.chatConfig.effort,
@@ -192,8 +189,8 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     content: "",
     role: "assistant" as const,
     status: "pending" as const,
-    model: state.chatConfig.model,
     parts: [],
+    model: state.chatConfig.model,
     modelParams: {
       webSearchEnabled: state.chatConfig.webSearch,
       effort: state.chatConfig.effort,
