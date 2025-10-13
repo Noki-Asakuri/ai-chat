@@ -145,7 +145,6 @@ export const ReasoningTrigger = memo(({ className, children, ...props }: Reasoni
 });
 
 export type ReasoningContentProps = ComponentProps<typeof Collapsible.Panel> & {
-  messageId: string;
   children: string;
 };
 
