@@ -51,7 +51,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <script defer src="https://unpkg.com/react-scan/dist/auto.global.js" />
         )}
 
-        <script defer data-domain="chat.asakuri.me" src="/api/nothing-here"></script>
+        <script
+          defer
+          data-domain="chat.asakuri.me"
+          data-api="https://plausible.asakuri.me"
+          src="/api/nothing-here"
+        ></script>
       </head>
 
       <WebVitals />
