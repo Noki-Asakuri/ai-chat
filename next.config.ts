@@ -34,8 +34,12 @@ const nextConfig: NextConfig = {
           destination: `${host}/_vercel/:path*`,
         },
         {
-          source: "/api/nothing-here",
+          source: "/api/plausible-script",
           destination: "https://plausible.asakuri.me/js/script.file-downloads.outbound-links.js",
+        },
+        {
+          source: "/api/plausible/event",
+          destination: "https://plausible.asakuri.me/api/event",
         },
         {
           source: "/threads/:path",

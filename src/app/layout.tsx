@@ -54,8 +54,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <script
           defer
           data-domain="chat.asakuri.me"
-          data-api="https://plausible.asakuri.me"
-          src="/api/nothing-here"
+          data-api="/api/plausible/event"
+          src="/api/plausible-script"
         ></script>
       </head>
 
