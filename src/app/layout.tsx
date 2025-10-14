@@ -62,6 +62,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <>
             <Analytics basePath="/api/vercel" />
             <SpeedInsights basePath="/api/vercel" />
+
+            <script
+              defer
+              data-domain="chat.asakuri.me"
+              src="https://plausible.asakuri.me/js/script.file-downloads.outbound-links.js"
+            ></script>
           </>
         )}
       </body>

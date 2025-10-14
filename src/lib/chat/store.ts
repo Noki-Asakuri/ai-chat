@@ -278,7 +278,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   profiles: [],
   setProfiles: (profiles) =>
-    set((state) => {
+    set(() => {
       localStorage.setItem(PROFILE_LOCAL_STORAGE_KEY, JSON.stringify(profiles));
       return { profiles };
     }),
