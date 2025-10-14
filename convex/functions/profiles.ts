@@ -1,6 +1,8 @@
 import { v } from "convex/values";
+
 import { r2 } from "..";
 import { mutation, query } from "../_generated/server";
+import type { Doc } from "../_generated/dataModel";
 
 /**
  * List AI Profiles for current user with optional search and sorting.
@@ -34,16 +36,17 @@ export const listProfiles = query({
     if (term.length === 0) {
       if (args.sort === "newest") {
         const docs = await ctx.db
-          .query("ai_profiles")
+          .query("profiles")
           .withIndex("by_userId_createdAt", (q) => q.eq("userId", user.subject))
           .order("desc")
           .collect();
+
         return docs;
       }
 
       if (args.sort === "oldest") {
         const docs = await ctx.db
-          .query("ai_profiles")
+          .query("profiles")
           .withIndex("by_userId_createdAt", (q) => q.eq("userId", user.subject))
           .order("asc")
           .collect();
@@ -52,7 +55,7 @@ export const listProfiles = query({
 
       if (args.sort === "recently-updated") {
         const docs = await ctx.db
-          .query("ai_profiles")
+          .query("profiles")
           .withIndex("by_userId_updatedAt", (q) => q.eq("userId", user.subject))
           .order("desc")
           .collect();
@@ -61,7 +64,7 @@ export const listProfiles = query({
 
       // Default fetch by user, then in-memory sort for name-based sorts
       const docs = await ctx.db
-        .query("ai_profiles")
+        .query("profiles")
         .withIndex("by_userId", (q) => q.eq("userId", user.subject))
         .collect();
 
@@ -70,17 +73,19 @@ export const listProfiles = query({
           a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
         );
       }
+
       if (args.sort === "za") {
         return docs.sort((a, b) =>
           b.name.localeCompare(a.name, undefined, { sensitivity: "base" }),
         );
       }
+
       return docs;
     }
 
     // With search, use search index and then apply sorting in-memory
     const searched = await ctx.db
-      .query("ai_profiles")
+      .query("profiles")
       .withSearchIndex("search_name", (q) => q.search("name", term).eq("userId", user.subject))
       .collect();
 
@@ -109,7 +114,7 @@ export const listProfiles = query({
  * Fetch a single profile (ownership enforced).
  */
 export const getProfile = query({
-  args: { profileId: v.optional(v.id("ai_profiles")) },
+  args: { profileId: v.optional(v.id("profiles")) },
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
     if (!user) throw new Error("Not authenticated");
@@ -132,13 +137,13 @@ export const createProfile = mutation({
     systemPrompt: v.string(),
     imageKey: v.optional(v.string()),
   },
-  returns: v.id("ai_profiles"),
+  returns: v.id("profiles"),
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();
     if (!user) throw new Error("Not authenticated");
 
     const now = Date.now();
-    const id = await ctx.db.insert("ai_profiles", {
+    const id = await ctx.db.insert("profiles", {
       userId: user.subject,
       name: args.name,
       systemPrompt: args.systemPrompt,
@@ -155,7 +160,7 @@ export const createProfile = mutation({
  */
 export const updateProfile = mutation({
   args: {
-    profileId: v.id("ai_profiles"),
+    profileId: v.id("profiles"),
     name: v.optional(v.string()),
     systemPrompt: v.optional(v.string()),
     imageKey: v.optional(v.union(v.string(), v.null())),
@@ -169,12 +174,7 @@ export const updateProfile = mutation({
     if (!doc) throw new Error("Profile not found");
     if (doc.userId !== user.subject) throw new Error("Not authorized");
 
-    const updates: {
-      name?: string;
-      systemPrompt?: string;
-      imageKey?: string;
-      updatedAt: number;
-    } = { updatedAt: Date.now() };
+    const updates: Partial<Doc<"profiles">> = { updatedAt: Date.now() };
 
     if (typeof args.name === "string") updates.name = args.name;
     if (typeof args.systemPrompt === "string") updates.systemPrompt = args.systemPrompt;
@@ -204,7 +204,7 @@ export const updateProfile = mutation({
  * Delete a profile and its associated image in R2 (if any).
  */
 export const deleteProfile = mutation({
-  args: { profileId: v.id("ai_profiles") },
+  args: { profileId: v.id("profiles") },
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = await ctx.auth.getUserIdentity();

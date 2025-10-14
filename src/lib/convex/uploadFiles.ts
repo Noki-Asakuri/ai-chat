@@ -34,7 +34,7 @@ export async function uploadFile(file: File, threadId: Id<"threads">, fileId: st
  */
 export async function uploadAiProfileImage(file: File) {
   const { url, key } = await convexClient.mutation(
-    api.functions.aiProfiles.generateAiProfileUploadUrl,
+    api.functions.profiles.generateAiProfileUploadUrl,
     {},
   );
 

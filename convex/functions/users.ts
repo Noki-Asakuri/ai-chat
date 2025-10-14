@@ -33,7 +33,7 @@ export const deleteFromClerk = internalMutation({
       .collect();
 
     const profilesPromises = ctx.db
-      .query("ai_profiles")
+      .query("profiles")
       .withIndex("by_userId", (q) => q.eq("userId", user.userId))
       .collect();
 

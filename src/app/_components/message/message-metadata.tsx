@@ -116,14 +116,14 @@ function PopoverInfo({ metadata }: PopoverInfoProps) {
             </span>
           </div>
 
-          {/* <div
+          <div
             data-slot="metadata-ai-profile"
             className="flex items-center gap-2"
-            hidden={!aiProfileName}
+            hidden={!metadata.profile}
           >
             <Icons.provider provider="openai" className="size-4" />
-            <span>Profile: {aiProfileName}</span>
-          </div> */}
+            <span>Profile: {metadata.profile?.name}</span>
+          </div>
         </div>
       </PopoverContent>
     </Popover>

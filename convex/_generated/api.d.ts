@@ -9,11 +9,11 @@
  */
 
 import type * as crons from "../crons.js";
-import type * as functions_aiProfiles from "../functions/aiProfiles.js";
 import type * as functions_attachments from "../functions/attachments.js";
 import type * as functions_files from "../functions/files.js";
 import type * as functions_groups from "../functions/groups.js";
 import type * as functions_messages from "../functions/messages.js";
+import type * as functions_profiles from "../functions/profiles.js";
 import type * as functions_statistics from "../functions/statistics.js";
 import type * as functions_threads from "../functions/threads.js";
 import type * as functions_usages from "../functions/usages.js";
@@ -39,11 +39,11 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   crons: typeof crons;
-  "functions/aiProfiles": typeof functions_aiProfiles;
   "functions/attachments": typeof functions_attachments;
   "functions/files": typeof functions_files;
   "functions/groups": typeof functions_groups;
   "functions/messages": typeof functions_messages;
+  "functions/profiles": typeof functions_profiles;
   "functions/statistics": typeof functions_statistics;
   "functions/threads": typeof functions_threads;
   "functions/usages": typeof functions_usages;

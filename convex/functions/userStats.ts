@@ -1,7 +1,7 @@
-import { internalMutation, type MutationCtx } from "../_generated/server";
 import { v } from "convex/values";
-import { type Doc, type Id } from "../_generated/dataModel";
 import { getModelData } from "../../src/lib/chat/models";
+import { type Doc, type Id } from "../_generated/dataModel";
+import { internalMutation, type MutationCtx } from "../_generated/server";
 
 function dayKey(ts: number): string {
   const d = new Date(ts);
@@ -117,7 +117,7 @@ export const incrementOnAssistantComplete = internalMutation({
     content: v.string(),
     modelUniqueId: v.string(),
     createdAt: v.number(),
-    aiProfileId: v.optional(v.id("ai_profiles")),
+    profileId: v.optional(v.id("profiles")),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -150,7 +150,7 @@ export const incrementOnAssistantComplete = internalMutation({
     modelCounts[normalizedModelId] = (modelCounts[normalizedModelId] ?? 0) + 1;
 
     const aiProfileCounts: Record<string, number> = { ...doc.aiProfileCounts };
-    const aiKey = args.aiProfileId ?? "null";
+    const aiKey = args.profileId ?? "null";
     aiProfileCounts[aiKey] = (aiProfileCounts[aiKey] ?? 0) + 1;
 
     await ctx.db.patch(doc._id, {

@@ -135,7 +135,7 @@ export const AISDKMetadata = v.object({
     reasoningTokens: v.number(),
   }),
   timeToFirstTokenMs: v.number(),
-  aiProfileId: v.optional(v.id("ai_profiles")),
+  profile: v.optional(v.object({ id: v.id("profiles"), name: v.string() })),
   durations: v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
 });
 
@@ -212,11 +212,12 @@ export default defineSchema({
     .index("by_threadId", ["threadId"])
     .index("by_messageId", ["messageId"]),
 
-  ai_profiles: defineTable({
+  profiles: defineTable({
     userId: v.string(),
     name: v.string(),
     systemPrompt: v.string(),
     imageKey: v.optional(v.string()),
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })

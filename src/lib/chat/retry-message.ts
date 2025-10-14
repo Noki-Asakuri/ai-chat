@@ -52,13 +52,17 @@ export async function retryMessage(
         : message.attachments,
   }));
 
-  const model = firstNonEmptyOrLast(
-    options?.modelId,
-    state.messages.at(-1)!.model,
-    state.chatConfig.model,
-  );
+  const lastMessage = state.messages.at(-1)!;
 
-  state.setChatConfig({ model });
+  const model = firstNonEmptyOrLast(options?.modelId, lastMessage.model, state.chatConfig.model);
+  const profileId = lastMessage.metadata?.profile?.id ?? state.chatConfig.profile?.id;
+
+  const profile = state.profiles.find((p) => p._id === profileId);
+  const activeProfile = profile
+    ? { id: profile._id, name: profile.name, systemPrompt: profile.systemPrompt }
+    : null;
+
+  state.setChatConfig({ model, profile: activeProfile });
 
   await convexClient.mutation(api.functions.messages.retryChatMessage, {
     threadId,
@@ -88,6 +92,7 @@ export async function retryMessage(
     model,
     effort: options?.effort ?? state.chatConfig.effort,
     webSearch: options?.webSearch ?? state.chatConfig.webSearch,
+    profile: activeProfile,
   };
 
   const body: ChatRequestBody = {

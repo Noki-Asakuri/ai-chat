@@ -3,6 +3,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { z } from "zod";
 import { create } from "zustand";
 
+import { profileIdSchema } from "../server/validate-request-body";
 import type { ChatMessage, Thread, UserAttachment } from "../types";
 import { getModelData } from "./models";
 
@@ -17,7 +18,7 @@ const DEFAULT_CONFIG = {
   webSearch: false,
   effort: "medium",
   model: "openai/gpt-5-nano",
-  profile: { id: null, systemPrompt: "" },
+  profile: null as { id: Id<"profiles">; name: string; systemPrompt: string } | null,
 } as const;
 
 function getChatConfigFromLS() {
@@ -32,13 +33,10 @@ function getChatConfigFromLS() {
     model: z.string().catch(DEFAULT_CONFIG.model),
     webSearch: z.boolean().catch(DEFAULT_CONFIG.webSearch),
     effort: z.enum(["minimal", "low", "medium", "high"]).catch(DEFAULT_CONFIG.effort),
-
     profile: z
-      .object({
-        id: z.custom<Id<"ai_profiles">>((data) => z.string().parse(data)).nullable(),
-        systemPrompt: z.string(),
-      })
-      .catch(DEFAULT_CONFIG.profile),
+      .object({ id: profileIdSchema, name: z.string(), systemPrompt: z.string() })
+      .nullish()
+      .catch(null),
   });
 
   try {
@@ -135,6 +133,9 @@ export interface ChatState {
   setController: (assistantMessageId: string | Id<"messages">, controller: AbortController) => void;
   clearController: (assistantMessageId: string | Id<"messages">) => void;
   getController: (assistantMessageId: string | Id<"messages">) => AbortController | undefined;
+
+  profiles: Doc<"profiles">[];
+  setProfiles: (profiles: Doc<"profiles">[]) => void;
 
   resetState: () => void;
   setDataFromConvex: (
@@ -272,6 +273,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   lastUserMessageHeight: null,
   setMessageHeight: (height) => set({ lastUserMessageHeight: height }),
+
+  profiles: [],
+  setProfiles: (profiles) => set({ profiles }),
 
   setDataFromConvex: (messages, status) =>
     set((state) => {

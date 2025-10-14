@@ -49,7 +49,7 @@ export default function AiProfilesPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("recently-updated");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<Id<"ai_profiles"> | null>(null);
+  const [editingId, setEditingId] = useState<Id<"profiles"> | null>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -58,7 +58,7 @@ export default function AiProfilesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data, isPending, refetch } = useQuery(
-    convexQuery(api.functions.aiProfiles.listProfiles, { search, sort }),
+    convexQuery(api.functions.profiles.listProfiles, { search, sort }),
   );
 
   const profiles = data ?? [];
@@ -76,7 +76,7 @@ export default function AiProfilesPage() {
     setDialogOpen(true);
   }
 
-  function onEditClicked(profile: { _id: Id<"ai_profiles">; name: string; systemPrompt: string }) {
+  function onEditClicked(profile: { _id: Id<"profiles">; name: string; systemPrompt: string }) {
     setEditingId(profile._id);
     setName(profile.name);
     setSystemPrompt(profile.systemPrompt);
@@ -84,9 +84,9 @@ export default function AiProfilesPage() {
     setDialogOpen(true);
   }
 
-  const createProfile = useMutation(api.functions.aiProfiles.createProfile);
-  const updateProfile = useMutation(api.functions.aiProfiles.updateProfile);
-  const deleteProfile = useMutation(api.functions.aiProfiles.deleteProfile);
+  const createProfile = useMutation(api.functions.profiles.createProfile);
+  const updateProfile = useMutation(api.functions.profiles.updateProfile);
+  const deleteProfile = useMutation(api.functions.profiles.deleteProfile);
 
   async function onSubmit() {
     if (!name.trim() || !systemPrompt.trim()) return;
@@ -94,9 +94,7 @@ export default function AiProfilesPage() {
 
     try {
       let imageKey: string | undefined | null = undefined;
-      if (file) {
-        imageKey = await uploadAiProfileImage(file);
-      }
+      if (file) imageKey = await uploadAiProfileImage(file);
 
       if (editingId) {
         await updateProfile({
@@ -123,7 +121,7 @@ export default function AiProfilesPage() {
     }
   }
 
-  async function onConfirmDelete(id: Id<"ai_profiles">) {
+  async function onConfirmDelete(id: Id<"profiles">) {
     try {
       await deleteProfile({ profileId: id });
       void refetch();
@@ -261,9 +259,7 @@ export default function AiProfilesPage() {
             <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               disabled={isSubmitting || !name.trim() || !systemPrompt.trim()}
-              onClick={() => {
-                void onSubmit();
-              }}
+              onClick={() => void onSubmit()}
             >
               {editingId ? "Save" : "Create"}
             </AlertDialogAction>
@@ -280,19 +276,19 @@ function ProfileCard({
   onDelete,
 }: {
   profile: {
-    _id: Id<"ai_profiles">;
+    _id: Id<"profiles">;
     name: string;
     systemPrompt: string;
     imageKey?: string;
     createdAt: number;
     updatedAt: number;
   };
-  onEdit: (p: { _id: Id<"ai_profiles">; name: string; systemPrompt: string }) => void;
-  onDelete: (id: Id<"ai_profiles">) => void;
+  onEdit: (p: { _id: Id<"profiles">; name: string; systemPrompt: string }) => void;
+  onDelete: (id: Id<"profiles">) => void;
 }) {
   const imageUrl =
     profile.imageKey && profile.imageKey.length > 0
-      ? `https://files.chat.asakuri.me/${profile.imageKey}`
+      ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${profile.imageKey}`
       : null;
 
   const shortDesc =
@@ -331,6 +327,7 @@ function ProfileCard({
                 <Trash2Icon className="size-4" />
               </Button>
             </AlertDialogTrigger>
+
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete “{profile.name}”?</AlertDialogTitle>

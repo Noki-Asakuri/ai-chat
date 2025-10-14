@@ -188,7 +188,7 @@ export const updateMessageById = mutation({
     if (message.role === "assistant" && becameComplete) {
       const content = args.updates.content ?? message.content ?? "";
       const modelUniqueId = args.updates.model ?? message.model ?? "";
-      const aiProfileId = args.updates.metadata?.aiProfileId ?? message.metadata?.aiProfileId;
+      const profileId = args.updates.metadata?.profile?.id ?? message.metadata?.profile?.id;
 
       await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
         userId: user.subject,
@@ -196,7 +196,7 @@ export const updateMessageById = mutation({
         content,
         modelUniqueId,
         createdAt: message.createdAt,
-        ...(aiProfileId ? { aiProfileId } : {}),
+        ...(profileId ? { profileId } : {}),
       });
     }
   },

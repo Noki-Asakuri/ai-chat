@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from "uuid";
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { WelcomeScreen } from "@/components/chat/welcome-screen";
 import { MessageHistory } from "@/components/message/message-history";
+import { ThreadProfileSidebar } from "@/components/threads/profile/sidebar";
 import { ThreadCommand } from "@/components/threads/thread-command";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -153,7 +154,7 @@ export function Chat() {
         data-active={isDragOver}
         className="group pointer-events-none absolute inset-0 z-5 flex items-center justify-center"
       >
-        <div className="m-2 flex h-[calc(100%-1rem)] w-[calc(100%-1rem)] items-center justify-center rounded-md border-2 border-primary border-dashed bg-primary/10 text-primary opacity-0 transition-opacity duration-150 group-data-[active=true]:opacity-100">
+        <div className="m-2 flex h-[calc(100%-1rem)] w-[calc(100%-1rem)] items-center justify-center rounded-md border-2 border-dashed border-primary bg-primary/10 text-primary opacity-0 transition-opacity duration-150 group-data-[active=true]:opacity-100">
           <span className="rounded-md border bg-background/80 px-3 py-1 text-sm">
             Drop files to attach
           </span>
@@ -196,6 +197,7 @@ function MessageRenderer({ thread, isLoading }: MessageRendererProps) {
         </div>
       </div>
 
+      <ThreadProfileSidebar />
       <MessageHistory />
     </>
   );
@@ -208,6 +210,6 @@ type ThreadTitleProps = {
 
 function ThreadTitle({ thread, isLoading }: ThreadTitleProps) {
   if (isLoading) return <Skeleton className="h-4 w-80" />;
-  if (!thread) return <p className="text-muted-foreground text-sm">New Thread</p>;
-  return <p className="truncate text-muted-foreground text-sm">{thread.title}</p>;
+  if (!thread) return <p className="text-sm text-muted-foreground">New Thread</p>;
+  return <p className="truncate text-sm text-muted-foreground">{thread.title}</p>;
 }

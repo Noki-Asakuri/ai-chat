@@ -9,10 +9,10 @@ import type { ModelMessage, ToolSet, UserContent } from "ai";
 import { getModelData } from "../chat/models";
 import { tryCatchSync } from "../utils";
 
-const threadIdSchema = z.custom<Id<"threads">>((data) => z.string().parse(data));
-const messageIdSchema = z.custom<Id<"messages">>((data) => z.string().parse(data));
-const attachmentIdSchema = z.custom<Id<"attachments">>((data) => z.string().parse(data));
-const aiProfileIdSchema = z.custom<Id<"ai_profiles">>((data) => z.string().parse(data));
+export const threadIdSchema = z.custom<Id<"threads">>((data) => z.string().parse(data));
+export const messageIdSchema = z.custom<Id<"messages">>((data) => z.string().parse(data));
+export const attachmentIdSchema = z.custom<Id<"attachments">>((data) => z.string().parse(data));
+export const profileIdSchema = z.custom<Id<"profiles">>((data) => z.string().parse(data));
 
 const attachmentSchema = z.object({
   _id: attachmentIdSchema,
@@ -42,7 +42,9 @@ const inputSchema = z.object({
     model: z.string(),
     webSearch: z.boolean().default(false),
     effort: z.enum(["minimal", "low", "medium", "high"]).default("medium"),
-    profile: z.object({ id: aiProfileIdSchema.nullable(), systemPrompt: z.string() }).optional(),
+    profile: z
+      .object({ id: profileIdSchema, name: z.string(), systemPrompt: z.string() })
+      .nullish(),
   }),
 });
 

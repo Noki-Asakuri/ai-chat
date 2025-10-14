@@ -22,8 +22,7 @@ export const run = migrations.runner();
 //     if (!data.metadata) return;
 //     const updates = structuredClone(data.metadata);
 
-//     if (typeof updates?.totalTokens === "number") delete updates.totalTokens;
-//     if (typeof updates?.thinkingTokens === "number") delete updates.thinkingTokens;
+//     if (typeof updates?.aiProfileId === "string") delete updates.aiProfileId;
 
 //     await ctx.db.patch(data._id, { metadata: updates });
 //   },

@@ -18,12 +18,12 @@ import { smoothStream, stepCountIs, streamText, type AISDKError } from "ai";
 import { handleFileCaching } from "./handle-file-caching";
 
 import { logger as baseLogger } from "@/lib/axiom/logger";
+import { convertV4MessageToV5 } from "@/lib/chat/conversion";
 import { serverUploadFileR2 } from "@/lib/server/file-upload";
 import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
 import { validateRequestBody } from "@/lib/server/validate-request-body";
 import { fixMarkdownCodeBlocks, tryCatch, tryCatchSync } from "@/lib/utils";
-import { convertV4MessageToV5 } from "@/lib/chat/conversion";
 
 import { env } from "@/env";
 
@@ -283,14 +283,16 @@ app.post("/api/ai/chat", async (ctx) => {
     },
   });
 
-  const metadata = {
+  const metadata: Doc<"messages">["metadata"] = {
     model: model.uniqueId,
-    aiProfileId: config.profile?.id ?? undefined,
+    profile: undefined,
     finishReason: "",
     timeToFirstTokenMs: 0,
     usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
     durations: { request: 0, reasoning: 0, text: 0 },
-  } satisfies Doc<"messages">["metadata"];
+  };
+
+  if (config.profile) metadata.profile = { id: config.profile.id, name: config.profile.name };
 
   void updateTitle({ messages, threadId, serverConvexClient });
 
@@ -418,6 +420,7 @@ app.post("/api/ai/chat", async (ctx) => {
         threadId,
         assistantMessageId,
         model: model.uniqueId,
+        profileId: config.profile?.id,
         metadata,
         requestId,
         dataLength: {

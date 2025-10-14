@@ -143,16 +143,14 @@ export const getStatistics = query({
       }
     }
 
-    const activity = Object.entries(activityCounts).map(([day, value]) => ({
-      day,
-      value,
-    }));
+    const activity = Object.entries(activityCounts).map(([day, value]) => ({ day, value }));
 
     // aiProfileRank: map ids to names for current user
     const profiles = await ctx.db
-      .query("ai_profiles")
+      .query("profiles")
       .withIndex("by_userId", (q) => q.eq("userId", user.subject))
       .collect();
+
     const idToName: Record<string, string> = {};
     for (const p of profiles) idToName[p._id] = p.name;
 
