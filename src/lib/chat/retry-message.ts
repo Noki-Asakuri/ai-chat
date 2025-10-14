@@ -60,7 +60,7 @@ export async function retryMessage(
   const profile = state.profiles.find((p) => p._id === profileId);
   const activeProfile = profile
     ? { id: profile._id, name: profile.name, systemPrompt: profile.systemPrompt }
-    : null;
+    : state.chatConfig.profile;
 
   state.setChatConfig({ model, profile: activeProfile });
 

@@ -3,6 +3,8 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { z } from "zod";
 import { create } from "zustand";
 
+import { PROFILE_LOCAL_STORAGE_KEY } from "@/components/threads/profile/sidebar";
+
 import { profileIdSchema } from "../server/validate-request-body";
 import type { ChatMessage, Thread, UserAttachment } from "../types";
 import { getModelData } from "./models";
@@ -275,7 +277,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setMessageHeight: (height) => set({ lastUserMessageHeight: height }),
 
   profiles: [],
-  setProfiles: (profiles) => set({ profiles }),
+  setProfiles: (profiles) =>
+    set((state) => {
+      localStorage.setItem(PROFILE_LOCAL_STORAGE_KEY, JSON.stringify(profiles));
+      return { profiles };
+    }),
 
   setDataFromConvex: (messages, status) =>
     set((state) => {
