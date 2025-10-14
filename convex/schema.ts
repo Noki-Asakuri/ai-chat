@@ -84,7 +84,7 @@ export const AISDKParts = v.array(
       callProviderMetadata: providerMetadata,
     }),
     v.object({
-      type: v.literal(`tool-${v.string()}`),
+      type: v.string(),
       state: v.literal("input-streaming"),
       toolCallId: v.string(),
       input: v.any(),
@@ -93,7 +93,7 @@ export const AISDKParts = v.array(
       errorText: v.optional(v.string()),
     }),
     v.object({
-      type: v.literal(`tool-${v.string()}`),
+      type: v.string(),
       state: v.literal("input-available"),
       toolCallId: v.string(),
       input: v.any(),
@@ -103,7 +103,7 @@ export const AISDKParts = v.array(
       callProviderMetadata: providerMetadata,
     }),
     v.object({
-      type: v.literal(`tool-${v.string()}`),
+      type: v.string(),
       state: v.literal("output-available"),
       toolCallId: v.string(),
       input: v.any(),
@@ -114,7 +114,7 @@ export const AISDKParts = v.array(
       preliminary: v.optional(v.boolean()),
     }),
     v.object({
-      type: v.literal(`tool-${v.string()}`),
+      type: v.string(),
       state: v.literal("output-error"),
       toolCallId: v.string(),
       input: v.any(),

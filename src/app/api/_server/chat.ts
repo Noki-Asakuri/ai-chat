@@ -1,6 +1,5 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { createServerConvexClient } from "@/lib/convex/server";
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -19,6 +18,7 @@ import { handleFileCaching } from "./handle-file-caching";
 
 import { logger as baseLogger } from "@/lib/axiom/logger";
 import { convertV4MessageToV5 } from "@/lib/chat/conversion";
+import { createServerConvexClient } from "@/lib/convex/server";
 import { serverUploadFileR2 } from "@/lib/server/file-upload";
 import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
