@@ -50,6 +50,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {process.env.ENABLE_REACT_SCAN && (
           <script defer src="https://unpkg.com/react-scan/dist/auto.global.js" />
         )}
+
+        <script defer data-domain="chat.asakuri.me" src="/api/nothing-here"></script>
       </head>
 
       <WebVitals />
@@ -62,12 +64,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <>
             <Analytics basePath="/api/vercel" />
             <SpeedInsights basePath="/api/vercel" />
-
-            <script
-              defer
-              data-domain="chat.asakuri.me"
-              src="https://plausible.asakuri.me/js/script.file-downloads.outbound-links.js"
-            ></script>
           </>
         )}
       </body>
