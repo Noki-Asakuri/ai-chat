@@ -3,8 +3,6 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { z } from "zod";
 import { create } from "zustand";
 
-import { PROFILE_LOCAL_STORAGE_KEY } from "@/components/threads/profile/sidebar";
-
 import { profileIdSchema } from "../server/validate-request-body";
 import type { ChatMessage, Thread, UserAttachment } from "../types";
 import { getModelData } from "./models";
@@ -22,6 +20,8 @@ const DEFAULT_CONFIG = {
   model: "openai/gpt-5-nano",
   profile: null as { id: Id<"profiles">; name: string; systemPrompt: string } | null,
 } as const;
+
+const PROFILE_LOCAL_STORAGE_KEY = "local-profiles-cache";
 
 function getChatConfigFromLS() {
   if (typeof window === "undefined" || window.localStorage === undefined) {

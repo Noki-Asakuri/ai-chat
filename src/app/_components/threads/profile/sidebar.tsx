@@ -8,8 +8,6 @@ import { ProfileDisplay } from "./profile-display";
 
 import { useChatStore } from "@/lib/chat/store";
 
-export const PROFILE_LOCAL_STORAGE_KEY = "local-profiles-cache";
-
 export function ThreadProfileSidebar() {
   const { data, isPending } = useQuery(convexQuery(api.functions.profiles.listProfiles, {}));
 
