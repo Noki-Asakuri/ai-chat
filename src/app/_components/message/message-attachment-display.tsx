@@ -1,14 +1,13 @@
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 import { FileIcon } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+
+import { ImagePreviewDialog } from "../image-preview-dialog";
 
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
-
-import { ImagePreviewDialog } from "../image-preview-dialog";
 
 type MessageAttachmentDisplayProps = {
   attachments: ChatMessage["attachments"];
@@ -92,8 +91,7 @@ export function MessageAttachmentDisplay({
         images={compactImages}
         initialIndex={Math.max(0, initialIndexWithinList)}
       >
-        <Image
-          unoptimized
+        <img
           alt={att ? "Attachment" : "Attachment preview"}
           className="size-full rounded-md border object-cover"
           src={src}
@@ -133,12 +131,7 @@ function AttachmentPreview({ attachment }: { attachment: Doc<"attachments"> }) {
           size: attachment.size,
         }}
       >
-        <Image
-          unoptimized
-          src={imageUrl}
-          alt="Attachment"
-          className="size-full rounded-md border object-cover"
-        />
+        <img src={imageUrl} alt="Attachment" className="size-full rounded-md border object-cover" />
       </ImagePreviewDialog>
     );
   }

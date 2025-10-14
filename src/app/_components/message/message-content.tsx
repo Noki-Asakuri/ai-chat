@@ -35,11 +35,10 @@ export function MessageContent({ message, parts }: MessageContentProps) {
   return (
     <>
       <MessageReasoning
-        messageId={message._id}
-        metadata={message.metadata}
-        parts={reasoningParts}
         model={message.model}
         status={message.status}
+        metadata={message.metadata}
+        parts={reasoningParts}
       />
 
       <Message from={message.role} className="relative items-start">
@@ -58,7 +57,7 @@ export function MessageContent({ message, parts }: MessageContentProps) {
         ))}
 
         {message.role === "user" && (
-          <MessageAvatar className={!isMobile ? "-right-13 absolute top-0" : ""} />
+          <MessageAvatar className={!isMobile ? "absolute top-0 -right-13" : ""} />
         )}
       </Message>
     </>

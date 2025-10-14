@@ -4,20 +4,13 @@ import { getModelData } from "@/lib/chat/models";
 import type { ChatMessage } from "@/lib/types";
 
 type ThinkingToggleProps = {
-  messageId: string;
   model: ChatMessage["model"];
   status: ChatMessage["status"];
-  parts: NonNullable<ChatMessage["parts"]>;
+  parts: ChatMessage["parts"];
   metadata: ChatMessage["metadata"];
 };
 
-export function MessageReasoning({
-  messageId,
-  model,
-  parts,
-  status,
-  metadata,
-}: ThinkingToggleProps) {
+export function MessageReasoning({ model, parts, status, metadata }: ThinkingToggleProps) {
   if (parts.length === 0 || status === "error") return null;
 
   const isReasoningModel = getModelData(model).capabilities.reasoning;
