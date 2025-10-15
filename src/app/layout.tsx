@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { type Metadata, type Viewport } from "next";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { cookies } from "next/headers";
 
 import { Providers } from "@/components/provider/main-providers";
 import { Toaster } from "@/components/ui/sonner";
@@ -44,12 +45,23 @@ const codeFont = JetBrains_Mono({
 });
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const cookieStore = await cookies();
+  const backgroundImage = cookieStore.get("background-image")?.value;
+
   return (
     <html lang="en" className={`${mainFont.variable} ${codeFont.variable} antialiased`}>
       <head>
         {process.env.ENABLE_REACT_SCAN && (
           <script defer src="https://unpkg.com/react-scan/dist/auto.global.js" />
         )}
+
+        <link
+          as="image"
+          rel="preload"
+          href={backgroundImage}
+          crossOrigin="anonymous"
+          type="image/webp"
+        />
 
         <script
           defer

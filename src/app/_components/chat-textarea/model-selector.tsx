@@ -1,9 +1,6 @@
-import { api } from "@/convex/_generated/api";
-import { convexQuery } from "@convex-dev/react-query";
-import { useQuery } from "@tanstack/react-query";
-
 import { Popover } from "@base-ui-components/react/popover";
 import { useMemo } from "react";
+import { useShallow } from "zustand/shallow";
 
 import { buttonVariants } from "../ui/button";
 import {
@@ -33,17 +30,15 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   const storeModel = useChatStore.getState().chatConfig.model;
   const selectedModel = value ?? storeModel;
 
-  const { data } = useQuery(convexQuery(api.functions.users.currentUser, {}));
-  const hidden = useMemo(
-    () => data?.customization?.hiddenModels ?? [],
-    [data?.customization?.hiddenModels],
+  const hiddenModel = useChatStore(
+    useShallow((state) => state.userCustomization?.hiddenModels ?? []),
   );
 
   const visibleModels = useMemo(() => {
     return AllModelIds.slice()
       .sort((a, b) => a.localeCompare(b))
-      .filter((id) => !hidden.includes(id));
-  }, [hidden]);
+      .filter((id) => !hiddenModel.includes(id));
+  }, [hiddenModel]);
 
   function handleChange(model: string) {
     if (onChange) onChange(model);

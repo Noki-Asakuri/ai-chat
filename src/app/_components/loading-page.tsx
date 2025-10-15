@@ -5,7 +5,14 @@ export function LoadingPage() {
   return (
     <main className="flex h-svh w-screen items-center justify-center">
       <div className="flex flex-col items-center justify-center gap-2">
-        <Image width={80} height={80} src="/favicon.svg" alt="AI Chat" className="size-20" />
+        <Image
+          width={80}
+          height={80}
+          src="/favicon.svg"
+          loading="eager"
+          alt="AI Chat"
+          className="size-20"
+        />
 
         <div className="flex items-center gap-2">
           <span>Loading...</span>
