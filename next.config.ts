@@ -4,6 +4,7 @@
  */
 import "./src/env.js";
 import type { NextConfig } from "next";
+import { env } from "./src/env.js";
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
@@ -24,8 +25,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_ENV: process.env.NODE_ENV,
   },
   async rewrites() {
-    const host =
-      process.env.NODE_ENV === "production" ? "https://chat.asakuri.me" : "http://localhost:3000";
+    const isProduction = process.env.NODE_ENV === "production";
+    const host = isProduction ? "https://chat.asakuri.me" : "http://localhost:3000";
 
     return {
       beforeFiles: [
@@ -48,6 +49,10 @@ const nextConfig: NextConfig = {
         {
           source: "/",
           destination: "/static-chat-shell",
+        },
+        {
+          source: "/api/ai/chat",
+          destination: env.API_ENDPOINT,
         },
       ],
     };

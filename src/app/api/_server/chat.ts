@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
+import { clerkMiddleware } from "@hono/clerk-auth";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";
@@ -112,10 +113,17 @@ app.use(
   }),
 );
 
-// Index route: uptime + current git commit sha
+app.use(
+  "/api/*",
+  clerkMiddleware({
+    publishableKey: env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    secretKey: env.CLERK_SECRET_KEY,
+  }),
+);
+
 app.get("/", (ctx) => {
   const payload = {
-    status: "ok" as const,
+    status: "ok",
     uptimeSeconds: Math.round(process.uptime()),
     startedAt: new Date(serverStartedAt).toISOString(),
     commitSha,
@@ -128,23 +136,67 @@ app.get("/", (ctx) => {
 // Health check route for Docker/K8s
 app.get("/health", (ctx) => ctx.text("OK"));
 
+app.get("/api/ai/chat", async (ctx) => {
+  const auth = ctx.get("clerkAuth");
+  const user = auth();
+
+  if (!user?.userId) {
+    logger.error("[Chat Error]: Unauthenticated GET request!");
+    return Response.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
+  }
+
+  const { streamId, resumeAt } = ctx.req.query();
+  if (!streamId) {
+    logger.error("[Chat Error]: Missing streamId!", { streamId, resumeAt });
+    return Response.json({ error: { message: "Error: Missing streamId!" } }, { status: 400 });
+  }
+
+  logger.info("[Chat] Resuming chat streaming!", { streamId, resumeAt, userId: user.userId });
+
+  const stream = await streamContext.resumeExistingStream(
+    streamId,
+    resumeAt ? parseInt(resumeAt) : undefined,
+  );
+
+  if (!stream) {
+    logger.error("[Chat Error]: Stream not found!", { streamId, resumeAt });
+    return Response.json({ error: { message: "Error: Stream not found!" } }, { status: 404 });
+  }
+
+  return new Response(stream, {
+    headers: {
+      connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+      "Transfer-Encoding": "chunked",
+      "Cache-Control": "no-cache, no-transform",
+      "Content-Type": "text/event-stream; charset=utf-8",
+    },
+  });
+});
+
 app.post("/api/ai/chat", async (ctx) => {
+  const user = ctx.get("clerkAuth")();
+  if (!user?.userId) {
+    logger.error("[Chat Error]: Unauthenticated POST request!");
+    return Response.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
+  }
+
+  const req = ctx.req;
+  const userId = user.userId;
+  const requestId = ctx.get("requestId");
+  const authToken = await user.getToken({ template: "convex" });
+
+  logger.info("[Chat] Chat request received", { userId, requestId });
+
+  if (!authToken || !userId) {
+    logger.error("[Chat Error]: Unauthenticated POST request!");
+    return Response.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
+  }
+
+  const serverConvexClient = createServerConvexClient(authToken.replace("Bearer ", ""));
+
   try {
-    const req = ctx.req;
-
-    const userId = req.header("X-User-Id");
-    const requestId = ctx.get("requestId");
-    const authToken = req.header("Authorization");
-
-    logger.info("[Chat] Chat request received", { userId, requestId });
-
-    if (!authToken || !userId) {
-      logger.error("[Chat Error]: Unauthenticated POST request!");
-      return Response.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
-    }
-
     const body = await req.json();
-    const serverConvexClient = createServerConvexClient(authToken.replace("Bearer ", ""));
 
     const [requestBody, validateError] = tryCatchSync(() => validateRequestBody(body, userId));
     if (validateError) {
@@ -152,6 +204,7 @@ app.post("/api/ai/chat", async (ctx) => {
         error: validateError,
         userId: userId,
       });
+
       return Response.json({ error: { message: validateError.message } }, { status: 400 });
     }
 
@@ -241,7 +294,6 @@ app.post("/api/ai/chat", async (ctx) => {
       messages: transformedMessages,
       providerOptions,
       tools,
-      abortSignal: ctx.req.raw.signal,
 
       experimental_telemetry: { isEnabled: false },
 
@@ -274,16 +326,6 @@ app.post("/api/ai/chat", async (ctx) => {
       },
     });
 
-    await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
-      messageId: assistantMessageId,
-      updates: {
-        status: "streaming",
-        model: model.uniqueId,
-        resumableStreamId: requestId,
-        modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
-      },
-    });
-
     const metadata: Doc<"messages">["metadata"] = {
       model: model.uniqueId,
       profile: undefined,
@@ -305,9 +347,29 @@ app.post("/api/ai/chat", async (ctx) => {
     return result.toUIMessageStreamResponse({
       originalMessages: v5Messages,
       generateMessageId: () => requestId,
+      status: 200,
+      headers: {
+        connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+        "Transfer-Encoding": "chunked",
+        "Cache-Control": "no-cache, no-transform",
+        "Content-Type": "text/event-stream; charset=utf-8",
+      },
       consumeSseStream: async ({ stream }) => {
         logger.info("[Chat] Creating resumable stream", { userId, requestId, threadId });
-        await streamContext.createNewResumableStream(requestId, () => stream);
+
+        await Promise.all([
+          streamContext.createNewResumableStream(requestId, () => stream),
+          serverConvexClient.mutation(api.functions.messages.updateMessageById, {
+            messageId: assistantMessageId,
+            updates: {
+              status: "streaming",
+              model: model.uniqueId,
+              resumableStreamId: requestId,
+              modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
+            },
+          }),
+        ]);
       },
 
       messageMetadata: ({ part }) => {
@@ -366,6 +428,11 @@ app.post("/api/ai/chat", async (ctx) => {
 
       async onFinish({ responseMessage, isAborted }) {
         if (isAborted) {
+          await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
+            messageId: assistantMessageId,
+            updates: { resumableStreamId: null },
+          });
+
           logger.info("[Chat] Request was aborted by the client", { userId, threadId, requestId });
           return;
         }

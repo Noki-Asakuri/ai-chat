@@ -106,6 +106,7 @@ To get a local copy up and running, follow these simple steps.
   - [x] Reorder groups
   - [x] Reorder threads within group
   - [x] Reorder threads between groups
+- [ ] Properly handle cancel streaming and lost connection (Right now if user connection is lost, it treat same as user cancel the message.)
 
 ## License
 
