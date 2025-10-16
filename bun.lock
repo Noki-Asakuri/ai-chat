@@ -64,7 +64,7 @@
         "rehype-raw": "^7.0.0",
         "remark-gfm": "^4.0.1",
         "remark-math": "^6.0.0",
-        "resumable-stream": "2.2.6",
+        "resumable-stream": "2.2.5",
         "server-only": "^0.0.1",
         "shiki": "^3.13.0",
         "sonner": "^2.0.7",
@@ -1614,7 +1614,7 @@
 
     "reselect": ["reselect@5.1.1", "", {}, "sha512-K/BG6eIky/SBpzfHZv/dd+9JBFiS4SWV7FIujVyJRux6e45+73RaUHXLmIR1f7WOMaQ0U1km6qwklRQxpJJY0w=="],
 
-    "resumable-stream": ["resumable-stream@2.2.6", "", {}, "sha512-9Opflto0W9ieXoXCfXd6BljZd4d8xsD81i73kscgmv7nPBRZK0xJeaPa0nAjF9D7JewOS4K/uhxPFxBow5JFXQ=="],
+    "resumable-stream": ["resumable-stream@2.2.5", "", {}, "sha512-nu3Qbp5GLxi6xF5/kLfFwcA8OE+Dw2UfUIUUjO20tZFehGU0X0b9ZTWvohusWWwjXUuugrux6sC9uf+WeLV10g=="],
 
     "robust-predicates": ["robust-predicates@3.0.2", "", {}, "sha512-IXgzBWvWQwE6PrDI05OvmXUIruQTcoMDzRsOd5CDvHCVLcLHMTSYvOK5Cm46kWqlV3yAbuSpBZdJ5oP5OUoStg=="],
 
