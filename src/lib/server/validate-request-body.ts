@@ -22,7 +22,7 @@ const attachmentSchema = z.object({
   name: z.string(),
   size: z.number(),
   type: z.enum(["image", "pdf"]),
-  path: z.string().optional(),
+  path: z.string(),
 });
 
 const inputSchema = z.object({
@@ -58,6 +58,13 @@ const safetySettings = [
   { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_SEXUALLY_EXPLICIT" },
 ];
 
+const reasoningToBudget = {
+  minimal: 128,
+  low: 1_024,
+  medium: 10_000,
+  high: 20_000,
+};
+
 export function validateRequestBody(body: Record<string, unknown>, userId: string) {
   const { success, data, error } = inputSchema.safeParse(body);
   if (!success) throw new Error(z.prettifyError(error));
@@ -92,7 +99,7 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
     providerOptions.openai.include = ["reasoning.encrypted_content"];
 
     providerOptions.google.thinkingConfig.thinkingBudget =
-      effort === "high" ? 20_000 : effort === "medium" ? 10_000 : 1_024;
+      reasoningToBudget[effort] ?? reasoningToBudget.medium;
   }
 
   switch (modelInfo.provider) {
@@ -134,27 +141,26 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
   };
 }
 
-function transformMessages(messages: z.infer<typeof inputSchema>["messages"], userId: string) {
+function transformMessages(messages: z.infer<typeof inputSchema>["messages"], _userId: string) {
   return messages.map((message): ModelMessage => {
     if (message.role === "assistant") return { role: "assistant", content: message.content };
 
     const parts = message.attachments
       ? message.attachments.map((attachment): Exclude<UserContent[number], string> => {
-          const pathname = attachment.path
-            ? `${attachment.path}`
-            : `${userId}/${attachment.threadId}/${attachment._id}`;
-
           if (attachment.type === "image") {
-            const url = `https://ik.imagekit.io/gmethsnvl/ai-chat/${pathname}`;
+            const url = `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.path}`;
             return { type: "image" as const, image: url };
           }
 
           if (attachment.type === "pdf") {
-            const url = `https://files.chat.asakuri.me/${pathname}`;
+            const url = `https://files.chat.asakuri.me/${attachment.path}`;
             return { type: "file" as const, data: url, mediaType: "application/pdf" };
           }
 
-          return { type: "text" as const, text: `https://files.chat.asakuri.me/${pathname}` };
+          return {
+            type: "text" as const,
+            text: `https://files.chat.asakuri.me/${attachment.path}`,
+          };
         })
       : [];
 

@@ -430,7 +430,7 @@ app.post("/api/ai/chat", async (ctx) => {
         if (isAborted) {
           await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
             messageId: assistantMessageId,
-            updates: { resumableStreamId: null },
+            updates: { resumableStreamId: null, status: "complete" },
           });
 
           logger.info("[Chat] Request was aborted by the client", { userId, threadId, requestId });
