@@ -109,6 +109,7 @@ app.use(
     allowHeaders: ["Authorization", "Upgrade-Insecure-Requests", "X-User-Id"],
     exposeHeaders: [
       "Content-Length",
+      "Cache-Control",
       "Content-Type",
       "X-Request-Id",
       "Transfer-Encoding",
@@ -170,13 +171,7 @@ app.get("/api/ai/chat", async (ctx) => {
   }
 
   return new Response(stream, {
-    headers: {
-      connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-      "Transfer-Encoding": "chunked",
-      "Cache-Control": "no-cache, no-transform",
-      "Content-Type": "text/event-stream; charset=utf-8",
-    },
+    headers: { "Cache-Control": "no-cache, no-transform" },
   });
 });
 
@@ -354,13 +349,7 @@ app.post("/api/ai/chat", async (ctx) => {
       originalMessages: v5Messages,
       generateMessageId: () => requestId,
       status: 200,
-      headers: {
-        connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-        "Transfer-Encoding": "chunked",
-        "Cache-Control": "no-cache, no-transform",
-        "Content-Type": "text/event-stream; charset=utf-8",
-      },
+      headers: { "Cache-Control": "no-cache, no-transform" },
       consumeSseStream: async ({ stream }) => {
         logger.info("[Chat] Creating resumable stream", { userId, requestId, threadId });
 
