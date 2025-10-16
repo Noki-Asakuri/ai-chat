@@ -1,10 +1,7 @@
-FROM oven/bun:latest AS deps
+FROM oven/bun:latest
 WORKDIR /app
 COPY bun.lock package.json ./
-RUN --mount=type=cache,target=/root/.bun/install/cache bun install --production --frozen-lockfile
-
-FROM oven/bun:latest AS runner
-WORKDIR /app
+RUN bun install --production --frozen-lockfile
 
 # Install curl, git, and CA certificates (Ubuntu/Debian)
 USER root
@@ -16,9 +13,7 @@ USER bun
 
 RUN git config --global --add safe.directory /app
 
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 EXPOSE 3001
-
 CMD ["bun", "start:server"]
