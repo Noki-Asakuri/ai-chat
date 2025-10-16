@@ -11,7 +11,7 @@ import {
   PinOffIcon,
   RefreshCwIcon,
 } from "lucide-react";
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, type ComponentProps } from "react";
 import { NavLink, useParams } from "react-router";
 
 import { useSortable } from "@dnd-kit/sortable";
@@ -51,6 +51,8 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
     opacity: isDragging || isOverlay ? 0.5 : 1,
   };
 
+  const isStreaming = thread.status === "streaming" || thread.status === "pending";
+
   return (
     <div
       ref={setNodeRef}
@@ -62,49 +64,54 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
       data-is-dragging={isDragging || isOverlay}
       data-slot="thread-item"
       className={cn(
-        "group/thread flex items-center justify-between gap-2 overflow-hidden rounded-md",
+        "group/thread flex items-center justify-between gap-2 overflow-hidden rounded-md px-2",
         "text-sidebar-foreground transition-colors hover:bg-primary/30",
         "data-[thread-active=true]:bg-primary/30 [&:has(button[data-popup-open])]:bg-primary/30",
         "data-[is-dragging=true]:bg-primary/30",
       )}
     >
       <NavLink
-        to={`/threads/${toUUID(thread._id)}`}
         title={thread.title}
-        className="flex w-full min-w-0 items-center gap-2 py-1.5 pl-2"
+        to={`/threads/${toUUID(thread._id)}`}
+        className="flex w-full min-w-0 items-center gap-2 py-1.5"
       >
-        <div className="flex w-full items-center justify-between gap-2">
-          {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
-          <span className="truncate text-sm">{thread.title}</span>
-
-          {thread.status && thread.status !== "complete" && (
-            <div className="inline-block">
-              <Loader2Icon className="size-4 animate-spin" />
-              <span className="sr-only">Streaming...</span>
-            </div>
-          )}
-        </div>
+        {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
+        <span className="truncate text-sm">{thread.title}</span>
       </NavLink>
 
-      <div className="flex items-center">
-        <ThreadActions thread={thread} />
+      <div className="flex items-center gap-2">
+        <ThreadActions thread={thread} isStreaming={isStreaming} />
 
-        <div
-          {...attributes}
-          {...listeners}
-          className={cn(
-            "cursor-grab px-2 py-1.5 active:cursor-grabbing",
-            (isDragging || disabled) && "cursor-grabbing",
-          )}
-        >
-          <GripVerticalIcon className="size-4" />
-        </div>
+        {isStreaming && (
+          <div className="inline-block">
+            <Loader2Icon className="size-4 animate-spin" />
+            <span className="sr-only">Streaming...</span>
+          </div>
+        )}
+
+        {!isStreaming && (
+          <div
+            {...attributes}
+            {...listeners}
+            className={cn(
+              "cursor-grab py-1.5 active:cursor-grabbing",
+              (isDragging || disabled) && "cursor-grabbing",
+            )}
+          >
+            <GripVerticalIcon className="size-4" />
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function ThreadActions({ thread }: { thread: Thread }) {
+type ThreadActionsProps = ComponentProps<typeof Menu.Trigger> & {
+  thread: Thread;
+  isStreaming: boolean;
+};
+
+function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActionsProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(thread.title);
@@ -160,17 +167,23 @@ function ThreadActions({ thread }: { thread: Thread }) {
       <Menu.Root>
         <Menu.Trigger
           ref={menuTriggerRef}
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-          }}
-          className="pointer-events-auto hidden size-5 items-center justify-center group-hover/thread:flex data-[popup-open]:flex group-data-[thread-active=true]/thread:flex group-data-[thread-status=streaming]/thread:hidden"
+          data-slot="thread-actions"
+          {...props}
+          className={cn(
+            "pointer-events-auto hidden items-center justify-center group-hover/thread:flex group-data-[thread-active=true]/thread:flex data-[popup-open]:flex",
+            className,
+          )}
         >
-          <EllipsisIcon className="size-4" />
+          <EllipsisIcon className="size-4 shrink-0" />
         </Menu.Trigger>
 
         <Menu.Portal>
-          <Menu.Positioner side="right" align="center" className="p-1" sideOffset={42}>
+          <Menu.Positioner
+            side="right"
+            align="center"
+            className="p-1"
+            sideOffset={isStreaming ? 20 : 50}
+          >
             <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col overflow-hidden rounded-md border bg-sidebar/60 backdrop-blur-md backdrop-saturate-150">
               {thread.branchedFrom && (
                 <Menu.Item
@@ -256,11 +269,11 @@ function ThreadActions({ thread }: { thread: Thread }) {
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-[opacity] duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:opacity-70" />
           <Dialog.Popup
             finalFocus={menuTriggerRef}
-            className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-[ending-style]:scale-95 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0"
+            className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0"
           >
             <div className="mb-2">
-              <h2 className="font-semibold text-lg">Edit thread</h2>
-              <p className="text-muted-foreground text-sm">Update the thread title.</p>
+              <h2 className="text-lg font-semibold">Edit thread</h2>
+              <p className="text-sm text-muted-foreground">Update the thread title.</p>
             </div>
 
             <form className="mt-3 space-y-4" onSubmit={(e) => e.preventDefault()}>
