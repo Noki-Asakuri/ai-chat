@@ -14,7 +14,6 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "checkJs": true,
-
     /* Bundled projects */
     "lib": ["dom", "dom.iterable", "ES2022"],
     "noEmit": true,
@@ -23,7 +22,6 @@
     "jsx": "react-jsx",
     "plugins": [{ "name": "next" }],
     "incremental": true,
-
     /* Path Aliases */
     "paths": {
       "@/convex/*": ["./convex/*"],
@@ -33,11 +31,11 @@
   },
   "exclude": ["node_modules", "public", "convex"],
   "include": [
+    "src",
     "next-env.d.ts",
     "lucide-react.d.ts",
-    "src",
-    ".next/types/**/*.ts",
     "next.config.ts",
-    ".next\\dev/types/**/*.ts"
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ]
 }
