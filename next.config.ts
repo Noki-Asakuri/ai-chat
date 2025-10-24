@@ -49,10 +49,6 @@ const nextConfig: NextConfig = {
           source: "/",
           destination: "/static-chat-shell",
         },
-        {
-          source: "/api/ai/chat",
-          destination: env.API_ENDPOINT,
-        },
       ],
     };
   },

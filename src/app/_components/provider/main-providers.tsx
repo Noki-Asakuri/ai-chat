@@ -26,9 +26,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ClerkProvider
+      signInUrl="/auth/login"
+      signUpUrl="/auth/login"
+      signInForceRedirectUrl="/"
+      signUpForceRedirectUrl="/"
+      waitlistUrl="/auth/wait-list"
       routerPush={(href) => router.push(href)}
       routerReplace={(href) => router.replace(href)}
-      waitlistUrl="/auth/wait-list"
       appearance={{ cssLayerName: "clerk" }}
       publishableKey={env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
     >

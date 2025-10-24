@@ -35,6 +35,7 @@ yarn-error.log*
 # do not commit any .env files to git, except for the .env.example file. https://create.t3.gg/en/usage/env-variables#using-environment-variables
 .env
 .env*.local
+.env.convex
 
 # vercel
 .vercel
@@ -44,13 +45,3 @@ yarn-error.log*
 
 # idea files
 .idea
-
-# Serwist
-public/sw*
-public/swe-worker*
-
-.vercel
-.env*.local
-
-# Sentry Config File
-.env.sentry-build-plugin
