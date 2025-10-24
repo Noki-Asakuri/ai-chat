@@ -171,7 +171,12 @@ app.get("/api/ai/chat", async (ctx) => {
   }
 
   return new Response(stream, {
-    headers: { "Cache-Control": "no-cache, no-transform" },
+    headers: {
+      "X-Accel-Buffering": "no",
+      "Transfer-Encoding": "chunked",
+      "Cache-Control": "no-cache, no-transform",
+      "Content-Type": "text/event-stream; charset=utf-8",
+    },
   });
 });
 
@@ -349,7 +354,12 @@ app.post("/api/ai/chat", async (ctx) => {
       originalMessages: v5Messages,
       generateMessageId: () => requestId,
       status: 200,
-      headers: { "Cache-Control": "no-cache, no-transform" },
+      headers: {
+        "X-Accel-Buffering": "no",
+        "Transfer-Encoding": "chunked",
+        "Cache-Control": "no-cache, no-transform",
+        "Content-Type": "text/event-stream; charset=utf-8",
+      },
       consumeSseStream: async ({ stream }) => {
         logger.info("[Chat] Creating resumable stream", { userId, requestId, threadId });
 
