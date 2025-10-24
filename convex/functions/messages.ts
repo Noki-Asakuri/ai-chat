@@ -5,6 +5,8 @@ import type { Doc } from "../_generated/dataModel";
 import { internalMutation, mutation, query } from "../_generated/server";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
+import { convertV4MessageToV5 } from "../../src/lib/chat/conversion";
+
 export const getAllMessagesFromThread = query({
   args: { threadId: v.optional(v.id("threads")) },
   handler: async (ctx, args) => {
@@ -212,6 +214,7 @@ export const retryChatMessage = mutation({
 
     userMessage: v.object({
       messageId: v.id("messages"),
+      parts: v.optional(AISDKParts),
       content: v.optional(v.string()),
     }),
   },
@@ -244,7 +247,10 @@ export const retryChatMessage = mutation({
       modelParams: args.modelParams ?? assistantMessage.modelParams ?? defaultModelParams,
     };
 
-    if (args.userMessage.content) userUpdates.content = args.userMessage.content;
+    if (args.userMessage.content) {
+      userUpdates.content = args.userMessage.content;
+      userUpdates.parts = args.userMessage.parts;
+    }
     await ctx.db.patch(args.userMessage.messageId, userUpdates);
 
     for (const message of deleteMessages) {

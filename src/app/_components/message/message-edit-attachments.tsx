@@ -1,5 +1,3 @@
-"use client";
-
 import { FileIcon, XIcon } from "lucide-react";
 import * as React from "react";
 
@@ -49,17 +47,14 @@ function useLocalPreviews(files: Array<UserAttachment>) {
       setPreviews([]);
       return;
     }
+
     const next = files.map((f) => {
       const objectUrl = URL.createObjectURL(f.file);
-      const p: LocalPreview = {
-        id: f.id,
-        url: objectUrl,
-        name: f.name,
-        size: f.size,
-        type: f.type,
-      };
+      const p: LocalPreview = { ...f, url: objectUrl };
+
       return p;
     });
+
     setPreviews(next);
 
     return () => {
@@ -70,33 +65,28 @@ function useLocalPreviews(files: Array<UserAttachment>) {
   return previews;
 }
 
-function useRemotePreviews(
-  existing: Array<Existing>,
-  removed: Set<Id<"attachments">>,
-  userId: string,
-  threadId: Id<"threads">,
-) {
+function useRemotePreviews(existing: Array<Existing>, removed: Set<Id<"attachments">>) {
   return React.useMemo(() => {
     const list: Array<RemotePreview> = [];
     for (const a of existing) {
       if (removed.has(a._id)) continue;
-      const url = `https://files.chat.asakuri.me/${userId}/${threadId}/${a._id}`;
+
+      const url =
+        a.type === "image"
+          ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${a.path}`
+          : `https://files.chat.asakuri.me/${a.path}`;
+
       list.push({ _id: a._id, type: a.type, url, name: a.name, size: a.size });
     }
     return list;
-  }, [existing, removed, userId, threadId]);
+  }, [existing, removed]);
 }
 
 export function MessageEditAttachments(props: MessageEditAttachmentsProps) {
   const hasImageVision = getModelData(props.modelId)?.capabilities.vision ?? false;
 
   const localPreviews = useLocalPreviews(props.newFiles);
-  const remotePreviews = useRemotePreviews(
-    props.existing,
-    props.removed,
-    props.userId,
-    props.threadId,
-  );
+  const remotePreviews = useRemotePreviews(props.existing, props.removed);
 
   const hasAny = localPreviews.length > 0 || remotePreviews.length > 0;
   // If there are no previews and the model doesn't support vision uploads, skip the whole section
@@ -132,7 +122,7 @@ export function MessageEditAttachments(props: MessageEditAttachmentsProps) {
                   <span>{format.size(att.size)}</span>
                   <button
                     type="button"
-                    className="border-destructive bg-destructive/60 flex w-10 cursor-pointer items-center justify-center rounded-md border p-0"
+                    className="flex w-10 cursor-pointer items-center justify-center rounded-md border border-destructive bg-destructive/60 p-0"
                     onMouseDown={() => props.onToggleRemove(att._id)}
                     title="Remove existing attachment"
                   >
@@ -166,7 +156,7 @@ export function MessageEditAttachments(props: MessageEditAttachmentsProps) {
                   <span>{format.size(att.size)}</span>
                   <button
                     type="button"
-                    className="border-destructive bg-destructive/60 flex w-10 cursor-pointer items-center justify-center rounded-md border p-0"
+                    className="flex w-10 cursor-pointer items-center justify-center rounded-md border border-destructive bg-destructive/60 p-0"
                     onMouseDown={() => props.onRemoveNew(att.id)}
                     title="Remove uploaded file"
                   >

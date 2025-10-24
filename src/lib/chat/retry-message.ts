@@ -8,6 +8,7 @@ import type { ChatRequestBody, ReasoningEffort } from "../types";
 import { firstNonEmptyOrLast } from "../utils";
 
 import { getConvexReactClient } from "@/lib/convex/client";
+import { convertV4MessageToV5 } from "./conversion";
 
 const convexClient = getConvexReactClient();
 
@@ -46,6 +47,7 @@ export async function retryMessage(
     id: message.messageId,
     role: message.role,
     content: message.content,
+    parts: message.parts,
     attachments:
       i === userMessageIndex && options?.attachmentsOverride
         ? options.attachmentsOverride
@@ -64,6 +66,17 @@ export async function retryMessage(
 
   state.setChatConfig({ model, profile: activeProfile });
 
+  const userMessageParts = editedUserMessage?.content
+    ? convertV4MessageToV5(
+        {
+          role: "user",
+          id: state.messages[userMessageIndex]!.messageId,
+          content: editedUserMessage?.content,
+        },
+        0,
+      )
+    : undefined;
+
   await convexClient.mutation(api.functions.messages.retryChatMessage, {
     threadId,
     assistantMessageId: assistantMessage._id,
@@ -75,11 +88,13 @@ export async function retryMessage(
     userMessage: {
       messageId: state.messages[userMessageIndex]!._id,
       content: editedUserMessage?.content,
+      parts: userMessageParts?.parts,
     },
   });
 
   if (editedUserMessage) {
     allMessages.at(-1)!.content = editedUserMessage.content;
+    allMessages.at(-1)!.parts = userMessageParts!.parts;
   }
 
   if (options?.attachmentsOverride) {

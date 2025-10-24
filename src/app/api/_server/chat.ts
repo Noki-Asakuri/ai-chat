@@ -172,6 +172,7 @@ app.get("/api/ai/chat", async (ctx) => {
 
   return new Response(stream, {
     headers: {
+      Connection: "keep-alive",
       "X-Accel-Buffering": "no",
       "Transfer-Encoding": "chunked",
       "Cache-Control": "no-cache, no-transform",
@@ -355,6 +356,7 @@ app.post("/api/ai/chat", async (ctx) => {
       generateMessageId: () => requestId,
       status: 200,
       headers: {
+        Connection: "keep-alive",
         "X-Accel-Buffering": "no",
         "Transfer-Encoding": "chunked",
         "Cache-Control": "no-cache, no-transform",

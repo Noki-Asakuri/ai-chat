@@ -60,8 +60,13 @@ export async function sendChatRequest(
     let reasoning = "";
     let metadata: ChatMessage["metadata"] | undefined;
 
+    const headers = {
+      ...init?.headers,
+      Connection: "keep-alive",
+    };
+
     await processChatStream({
-      fetch: fetch(url, { ...init, signal: abortController.signal }),
+      fetch: fetch(url, { ...init, headers, cache: "no-store", signal: abortController.signal }),
       handler: async (stream) => {
         switch (stream.type) {
           case "text-delta":
