@@ -10,7 +10,6 @@ export const env = createEnv({
   server: {
     NODE_ENV: z.enum(["development", "production"]).default("development"),
 
-    API_ENDPOINT: z.string(),
     CONVEX_DEPLOYMENT: z.string(),
 
     PROXY_URL: z.string(),
@@ -33,6 +32,7 @@ export const env = createEnv({
     NEXT_PUBLIC_AXIOM_DATASET: z.string(),
 
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string(),
+    NEXT_PUBLIC_API_ENDPOINT: z.string(),
   },
 
   experimental__runtimeEnv: {
@@ -42,6 +42,7 @@ export const env = createEnv({
     NEXT_PUBLIC_AXIOM_DATASET: process.env.NEXT_PUBLIC_AXIOM_DATASET,
 
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    NEXT_PUBLIC_API_ENDPOINT: process.env.NEXT_PUBLIC_API_ENDPOINT,
   },
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
