@@ -17,8 +17,6 @@ import { chatStore } from "./store";
 import type { ChatMessage, ChatRequestBody } from "../types";
 import { fixMarkdownCodeBlocks, fromUUID, toUUID, tryCatch, tryCatchSync } from "../utils";
 
-import { env } from "@/env";
-
 const convexClient = getConvexReactClient();
 
 function sleep(ms: number): Promise<void> {
@@ -63,11 +61,7 @@ export async function sendChatRequest(
     let metadata: ChatMessage["metadata"] | undefined;
 
     await processChatStream({
-      fetch: fetch(env.NEXT_PUBLIC_API_ENDPOINT, {
-        ...init,
-        credentials: "include",
-        signal: abortController.signal,
-      }),
+      fetch: fetch(url, { ...init, signal: abortController.signal }),
       handler: async (stream) => {
         switch (stream.type) {
           case "text-delta":

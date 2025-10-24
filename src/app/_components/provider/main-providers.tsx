@@ -28,9 +28,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ClerkProvider
       signInUrl="/auth/login"
       signUpUrl="/auth/login"
-      signInForceRedirectUrl="/"
-      signUpForceRedirectUrl="/"
       waitlistUrl="/auth/wait-list"
+      afterSignOutUrl="/auth/login"
       routerPush={(href) => router.push(href)}
       routerReplace={(href) => router.replace(href)}
       appearance={{ cssLayerName: "clerk" }}
