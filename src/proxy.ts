@@ -2,18 +2,27 @@ import { transformMiddlewareRequest } from "@axiomhq/nextjs";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
+import { env } from "@/env";
 import { logger } from "@/lib/axiom/server";
 
 const isProtectedRoute = createRouteMatcher(["/settings(.*)"]);
 
-export default clerkMiddleware(async (auth, req, event) => {
-  logger.info(...transformMiddlewareRequest(req));
+export default clerkMiddleware(
+  async (auth, req, event) => {
+    logger.info(...transformMiddlewareRequest(req));
 
-  event.waitUntil(logger.flush());
-  if (isProtectedRoute(req)) await auth.protect();
+    event.waitUntil(logger.flush());
+    if (isProtectedRoute(req)) await auth.protect();
 
-  return NextResponse.next();
-});
+    return NextResponse.next();
+  },
+  {
+    authorizedParties:
+      env.NODE_ENV === "production"
+        ? ["https://chat.asakuri.me", new URL(env.NEXT_PUBLIC_API_ENDPOINT).origin]
+        : ["http://localhost:3000", "http://localhost:3001"],
+  },
+);
 
 export const config = {
   matcher: [
