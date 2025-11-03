@@ -1,6 +1,8 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
+import {} from "@clerk/react-router";
+
 import { useCallback } from "react";
 import { useNavigate, useParams } from "react-router";
 import { v4 as uuidv4 } from "uuid";
@@ -43,18 +45,20 @@ async function waitForServerSyncForMessage(
   }
 }
 
-export async function sendChatRequest(
-  path: string | URL,
-  init: RequestInit | undefined,
-  assistantMessageId: Id<"messages">,
-) {
-  const state = chatStore.getState();
-  state.markStreamStart(assistantMessageId);
+type SendChatRequestParams = {
+  resumeId?: string;
+  body?: ChatRequestBody;
+  assistantMessageId: Id<"messages">;
+};
 
-  let abortController = state.getController(assistantMessageId);
+export async function sendChatRequest(data: SendChatRequestParams) {
+  const state = chatStore.getState();
+  state.markStreamStart(data.assistantMessageId);
+
+  let abortController = state.getController(data.assistantMessageId);
   if (!abortController || abortController.signal.aborted) {
     abortController = new AbortController();
-    state.setController(assistantMessageId, abortController);
+    state.setController(data.assistantMessageId, abortController);
   }
 
   try {
@@ -62,10 +66,25 @@ export async function sendChatRequest(
     let reasoning = "";
     let metadata: ChatMessage["metadata"] | undefined;
 
-    const url = new URL(path, env.NEXT_PUBLIC_API_ENDPOINT);
+    let streamId = data.resumeId;
+    const url = new URL("/api/ai/chat", env.NEXT_PUBLIC_API_ENDPOINT);
+
+    if (!streamId) {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data.body),
+        signal: abortController.signal,
+      });
+
+      if (!response.ok) throw new Error(await response.text());
+      streamId = response.headers.get("X-Request-Id")!;
+    }
+
+    url.searchParams.set("streamId", streamId);
 
     await processChatStream({
-      fetch: fetch(url, { ...init, signal: abortController.signal, credentials: "include" }),
+      fetch: fetch(url, { signal: abortController.signal }),
       handler: async (stream) => {
         switch (stream.type) {
           case "text-delta":
@@ -88,7 +107,7 @@ export async function sendChatRequest(
 
           case "file": {
             // Early client-side preview for streamed image data URLs
-            state.addPreviewImage(assistantMessageId, {
+            state.addPreviewImage(data.assistantMessageId, {
               src: stream.url,
               mediaType: stream.mediaType,
             });
@@ -101,12 +120,16 @@ export async function sendChatRequest(
         }
 
         const v5Message = convertV4MessageToV5(
-          { id: assistantMessageId, role: "assistant", content, reasoning },
+          { id: data.assistantMessageId, role: "assistant", content, reasoning },
           0,
         );
 
         content = fixMarkdownCodeBlocks(content);
-        state.setAssistantMessage({ id: assistantMessageId, parts: v5Message.parts, metadata });
+        state.setAssistantMessage({
+          id: data.assistantMessageId,
+          parts: v5Message.parts,
+          metadata,
+        });
       },
     });
   } catch (rawError) {
@@ -123,24 +146,24 @@ export async function sendChatRequest(
         webSearchEnabled: state.chatConfig.webSearch,
         effort: state.chatConfig.effort,
       },
-      messageId: assistantMessageId,
+      messageId: data.assistantMessageId,
     });
   } finally {
     // Clear controller
-    state.clearController(assistantMessageId);
+    state.clearController(data.assistantMessageId);
 
     // Wait for server to finish persisting the assistant message before clearing the client overlay.
     // This avoids a flicker where the message briefly returns to a loading state.
     if (!abortController.signal.aborted) {
       // Ignore wait errors/timeouts; fall through to clear overlay to avoid leaks.
-      await tryCatch(waitForServerSyncForMessage(assistantMessageId));
+      await tryCatch(waitForServerSyncForMessage(data.assistantMessageId));
     }
 
     // Mark stream end after server have persisted the message
-    state.markStreamEnd(assistantMessageId);
+    state.markStreamEnd(data.assistantMessageId);
 
     // Drop in-memory overlay to avoid leaks (Convex holds the persisted message)
-    state.clearAssistantMessage(assistantMessageId);
+    state.clearAssistantMessage(data.assistantMessageId);
   }
 }
 
@@ -282,11 +305,7 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     assistantMessageId,
   };
 
-  await sendChatRequest(
-    "/api/ai/chat",
-    { method: "POST", body: JSON.stringify(body) },
-    assistantMessageId,
-  );
+  await sendChatRequest({ body, assistantMessageId });
 }
 
 export async function abortChatRequest() {

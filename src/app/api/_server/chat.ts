@@ -1,7 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
-import { clerkMiddleware } from "@hono/clerk-auth";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";
@@ -113,14 +112,6 @@ app.use(
   }),
 );
 
-app.use(
-  "/api/*",
-  clerkMiddleware({
-    secretKey: env.CLERK_SECRET_KEY,
-    publishableKey: env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-  }),
-);
-
 app.get("/", (ctx) => {
   const payload = {
     status: "ok",
@@ -136,36 +127,25 @@ app.get("/", (ctx) => {
 // Health check route for Docker/K8s
 app.get("/health", (ctx) => ctx.text("OK"));
 
+// Resume stream route
 app.get("/api/ai/chat", async (ctx) => {
-  const auth = ctx.get("clerkAuth");
-  const user = auth();
-
-  if (!user?.userId) {
-    logger.error("[Chat Error]: Unauthenticated GET request!");
-    return Response.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
-  }
-
-  const { streamId, resumeAt } = ctx.req.query();
+  const { streamId } = ctx.req.query();
   if (!streamId) {
-    logger.error("[Chat Error]: Missing streamId!", { streamId, resumeAt });
+    logger.error("[Chat Error]: Missing streamId!", { streamId });
     return Response.json({ error: { message: "Error: Missing streamId!" } }, { status: 400 });
   }
 
-  logger.info("[Chat] Resuming chat streaming!", { streamId, resumeAt, userId: user.userId });
+  logger.info("[Chat] Resuming chat streaming!", { streamId });
 
-  const stream = await streamContext.resumeExistingStream(
-    streamId,
-    resumeAt ? parseInt(resumeAt) : undefined,
-  );
+  const stream = await streamContext.resumeExistingStream(streamId);
 
   if (!stream) {
-    logger.error("[Chat Error]: Stream not found!", { streamId, resumeAt });
+    logger.error("[Chat Error]: Stream not found!", { streamId });
     return Response.json({ error: { message: "Error: Stream not found!" } }, { status: 404 });
   }
 
   return new Response(stream, {
     headers: {
-      Connection: "keep-alive",
       "X-Accel-Buffering": "no",
       "Transfer-Encoding": "chunked",
       "Cache-Control": "no-cache, no-transform",
@@ -175,25 +155,20 @@ app.get("/api/ai/chat", async (ctx) => {
 });
 
 app.post("/api/ai/chat", async (ctx) => {
-  const user = ctx.get("clerkAuth")();
-  if (!user?.userId) {
-    logger.error("[Chat Error]: Unauthenticated POST request!");
-    return Response.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
-  }
-
   const req = ctx.req;
-  const userId = user.userId;
+
   const requestId = ctx.get("requestId");
-  const authToken = await user.getToken({ template: "convex" });
+  const userId = req.header("X-User-Id");
+  const convexAuthToken = req.header("Authorization")?.replace("Bearer ", "");
 
   logger.info("[Chat] Chat request received", { userId, requestId });
 
-  if (!authToken || !userId) {
-    logger.error("[Chat Error]: Unauthenticated POST request!");
+  if (!convexAuthToken || !userId) {
+    logger.error("[Chat Error]: Unauthenticated POST request!", { userId, convexAuthToken });
     return Response.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
   }
 
-  const serverConvexClient = createServerConvexClient(authToken.replace("Bearer ", ""));
+  const serverConvexClient = createServerConvexClient(convexAuthToken);
 
   try {
     const body = await req.json();
@@ -349,7 +324,6 @@ app.post("/api/ai/chat", async (ctx) => {
       generateMessageId: () => requestId,
       status: 200,
       headers: {
-        Connection: "keep-alive",
         "X-Accel-Buffering": "no",
         "Transfer-Encoding": "chunked",
         "Cache-Control": "no-cache, no-transform",

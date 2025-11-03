@@ -117,9 +117,5 @@ export async function retryMessage(
     config,
   };
 
-  await sendChatRequest(
-    "/api/ai/chat",
-    { method: "POST", body: JSON.stringify(body) },
-    assistantMessage._id,
-  );
+  await sendChatRequest({ body, assistantMessageId: assistantMessage._id });
 }

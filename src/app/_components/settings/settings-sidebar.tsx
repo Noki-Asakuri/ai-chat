@@ -35,7 +35,7 @@ export function SettingsSidebar() {
         </Avatar>
 
         <div className="text-center">
-          <h1 className="font-semibold text-xl capitalize">{data?.username}</h1>
+          <h1 className="text-xl font-semibold capitalize">{data?.username}</h1>
           <p className="text-muted-foreground">{data?.emailAddress}</p>
 
           <Button variant="ghost" size="sm" className="mt-2 capitalize">
@@ -50,7 +50,7 @@ export function SettingsSidebar() {
             <span>Monthly Usage</span>
 
             {usage && (
-              <span className="text-muted-foreground text-sm">
+              <span className="text-sm text-muted-foreground">
                 {format.number(usage.used)} / {format.number(usage.base)}
               </span>
             )}
@@ -59,7 +59,7 @@ export function SettingsSidebar() {
 
         <CardContent>
           {usagePending || !usage ? (
-            <p className="text-muted-foreground text-sm">Loading usage…</p>
+            <p className="text-sm text-muted-foreground">Loading usage…</p>
           ) : (
             <Meter.Root
               className="box-border flex w-full items-center gap-2"
@@ -107,7 +107,7 @@ export function SettingsSidebar() {
         </CardContent>
       </Card>
 
-      <span className="block w-full text-center text-muted-foreground text-xs">
+      <span className="block w-full text-center text-xs text-muted-foreground">
         User ID: {data?.userId.slice(5)}
       </span>
     </aside>

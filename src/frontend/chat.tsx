@@ -23,7 +23,6 @@ import { chatStore, useChatStore } from "@/lib/chat/store";
 import { fromUUID } from "@/lib/utils";
 
 export function Chat() {
-  const resumeRef = useRef<boolean>(false);
   const dragCounterRef = useRef<number>(0);
   const { threadId } = useParams<{ threadId: Id<"threads"> }>();
 
@@ -56,21 +55,17 @@ export function Chat() {
     if (
       lastMessage?.resumableStreamId &&
       lastMessage.status === "streaming" &&
-      !state.hasActiveStream(lastMessage._id) &&
-      !resumeRef.current
+      !state.hasActiveStream(lastMessage._id)
     ) {
-      resumeRef.current = true;
       console.debug("[Convex] Resuming chat streaming", {
         threadId: threadIdLocal,
         streamId: lastMessage.resumableStreamId,
       });
 
-      void sendChatRequest(
-        `/api/ai/chat?streamId=${lastMessage.resumableStreamId}`,
-        undefined,
-        lastMessage._id,
-      );
-      resumeRef.current = false;
+      void sendChatRequest({
+        assistantMessageId: lastMessage._id,
+        resumeId: lastMessage.resumableStreamId,
+      });
     }
   }, [data]);
 
