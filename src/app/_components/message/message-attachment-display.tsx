@@ -14,6 +14,12 @@ type MessageAttachmentDisplayProps = {
   messageId?: Id<"messages">;
 };
 
+function imageUrlFromAttachment(att: Doc<"attachments">): string {
+  if (att.path) return `https://ik.imagekit.io/gmethsnvl/ai-chat/${att.path}`;
+  // Fallback to legacy path
+  return `https://ik.imagekit.io/gmethsnvl/ai-chat/${att.userId}/${att.threadId}/${att._id}`;
+}
+
 export function MessageAttachmentDisplay({
   attachments,
   messageId,
@@ -31,11 +37,6 @@ export function MessageAttachmentDisplay({
   if (totalImageSlots === 0 && otherAttachments.length === 0) return null;
 
   const baseKey = messageId ?? "no-message";
-  function imageUrlFromAttachment(att: Doc<"attachments">): string {
-    if (att.path) return `https://ik.imagekit.io/gmethsnvl/ai-chat/${att.path}`;
-    // Fallback to legacy path
-    return `https://ik.imagekit.io/gmethsnvl/ai-chat/${att.userId}/${att.threadId}/${att._id}`;
-  }
 
   // Build a normalized list of image entries preserving visual order (by slot index).
   // Each slot may be from a persisted attachment or a preview image, or be empty.
@@ -45,13 +46,9 @@ export function MessageAttachmentDisplay({
       const prev = previewImages[idx] as { src: string; size?: number; name?: string } | undefined;
 
       if (att) {
-        return {
-          src: imageUrlFromAttachment(att),
-          alt: att.name,
-          name: att.name,
-          size: att.size,
-        };
+        return { src: imageUrlFromAttachment(att), alt: att.name, name: att.name, size: att.size };
       }
+
       if (prev) {
         return {
           src: prev.src,
@@ -60,24 +57,25 @@ export function MessageAttachmentDisplay({
           size: prev.size,
         };
       }
+
       return null;
     });
 
   function renderImageSlot(idx: number) {
-    const att = persistedImages[idx] as Doc<"attachments"> | undefined;
-    const prev = previewImages[idx] as { src: string; size?: number; name?: string } | undefined;
+    const att = persistedImages[idx];
+    const prev = previewImages[idx];
 
     if (!att && !prev) return null;
 
+    const size = att?.size ?? prev?.size;
     const src = att ? imageUrlFromAttachment(att) : prev!.src;
-    const alt = att ? att.name : (prev?.name ?? "Generating image...");
-    const name = att ? att.name : (prev?.name ?? "Generating image...");
-    const size = att ? att.size : prev?.size;
+    const name = att?.name ?? prev?.name ?? "Generating image...";
 
     // Compute the initial index within the compacted images list (exclude empty slots).
     const compactImages = imageSlots.filter(
       (v): v is { src?: string; alt: string; name: string; size?: number } => v !== null,
     );
+
     const initialIndexWithinList =
       imageSlots.slice(0, idx + 1).filter((v) => v !== null).length - 1;
 
@@ -85,10 +83,10 @@ export function MessageAttachmentDisplay({
     // so when a preview transitions to a persisted attachment, the dialog instance stays mounted.
     return (
       <ImagePreviewDialog
-        key={`${baseKey}-image-slot-${idx}`}
-        className="aspect-square size-40 overflow-hidden rounded-md"
-        image={{ src, alt, name, size }}
         images={compactImages}
+        key={`${baseKey}-image-slot-${idx}`}
+        image={{ src, alt: name, name, size }}
+        className="aspect-square size-20 overflow-hidden rounded-md"
         initialIndex={Math.max(0, initialIndexWithinList)}
       >
         <img
@@ -123,7 +121,7 @@ function AttachmentPreview({ attachment }: { attachment: Doc<"attachments"> }) {
 
     return (
       <ImagePreviewDialog
-        className="aspect-square size-40 overflow-hidden rounded-md"
+        className="aspect-square size-20 overflow-hidden rounded-md"
         image={{
           src: imageUrl,
           alt: attachment.name,
@@ -144,7 +142,7 @@ function AttachmentPreview({ attachment }: { attachment: Doc<"attachments"> }) {
         href={fileUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex size-40 flex-col items-center justify-center gap-2 rounded-md border p-2"
+        className="flex size-20 flex-col items-center justify-center gap-2 rounded-md border p-2"
       >
         <FileIcon className="size-8" />
 

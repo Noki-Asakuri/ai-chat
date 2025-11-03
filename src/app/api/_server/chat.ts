@@ -107,24 +107,17 @@ app.use(
     origin: env.NODE_ENV === "production" ? "https://chat.asakuri.me" : "http://localhost:3000",
     allowMethods: ["POST", "GET", "OPTIONS"],
     allowHeaders: ["Authorization", "Upgrade-Insecure-Requests", "X-User-Id"],
-    exposeHeaders: [
-      "Content-Length",
-      "Cache-Control",
-      "Content-Type",
-      "X-Request-Id",
-      "Transfer-Encoding",
-      "X-Accel-Buffering",
-    ],
-    maxAge: 3600,
+    exposeHeaders: ["Content-Type", "X-Request-Id"],
     credentials: true,
+    maxAge: 604_800,
   }),
 );
 
 app.use(
   "/api/*",
   clerkMiddleware({
-    publishableKey: env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     secretKey: env.CLERK_SECRET_KEY,
+    publishableKey: env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
   }),
 );
 

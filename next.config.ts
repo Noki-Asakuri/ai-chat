@@ -2,14 +2,12 @@
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
  * for Docker builds.
  */
-import "./src/env.js";
 import type { NextConfig } from "next";
-import { env } from "./src/env.js";
+import "./src/env.js";
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
   experimental: {
-    clientSegmentCache: true,
     optimisticClientCache: true,
     turbopackFileSystemCacheForDev: true,
     turbopackFileSystemCacheForBuild: true,

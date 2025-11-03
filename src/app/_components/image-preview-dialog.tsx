@@ -222,11 +222,11 @@ export function ImagePreviewDialog({
       </Dialog.Trigger>
 
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-[opacity] duration-300 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:opacity-70" />
+        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-opacity duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0 dark:opacity-70" />
 
         <Dialog.Popup
           data-slot="image-preview-popup"
-          className="group/image-preview pointer-events-none fixed top-0 z-50 flex h-full w-full flex-col items-center justify-center gap-2 transition-[opacity] duration-300 outline-none data-[ending-style]:opacity-0 data-[starting-style]:opacity-0"
+          className="group/image-preview pointer-events-none fixed top-0 z-50 flex h-full w-full flex-col items-center justify-center gap-2 transition-opacity duration-300 outline-none data-ending-style:opacity-0 data-starting-style:opacity-0"
           onKeyDown={(e) => {
             if (!hasCarousel) return;
             if (e.key === "ArrowLeft") {
@@ -286,13 +286,13 @@ export function ImagePreviewDialog({
             </div>
           </div>
 
-          <div className="pointer-events-none flex flex-col items-center justify-center gap-6 transition-[scale,opacity] duration-300 group-data-[ending-style]/image-preview:scale-90 group-data-[ending-style]/image-preview:opacity-0 group-data-[starting-style]/image-preview:opacity-0">
+          <div className="pointer-events-none flex flex-col items-center justify-center gap-6 transition-[scale,opacity] duration-300 group-data-ending-style/image-preview:scale-90 group-data-ending-style/image-preview:opacity-0 group-data-starting-style/image-preview:opacity-0">
             {/* Carousel navigation buttons */}
             {hasCarousel && (
               <>
                 <button
                   type="button"
-                  className="pointer-events-auto absolute top-1/2 left-4 -translate-y-1/2 rounded-full border bg-muted/80 p-2"
+                  className="pointer-events-auto absolute top-1/2 left-4 -translate-y-1/2 rounded-full border bg-muted/80 p-2 group-data-ending-style/image-preview:hidden"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     setCurrentIndex((i) => i - 1);
@@ -302,9 +302,10 @@ export function ImagePreviewDialog({
                 >
                   <ChevronLeftIcon />
                 </button>
+
                 <button
                   type="button"
-                  className="pointer-events-auto absolute top-1/2 right-4 -translate-y-1/2 rounded-full border bg-muted/80 p-2"
+                  className="pointer-events-auto absolute top-1/2 right-4 -translate-y-1/2 rounded-full border bg-muted/80 p-2 group-data-ending-style/image-preview:hidden"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     setCurrentIndex((i) => i + 1);
@@ -326,6 +327,7 @@ export function ImagePreviewDialog({
             <div className="pointer-events-auto flex flex-col items-center justify-center gap-1 text-sm">
               <span>Name: {activeImage.name}</span>
               {activeImage.size && <span>Size: {format.size(activeImage.size)}</span>}
+              Index: {normalizedIndex + 1} / {totalImages}
             </div>
           </div>
         </Dialog.Popup>

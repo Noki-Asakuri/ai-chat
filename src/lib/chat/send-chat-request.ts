@@ -17,6 +17,8 @@ import { chatStore } from "./store";
 import type { ChatMessage, ChatRequestBody } from "../types";
 import { fixMarkdownCodeBlocks, fromUUID, toUUID, tryCatch, tryCatchSync } from "../utils";
 
+import { env } from "@/env";
+
 const convexClient = getConvexReactClient();
 
 function sleep(ms: number): Promise<void> {
@@ -42,7 +44,7 @@ async function waitForServerSyncForMessage(
 }
 
 export async function sendChatRequest(
-  url: string | URL,
+  path: string | URL,
   init: RequestInit | undefined,
   assistantMessageId: Id<"messages">,
 ) {
@@ -60,8 +62,10 @@ export async function sendChatRequest(
     let reasoning = "";
     let metadata: ChatMessage["metadata"] | undefined;
 
+    const url = new URL(path, env.NEXT_PUBLIC_API_ENDPOINT);
+
     await processChatStream({
-      fetch: fetch(url, { ...init, signal: abortController.signal }),
+      fetch: fetch(url, { ...init, signal: abortController.signal, credentials: "include" }),
       handler: async (stream) => {
         switch (stream.type) {
           case "text-delta":
