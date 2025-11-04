@@ -194,27 +194,30 @@ app.post("/api/ai/chat", async (ctx) => {
       tools,
     } = requestBody;
 
-    // Enforce monthly per-user usage limit before processing the request
+    // Enforce per-user usage limit before processing the request
     const usage = await serverConvexClient.mutation(api.functions.usages.checkAndIncrement, {
       amount: 1,
     });
 
     if (!usage.allowed) {
+      const type = usage.resetType === "daily" ? "Daily" : "Monthly";
+
       await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
         model: model.uniqueId,
-        error: `Monthly message limit reached (${usage.used}/${usage.base}).`,
+        error: `${type} message limit reached (${usage.used}/${usage.base}).`,
         modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
         messageId: assistantMessageId,
       });
 
-      logger.error("[Chat Error]: Monthly message limit reached!", {
+      logger.error("[Chat Error]: User max message limit reached!", {
         userId: userId,
         used: usage.used,
         base: usage.base,
+        resetType: usage.resetType,
       });
 
       return Response.json(
-        { error: { message: `Monthly message limit reached (${usage.used}/${usage.base}).` } },
+        { error: { message: `${type} message limit reached (${usage.used}/${usage.base}).` } },
         { status: 429 },
       );
     }

@@ -10,7 +10,15 @@ const crons = cronJobs();
 crons.monthly(
   "reset monthly usage",
   { day: 1, hourUTC: 0, minuteUTC: 0 },
-  internal.functions.usages.resetAll,
+  internal.functions.usages.resetAllUsages,
+  {},
+);
+
+// Add a daily reset cron for new users
+crons.daily(
+  "reset daily usage for new users",
+  { hourUTC: 0, minuteUTC: 0 },
+  internal.functions.usages.resetAllUsagesDaily,
   {},
 );
 

@@ -65,7 +65,9 @@ export function Chat() {
   useEffect(() => {
     if (!threadId) return;
     const state = chatStore.getState();
-    const lastMessage = state.messages.at(-1)!;
+    const lastMessage = state.messages.at(-1);
+
+    if (!lastMessage) return;
 
     const profiles = state.profiles.find((p) => p._id === lastMessage.metadata?.profile?.id);
     const activeProfile = profiles

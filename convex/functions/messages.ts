@@ -5,8 +5,6 @@ import type { Doc } from "../_generated/dataModel";
 import { internalMutation, mutation, query } from "../_generated/server";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
-import { convertV4MessageToV5 } from "../../src/lib/chat/conversion";
-
 export const getAllMessagesFromThread = query({
   args: { threadId: v.optional(v.id("threads")) },
   handler: async (ctx, args) => {

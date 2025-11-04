@@ -88,8 +88,11 @@ async function getUserByClerkUserId(ctx: QueryCtx, userId: string) {
 
 export const upsertFromClerk = internalMutation({
   // no runtime validation, Clerk webhook always return valid data
-  args: { data: v.any() as Validator<UserJSON> },
-  async handler(ctx, { data }) {
+  args: {
+    data: v.any() as Validator<UserJSON>,
+    event: v.union(v.literal("created"), v.literal("updated")),
+  },
+  async handler(ctx, { data, event }) {
     const mainEmailAddress = data.email_addresses?.find(
       (email) => email.id === data.primary_email_address_id,
     );
@@ -107,21 +110,27 @@ export const upsertFromClerk = internalMutation({
       updatedAt: data.updated_at,
     };
 
-    const existUserData = await getUserByClerkUserId(ctx, data.id);
-    if (existUserData) return await ctx.db.patch(existUserData._id, userAttributes);
+    switch (event) {
+      case "updated":
+        const existUserData = await getUserByClerkUserId(ctx, data.id);
+        if (existUserData) await ctx.db.patch(existUserData._id, userAttributes);
 
-    return await ctx.db.insert("users", {
-      ...userAttributes,
-      customization: {
-        name: data.username!,
-        systemInstruction: "You are a helpful assistant.",
-        traits: [],
-        backgroundId: null,
-        hiddenModels: [],
-        showFullCode: false,
-        disableBlur: false,
-      },
-    });
+      case "created":
+        await ctx.db.insert("usages", { userId: data.id, used: 0, base: 25, resetType: "daily" });
+
+        return await ctx.db.insert("users", {
+          ...userAttributes,
+          customization: {
+            name: data.username!,
+            systemInstruction: "You are a helpful assistant.",
+            traits: [],
+            backgroundId: null,
+            hiddenModels: [],
+            showFullCode: false,
+            disableBlur: false,
+          },
+        });
+    }
   },
 });
 
@@ -134,6 +143,7 @@ export const clerkWebhook = httpAction(async (ctx, request) => {
     case "user.updated":
       await ctx.runMutation(internal.functions.users.upsertFromClerk, {
         data: event.data,
+        event: event.type === "user.created" ? "created" : "updated",
       });
       break;
 

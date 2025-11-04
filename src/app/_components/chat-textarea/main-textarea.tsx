@@ -91,7 +91,7 @@ function InputTextArea() {
   }
 
   return (
-    <div className="flex flex-grow flex-row items-start p-2.5">
+    <div className="flex grow flex-row items-start p-2.5">
       <Textarea
         rows={3}
         name="user-input"
@@ -105,7 +105,7 @@ function InputTextArea() {
         value={input}
         onChange={(event) => useChatStore.getState().setChatInput(event.target.value)}
         data-slot="textarea-chat-input"
-        className="!bg-transparent !ring-0 max-h-[250px] w-full resize-none rounded-none border-0 p-0"
+        className="max-h-[250px] w-full resize-none rounded-none border-0 bg-transparent! p-0 ring-0!"
         onPaste={(event) => {
           const { items } = event.clipboardData;
           const files = Array.from(items)
@@ -150,21 +150,39 @@ function TextareaDescription() {
   );
 }
 
+function getResetDate(type: "monthly" | "daily"): string {
+  const dateNow = Date.now();
+
+  switch (type) {
+    case "monthly": {
+      const date = new Date(dateNow);
+      date.setMonth(date.getMonth() + 1);
+      date.setDate(1);
+      date.setHours(0, 0, 0, 0);
+
+      return date.toISOString();
+    }
+
+    case "daily": {
+      const date = new Date(dateNow);
+      date.setDate(date.getDate() + 1);
+      date.setHours(0, 0, 0, 0);
+
+      return date.toISOString();
+    }
+  }
+}
+
 function UsageBanner() {
-  const { data, isPending } = useQuery(convexQuery(api.functions.usages.getUsage, {}));
+  const { data, isPending } = useQuery(convexQuery(api.functions.usages.getUserUsages, {}));
   if (isPending || !data || data.used < data.base) return null;
 
-  const date = new Date(data.resetAt);
-  const resetStr = date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  });
+  const resetStr = getResetDate(data.resetType ?? "monthly");
 
   return (
     <div className="border-b text-sm">
       <div className="px-2.5 py-2">
-        Monthly usage:{" "}
+        {data.resetType === "monthly" ? "Monthly" : "Daily"} usage:{" "}
         <span className="font-medium">
           {data.used} / {data.base}
         </span>

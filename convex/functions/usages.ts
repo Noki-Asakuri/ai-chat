@@ -1,124 +1,22 @@
 import { v } from "convex/values";
-import {
-  query,
-  mutation,
-  internalMutation,
-  type QueryCtx,
-  type MutationCtx,
-} from "../_generated/server";
-import { type Doc } from "../_generated/dataModel";
 
-const DEFAULT_BASE = 2000;
+import { internalMutation, mutation, query } from "../_generated/server";
 
-type Usage = Doc<"usages">;
-
-function monthStartUtcTs(date: Date = new Date()): number {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1, 0, 0, 0, 0));
-  return d.getTime();
-}
-
-function sanitizeBase(base: number | undefined): number {
-  return typeof base === "number" && base > 0 ? base : DEFAULT_BASE;
-}
-
-async function getUsageDoc(ctx: QueryCtx, userId: string): Promise<Usage | null> {
-  return await ctx.db
-    .query("usages")
-    .withIndex("by_userId", (q) => q.eq("userId", userId))
-    .unique();
-}
-
-async function getOrInitUsageMut(ctx: MutationCtx, userId: string): Promise<Usage> {
-  const existing = await ctx.db
-    .query("usages")
-    .withIndex("by_userId", (q) => q.eq("userId", userId))
-    .unique();
-
-  if (existing) {
-    // Ensure base is valid
-    const base = sanitizeBase(existing.base);
-
-    if (base !== existing.base) {
-      await ctx.db.patch(existing._id, { base });
-      const updated = await ctx.db.get(existing._id);
-      return updated ?? { ...existing, base };
-    }
-
-    return existing;
-  }
-
-  const initDoc = {
-    userId,
-    used: 0,
-    base: DEFAULT_BASE,
-    resetAt: monthStartUtcTs(),
-  };
-  const id = await ctx.db.insert("usages", initDoc);
-  const inserted = await ctx.db.get(id);
-  if (!inserted) {
-    // Fallback; should not happen
-    throw new Error("Failed to create usage document");
-  }
-  return inserted;
-}
-
-function normalizedFieldsForRead(doc: Usage) {
-  const currentStart = monthStartUtcTs();
-  const base = sanitizeBase(doc.base);
-
-  if (doc.resetAt < currentStart) {
-    return { used: 0, base, resetAt: currentStart };
-  }
-  return { used: doc.used, base, resetAt: doc.resetAt };
-}
-
-async function maybeResetForMutation(ctx: MutationCtx, doc: Usage): Promise<Usage> {
-  const currentStart = monthStartUtcTs();
-  const base = sanitizeBase(doc.base);
-
-  if (doc.resetAt < currentStart || base !== doc.base) {
-    await ctx.db.patch(doc._id, {
-      base,
-      ...(doc.resetAt < currentStart ? { used: 0, resetAt: currentStart } : {}),
-    });
-    const updated = await ctx.db.get(doc._id);
-    if (updated) return updated;
-
-    return {
-      ...doc,
-      base,
-      ...(doc.resetAt < currentStart ? { used: 0, resetAt: currentStart } : {}),
-    };
-  }
-  return doc;
-}
+// Default daily limit for new users
+const DEFAULT_BASE = 25;
 
 /**
- * Public query to retrieve current usage info.
- * - Read-only, no writes here (per Convex query guidelines).
+ * Public query to retrieve current usage inf for user.
  */
-export const getUsage = query({
-  args: {},
-  returns: v.object({
-    used: v.number(),
-    base: v.number(),
-    resetAt: v.number(),
-    limited: v.boolean(),
-  }),
+export const getUserUsages = query({
   handler: async (ctx) => {
-    const auth = await ctx.auth.getUserIdentity();
-    if (!auth) {
-      return { used: 0, base: DEFAULT_BASE, resetAt: monthStartUtcTs(), limited: false };
-    }
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) return null;
 
-    const doc = await getUsageDoc(ctx, auth.subject);
-    if (!doc) {
-      const resetAt = monthStartUtcTs();
-      return { used: 0, base: DEFAULT_BASE, resetAt, limited: false };
-    }
-
-    const normalized = normalizedFieldsForRead(doc);
-    return { ...normalized, limited: normalized.used >= normalized.base };
+    return await ctx.db
+      .query("usages")
+      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .unique();
   },
 });
 
@@ -127,45 +25,56 @@ export const getUsage = query({
  * Ensures monthly reset semantics.
  */
 export const checkAndIncrement = mutation({
-  args: { amount: v.optional(v.number()) },
+  args: { amount: v.number() },
   returns: v.object({
     allowed: v.boolean(),
     used: v.number(),
     base: v.number(),
-    resetAt: v.number(),
+    resetType: v.string(),
   }),
   handler: async (ctx, args) => {
-    const auth = await ctx.auth.getUserIdentity();
-    if (!auth) throw new Error("Not authenticated");
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
 
-    const amount = typeof args.amount === "number" && args.amount > 0 ? args.amount : 1;
+    const usage = await ctx.db
+      .query("usages")
+      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .unique();
 
-    let usage = await getOrInitUsageMut(ctx, auth.subject);
-    usage = await maybeResetForMutation(ctx, usage);
+    if (!usage) return { allowed: true, used: args.amount, base: DEFAULT_BASE, resetType: "daily" };
 
-    const base = sanitizeBase(usage.base);
-    if (usage.used + amount > base) {
-      return { allowed: false, used: usage.used, base, resetAt: usage.resetAt };
+    if (usage.used + args.amount > usage.base) {
+      return {
+        allowed: false,
+        used: usage.used,
+        base: usage.base,
+        resetType: usage.resetType ?? "daily",
+      };
     }
 
-    const newUsed = usage.used + amount;
-    await ctx.db.patch(usage._id, { used: newUsed });
-    return { allowed: true, used: newUsed, base, resetAt: usage.resetAt };
+    await ctx.db.patch(usage._id, { used: usage.used + args.amount });
+    return {
+      allowed: true,
+      used: usage.used + args.amount,
+      base: usage.base,
+      resetType: usage.resetType ?? "daily",
+    };
   },
 });
 
 export const refundRequest = mutation({
   args: { amount: v.number() },
-  returns: v.null(),
   handler: async (ctx, args) => {
-    const auth = await ctx.auth.getUserIdentity();
-    if (!auth) throw new Error("Not authenticated");
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Not authenticated");
 
-    const usage = await getOrInitUsageMut(ctx, auth.subject);
+    const usage = await ctx.db
+      .query("usages")
+      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .unique();
 
-    const newUsed = usage.used - args.amount;
-    await ctx.db.patch(usage._id, { used: newUsed });
-    return null;
+    if (!usage) return;
+    await ctx.db.patch(usage._id, { used: usage.used - args.amount });
   },
 });
 
@@ -173,23 +82,25 @@ export const refundRequest = mutation({
  * Internal mutation to reset all usage documents at the start of a new month.
  * Intended for invocation via a cron job.
  */
-export const resetAll = internalMutation({
+export const resetAllUsages = internalMutation({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
-    const start = monthStartUtcTs();
-    const all = await ctx.db.query("usages").collect();
+    const allUsages = await ctx.db.query("usages").collect();
+    for (const usage of allUsages) await ctx.db.patch(usage._id, { used: 0 });
+  },
+});
 
-    for (const doc of all) {
-      const base = sanitizeBase(doc.base);
-      if (doc.resetAt < start || base !== doc.base) {
-        await ctx.db.patch(doc._id, {
-          base,
-          ...(doc.resetAt < start ? { used: 0, resetAt: start } : {}),
-        });
-      }
-    }
-
-    return null;
+/**
+ * Internal mutation to reset all usage documents at the start of a new day.
+ * Intended for invocation via a cron job.
+ */
+export const resetAllUsagesDaily = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const allUsages = await ctx.db.query("usages").collect();
+    const dailyUsages = allUsages.filter((usage) => usage.resetType === "daily");
+    for (const usage of dailyUsages) await ctx.db.patch(usage._id, { used: 0 });
   },
 });

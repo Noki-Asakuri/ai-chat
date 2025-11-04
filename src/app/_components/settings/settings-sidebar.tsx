@@ -15,7 +15,7 @@ import { format } from "@/lib/utils";
 export function SettingsSidebar() {
   const { data } = useQuery(convexQuery(api.functions.users.currentUser, {}));
   const { data: usage, isPending: usagePending } = useQuery(
-    convexQuery(api.functions.usages.getUsage, {}),
+    convexQuery(api.functions.usages.getUserUsages, {}),
   );
 
   const fallback = data?.username
@@ -47,7 +47,7 @@ export function SettingsSidebar() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between gap-2 text-xl">
-            <span>Monthly Usage</span>
+            <span>{usage?.resetType === "daily" ? "Daily" : "Monthly"} Usage</span>
 
             {usage && (
               <span className="text-sm text-muted-foreground">

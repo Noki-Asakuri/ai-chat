@@ -16,17 +16,13 @@ export const migrations = new Migrations<DataModel>(components.migrations);
  */
 export const run = migrations.runner();
 
-// export const backfillMessages = migrations.define({
-//   table: "messages",
-//   migrateOne: async (ctx, data) => {
-//     if (!data.metadata) return;
-//     const updates = structuredClone(data.metadata);
-
-//     if (typeof updates?.aiProfileId === "string") delete updates.aiProfileId;
-
-//     await ctx.db.patch(data._id, { metadata: updates });
-//   },
-// });
+export const backfillMessages = migrations.define({
+  table: "usages",
+  migrateOne: async (ctx, data) => {
+    if (data.resetType) return;
+    await ctx.db.patch(data._id, { resetType: "monthly", resetAt: undefined });
+  },
+});
 
 // export const runBackfillMessages = migrations.runner([internal.migrations.backfillMessages]);
 // export const runAll = migrations.runner([internal.migrations.backfillMessages]);

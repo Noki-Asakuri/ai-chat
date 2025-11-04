@@ -254,7 +254,10 @@ export default defineSchema({
     userId: v.string(),
     used: v.number(),
     base: v.number(),
-    resetAt: v.number(),
+    resetType: v.optional(v.union(v.literal("monthly"), v.literal("daily"))),
+
+    // @deprecate, no point of using this anymore
+    resetAt: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 
   user_stats: defineTable({
