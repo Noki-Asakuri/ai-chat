@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 
 export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
   const activeProfile = useChatStore((state) => state.chatConfig.profile);
-
   const isActive = activeProfile?.id === profile._id;
 
   return (

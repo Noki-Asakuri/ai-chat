@@ -70,7 +70,7 @@ function MessageError({ message }: { message: string }) {
       data-slot="message-error"
       className="rounded-md bg-destructive/80 px-4 py-2 text-destructive-foreground backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-destructive"
     >
-      <MemoizedMarkdownBlock content={message} />
+      <MemoizedMarkdownBlock content={message} isStreaming={false} />
     </div>
   );
 }

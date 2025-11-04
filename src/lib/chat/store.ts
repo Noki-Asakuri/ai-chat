@@ -4,7 +4,7 @@ import { z } from "zod";
 import { create } from "zustand";
 
 import { profileIdSchema } from "../server/validate-request-body";
-import type { ChatMessage, Thread, UserAttachment } from "../types";
+import type { ChatMessage, ReasoningEffort, Thread, UserAttachment } from "../types";
 import { getModelData } from "./models";
 
 type PreviewImage = {
@@ -14,11 +14,18 @@ type PreviewImage = {
   size?: number;
 };
 
-const DEFAULT_CONFIG = {
+type ChatConfig = {
+  model: string;
+  effort: ReasoningEffort;
+  webSearch: boolean;
+  profile?: { id: Id<"profiles">; name: string; systemPrompt: string } | null;
+};
+
+const DEFAULT_CONFIG: ChatConfig = {
   webSearch: false,
   effort: "medium",
   model: "openai/gpt-5-nano",
-  profile: null as { id: Id<"profiles">; name: string; systemPrompt: string } | null,
+  profile: null,
 } as const;
 
 const PROFILE_LOCAL_STORAGE_KEY = "local-profiles-cache";

@@ -1,6 +1,3 @@
-import { marked } from "marked";
-import { memo, useMemo } from "react";
-
 import { isInlineCode, type Element } from "react-shiki";
 import { Streamdown } from "streamdown";
 
@@ -147,56 +144,35 @@ function CodeBlock({
   );
 }
 
-export const MemoizedMarkdownBlock = memo(
-  ({ content, isStreaming }: { content: string; isStreaming?: boolean }) => {
-    return (
-      <Streamdown
-        isAnimating={isStreaming}
-        parseIncompleteMarkdown
-        rehypePlugins={[
-          [
-            rehypeHarden,
-            {
-              allowedLinkPrefixes: ["*"],
-              defaultOrigin: "https://*.asakuri.me",
-              allowedImagePrefixes: ["https://files.chat.asakuri.me", "https://ik.imagekit.io"],
-            },
-          ],
-          rehypeRaw,
-          [rehypeKatex, { errorColor: "var(--color-muted-foreground)" }],
-        ]}
-        remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
-        remarkRehypeOptions={{ allowDangerousHtml: true }}
-        components={{ code: CodeBlock }}
-      >
-        {escapeInvalidMath(content)}
-      </Streamdown>
-    );
-  },
-  (prevProps, nextProps) => prevProps.content === nextProps.content,
-);
+type MarkdownProps = {
+  content: string;
+  isStreaming?: boolean;
+};
 
-MemoizedMarkdownBlock.displayName = "MemoizedMarkdownBlock";
-
-function parseContentToBlocks(markdown: string): string[] {
-  const tokens = marked.lexer(markdown);
-  return tokens.map((token) => token.raw);
+export function MemoizedMarkdownBlock({ content, isStreaming }: MarkdownProps) {
+  return (
+    <Streamdown
+      isAnimating={isStreaming}
+      parseIncompleteMarkdown
+      rehypePlugins={[
+        [
+          rehypeHarden,
+          {
+            allowedLinkPrefixes: ["*"],
+            defaultOrigin: "https://*.asakuri.me",
+            allowedImagePrefixes: ["https://files.chat.asakuri.me", "https://ik.imagekit.io"],
+          },
+        ],
+        rehypeRaw,
+        [rehypeKatex, { errorColor: "var(--color-muted-foreground)" }],
+      ]}
+      remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
+      remarkRehypeOptions={{ allowDangerousHtml: true }}
+      components={{ code: CodeBlock }}
+    >
+      {escapeInvalidMath(content)}
+    </Streamdown>
+  );
 }
 
-type MarkdownProps = { content: string; id: string; isStreaming?: boolean };
-
-export const MemoizedMarkdown = memo(({ content, id, isStreaming }: MarkdownProps) => {
-  const blocks = useMemo(() => parseContentToBlocks(content), [content]);
-  return blocks.map((block, index) => {
-    if (block.trim().length === 0) return null;
-    return (
-      <MemoizedMarkdownBlock
-        content={block}
-        isStreaming={isStreaming}
-        key={`${id}-block_${index}`}
-      />
-    );
-  });
-});
-
-MemoizedMarkdown.displayName = "MemoizedMarkdown";
+MemoizedMarkdownBlock.displayName = "MemoizedMarkdownBlock";

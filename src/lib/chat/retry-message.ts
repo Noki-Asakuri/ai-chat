@@ -59,10 +59,19 @@ export async function retryMessage(
   const model = firstNonEmptyOrLast(options?.modelId, lastMessage.model, state.chatConfig.model);
   const profileId = lastMessage.metadata?.profile?.id ?? state.chatConfig.profile?.id;
 
-  const profile = state.profiles.find((p) => p._id === profileId);
-  const activeProfile = profile
-    ? { id: profile._id, name: profile.name, systemPrompt: profile.systemPrompt }
-    : state.chatConfig.profile;
+  const previousProfileObj = state.profiles.find((p) => p._id === profileId);
+  const previousProfile = previousProfileObj
+    ? {
+        id: previousProfileObj._id,
+        name: previousProfileObj.name,
+        systemPrompt: previousProfileObj.systemPrompt,
+      }
+    : null;
+
+  const activeProfile =
+    state.chatConfig.profile === null
+      ? null
+      : (state.chatConfig.profile ?? previousProfile ?? null);
 
   state.setChatConfig({ model, profile: activeProfile });
 

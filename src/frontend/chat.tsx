@@ -45,13 +45,6 @@ export function Chat() {
     console.debug("[Convex] Syncing messages from Convex", { data, threadId: threadIdLocal });
     state.setDataFromConvex(data.messages, lastMessage.status ?? "complete");
 
-    const profiles = state.profiles.find((p) => p._id === lastMessage.metadata?.profile?.id);
-    const activeProfile = profiles
-      ? { id: profiles._id, name: profiles.name, systemPrompt: profiles.systemPrompt }
-      : state.chatConfig.profile;
-
-    state.setChatConfig({ model: lastMessage.model, profile: activeProfile });
-
     if (
       lastMessage?.resumableStreamId &&
       lastMessage.status === "streaming" &&
@@ -68,6 +61,19 @@ export function Chat() {
       });
     }
   }, [data]);
+
+  useEffect(() => {
+    if (!threadId) return;
+    const state = chatStore.getState();
+    const lastMessage = state.messages.at(-1)!;
+
+    const profiles = state.profiles.find((p) => p._id === lastMessage.metadata?.profile?.id);
+    const activeProfile = profiles
+      ? { id: profiles._id, name: profiles.name, systemPrompt: profiles.systemPrompt }
+      : state.chatConfig.profile;
+
+    state.setChatConfig({ model: lastMessage.model, profile: activeProfile });
+  }, [threadId]);
 
   function handleAddAttachments(files: Array<File>) {
     const acceptFiles = files.filter(
