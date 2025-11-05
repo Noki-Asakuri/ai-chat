@@ -216,15 +216,15 @@ div[data-slot="codeblock"] {
 }
 
 #sidebar-provider[data-disable-blur="true"] .backdrop-blur-md {
-  @apply !backdrop-blur-none;
+  @apply backdrop-blur-none!;
 }
 
 #sidebar-provider[data-disable-blur="true"] .backdrop-saturate-150 {
-  @apply !backdrop-saturate-100;
+  @apply backdrop-saturate-100!;
 }
 
 #sidebar-provider[data-disable-blur="true"] .backdrop-blur-md.backdrop-saturate-150 {
-  @apply !backdrop-blur-none !backdrop-saturate-100;
+  @apply backdrop-blur-none! backdrop-saturate-100!;
 }
 
 .katex-display {
@@ -232,5 +232,5 @@ div[data-slot="codeblock"] {
 }
 
 [data-sonner-toaster] {
-  @apply !font-sans;
+  @apply font-sans!;
 }

@@ -43,7 +43,7 @@ export function ThreadCommand() {
         <SearchIcon />
         <span>Search Threads...</span>
 
-        <kbd className="pointer-events-none ml-8 inline-flex h-4 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] text-muted-foreground opacity-100">
+        <kbd className="pointer-events-none ml-8 inline-flex h-4 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 select-none">
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
@@ -148,7 +148,7 @@ function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
         <CommandItem
           key={"thread-cmd-group-" + thread._id}
           value={thread._id}
-          className="!p-0"
+          className="p-0!"
           onSelect={async () => {
             await navigate(`/threads/${toUUID(thread._id)}`);
             useChatStore.getState().setThreadCommandOpen(false);
