@@ -121,7 +121,7 @@ function MessageLoading({ model, params }: MessageLoadingProps) {
 
 function MessageInner({ message, index, isLast }: MessageProps) {
   const editMessage = useChatStore((state) => state.editMessage);
-  const overlay = useChatStore((state) => state.assistantMessages[message._id]);
+  const overlay = useChatStore((state) => state.assistantMessages.get(message._id));
 
   const renderMessage =
     message.role === "assistant" && message.status === "streaming" && overlay ? overlay : message;

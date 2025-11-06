@@ -30,7 +30,7 @@ export function MessageContent({ message, parts }: MessageContentProps) {
   if (!parts || parts.length === 0) return null;
 
   const reasoningParts = parts.filter((p) => p.type === "reasoning");
-  const textParts = parts.filter((p) => p.type === "text");
+  const textParts = parts.filter((p) => p.type === "text") as { type: "text"; text: string }[];
 
   return (
     <>

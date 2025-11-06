@@ -144,12 +144,12 @@ function CodeBlock({
   );
 }
 
-type MarkdownProps = {
+type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
   content: string;
   isStreaming?: boolean;
 };
 
-export function MemoizedMarkdownBlock({ content, isStreaming }: MarkdownProps) {
+export function MemoizedMarkdownBlock({ content, isStreaming, ...props }: MarkdownProps) {
   return (
     <Streamdown
       isAnimating={isStreaming}
@@ -169,6 +169,7 @@ export function MemoizedMarkdownBlock({ content, isStreaming }: MarkdownProps) {
       remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
       remarkRehypeOptions={{ allowDangerousHtml: true }}
       components={{ code: CodeBlock }}
+      {...props}
     >
       {escapeInvalidMath(content)}
     </Streamdown>

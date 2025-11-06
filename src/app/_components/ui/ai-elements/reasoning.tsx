@@ -155,12 +155,16 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
     <Collapsible.Panel
       className={cn(
         "mt-2 text-sm",
-        "text-foreground outline-none group-data-[closed]:animate-out group-data-[closed]:fade-out-0 group-data-[closed]:slide-out-to-top-2 group-data-[open]:animate-in group-data-[open]:slide-in-from-top-2",
+        "text-foreground outline-none group-data-closed:animate-out group-data-closed:fade-out-0 group-data-closed:slide-out-to-top-2 group-data-open:animate-in group-data-open:slide-in-from-top-2",
         className,
       )}
       {...props}
     >
-      <MemoizedMarkdownBlock content={children} isStreaming={isStreaming} />
+      <MemoizedMarkdownBlock
+        content={children}
+        isStreaming={isStreaming}
+        parseIncompleteMarkdown={false}
+      />
     </Collapsible.Panel>
   );
 });

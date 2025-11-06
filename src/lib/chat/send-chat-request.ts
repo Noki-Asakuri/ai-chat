@@ -1,8 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import {} from "@clerk/react-router";
-
 import { useCallback } from "react";
 import { useNavigate, useParams } from "react-router";
 import { v4 as uuidv4 } from "uuid";
@@ -11,7 +9,7 @@ import { getConvexReactClient } from "../convex/client";
 import { uploadFile } from "../convex/uploadFiles";
 
 import { branchOffThreadMessage } from "./action-branch-off";
-import { convertV4MessageToV5 } from "./conversion";
+import { type MyUIMessage } from "./conversion";
 import { processChatStream } from "./process-stream";
 import { retryMessage } from "./retry-message";
 import { chatStore } from "./store";
@@ -62,10 +60,6 @@ export async function sendChatRequest(data: SendChatRequestParams) {
   }
 
   try {
-    let content = "";
-    let reasoning = "";
-    let metadata: ChatMessage["metadata"] | undefined;
-
     let streamId = data.resumeId;
     const url = new URL("/api/ai/chat", env.NEXT_PUBLIC_API_ENDPOINT);
 
@@ -83,6 +77,10 @@ export async function sendChatRequest(data: SendChatRequestParams) {
 
     url.searchParams.set("streamId", streamId);
 
+    let content = "";
+    let reasoning: string[] = [];
+    let metadata: ChatMessage["metadata"] | undefined;
+
     await processChatStream({
       fetch: fetch(url, { signal: abortController.signal }),
       handler: async (stream) => {
@@ -92,17 +90,14 @@ export async function sendChatRequest(data: SendChatRequestParams) {
             break;
 
           case "reasoning-start":
-            const isStarting =
-              stream.id.endsWith(":0") &&
-              stream.providerMetadata &&
-              "openai" in stream.providerMetadata;
-
-            // OpenAI seperate reasoning part with new 'reasoning-start' event
-            if (!isStarting) reasoning += "\n\n";
+            reasoning.push("");
             break;
 
           case "reasoning-delta":
-            reasoning += stream.delta;
+            reasoning[reasoning.length - 1] += stream.delta;
+            break;
+
+          case "reasoning-end":
             break;
 
           case "file": {
@@ -119,17 +114,18 @@ export async function sendChatRequest(data: SendChatRequestParams) {
             break;
         }
 
-        const v5Message = convertV4MessageToV5(
-          { id: data.assistantMessageId, role: "assistant", content, reasoning },
-          0,
-        );
+        const parts: MyUIMessage["parts"] = reasoning.map((text) => ({
+          type: "reasoning",
+          text,
+          details: [{ type: "text", text }],
+        }));
+
+        if (content.length) {
+          parts.push({ type: "text", text: content });
+        }
 
         content = fixMarkdownCodeBlocks(content);
-        state.setAssistantMessage({
-          id: data.assistantMessageId,
-          parts: v5Message.parts,
-          metadata,
-        });
+        state.setAssistantMessage({ id: data.assistantMessageId, parts, metadata });
       },
     });
   } catch (rawError) {
@@ -203,7 +199,7 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
     content: chatInput,
     role: "user" as const,
     status: "complete" as const,
-    parts: convertV4MessageToV5({ id: uuidv4(), role: "user", content: chatInput }, 0).parts,
+    parts: [{ type: "text", text: chatInput }],
     model: state.chatConfig.model,
     modelParams: {
       webSearchEnabled: state.chatConfig.webSearch,
