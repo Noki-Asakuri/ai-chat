@@ -122,9 +122,15 @@ const HighlightPane = React.memo(function HighlightPane(props: {
   wrapline: boolean;
 }) {
   const shikiOptions = React.useMemo(
-    (): HighlighterOptions => ({ delay: 50, transformers: transformersOnce, outputFormat: "html" }),
+    (): HighlighterOptions => ({
+      delay: 50,
+      tabindex: -1,
+      transformers: transformersOnce,
+      outputFormat: "html",
+    }),
     [],
   );
+
   const className = React.useMemo(() => {
     return cn(
       "custom-scroll codeblock *:!bg-transparent w-full overflow-auto px-2 py-2 font-mono text-sm transition-[height]",
@@ -142,6 +148,7 @@ const HighlightPane = React.memo(function HighlightPane(props: {
   if (!highlighted) {
     return (
       <pre
+        tabIndex={-1}
         className={className}
         style={{ scrollbarGutter: "stable both-edges", height: props.height }}
       >
@@ -152,6 +159,7 @@ const HighlightPane = React.memo(function HighlightPane(props: {
 
   return (
     <div
+      tabIndex={-1}
       className={className}
       style={{ scrollbarGutter: "stable both-edges", height: props.height }}
       dangerouslySetInnerHTML={{ __html: highlighted }}
@@ -191,6 +199,7 @@ export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
     if (expanded || totalLines <= LINE_CLAMP) return undefined;
     const lineHeightPx = 20;
     const verticalPadding = 8;
+
     return `${LINE_CLAMP * lineHeightPx + verticalPadding}px`;
   }, [expanded, totalLines]);
 
