@@ -83,7 +83,49 @@ export const openai: Record<ModelIdKey, ModelData> = {
     id: "openai/gpt-5-pro",
     provider: "openai",
     capabilities: {
-      generateImage: true,
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+    },
+  },
+
+  "openai/gpt-5.1": {
+    display: { name: "GPT 5.1" },
+    id: "openai/gpt-5.1",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+    },
+  },
+
+  "openai/gpt-5.1-chat": {
+    display: { name: "GPT 5.1 Chat" },
+    id: "openai/gpt-5.1-chat",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      vision: true,
+    },
+  },
+
+  "openai/gpt-5.1-codex": {
+    display: { name: "GPT 5.1 Codex" },
+    id: "openai/gpt-5.1-codex",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+    },
+  },
+
+  "openai/gpt-5.1-codex-mini": {
+    display: { name: "GPT 5.1 Codex Mini" },
+    id: "openai/gpt-5.1-codex-mini",
+    provider: "openai",
+    capabilities: {
       webSearch: true,
       reasoning: true,
       vision: true,
