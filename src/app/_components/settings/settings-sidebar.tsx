@@ -36,7 +36,7 @@ export function SettingsSidebar() {
 
         <div className="text-center">
           <h1 className="text-xl font-semibold capitalize">{data?.username}</h1>
-          <p className="text-muted-foreground">{data?.emailAddress}</p>
+          <p className="text-muted-foreground blur-xs hover:blur-none">{data?.emailAddress}</p>
 
           <Button variant="ghost" size="sm" className="mt-2 capitalize">
             Free Plan
