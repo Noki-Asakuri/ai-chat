@@ -1,12 +1,11 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { generateText } from "ai";
+import dedent from "dedent";
 
 import { type ServerConvexClient } from "../convex/server";
 import { registry } from "./model-registry";
-import dedent from "dedent";
 
 export async function updateTitle({
   messages,
@@ -22,25 +21,26 @@ export async function updateTitle({
 
   const { text } = await generateText({
     model: registry.languageModel("google/gemini-2.5-flash"),
-    providerOptions: {
-      google: { thinkingConfig: { thinkingBudget: 0 } } satisfies GoogleGenerativeAIProviderOptions,
-    },
+    providerOptions: {},
     messages: [
       {
         role: "system",
         content:
-          "You are a conversational assistant and you need to summarize the user's text into a title of 10 words or less.",
+          "You are a conversational assistant and you need to summarize the user's text into a title of 10 words or less. Do not add anything else.",
       },
       {
         role: "user",
         content: dedent`
-				User: ${messages[0].content}
+				User message content:
+				"""
+				${messages[0].content}
+				"""
 
 				Please summarize the above conversation into a title, following the following rules.
 				- The title must be 10 words or less.
 				- The title must be without punctuation, prefix or any special characters.
 				- The title must be short and descriptive.
-				- The title must be in the same language as the user's text.
+				- The title must be in the same language as the user's text. (This does not apply when user asked to translate to another language, in that case, the title should be in the target language.)
 				`.trim(),
       },
       {
