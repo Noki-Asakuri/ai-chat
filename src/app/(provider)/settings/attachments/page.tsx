@@ -7,7 +7,17 @@ import { useMutation } from "convex/react";
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
-import { FileTextIcon, SearchIcon, TrashIcon } from "lucide-react";
+import {
+  ArrowDownAZIcon,
+  ArrowDownNarrowWideIcon,
+  ArrowUpAZIcon,
+  ArrowUpNarrowWideIcon,
+  CalendarArrowDownIcon,
+  CalendarArrowUpIcon,
+  FileTextIcon,
+  SearchIcon,
+  TrashIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -40,6 +50,10 @@ import { format, toUUID, tryCatch } from "@/lib/utils";
 
 type SourceFilter = "all" | "user" | "assistant";
 type AttachmentTypeFilter = "all" | "image" | "pdf";
+type AttachmentSortField = "createdAt" | "name" | "size";
+type SortDirection = "asc" | "desc";
+
+const PAGE_SIZE = 20;
 
 function LoadingSkeleton() {
   return (
@@ -77,10 +91,11 @@ export default function AttachmentsPage() {
   const [searchText, setSearchText] = useState<string>("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [typeFilter, setTypeFilter] = useState<AttachmentTypeFilter>("all");
-
-  // Selection mode and state
+  const [sortField, setSortField] = useState<AttachmentSortField>("createdAt");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [selectionMode, setSelectionMode] = useState<boolean>(false);
   const [selected, setSelected] = useState<Set<Id<"attachments">>>(() => new Set());
+  const [page, setPage] = useState<number>(1);
   const [bulkPending, startBulkTransition] = useTransition();
   const deleteAttachments = useMutation(api.functions.attachments.deleteAttachments);
 
@@ -106,19 +121,29 @@ export default function AttachmentsPage() {
     setSelected(all);
   }
 
+  function handleSortChange(value: string) {
+    const [field, direction] = value.split("_");
+
+    if (
+      (field === "createdAt" || field === "name" || field === "size") &&
+      (direction === "asc" || direction === "desc")
+    ) {
+      setSortField(field);
+      setSortDirection(direction);
+      setPage(1);
+    }
+  }
+
   const filteredData = useMemo(() => {
     const q = searchText.trim().toLowerCase();
     const list = (data ?? []).filter((attachment) => {
-      // Search by name or thread title
       const name = attachment.name.toLowerCase();
       const threadTitle = (attachment.thread?.title ?? "").toLowerCase();
       const matchesSearch = !q || name.includes(q) || threadTitle.includes(q);
 
-      // Filter by source if requested; treat missing as "user" for backwards compatibility
       const src = attachment.source ?? "user";
       const matchesSource = sourceFilter === "all" || src === sourceFilter;
 
-      // Filter by attachment type (image/pdf)
       const matchesType = typeFilter === "all" || attachment.type === typeFilter;
 
       return matchesSearch && matchesSource && matchesType;
@@ -127,10 +152,51 @@ export default function AttachmentsPage() {
     return list;
   }, [data, searchText, sourceFilter, typeFilter]);
 
-  // Build gallery sources for image preview (only currently visible items)
+  const sortedData = useMemo(() => {
+    const list = [...filteredData];
+
+    list.sort((a, b) => {
+      if (sortField === "createdAt") {
+        if (a._creationTime < b._creationTime) return -1;
+        if (a._creationTime > b._creationTime) return 1;
+        return 0;
+      }
+
+      if (sortField === "name") {
+        const left = a.name.toLowerCase();
+        const right = b.name.toLowerCase();
+
+        if (left < right) return -1;
+        if (left > right) return 1;
+        return 0;
+      }
+
+      if (a.size < b.size) return -1;
+      if (a.size > b.size) return 1;
+      return 0;
+    });
+
+    if (sortDirection === "desc") {
+      list.reverse();
+    }
+
+    return list;
+  }, [filteredData, sortField, sortDirection]);
+
+  const totalItems = sortedData.length;
+  const totalPages = totalItems === 0 ? 1 : Math.ceil(totalItems / PAGE_SIZE);
+  const currentPage = page > totalPages ? totalPages : page;
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+
+    return sortedData.slice(start, end);
+  }, [sortedData, currentPage]);
+
   const imageAttachments = useMemo(
-    () => filteredData.filter((a) => a.type === "image"),
-    [filteredData],
+    () => sortedData.filter((a) => a.type === "image"),
+    [sortedData],
   );
 
   const galleryImages = useMemo(
@@ -150,7 +216,6 @@ export default function AttachmentsPage() {
     return m;
   }, [imageAttachments]);
 
-  // Totals across all attachments (not filtered)
   const totals = useMemo(() => {
     const list = data ?? [];
     const count = list.length;
@@ -158,7 +223,6 @@ export default function AttachmentsPage() {
     return { count, bytes };
   }, [data]);
 
-  // Total size of selected attachments
   const selectedBytes = useMemo(() => {
     if (selected.size === 0) return 0;
     const ids = new Set(selected);
@@ -203,9 +267,9 @@ export default function AttachmentsPage() {
         </div>
       </div>
 
-      <div className="sticky top-0 z-10 bg-background/80 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full max-w-md sm:max-w-[unset]">
+      <div className="sticky top-0 z-10 bg-background/80 py-2 backdrop-blur supports-backdrop-filter:bg-background/60">
+        <div className="flex flex-col gap-2">
+          <div className="relative w-full">
             <SearchIcon
               size={16}
               className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
@@ -214,17 +278,27 @@ export default function AttachmentsPage() {
             <Input
               placeholder="Search attachments..."
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              onChange={(e) => {
+                setSearchText(e.target.value);
+                setPage(1);
+              }}
               className="h-9 w-full pl-9"
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as SourceFilter)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={sourceFilter}
+              onValueChange={(v) => {
+                setSourceFilter(v as SourceFilter);
+                setPage(1);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue aria-label="Filter by source" placeholder="Source: All" />
               </SelectTrigger>
-              <SelectContent>
+
+              <SelectContent className="bg-card">
                 <SelectItem value="all">Source: All</SelectItem>
                 <SelectItem value="user">Source: User uploads</SelectItem>
                 <SelectItem value="assistant">Source: Assistant generated</SelectItem>
@@ -233,26 +307,75 @@ export default function AttachmentsPage() {
 
             <Select
               value={typeFilter}
-              onValueChange={(v) => setTypeFilter(v as AttachmentTypeFilter)}
+              onValueChange={(v) => {
+                setTypeFilter(v as AttachmentTypeFilter);
+                setPage(1);
+              }}
             >
               <SelectTrigger>
                 <SelectValue aria-label="Filter by type" placeholder="Type: All" />
               </SelectTrigger>
-              <SelectContent>
+
+              <SelectContent className="bg-card">
                 <SelectItem value="all">Type: All</SelectItem>
                 <SelectItem value="image">Type: Images</SelectItem>
                 <SelectItem value="pdf">Type: PDFs</SelectItem>
               </SelectContent>
             </Select>
 
+            <Select value={`${sortField}_${sortDirection}`} onValueChange={handleSortChange}>
+              <SelectTrigger>
+                <SelectValue aria-label="Sort attachments" placeholder="Sort" />
+              </SelectTrigger>
+
+              <SelectContent className="bg-card">
+                <SelectItem value="createdAt_desc">
+                  <div className="flex items-center gap-2">
+                    <CalendarArrowDownIcon className="size-4" />
+                    <span>Date created newest first</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="createdAt_asc">
+                  <div className="flex items-center gap-2">
+                    <CalendarArrowUpIcon className="size-4" />
+                    <span>Date created oldest first</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="name_asc">
+                  <div className="flex items-center gap-2">
+                    <ArrowDownAZIcon className="size-4" />
+                    <span>Name A to Z</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="name_desc">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpAZIcon className="size-4" />
+                    <span>Name Z to A</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="size_desc">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpNarrowWideIcon className="size-4" />
+                    <span>Size largest first</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="size_asc">
+                  <div className="flex items-center gap-2">
+                    <ArrowDownNarrowWideIcon className="size-4" />
+                    <span>Size smallest first</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
             {!selectionMode && (
-              <Button variant="outline" onClick={toggleSelectionMode}>
+              <Button variant="outline" className="ml-auto" onClick={toggleSelectionMode}>
                 Select
               </Button>
             )}
 
             {selectionMode && (
-              <div className="flex items-center gap-2">
+              <div className="ml-auto flex items-center gap-2">
                 <div className="flex w-max flex-col leading-tight">
                   <span className="text-sm text-muted-foreground">{selected.size} selected</span>
                   <span className="text-center text-xs text-muted-foreground">
@@ -262,8 +385,8 @@ export default function AttachmentsPage() {
 
                 <Button
                   variant="secondary"
-                  onClick={() => selectAllVisible(filteredData)}
-                  disabled={filteredData.length === 0}
+                  onClick={() => selectAllVisible(paginatedData)}
+                  disabled={paginatedData.length === 0}
                 >
                   Select all
                 </Button>
@@ -286,13 +409,13 @@ export default function AttachmentsPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-        {filteredData.length === 0 && (
+        {totalItems === 0 && (
           <div className="col-span-full flex flex-col items-center justify-center gap-2 rounded-md border p-8 text-center">
             <p className="text-muted-foreground">No attachments found</p>
           </div>
         )}
 
-        {filteredData.map((attachment) => {
+        {paginatedData.map((attachment) => {
           const isSelected = selected.has(attachment._id);
           const imageUrl = `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.path}`;
           const fileUrl = `https://files.chat.asakuri.me/${attachment.path}`;
@@ -300,7 +423,7 @@ export default function AttachmentsPage() {
           return (
             <div
               key={attachment._id}
-              className="group flex flex-col overflow-hidden rounded-md border transition-colors hover:bg-card/80"
+              className="group /80 flex flex-col overflow-hidden rounded-md border transition-colors"
               data-selected={isSelected}
             >
               <div className="relative size-full">
@@ -317,6 +440,7 @@ export default function AttachmentsPage() {
                         alt={attachment.name}
                         className="aspect-square size-full object-cover"
                         src={imageUrl}
+                        loading="lazy"
                       />
                     ) : (
                       <div className="flex aspect-square size-full items-center justify-center p-2">
@@ -340,6 +464,7 @@ export default function AttachmentsPage() {
                       alt={attachment.name}
                       className="aspect-square size-full object-cover"
                       src={imageUrl}
+                      loading="lazy"
                     />
                   </ImagePreviewDialog>
                 ) : (
@@ -420,6 +545,33 @@ export default function AttachmentsPage() {
           );
         })}
       </div>
+
+      {totalItems > 0 && (
+        <div className="flex items-center justify-between gap-2 pt-2 text-sm text-muted-foreground">
+          <span>
+            Page {currentPage} of {totalPages} • {totalItems} attachments
+          </span>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((prev) => (prev >= totalPages ? totalPages : prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
