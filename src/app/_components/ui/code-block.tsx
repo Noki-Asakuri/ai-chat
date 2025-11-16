@@ -10,6 +10,8 @@ import { ButtonWithTip } from "./button";
 import { Icons } from "./icons";
 
 import { useChatStore } from "@/lib/chat/store";
+import { useThrottledDebouncedValue } from "@/lib/hooks/use-throttled-debounced-value";
+import { getHighlightFromCache, setHighlightInCache } from "@/lib/code-highlight-cache";
 import { cn } from "@/lib/utils";
 
 function trimOneEdgeNewline(input: string): string {
@@ -83,6 +85,42 @@ function lineStats(s: string): { total: number; first?: string } {
   return { total, first: s.slice(0, firstBreak) };
 }
 
+function getRenderDelayFromLines(lineCount: number): {
+  minHighlightInterval: number;
+  debounceMs: number;
+} {
+  const smallThreshold = 50;
+  const mediumThreshold = 150;
+  const largeThreshold = 300;
+
+  if (lineCount < smallThreshold) {
+    // Small blocks: highlight frequently
+    return {
+      minHighlightInterval: 100,
+      debounceMs: 500,
+    };
+  }
+  if (lineCount < mediumThreshold) {
+    // Medium blocks: reduce highlight frequency
+    return {
+      minHighlightInterval: 500,
+      debounceMs: 800,
+    };
+  }
+  if (lineCount < largeThreshold) {
+    // Large blocks: highlight rarely, rely on debounce
+    return {
+      minHighlightInterval: 1500,
+      debounceMs: 1200,
+    };
+  }
+  // Very large blocks: skip immediate highlights entirely during streaming
+  return {
+    minHighlightInterval: Number.POSITIVE_INFINITY,
+    debounceMs: 1500,
+  };
+}
+
 type CodeBlockHeaderProps = {
   langKey: string;
   totalLines: number;
@@ -138,6 +176,11 @@ const HighlightPane = React.memo(function HighlightPane(props: {
     );
   }, [props.wrapline]);
 
+  const cacheKey = React.useMemo(
+    () => `${props.langKey}:${props.code}`,
+    [props.langKey, props.code],
+  );
+
   const highlighted = useShikiHighlighter(
     props.code,
     props.langKey,
@@ -145,7 +188,15 @@ const HighlightPane = React.memo(function HighlightPane(props: {
     shikiOptions,
   ) as string | null;
 
-  if (!highlighted) {
+  React.useEffect(() => {
+    if (highlighted && cacheKey) {
+      setHighlightInCache(cacheKey, highlighted);
+    }
+  }, [cacheKey, highlighted]);
+
+  const cached = getHighlightFromCache(cacheKey);
+
+  if (!highlighted && !cached) {
     return (
       <pre
         tabIndex={-1}
@@ -157,12 +208,14 @@ const HighlightPane = React.memo(function HighlightPane(props: {
     );
   }
 
+  const html = highlighted ?? cached!;
+
   return (
     <div
       tabIndex={-1}
       className={className}
       style={{ scrollbarGutter: "stable both-edges", height: props.height }}
-      dangerouslySetInnerHTML={{ __html: highlighted }}
+      dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 });
@@ -180,18 +233,18 @@ export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
 
   const normalizedFull = React.useMemo(() => normalizeCode(code), [code]);
 
-  // Optional: makes highlighting/UI smoother while code streams in rapidly.
-  const deferredFull = React.useDeferredValue(normalizedFull);
+  const { total: totalLines, first: firstLine } = React.useMemo(
+    () => lineStats(normalizedFull),
+    [normalizedFull],
+  );
+
+  const { debounceMs } = React.useMemo(() => getRenderDelayFromLines(totalLines), [totalLines]);
+  const throttledCode = useThrottledDebouncedValue(normalizedFull, debounceMs);
 
   const langKey = React.useMemo(() => {
     const key = language === "assembly" ? "asm" : (language ?? "plaintext");
     return key.toLowerCase();
   }, [language]);
-
-  const { total: totalLines, first: firstLine } = React.useMemo(
-    () => lineStats(deferredFull),
-    [deferredFull],
-  );
 
   const moreCount = totalLines > LINE_CLAMP ? totalLines - LINE_CLAMP : 0;
 
@@ -238,7 +291,7 @@ export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
       </div>
 
       <HighlightPane
-        code={deferredFull}
+        code={throttledCode}
         langKey={langKey}
         height={containerMaxHeight}
         wrapline={wrapline}
