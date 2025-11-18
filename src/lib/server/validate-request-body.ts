@@ -100,6 +100,11 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
 
     providerOptions.google.thinkingConfig.thinkingBudget =
       reasoningToBudget[effort] ?? reasoningToBudget.medium;
+
+    if (modelInfo.id === "google/gemini-3-pro") {
+      // Right now it doesn't support thinking budget.
+      delete providerOptions.google.thinkingConfig.thinkingBudget;
+    }
   }
 
   switch (modelInfo.provider) {
