@@ -51,6 +51,8 @@ const google = customProvider({
     "gemini-2.5-flash-image": baseGoogle.languageModel("gemini-2.5-flash-image-preview"),
 
     "gemini-2.5-pro": baseGoogle.languageModel("gemini-2.5-pro"),
+
+		"gemini-3-pro": baseGoogle.languageModel("gemini-3-pro-preview"),
   },
 });
 
