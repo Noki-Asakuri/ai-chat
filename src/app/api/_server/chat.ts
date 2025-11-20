@@ -477,6 +477,8 @@ app.post("/api/ai/chat", async (ctx) => {
 
         if (updates.content?.length === 0) {
           updates.content = `Upstream returned empty content. Stop reason: ${metadata.finishReason}`;
+          updates.parts?.push({ type: "text", text: updates.content });
+
           logger.info("[Chat]: Upstream returned empty content!", {
             userId: userId,
             threadId,

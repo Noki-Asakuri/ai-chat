@@ -68,14 +68,26 @@ export const google: Record<ModelIdKey, ModelData> = {
       reasoning: true,
     },
   },
-	"google/gemini-3-pro": {
+  "google/gemini-3-pro": {
     display: { name: "Gemini 3 Pro" },
     id: "google/gemini-3-pro",
+    altModelIds: ["google/gemini-3-pro-preview"],
     provider: "google",
     capabilities: {
       vision: true,
       webSearch: true,
       reasoning: true,
+    },
+  },
+  "google/gemini-3-pro-image": {
+    display: { name: "Gemini 3 Pro (Image)", unique: "Gemini 3 Pro (Image)" },
+    id: "google/gemini-3-pro-image",
+    altModelIds: ["google/gemini-3-pro-image-preview"],
+    provider: "google",
+    capabilities: {
+      vision: true,
+      webSearch: true,
+      generateImage: true,
     },
   },
 };
