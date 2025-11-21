@@ -112,6 +112,11 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
       if (modelInfo.capabilities.generateImage) {
         delete providerOptions.google.thinkingConfig;
         providerOptions.google.responseModalities = ["TEXT", "IMAGE"];
+
+        // Only gemini-3-pro-image supports setting image size.
+        if (modelInfo.id === "google/gemini-3-pro-image") {
+          providerOptions.google.imageConfig = { imageSize: "2K" };
+        }
       }
 
       if (config?.webSearch && modelInfo.capabilities.webSearch) {
