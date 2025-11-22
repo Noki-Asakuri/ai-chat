@@ -36,7 +36,11 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
 
   return (
     <div className="flex items-center gap-0.5 rounded-md border bg-background/80 p-1 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
-      <CopyButton className="size-8" side="bottom" content={message.content} />
+      <CopyButton
+        className="size-8"
+        side="bottom"
+        content={message.status === "error" ? message.error || "" : message.content}
+      />
 
       {message.role === "assistant" && (
         <ButtonWithTip
