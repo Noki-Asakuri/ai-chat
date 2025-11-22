@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <div className="grid h-svh w-screen items-center justify-center px-4">
-      <SignIn waitlistUrl="/auth/wait-list" withSignUp appearance={{ baseTheme: dark }} />
+      <SignIn withSignUp appearance={{ baseTheme: dark }} />
     </div>
   );
 }
