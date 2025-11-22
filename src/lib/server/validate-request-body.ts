@@ -41,7 +41,7 @@ const inputSchema = z.object({
   config: z.object({
     model: z.string(),
     webSearch: z.boolean().default(false),
-    effort: z.enum(["minimal", "low", "medium", "high"]).default("medium"),
+    effort: z.enum(["none", "minimal", "low", "medium", "high"]).default("medium"),
     profile: z
       .object({ id: profileIdSchema, name: z.string(), systemPrompt: z.string() })
       .nullish(),
@@ -59,6 +59,7 @@ const safetySettings = [
 ];
 
 const reasoningToBudget = {
+  none: 0,
   minimal: 128,
   low: 1_024,
   medium: 10_000,
@@ -101,9 +102,21 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
     providerOptions.google.thinkingConfig.thinkingBudget =
       reasoningToBudget[effort] ?? reasoningToBudget.medium;
 
+    if (modelInfo.id === "google/gemini-2.5-pro") {
+      // Gemini 2.5 Pro doesn't disable thinking, so we fallback to dynamic mode.
+      providerOptions.google.thinkingConfig.thinkingBudget =
+        providerOptions.google.thinkingConfig.thinkingBudget === 0
+          ? -1
+          : providerOptions.google.thinkingConfig.thinkingBudget;
+    }
+
     if (modelInfo.id === "google/gemini-3-pro") {
       // Right now it doesn't support thinking budget.
-      delete providerOptions.google.thinkingConfig.thinkingBudget;
+      providerOptions.google.thinkingConfig = {
+        includeThoughts: true,
+        // Currently gemini-3-pro only supports high and low thinking level.
+        thinkingLevel: config.effort === "high" ? "high" : "low",
+      };
     }
   }
 

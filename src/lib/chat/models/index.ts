@@ -1,3 +1,4 @@
+import type { ReasoningEffort } from "@/lib/types";
 import { deepseek } from "./services/deepseek";
 import { google } from "./services/google";
 import { openai } from "./services/openai";
@@ -32,6 +33,7 @@ type Capability = {
   generateImage?: boolean;
   vision?: boolean;
   reasoning?: boolean | "always";
+  customReasoningLevel?: ReasoningEffort[];
 };
 export type Provider = "google" | "openai" | "deepseek";
 export type ModelData = {

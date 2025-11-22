@@ -163,7 +163,7 @@ export const updateProfile = mutation({
     profileId: v.id("profiles"),
     name: v.optional(v.string()),
     systemPrompt: v.optional(v.string()),
-    imageKey: v.optional(v.union(v.string(), v.null())),
+    imageKey: v.optional(v.nullable(v.string())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {

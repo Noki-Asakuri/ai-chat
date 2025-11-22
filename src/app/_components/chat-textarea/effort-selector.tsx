@@ -1,4 +1,5 @@
 import { BrainIcon, SignalHighIcon, SignalLowIcon, SignalMediumIcon } from "lucide-react";
+import { useEffect } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { Button, buttonVariants } from "../ui/button";
@@ -27,6 +28,14 @@ export function EffortSelector(props: EffortSelectorProps) {
   return <EffortSelectorBase {...props} />;
 }
 
+const EFFORT_OPTIONS: Record<ReasoningEffort, { label: string; icon: typeof SignalLowIcon }> = {
+  none: { label: "None", icon: SignalLowIcon },
+  minimal: { label: "Minimal", icon: SignalLowIcon },
+  low: { label: "Low", icon: SignalLowIcon },
+  medium: { label: "Medium", icon: SignalMediumIcon },
+  high: { label: "High", icon: SignalHighIcon },
+};
+
 export function EffortSelectorBase(props: EffortSelectorProps) {
   const modelData = getModelData(props.modelId);
 
@@ -42,12 +51,27 @@ export function EffortSelectorBase(props: EffortSelectorProps) {
 
   if (shouldHideSelector) return null;
 
+  // If they don't have customReasoningLevel, we fallback to the only 3 levels.
+  const validOptions = Object.entries(EFFORT_OPTIONS).filter(([key]) =>
+    modelData.capabilities.customReasoningLevel
+      ? modelData.capabilities.customReasoningLevel?.includes(key as ReasoningEffort)
+      : ["high", "medium", "low"].includes(key),
+  );
+
+  useEffect(() => {
+    const validKeys = validOptions.map(([key]) => key);
+
+    if (!validKeys.includes(props.value)) {
+      handleChange(validKeys[0] as ReasoningEffort);
+    }
+  }, [modelData]);
+
   return (
     <Popover>
       <PopoverTrigger
         className={cn(
           buttonVariants({ variant: "ghost" }),
-          "hover:!bg-primary/15 flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 capitalize",
+          "flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 capitalize hover:!bg-primary/15",
           props.className,
         )}
       >
@@ -59,32 +83,17 @@ export function EffortSelectorBase(props: EffortSelectorProps) {
         <PopoverArrow className="fill-card" />
 
         <div className="flex flex-col gap-1">
-          <Button
-            variant="ghost"
-            className="w-full cursor-pointer justify-start p-0"
-            onClick={() => handleChange("low")}
-          >
-            <SignalLowIcon className="size-5" />
-            Low
-          </Button>
-
-          <Button
-            variant="ghost"
-            className="w-full cursor-pointer justify-start p-0"
-            onClick={() => handleChange("medium")}
-          >
-            <SignalMediumIcon className="size-5" />
-            Medium
-          </Button>
-
-          <Button
-            variant="ghost"
-            className="w-full cursor-pointer justify-start p-0"
-            onClick={() => handleChange("high")}
-          >
-            <SignalHighIcon className="size-5" />
-            High
-          </Button>
+          {validOptions.map(([key, { label, icon: Icon }]) => (
+            <Button
+              key={`effort-selector-${key}`}
+              variant="ghost"
+              className="w-full cursor-pointer justify-start p-0"
+              onClick={() => handleChange(key as ReasoningEffort)}
+            >
+              <Icon className="size-5" />
+              {label}
+            </Button>
+          ))}
         </div>
       </PopoverContent>
     </Popover>

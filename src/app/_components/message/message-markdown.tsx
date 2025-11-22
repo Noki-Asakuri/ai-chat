@@ -153,7 +153,7 @@ export function MemoizedMarkdownBlock({ content, isStreaming, ...props }: Markdo
   return (
     <Streamdown
       isAnimating={isStreaming}
-      parseIncompleteMarkdown
+      parseIncompleteMarkdown={false}
       rehypePlugins={[
         [
           rehypeHarden,

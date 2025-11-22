@@ -12,7 +12,7 @@ import { Redis } from "ioredis";
 import { execSync } from "node:child_process";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 
-import { smoothStream, stepCountIs, streamText, type AISDKError } from "ai";
+import { smoothStream, stepCountIs, streamText, type AISDKError, APICallError } from "ai";
 
 import { handleFileCaching } from "./handle-file-caching";
 
@@ -282,21 +282,35 @@ app.post("/api/ai/chat", async (ctx) => {
       experimental_download: (options) => Promise.all(options.map(handleFileCaching)),
 
       async onError({ error }) {
-        const err = error as AISDKError;
+        const err = error as Error;
+        let errorMessage = `An error have occurred. Please try again. \n\nError: ${err.message}`;
+
+        if (err.name === "AbortError" && ctx.req.raw.signal.aborted) return;
+
+        if (APICallError.isInstance(err)) {
+          const responseBody = JSON.parse(err.responseBody || "{}");
+          errorMessage = dedent`
+					An error have occurred. This is likely a server-side error, Please report to the developer.
+
+Error:
+\`\`\`
+${JSON.stringify(responseBody, null, 2)}
+\`\`\`
+					`;
+        }
+
+        console.log(errorMessage);
 
         logger.error("[Chat Error]: " + err.message, {
           userId: userId,
           threadId,
           assistantMessageId,
           model: model.uniqueId,
-          errorName: err.name,
         });
-
-        if (err.name === "AbortError" && ctx.req.raw.signal.aborted) return;
 
         await serverConvexClient.mutation(api.functions.usages.refundRequest, { amount: 1 });
         await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
-          error: err.message,
+          error: errorMessage,
           model: model.uniqueId,
           modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
           messageId: assistantMessageId,

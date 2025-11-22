@@ -97,6 +97,7 @@ export const openai: Record<ModelIdKey, ModelData> = {
       webSearch: true,
       reasoning: true,
       vision: true,
+      customReasoningLevel: ["none", "low", "medium", "high"],
     },
   },
 

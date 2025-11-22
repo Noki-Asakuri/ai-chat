@@ -79,6 +79,7 @@ function lineStats(s: string): { total: number; first?: string } {
   const firstBreak = s.indexOf("\n");
   if (firstBreak === -1) return { total: 1, first: s };
   let total = 1;
+
   for (let i = firstBreak + 1; i < s.length; i++) {
     if (s.charCodeAt(i) === 10) total++;
   }
@@ -257,7 +258,7 @@ export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
   }, [expanded, totalLines]);
 
   return (
-    <div className="codeblock relative overflow-hidden rounded-md border bg-background/80">
+    <div className="codeblock relative overflow-hidden rounded-md border bg-background/80 text-foreground">
       <div className="pointer-events-none relative flex items-center justify-between border-b px-2 py-1">
         <CodeBlockHeader langKey={langKey} totalLines={totalLines} firstLine={firstLine} />
 

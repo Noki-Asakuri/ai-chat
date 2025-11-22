@@ -41,7 +41,7 @@ function getChatConfigFromLS() {
   const schema = z.object({
     model: z.string().catch(DEFAULT_CONFIG.model),
     webSearch: z.boolean().catch(DEFAULT_CONFIG.webSearch),
-    effort: z.enum(["minimal", "low", "medium", "high"]).catch(DEFAULT_CONFIG.effort),
+    effort: z.enum(["minimal", "none", "low", "medium", "high"]).catch(DEFAULT_CONFIG.effort),
     profile: z
       .object({ id: profileIdSchema, name: z.string(), systemPrompt: z.string() })
       .nullish()

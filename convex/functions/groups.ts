@@ -202,7 +202,7 @@ export const removeGroupId = mutation({
 export const moveThreadToGroup = mutation({
   args: {
     threadId: v.id("threads"),
-    toGroupId: v.union(v.id("groups"), v.null()),
+    toGroupId: v.nullable(v.id("groups")),
     toIndex: v.number(),
   },
   handler: async (ctx, args) => {

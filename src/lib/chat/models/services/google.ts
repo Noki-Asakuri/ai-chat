@@ -77,6 +77,7 @@ export const google: Record<ModelIdKey, ModelData> = {
       vision: true,
       webSearch: true,
       reasoning: true,
+      customReasoningLevel: ["low", "high"],
     },
   },
   "google/gemini-3-pro-image": {

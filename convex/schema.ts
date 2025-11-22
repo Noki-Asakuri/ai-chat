@@ -5,6 +5,7 @@ const providerMetadata = v.optional(v.record(v.string(), v.record(v.string(), v.
 const state = v.optional(v.union(v.literal("done"), v.literal("streaming")));
 
 export const effort = v.union(
+  v.literal("none"),
   v.literal("minimal"),
   v.literal("low"),
   v.literal("medium"),
@@ -158,7 +159,7 @@ export default defineSchema({
     pinned: v.boolean(),
     branchedFrom: v.optional(v.id("threads")),
 
-    groupId: v.union(v.id("groups"), v.null()),
+    groupId: v.nullable(v.id("groups")),
     order: v.number(),
 
     status: status,
@@ -199,7 +200,7 @@ export default defineSchema({
     status: status,
 
     role: v.union(v.literal("assistant"), v.literal("user")),
-    resumableStreamId: v.optional(v.union(v.string(), v.null())),
+    resumableStreamId: v.optional(v.nullable(v.string())),
 
     metadata: v.optional(AISDKMetadata),
     modelParams: v.optional(AISDKModelParams),
@@ -229,9 +230,9 @@ export default defineSchema({
   users: defineTable({
     userId: v.string(),
 
-    username: v.union(v.string(), v.null()),
-    emailAddress: v.union(v.string(), v.null()),
-    imageUrl: v.union(v.string(), v.null()),
+    username: v.nullable(v.string()),
+    emailAddress: v.nullable(v.string()),
+    imageUrl: v.nullable(v.string()),
 
     isBanned: v.optional(v.boolean()),
 
@@ -243,7 +244,7 @@ export default defineSchema({
       occupation: v.optional(v.string()),
       traits: v.optional(v.array(v.string())),
       systemInstruction: v.optional(v.string()),
-      backgroundId: v.optional(v.union(v.string(), v.null())),
+      backgroundId: v.optional(v.nullable(v.string())),
       disableBlur: v.optional(v.boolean()),
       hiddenModels: v.optional(v.array(v.string())),
       showFullCode: v.optional(v.boolean()),

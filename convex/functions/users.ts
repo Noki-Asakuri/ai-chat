@@ -184,7 +184,7 @@ export const updateUserCustomization = mutation({
       occupation: v.optional(v.string()),
       traits: v.optional(v.array(v.string())),
       systemInstruction: v.optional(v.string()),
-      backgroundId: v.optional(v.union(v.string(), v.null())),
+      backgroundId: v.optional(v.nullable(v.string())),
       disableBlur: v.optional(v.boolean()),
       hiddenModels: v.optional(v.array(v.string())),
       showFullCode: v.optional(v.boolean()),

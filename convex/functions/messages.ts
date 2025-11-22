@@ -149,7 +149,7 @@ export const updateMessageById = mutation({
       model: v.optional(v.string()),
       content: v.optional(v.string()),
       reasoning: v.optional(v.string()),
-      resumableStreamId: v.optional(v.union(v.string(), v.null())),
+      resumableStreamId: v.optional(v.nullable(v.string())),
 
       parts: v.optional(AISDKParts),
       metadata: v.optional(AISDKMetadata),

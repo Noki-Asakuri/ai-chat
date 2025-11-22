@@ -24,5 +24,8 @@ export const POST = async (req: Request) => {
     return Response.json(response.body, { status: response.status, headers: response.headers });
   }
 
-  return new Response(null, { status: response.status, headers: response.headers });
+  return new Response(null, {
+    status: response.status,
+    headers: { "X-Request-Id": response.headers.get("X-Request-Id")! },
+  });
 };
