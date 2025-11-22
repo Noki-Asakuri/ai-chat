@@ -2,7 +2,8 @@ import { deepseek } from "./services/deepseek";
 import { google } from "./services/google";
 import { openai } from "./services/openai";
 
-import type { ReasoningEffort } from "@/lib/types";
+// This is a hack to get around to deploy due to convex doesn't have path aliasing.
+import type { Doc } from "../../../../convex/_generated/dataModel";
 
 export function getModelData(modelId: AllModelIds | (string & {})): ModelData {
   const data = ModelsData[modelId as AllModelIds];
@@ -28,6 +29,8 @@ export function prettifyProviderName(provider: Provider | (string & {})) {
       return "Unknown";
   }
 }
+
+type ReasoningEffort = NonNullable<Doc<"messages">["modelParams"]>["effort"];
 
 type Capability = {
   webSearch?: boolean;
