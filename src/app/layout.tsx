@@ -1,23 +1,21 @@
 import "@/styles/globals.css";
 
+import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { type Metadata, type Viewport } from "next";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
-import { cookies } from "next/headers";
 
 import { Providers } from "@/components/provider/main-providers";
 import { Toaster } from "@/components/ui/sonner";
-
-import { WebVitals } from "@/lib/axiom/client";
 
 export const metadata: Metadata = {
   title: "AI Chat",
   description:
     "An advanced AI chat application built with the T3 stack, featuring a modern UI and a rich feature set.",
   icons: [{ rel: "icon", url: "/favicon.svg", type: "image/svg+xml" }],
-  manifest: "/manifest.json",
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
@@ -44,46 +42,22 @@ const codeFont = JetBrains_Mono({
   variable: "--font-codeblock",
 });
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const cookieStore = await cookies();
-  const backgroundImage = cookieStore.get("background-image")?.value;
-
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${mainFont.variable} ${codeFont.variable} antialiased`}>
-      <head>
-        {process.env.ENABLE_REACT_SCAN && (
-          <script defer src="https://unpkg.com/react-scan/dist/auto.global.js" />
-        )}
+    <ClerkProvider appearance={{ cssLayerName: "clerk" }}>
+      <html lang="en" className={`${mainFont.variable} ${codeFont.variable} antialiased`}>
+        <body className="dark isolate font-sans">
+          <Providers>{children}</Providers>
+          <Toaster />
 
-        <link
-          as="image"
-          rel="preload"
-          href={backgroundImage}
-          crossOrigin="anonymous"
-          type="image/webp"
-        />
-
-        <script
-          defer
-          data-domain="chat.asakuri.me"
-          data-api="/api/plausible/event"
-          src="/api/plausible-script"
-        ></script>
-      </head>
-
-      <WebVitals />
-
-      <body className="dark isolate font-sans">
-        <Providers>{children}</Providers>
-        <Toaster />
-
-        {process.env.NEXT_PUBLIC_ENV === "production" && (
-          <>
-            <Analytics basePath="/api/vercel" />
-            <SpeedInsights basePath="/api/vercel" />
-          </>
-        )}
-      </body>
-    </html>
+          {process.env.NEXT_PUBLIC_ENV === "production" && (
+            <>
+              <Analytics basePath="/api/vercel" />
+              <SpeedInsights basePath="/api/vercel" />
+            </>
+          )}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

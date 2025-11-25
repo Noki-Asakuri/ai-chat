@@ -13,6 +13,8 @@ export function ChatAttachmentButton() {
   const model = useChatStore((state) => state.chatConfig.model);
   const hasImageVision = getModelData(model)?.capabilities.vision;
 
+  if (!hasImageVision) return null;
+
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files![0];
     if (!file) return;
@@ -27,17 +29,18 @@ export function ChatAttachmentButton() {
       ]);
   }
 
-  if (!hasImageVision) return null;
-
   return (
     <>
       <ButtonWithTip
-        asChild
-        title="Upload Image"
         variant="ghost"
-        className="border- size-9 border px-2 py-1.5 text-xs"
+        title="Upload Image"
+        className="size-9 border p-0! px-2 py-1.5 text-xs"
+        type="button"
       >
-        <label htmlFor="image-upload" className="cursor-pointer">
+        <label
+          htmlFor="image-upload"
+          className="flex size-full cursor-pointer items-center justify-center"
+        >
           <PaperclipIcon />
           <span className="sr-only">Upload Image</span>
         </label>

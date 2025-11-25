@@ -1,115 +1,85 @@
-"use client";
-
-import { api } from "@/convex/_generated/api";
-import { convexQuery } from "@convex-dev/react-query";
-import { useQuery } from "@tanstack/react-query";
-
-import { Meter } from "@base-ui-components/react/meter";
+import { currentUser } from "@clerk/nextjs/server";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { format } from "@/lib/utils";
+import { UserUsagesWrapper } from "./user-usages-wrapper";
 
 export function SettingsSidebar() {
-  const { data } = useQuery(convexQuery(api.functions.users.currentUser, {}));
-  const { data: usage, isPending: usagePending } = useQuery(
-    convexQuery(api.functions.usages.getUserUsages, {}),
+  return (
+    <aside className="space-y-4">
+      <UserInfo />
+      <UserUsagesWrapper />
+      <KeyboardShortcuts />
+    </aside>
   );
+}
 
-  const fallback = data?.username
+async function UserInfo() {
+  const user = await currentUser();
+  if (!user) return null;
+
+  const fallback = user.username
     ?.split(" ")
     .map((name) => name[0])
     .join("");
 
+  const mainEmailAddress = user.emailAddresses.find(
+    (email) => email.id === user.primaryEmailAddressId,
+  );
+
   return (
-    <aside className="space-y-4">
-      <div className="space-y-2">
-        <Avatar className="mx-auto size-40">
-          <AvatarImage
-            src={data?.imageUrl as string | undefined}
-            alt={`${data?.username} avatar`}
-          />
-          <AvatarFallback>{fallback}</AvatarFallback>
-        </Avatar>
+    <div className="space-y-2">
+      <Avatar className="mx-auto size-40">
+        <AvatarImage src={user?.imageUrl as string | undefined} alt={`${user?.username} avatar`} />
+        <AvatarFallback>{fallback}</AvatarFallback>
+      </Avatar>
 
-        <div className="text-center">
-          <h1 className="text-xl font-semibold capitalize">{data?.username}</h1>
-          <p className="text-muted-foreground blur-xs hover:blur-none">{data?.emailAddress}</p>
+      <div className="text-center">
+        <h1 className="text-xl font-semibold capitalize">{user.username}</h1>
+        <p className="text-muted-foreground blur-xs hover:blur-none">
+          {mainEmailAddress?.emailAddress}
+        </p>
 
-          <Button variant="ghost" size="sm" className="mt-2 capitalize">
-            Free Plan
-          </Button>
-        </div>
+        <Button variant="ghost" size="sm" className="mt-2 capitalize">
+          Free Plan
+        </Button>
       </div>
+    </div>
+  );
+}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between gap-2 text-xl">
-            <span>{usage?.resetType === "daily" ? "Daily" : "Monthly"} Usage</span>
+function KeyboardShortcuts() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-xl">Keyboard Shortcuts</CardTitle>
+      </CardHeader>
 
-            {usage && (
-              <span className="text-sm text-muted-foreground">
-                {format.number(usage.used)} / {format.number(usage.base)}
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
+      <CardContent>
+        <ul className="space-y-2">
+          <li className="flex justify-between">
+            <span>Search Threads</span>
+            <kbd className="rounded-md border bg-muted px-2 py-1 text-xs">Ctrl K</kbd>
+          </li>
 
-        <CardContent>
-          {usagePending || !usage ? (
-            <p className="text-sm text-muted-foreground">Loading usage…</p>
-          ) : (
-            <Meter.Root
-              className="box-border flex w-full items-center gap-2"
-              value={(usage.used * 100) / usage.base}
-            >
-              <Meter.Track className="block h-4 w-full overflow-hidden rounded-md border">
-                <Meter.Indicator className="block bg-accent transition-all duration-500" />
-              </Meter.Track>
+          <li className="flex justify-between">
+            <span>Toggle Sidebar</span>
+            <kbd className="rounded-md border bg-muted px-2 py-1 text-xs">Ctrl B</kbd>
+          </li>
 
-              <Meter.Value className="col-start-2 m-0 text-right text-sm leading-5">
-                {(_, value) => `${value}%`}
-              </Meter.Value>
-            </Meter.Root>
-          )}
-        </CardContent>
-      </Card>
+          <li className="flex justify-between">
+            <span>New Chat</span>
+            <kbd className="rounded-md border bg-muted px-2 py-1 text-xs">Ctrl Shift O</kbd>
+          </li>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">Keyboard Shortcuts</CardTitle>
-        </CardHeader>
-
-        <CardContent>
-          <ul className="space-y-2">
-            <li className="flex justify-between">
-              <span>Search Threads</span>
-              <kbd className="rounded-md border bg-muted px-2 py-1 text-xs">Ctrl K</kbd>
-            </li>
-
-            <li className="flex justify-between">
-              <span>Toggle Sidebar</span>
-              <kbd className="rounded-md border bg-muted px-2 py-1 text-xs">Ctrl B</kbd>
-            </li>
-
-            <li className="flex justify-between">
-              <span>New Chat</span>
-              <kbd className="rounded-md border bg-muted px-2 py-1 text-xs">Ctrl Shift O</kbd>
-            </li>
-
-            <li className="flex justify-between">
-              <span>Open Model Picker</span>
-              <kbd className="rounded-md border bg-muted px-2 py-1 text-xs">Ctrl M</kbd>
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-
-      <span className="block w-full text-center text-xs text-muted-foreground">
-        User ID: {data?.userId.slice(5)}
-      </span>
-    </aside>
+          <li className="flex justify-between">
+            <span>Open Model Picker</span>
+            <kbd className="rounded-md border bg-muted px-2 py-1 text-xs">Ctrl M</kbd>
+          </li>
+        </ul>
+      </CardContent>
+    </Card>
   );
 }

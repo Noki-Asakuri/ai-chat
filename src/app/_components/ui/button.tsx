@@ -1,5 +1,5 @@
-import { Slot as SlotPrimitive } from "radix-ui";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Slot as SlotPrimitive } from "radix-ui";
 import * as React from "react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
@@ -74,8 +74,8 @@ function ButtonWithTip({
   );
 
   return (
-    <Tooltip delay={delay}>
-      <TooltipTrigger render={trigger} />
+    <Tooltip>
+      <TooltipTrigger delay={delay} render={trigger} />
       <TooltipContent side={side}>{title}</TooltipContent>
     </Tooltip>
   );

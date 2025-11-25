@@ -1,18 +1,15 @@
 "use client";
 
-import { useDocumentTitle } from "@uidotdev/usehooks";
-
 import {
   BrainIcon,
   ChartNoAxesColumnIcon,
   CircleUserRoundIcon,
   Columns3CogIcon,
-  LogOutIcon,
   PaperclipIcon,
   UserRoundPenIcon,
 } from "lucide-react";
-import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { Tab, Tabs, TabsList } from "@/components/ui/tabs";
 
@@ -43,7 +40,7 @@ const paths = [
     icon: BrainIcon,
   },
   {
-    name: "AI Profiles",
+    name: "Profiles",
     path: "/settings/ai-profiles",
     icon: UserRoundPenIcon,
   },
@@ -51,21 +48,18 @@ const paths = [
 
 export function UserNavbar() {
   const pathname = usePathname();
-  const activeTitle = paths.find(
-    (p) => pathname === p.path || pathname.startsWith(p.path + "/"),
-  )?.name;
+  const searchParams = useSearchParams();
 
-  useDocumentTitle(activeTitle ? `${activeTitle} - AI Chat` : "Account - AI Chat");
+  const activeTab = paths.find((p) => pathname.startsWith(p.path));
 
   return (
-    <Tabs value={"tab-" + activeTitle} onValueChange={() => null}>
+    <Tabs value={activeTab ? "tab-" + activeTab.name : null}>
       <TabsList>
         {paths.map(({ path, name, icon: Icon }) => (
           <Tab key={path} value={"tab-" + name} className="h-10 px-0">
             <Link
-              href={path}
-              prefetch={false}
-              className="flex h-full w-full items-center justify-center gap-1.5 px-2"
+              href={{ pathname: path, search: searchParams.toString() }}
+              className="flex size-full items-center justify-center gap-1.5 px-2"
             >
               <Icon className="size-5" />
               <span>{name}</span>

@@ -52,10 +52,6 @@ To get a local copy up and running, follow these simple steps.
     ```
     NEXT_PUBLIC_CONVEX_URL=
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-    NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-    NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-    NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
-    NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
     CLERK_SECRET_KEY=
     ```
 
@@ -107,6 +103,7 @@ To get a local copy up and running, follow these simple steps.
   - [x] Reorder threads within group
   - [x] Reorder threads between groups
 - [ ] Properly handle cancel streaming and lost connection (Right now if user connection is lost, it treat same as user cancel the message.)
+- [ ] Add share thread feature
 
 ## License
 

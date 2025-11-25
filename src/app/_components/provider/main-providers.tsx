@@ -1,8 +1,7 @@
 "use client";
 
-import { ClerkProvider, useAuth } from "@clerk/clerk-react";
+import { ClerkProvider, useAuth } from "@clerk/nextjs";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 
 import { ConvexQueryClient } from "@convex-dev/react-query";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
@@ -16,27 +15,18 @@ const convexQueryClient = new ConvexQueryClient(convex);
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { queryKeyHashFn: convexQueryClient.hashFn(), queryFn: convexQueryClient.queryFn() },
+    queries: {
+      queryFn: convexQueryClient.queryFn(),
+      queryKeyHashFn: convexQueryClient.hashFn(),
+    },
   },
 });
 convexQueryClient.connect(queryClient);
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-
   return (
-    <ClerkProvider
-      signInUrl="/auth/login"
-      signUpUrl="/auth/login"
-      afterSignOutUrl="/auth/login"
-      routerPush={(href) => router.push(href)}
-      routerReplace={(href) => router.replace(href)}
-      appearance={{ cssLayerName: "clerk" }}
-      publishableKey={env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-    >
-      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-      </ConvexProviderWithClerk>
-    </ClerkProvider>
+    <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </ConvexProviderWithClerk>
   );
 }

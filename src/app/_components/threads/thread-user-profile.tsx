@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { ComponentProps } from "react";
+import { useParams } from "react-router";
 
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Menu } from "../ui/menu";
@@ -102,6 +103,8 @@ type UserMenuSettingItemProps = ComponentProps<typeof Menu.Item> & {
 };
 
 function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSettingItemProps) {
+  const { threadId } = useParams<{ threadId?: string }>();
+
   return (
     <Menu.Item
       className={cn(
@@ -111,14 +114,8 @@ function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSe
       {...props}
       render={
         <Link
-          href={href}
           prefetch={false}
-          onNavigate={() => {
-            const pathname = window.location.pathname;
-            if (!pathname.startsWith("/threads/")) return;
-
-            localStorage.setItem("last-thread-ids", pathname);
-          }}
+          href={{ pathname: href, query: threadId ? { rt: threadId } : null }}
         />
       }
     >

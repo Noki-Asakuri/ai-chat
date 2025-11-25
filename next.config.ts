@@ -10,16 +10,14 @@ const nextConfig: NextConfig = {
   experimental: {
     optimisticClientCache: true,
     turbopackFileSystemCacheForDev: true,
-    turbopackFileSystemCacheForBuild: true,
   },
 
   reactCompiler: true,
   skipTrailingSlashRedirect: true,
-  enablePrerenderSourceMaps: true,
 
   env: {
-    NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
     NEXT_PUBLIC_ENV: process.env.NODE_ENV,
+    NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? "local",
   },
   async rewrites() {
     const isProduction = process.env.NODE_ENV === "production";
@@ -52,11 +50,6 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      {
-        permanent: true,
-        source: "/manifest.json",
-        destination: "/manifest.webmanifest",
-      },
       {
         permanent: true,
         source: "/settings",

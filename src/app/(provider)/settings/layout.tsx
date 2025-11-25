@@ -1,20 +1,9 @@
-"use client";
-
-import { useConvexAuth } from "convex/react";
-import { redirect } from "next/navigation";
-
-import { LoadingPage } from "@/components/loading-page";
 import { UserNavbar } from "@/components/user/navbar";
 
 import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import { TopSettingHeaders } from "@/components/settings/top-setting-headers";
 
-export default function AuthLayout({ children }: LayoutProps<"/settings">) {
-  const { isAuthenticated, isLoading } = useConvexAuth();
-
-  if (isLoading) return <LoadingPage />;
-  if (!isAuthenticated) return redirect("/auth/login");
-
+export default async function AuthLayout({ children }: LayoutProps<"/settings">) {
   return (
     <div className="flex h-svh w-full flex-col">
       <TopSettingHeaders />

@@ -52,7 +52,7 @@ export default function Home() {
         id="sidebar-provider"
         data-disable-blur={user?.customization?.disableBlur ?? !backgroundImage}
         style={{ backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined }}
-        className="group/sidebar-provider -z-[9999] bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat"
+        className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat"
         defaultOpen={defaultOpenSidebar}
       >
         <ThreadSidebar />

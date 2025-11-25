@@ -1,5 +1,4 @@
 const MAX_CACHE_ENTRIES = 500;
-
 const highlightCache: Map<string, string> = new Map();
 
 export function getHighlightFromCache(key: string): string | undefined {

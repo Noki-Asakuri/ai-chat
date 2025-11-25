@@ -56,8 +56,9 @@ type CapabilityIconProps = {
 
 export function CapabilityIcon({ children, variant, enabled, title }: CapabilityIconProps) {
   return (
-    <Tooltip delay={150}>
+    <Tooltip>
       <TooltipTrigger
+        delay={150}
         render={() => (
           <div
             className={cn("flex size-6.5 items-center justify-center rounded-md border", {
