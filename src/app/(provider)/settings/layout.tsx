@@ -1,9 +1,13 @@
+import { connection } from "next/server";
+
 import { UserNavbar } from "@/components/user/navbar";
 
 import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import { TopSettingHeaders } from "@/components/settings/top-setting-headers";
 
 export default async function AuthLayout({ children }: LayoutProps<"/settings">) {
+  await connection();
+
   return (
     <div className="flex h-svh w-full flex-col">
       <TopSettingHeaders />
