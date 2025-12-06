@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { deleteCookie } from "@tanstack/react-start/server";
 
+import { cache } from "react";
+
 import { getConfig } from "./ssr/config";
 import type { GetAuthURLOptions, NoUserInfo, UserInfo } from "./ssr/interfaces";
 import { terminateSession, withAuth } from "./ssr/session";
@@ -41,9 +43,11 @@ export const signOut = createServerFn({ method: "POST" })
     await terminateSession({ returnTo });
   });
 
-export const getAuth = createServerFn({ method: "GET" }).handler(
+const getAuthFn = createServerFn({ method: "GET" }).handler(
   async (): Promise<UserInfo | NoUserInfo> => {
     const auth = await withAuth();
     return auth;
   },
 );
+
+export const getAuth = cache(getAuthFn);

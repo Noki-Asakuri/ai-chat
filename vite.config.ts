@@ -19,7 +19,7 @@ export default defineConfig({
         routesDirectory: "app", // Defaults to "routes", relative to srcDirectory
       },
     }),
-    viteReact(),
+    viteReact({ babel: { plugins: ["babel-plugin-react-compiler"] } }),
     tailwindcss(),
   ],
 });
