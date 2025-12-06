@@ -1,4 +1,6 @@
 import { createEnv } from "@t3-oss/env-core";
+import { vercel } from "@t3-oss/env-core/presets-zod";
+
 import { z } from "zod/v4";
 
 export const env = createEnv({
@@ -17,7 +19,6 @@ export const env = createEnv({
 
     WORKOS_REDIRECT_URI: z.url(),
     WORKOS_API_KEY: z.string(),
-    WORKOS_CLIENT_ID: z.string(),
     WORKOS_COOKIE_PASSWORD: z.string(),
   },
 
@@ -28,6 +29,7 @@ export const env = createEnv({
    */
   client: {
     VITE_CONVEX_URL: z.string(),
+    VITE_WORKOS_CLIENT_ID: z.string(),
 
     VITE_AXIOM_TOKEN: z.string(),
     VITE_AXIOM_DATASET: z.string(),
@@ -59,4 +61,6 @@ export const env = createEnv({
    * explicitly specify this option as true.
    */
   emptyStringAsUndefined: true,
+
+  extends: [vercel()],
 });

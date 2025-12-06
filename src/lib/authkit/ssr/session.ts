@@ -280,5 +280,5 @@ export async function terminateSession({ returnTo }: { returnTo?: string } = {})
     return redirect({ href, throw: true, reloadDocument: true });
   }
 
-  return redirect({ to: returnTo ?? "/", throw: true, reloadDocument: true });
+  return redirect({ to: returnTo ?? "/auth/login", throw: true, reloadDocument: true });
 }

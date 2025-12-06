@@ -1,15 +1,11 @@
-import type { UserJSON, WebhookEvent } from "@clerk/backend";
-import { Webhook } from "svix";
-
-import { v, type Validator } from "convex/values";
+import { v } from "convex/values";
 import { r2 } from "..";
-import { internal } from "../_generated/api";
-import { httpAction, internalMutation, mutation, query, type QueryCtx } from "../_generated/server";
+import { internalMutation, mutation, query, type QueryCtx } from "../_generated/server";
 
-export const deleteFromClerk = internalMutation({
+export const deleteUserData = internalMutation({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    const user = await getUserByClerkUserId(ctx, args.userId);
+    const user = await getUserById(ctx, args.userId);
     if (!user) return;
 
     const threadPromises = ctx.db
@@ -79,103 +75,103 @@ export const deleteFromClerk = internalMutation({
   },
 });
 
-async function getUserByClerkUserId(ctx: QueryCtx, userId: string) {
+async function getUserById(ctx: QueryCtx, userId: string) {
   return await ctx.db
     .query("users")
     .withIndex("by_userId", (q) => q.eq("userId", userId))
     .unique();
 }
 
-export const upsertFromClerk = internalMutation({
-  // no runtime validation, Clerk webhook always return valid data
-  args: {
-    data: v.any() as Validator<UserJSON>,
-    event: v.union(v.literal("created"), v.literal("updated")),
-  },
-  async handler(ctx, { data, event }) {
-    const mainEmailAddress = data.email_addresses?.find(
-      (email) => email.id === data.primary_email_address_id,
-    );
+// export const upsertFromClerk = internalMutation({
+//   // no runtime validation, Clerk webhook always return valid data
+//   args: {
+//     data: v.any() as Validator<UserJSON>,
+//     event: v.union(v.literal("created"), v.literal("updated")),
+//   },
+//   async handler(ctx, { data, event }) {
+//     const mainEmailAddress = data.email_addresses?.find(
+//       (email) => email.id === data.primary_email_address_id,
+//     );
 
-    const userAttributes = {
-      userId: data.id,
+//     const userAttributes = {
+//       userId: data.id,
 
-      username: data.username,
-      emailAddress: mainEmailAddress?.email_address ?? null,
-      imageUrl: data.image_url,
+//       username: data.username,
+//       emailAddress: mainEmailAddress?.email_address ?? null,
+//       imageUrl: data.image_url,
 
-      isBanned: data.banned,
+//       isBanned: data.banned,
 
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-    };
+//       createdAt: data.created_at,
+//       updatedAt: data.updated_at,
+//     };
 
-    switch (event) {
-      case "updated":
-        const existUserData = await getUserByClerkUserId(ctx, data.id);
-        if (existUserData) await ctx.db.patch(existUserData._id, userAttributes);
+//     switch (event) {
+//       case "updated":
+//         const existUserData = await getUserByClerkUserId(ctx, data.id);
+//         if (existUserData) await ctx.db.patch(existUserData._id, userAttributes);
 
-      case "created":
-        await ctx.db.insert("usages", { userId: data.id, used: 0, base: 25, resetType: "daily" });
+//       case "created":
+//         await ctx.db.insert("usages", { userId: data.id, used: 0, base: 25, resetType: "daily" });
 
-        return await ctx.db.insert("users", {
-          ...userAttributes,
-          customization: {
-            name: data.username!,
-            systemInstruction: "You are a helpful assistant.",
-            traits: [],
-            backgroundId: null,
-            hiddenModels: [],
-            showFullCode: false,
-            disableBlur: false,
-          },
-        });
-    }
-  },
-});
+//         return await ctx.db.insert("users", {
+//           ...userAttributes,
+//           customization: {
+//             name: data.username!,
+//             systemInstruction: "You are a helpful assistant.",
+//             traits: [],
+//             backgroundId: null,
+//             hiddenModels: [],
+//             showFullCode: false,
+//             disableBlur: false,
+//           },
+//         });
+//     }
+//   },
+// });
 
-export const clerkWebhook = httpAction(async (ctx, request) => {
-  const event = await validateRequest(request);
-  if (!event) return new Response("Error occurred", { status: 400 });
+// export const clerkWebhook = httpAction(async (ctx, request) => {
+//   const event = await validateRequest(request);
+//   if (!event) return new Response("Error occurred", { status: 400 });
 
-  switch (event.type) {
-    case "user.created":
-    case "user.updated":
-      await ctx.runMutation(internal.functions.users.upsertFromClerk, {
-        data: event.data,
-        event: event.type === "user.created" ? "created" : "updated",
-      });
-      break;
+//   switch (event.type) {
+//     case "user.created":
+//     case "user.updated":
+//       await ctx.runMutation(internal.functions.users.upsertFromClerk, {
+//         data: event.data,
+//         event: event.type === "user.created" ? "created" : "updated",
+//       });
+//       break;
 
-    case "user.deleted": {
-      const userId = event.data.id!;
-      await ctx.runMutation(internal.functions.users.deleteFromClerk, { userId });
-      break;
-    }
-    default:
-      console.log("Ignored Clerk webhook event", event.type);
-  }
+//     case "user.deleted": {
+//       const userId = event.data.id!;
+//       await ctx.runMutation(internal.functions.users.deleteFromClerk, { userId });
+//       break;
+//     }
+//     default:
+//       console.log("Ignored Clerk webhook event", event.type);
+//   }
 
-  return new Response(null, { status: 200 });
-});
+//   return new Response(null, { status: 200 });
+// });
 
-async function validateRequest(req: Request): Promise<WebhookEvent | null> {
-  const payloadString = await req.text();
-  const svixHeaders = {
-    "svix-id": req.headers.get("svix-id")!,
-    "svix-timestamp": req.headers.get("svix-timestamp")!,
-    "svix-signature": req.headers.get("svix-signature")!,
-  };
+// async function validateRequest(req: Request): Promise<WebhookEvent | null> {
+//   const payloadString = await req.text();
+//   const svixHeaders = {
+//     "svix-id": req.headers.get("svix-id")!,
+//     "svix-timestamp": req.headers.get("svix-timestamp")!,
+//     "svix-signature": req.headers.get("svix-signature")!,
+//   };
 
-  const wh = new Webhook(process.env.CLERK_WEBHOOK_SIGNING_SECRET!);
+//   const wh = new Webhook(process.env.CLERK_WEBHOOK_SIGNING_SECRET!);
 
-  try {
-    return wh.verify(payloadString, svixHeaders) as WebhookEvent;
-  } catch (error) {
-    console.error("Error verifying webhook event", error);
-    return null;
-  }
-}
+//   try {
+//     return wh.verify(payloadString, svixHeaders) as WebhookEvent;
+//   } catch (error) {
+//     console.error("Error verifying webhook event", error);
+//     return null;
+//   }
+// }
 
 export const updateUserCustomization = mutation({
   args: {
@@ -194,7 +190,7 @@ export const updateUserCustomization = mutation({
     const userId = await ctx.auth.getUserIdentity();
     if (!userId) throw new Error("Not authenticated");
 
-    const user = await getUserByClerkUserId(ctx, userId.subject);
+    const user = await getUserById(ctx, userId.subject);
     if (!user) throw new Error("User not found");
 
     await ctx.db.patch(user._id, { customization: { ...user.customization, ...data } });
@@ -207,11 +203,84 @@ export const currentUser = query({
     const userId = await ctx.auth.getUserIdentity();
     if (!userId) return null;
 
-    const user = await getUserByClerkUserId(ctx, userId.subject);
+    const user = await getUserById(ctx, userId.subject);
     if (!user) return null;
 
     // Ensure hiddenModels is always defined for clients
     const hiddenModels = user.customization?.hiddenModels ?? [];
     return { ...user, customization: { ...user.customization, hiddenModels } };
+  },
+});
+
+export const migrateUserData = internalMutation({
+  args: { oldUserId: v.string(), newUserId: v.string() },
+  handler: async (ctx, args) => {
+    const oldUser = await getUserById(ctx, args.oldUserId);
+    if (!oldUser) return;
+
+    await ctx.db.patch(oldUser._id, { userId: args.newUserId });
+
+    const threads = await ctx.db
+      .query("threads")
+      .withIndex("by_userId", (q) => q.eq("userId", args.oldUserId))
+      .collect();
+
+    for (const thread of threads) {
+      await ctx.db.patch(thread._id, { userId: args.newUserId });
+    }
+
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_userId_threadId", (q) => q.eq("userId", args.oldUserId))
+      .collect();
+
+    for (const message of messages) {
+      await ctx.db.patch(message._id, { userId: args.newUserId });
+    }
+
+    const attachments = await ctx.db
+      .query("attachments")
+      .withIndex("by_userId", (q) => q.eq("userId", args.oldUserId))
+      .collect();
+
+    for (const attachment of attachments) {
+      await ctx.db.patch(attachment._id, { userId: args.newUserId });
+    }
+
+    const profiles = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.oldUserId))
+      .collect();
+
+    for (const profile of profiles) {
+      await ctx.db.patch(profile._id, { userId: args.newUserId });
+    }
+
+    const usages = await ctx.db
+      .query("usages")
+      .withIndex("by_userId", (q) => q.eq("userId", args.oldUserId))
+      .collect();
+
+    for (const usage of usages) {
+      await ctx.db.patch(usage._id, { userId: args.newUserId });
+    }
+
+    const stats = await ctx.db
+      .query("user_stats")
+      .withIndex("by_userId", (q) => q.eq("userId", args.oldUserId))
+      .collect();
+
+    for (const stat of stats) {
+      await ctx.db.patch(stat._id, { userId: args.newUserId });
+    }
+
+    const groups = await ctx.db
+      .query("groups")
+      .withIndex("by_userId_order", (q) => q.eq("userId", args.oldUserId))
+      .collect();
+
+    for (const group of groups) {
+      await ctx.db.patch(group._id, { userId: args.newUserId });
+    }
   },
 });

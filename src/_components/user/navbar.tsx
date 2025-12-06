@@ -1,5 +1,4 @@
-"use client";
-
+import { Link, useSearch, useLocation } from "@tanstack/react-router";
 import {
   BrainIcon,
   ChartNoAxesColumnIcon,
@@ -8,10 +7,8 @@ import {
   PaperclipIcon,
   UserRoundPenIcon,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
 
-import { Tab, Tabs, TabsList } from "@/components/ui/tabs";
+import { Tab, Tabs, TabsList } from "@/_components/ui/tabs";
 
 const paths = [
   {
@@ -47,9 +44,7 @@ const paths = [
 ];
 
 export function UserNavbar() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
+  const { pathname, search } = useLocation();
   const activeTab = paths.find((p) => pathname.startsWith(p.path));
 
   return (
@@ -58,7 +53,8 @@ export function UserNavbar() {
         {paths.map(({ path, name, icon: Icon }) => (
           <Tab key={path} value={"tab-" + name} className="h-10 px-0">
             <Link
-              href={{ pathname: path, search: searchParams.toString() }}
+              to={path}
+              search={search}
               className="flex size-full items-center justify-center gap-1.5 px-2"
             >
               <Icon className="size-5" />
