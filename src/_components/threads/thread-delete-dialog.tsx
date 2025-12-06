@@ -1,10 +1,8 @@
 import { api } from "@/convex/_generated/api";
 
+import { useNavigate } from "@tanstack/react-router";
 import { useState, useTransition } from "react";
-import { useNavigate } from "react-router";
 
-import { Checkbox } from "../ui/checkbox";
-import { Label } from "../ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +13,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
+import { Checkbox } from "../ui/checkbox";
+import { Label } from "../ui/label";
 
 import { getConvexReactClient } from "@/lib/convex/client";
 import type { Thread } from "@/lib/types";
@@ -47,7 +47,7 @@ export function ThreadDeleteDialog({
         threadId,
         deleteAttachments: checked,
       });
-      await navigate("/");
+      await navigate({ to: "/" });
     });
   }
 

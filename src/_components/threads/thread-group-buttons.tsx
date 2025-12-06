@@ -1,5 +1,5 @@
 import { PlusIcon } from "lucide-react";
-import { NavLink } from "react-router";
+import { Link } from "@tanstack/react-router";
 
 import { Button } from "../ui/button";
 import { SidebarTrigger, useSidebar } from "../ui/sidebar";
@@ -15,7 +15,7 @@ export function ThreadGroupButtons() {
       data-state={isMobile ? "collapsed" : state}
       className={cn(
         "absolute top-3 left-3 z-50 flex items-center justify-center gap-1 rounded-md p-1",
-        "bg-sidebar group data-[state=collapsed]:!bg-sidebar md:bg-transparent",
+        "group bg-sidebar data-[state=collapsed]:bg-sidebar! md:bg-transparent",
       )}
     >
       <SidebarTrigger />
@@ -27,10 +27,10 @@ export function ThreadGroupButtons() {
         variant="ghost"
         className="size-7 group-data-[state=expanded]:hidden"
       >
-        <NavLink to="/">
+        <Link to="/">
           <PlusIcon />
           <span className="sr-only">New Thread</span>
-        </NavLink>
+        </Link>
       </Button>
     </div>
   );

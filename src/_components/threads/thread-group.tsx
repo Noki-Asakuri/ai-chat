@@ -64,7 +64,7 @@ export function ThreadGroup({ group, threads, disabled, isOverlay }: ThreadGroup
             {...attributes}
             {...listeners}
             asChild
-            className="select-none font-semibold"
+            className="font-semibold select-none"
           >
             <span>{group?.title}</span>
           </SidebarGroupLabel>
@@ -76,7 +76,7 @@ export function ThreadGroup({ group, threads, disabled, isOverlay }: ThreadGroup
               <ChevronLeftIcon
                 className={cn(
                   "size-4 transition-[rotate]",
-                  !isGroupSorting && "group-data-[panel-open]/trigger:-rotate-90",
+                  !isGroupSorting && "group-data-panel-open/trigger:-rotate-90",
                   isGroupSorting && "cursor-grab",
                 )}
               />
@@ -125,7 +125,7 @@ export function ThreadGroupDropzone(props: ThreadGroupDropzoneProps) {
         </SortableContext>
 
         {props.threads.length === 0 && (
-          <div className="px-1.5 py-1.5 text-muted-foreground text-sm">Drop here</div>
+          <div className="px-1.5 py-1.5 text-sm text-muted-foreground">Drop here</div>
         )}
       </SidebarGroupContent>
     </Collapsible.Panel>

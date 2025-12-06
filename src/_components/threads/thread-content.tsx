@@ -4,9 +4,9 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
-import { useEffect, useRef, useState } from "react";
-import { NavLink } from "react-router";
+import { Link } from "@tanstack/react-router";
 import { useLocalStorage } from "@uidotdev/usehooks";
+import { useEffect, useRef, useState } from "react";
 
 import {
   closestCorners,
@@ -31,14 +31,14 @@ import { ThreadGroup } from "./thread-group";
 import { ThreadItem } from "./thread-items";
 import { UngroupedThreadGroup } from "./thread-ungrouped";
 
-import { useChatStore } from "@/lib/chat/store";
+// import { useChatStore } from "@/lib/chat/store";
 
 export function ThreadContents() {
   return (
     <>
       <div className="mt-2 flex items-center gap-2 *:flex-1">
         <Button size="sm" variant="secondary" asChild>
-          <NavLink to="/">New Chat</NavLink>
+          <Link to="/">New Chat</Link>
         </Button>
         <CreateGroupButton />
       </div>
@@ -73,8 +73,8 @@ function CreateGroupButton() {
 
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-[opacity] duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:opacity-70" />
-          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0">
+          <Dialog.Backdrop className="data-ending-style:opacity-0ata-[starting-style]:opacity-0 fixed inset-0 z-40 bg-black opacity-20 transition-opacity duration-150 dark:opacity-70" />
+          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
             <div className="mb-2">
               <h2 className="text-lg font-semibold">Create group</h2>
               <p className="text-sm text-muted-foreground">Enter a group name.</p>
@@ -113,15 +113,15 @@ function CreateGroupButton() {
 
 const LOCAL_STORAGE_KEY = "local-threads-cache";
 function ThreadListWrapper() {
-  const [localData, setLocalData] = useLocalStorage<ListGroupData | null>(LOCAL_STORAGE_KEY);
+  // const [localData, setLocalData] = useLocalStorage<ListGroupData | null>(LOCAL_STORAGE_KEY);
   const data = useQuery(api.functions.groups.listGroups);
 
-  useEffect(() => {
-    if (data) setLocalData(data);
-  }, [data, setLocalData]);
+  // useEffect(() => {
+  //   if (data) setLocalData(data);
+  // }, [data, setLocalData]);
 
-  if (data) return <ThreadList data={data} />;
-  if (localData) return <ThreadList data={localData} />;
+  // if (data) return <ThreadList data={data} />;
+  // if (localData) return <ThreadList data={localData} />;
 
   return null;
 }

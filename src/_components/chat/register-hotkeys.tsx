@@ -1,11 +1,11 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "@tanstack/react-router";
 
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
 import { abortChatRequest } from "@/lib/chat/send-chat-request";
-import { useChatStore } from "@/lib/chat/store";
+import { chatStore, useChatStore } from "@/lib/chat/store";
 
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
 const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
@@ -16,7 +16,7 @@ export function RegisterHotkeys() {
   const editMessage = useChatStore((state) => state.editMessage);
 
   const { setEditMessage, setThreadCommandOpen, addAttachment, setChatInput } =
-    useChatStore.getState();
+    chatStore.getState();
 
   useEffect(() => {
     function onPaste(event: ClipboardEvent) {
@@ -157,7 +157,7 @@ export function RegisterHotkeys() {
         (event.metaKey || event.ctrlKey)
       ) {
         event.preventDefault();
-        void navigate("/");
+        navigate({ to: "/" });
       }
     }
 

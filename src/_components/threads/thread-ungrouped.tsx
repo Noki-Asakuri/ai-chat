@@ -59,11 +59,11 @@ function GroupByDateItem({ groupKey, title, threads }: GroupByDateItemProps) {
   return (
     <Collapsible.Root defaultOpen data-slot={groupKey} data-threads-count={threads.length}>
       <SidebarGroup>
-        <SidebarGroupLabel asChild className="py-1 text-muted-foreground text-sm">
+        <SidebarGroupLabel asChild className="py-1 text-sm text-muted-foreground">
           <Collapsible.Trigger className="group/trigger flex w-full items-center justify-between gap-2">
             <span>{beautifyTitle}</span>
 
-            <ChevronLeftIcon className="group-data-[panel-open]/trigger:-rotate-90 size-4 transition-[rotate]" />
+            <ChevronLeftIcon className="size-4 transition-[rotate] group-data-panel-open/trigger:-rotate-90" />
           </Collapsible.Trigger>
         </SidebarGroupLabel>
 

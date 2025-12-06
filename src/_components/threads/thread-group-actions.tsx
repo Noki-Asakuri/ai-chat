@@ -7,7 +7,6 @@ import { type ComponentPropsWithRef, useRef, useState, useTransition } from "rea
 import { Dialog } from "@base-ui-components/react/dialog";
 import { Menu } from "@base-ui-components/react/menu";
 
-import { buttonVariants } from "../ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
+import { buttonVariants } from "../ui/button";
 import { Input } from "../ui/input";
 
 import { getConvexReactClient } from "@/lib/convex/client";
@@ -123,11 +123,11 @@ export function ThreadGroupActions({ group, ...props }: ThreadGroupActionProps) 
           <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-[opacity] duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:opacity-70" />
           <Dialog.Popup
             finalFocus={menuTriggerRef}
-            className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-[ending-style]:scale-95 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0"
+            className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0"
           >
             <div className="mb-2">
-              <h2 className="font-semibold text-lg">Rename group</h2>
-              <p className="text-muted-foreground text-sm">Update the group title.</p>
+              <h2 className="text-lg font-semibold">Rename group</h2>
+              <p className="text-sm text-muted-foreground">Update the group title.</p>
             </div>
 
             <form className="mt-3 space-y-4" onSubmit={(e) => e.preventDefault()}>

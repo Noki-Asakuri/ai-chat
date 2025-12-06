@@ -1,8 +1,9 @@
 import { api } from "@/convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
-import { useQuery } from "@tanstack/react-query";
 
-import { useAuth, useUser } from "@clerk/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useLoaderData, useParams } from "@tanstack/react-router";
+
 import {
   BrainIcon,
   ChartNoAxesColumnIcon,
@@ -12,9 +13,7 @@ import {
   PaperclipIcon,
   UserRoundPenIcon,
 } from "lucide-react";
-import Link from "next/link";
 import type { ComponentProps } from "react";
-import { useParams } from "react-router";
 
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Menu } from "../ui/menu";
@@ -22,28 +21,28 @@ import { Menu } from "../ui/menu";
 import { cn } from "@/lib/utils";
 
 export function ThreadUserProfile() {
-  const { isLoaded, isSignedIn, user } = useUser();
-  const auth = useAuth();
+  const { user } = useLoaderData({ from: "/_chat_layout" });
+  if (!user) return null;
 
-  if (!isLoaded || !isSignedIn) return null;
-
-  const fallback = user.username
-    ?.split(" ")
-    .map((name) => name[0])
+  const fallback = [user.firstName, user.lastName]
+    .filter(Boolean)
+    .map((name) => name![0])
     .join("");
+
+  const username = [user.firstName, user.lastName].filter(Boolean).join(" ");
 
   return (
     <Menu.Root>
       <Menu.Trigger className="flex gap-2 rounded-md border border-transparent p-2 transition-colors hover:border-primary/30 hover:bg-primary/20 data-popup-open:border-primary/30 data-popup-open:bg-primary/20">
         <Avatar className="size-11 rounded-md">
-          <AvatarImage src={user.imageUrl} alt={user.username!} />
+          <AvatarImage src={user.profilePictureUrl as string} alt={`${username} avatar`} />
           <AvatarFallback className="bg-primary text-sm text-primary-foreground">
             {fallback}
           </AvatarFallback>
         </Avatar>
 
         <div className="ml-1 flex h-full w-full flex-col justify-center text-left">
-          <p className="font-medium capitalize">{user.username}</p>
+          <p className="font-medium capitalize">{username}</p>
           <UserQuota />
         </div>
       </Menu.Trigger>
@@ -86,7 +85,7 @@ export function ThreadUserProfile() {
 
             <Menu.Item
               className="flex w-full cursor-pointer items-center justify-start gap-1.5 rounded-md px-1.5 py-1 text-sm text-destructive transition-colors hover:bg-destructive/20"
-              onClick={() => auth.signOut()}
+              render={<Link preload={false} to="/auth/logout" />}
             >
               <LogOutIcon className="size-5" />
               Logout
@@ -103,7 +102,7 @@ type UserMenuSettingItemProps = ComponentProps<typeof Menu.Item> & {
 };
 
 function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSettingItemProps) {
-  const { threadId } = useParams<{ threadId?: string }>();
+  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
 
   return (
     <Menu.Item
@@ -112,12 +111,7 @@ function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSe
         className,
       )}
       {...props}
-      render={
-        <Link
-          prefetch={false}
-          href={{ pathname: href, query: threadId ? { rt: threadId } : null }}
-        />
-      }
+      render={<Link preload={false} to={href} search={{ rt: params?.threadId }} />}
     >
       {children}
     </Menu.Item>
@@ -125,7 +119,7 @@ function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSe
 }
 
 function UserQuota() {
-  const { data, isPending } = useQuery(convexQuery(api.functions.usages.getUserUsages, {}));
+  const { data, isPending } = useQuery(convexQuery(api.functions.usages.getUserUsages));
   if (isPending || !data) return null;
 
   const percentage = (data.used / data.base) * 100;
