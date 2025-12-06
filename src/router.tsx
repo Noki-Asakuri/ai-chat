@@ -4,6 +4,7 @@ import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query
 
 import { ConvexQueryClient } from "@convex-dev/react-query";
 import { ConvexProvider } from "convex/react";
+import { StrictMode } from "react";
 
 import { AuthProviders } from "./_components/provider/auth-providers";
 import { getConvexReactClient } from "./lib/convex/client";
@@ -31,9 +32,11 @@ export function getRouter() {
     scrollRestoration: true,
 
     Wrap: ({ children }) => (
-      <AuthProviders>
-        <ConvexProvider client={convexClient}>{children}</ConvexProvider>,
-      </AuthProviders>
+      <StrictMode>
+        <ConvexProvider client={convexClient}>
+          <AuthProviders>{children}</AuthProviders>
+        </ConvexProvider>
+      </StrictMode>
     ),
   });
 
