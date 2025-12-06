@@ -6,8 +6,6 @@ import { ThreadSidebar } from "@/_components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider } from "@/_components/ui/sidebar";
 
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
-import { useAuth } from "@workos-inc/authkit-react";
-import { useEffect } from "react";
 
 const getCookiesServerFunction = createServerFn({ method: "GET" }).handler(async () => {
   const backgroundImage = getCookie("background-image");
