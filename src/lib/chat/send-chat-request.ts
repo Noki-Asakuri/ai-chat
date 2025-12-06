@@ -53,6 +53,9 @@ export async function sendChatRequest(data: SendChatRequestParams) {
   const state = chatStore.getState();
   state.markStreamStart(data.assistantMessageId);
 
+  // Clear any existing message overlay before starting a new one
+  state.clearAssistantMessage(data.assistantMessageId);
+
   let abortController = state.getController(data.assistantMessageId);
   if (!abortController || abortController.signal.aborted) {
     abortController = new AbortController();
@@ -77,27 +80,42 @@ export async function sendChatRequest(data: SendChatRequestParams) {
 
     url.searchParams.set("streamId", streamId);
 
-    let content = "";
-    let reasoning: string[] = [];
     let metadata: ChatMessage["metadata"] | undefined;
+    const parts: MyUIMessage["parts"] = [];
 
     await processChatStream({
       fetch: fetch(url, { signal: abortController.signal }),
       handler: async (stream) => {
         switch (stream.type) {
-          case "text-delta":
-            content += stream.delta;
+          case "text-start":
+            parts.push({ type: "text", text: "" });
             break;
 
+          case "text-delta": {
+            const textPart = parts.find((p) => p.type === "text");
+            if (!textPart) return;
+
+            textPart.text += stream.delta;
+            break;
+          }
+
+          case "text-end": {
+            const textPart = parts.find((p) => p.type === "text");
+            if (!textPart) return;
+
+            textPart.text = fixMarkdownCodeBlocks(textPart.text);
+            break;
+          }
+
           case "reasoning-start":
-            reasoning.push("");
+            parts.push({ type: "reasoning", text: "" });
             break;
 
           case "reasoning-delta":
-            reasoning[reasoning.length - 1] += stream.delta;
-            break;
+            const reasoningPart = parts.find((p) => p.type === "reasoning");
+            if (!reasoningPart) return;
 
-          case "reasoning-end":
+            reasoningPart.text += stream.delta;
             break;
 
           case "file": {
@@ -114,17 +132,6 @@ export async function sendChatRequest(data: SendChatRequestParams) {
             break;
         }
 
-        const parts: MyUIMessage["parts"] = reasoning.map((text) => ({
-          type: "reasoning",
-          text,
-          details: [{ type: "text", text }],
-        }));
-
-        if (content.length) {
-          parts.push({ type: "text", text: content });
-        }
-
-        content = fixMarkdownCodeBlocks(content);
         state.setAssistantMessage({ id: data.assistantMessageId, parts, metadata });
       },
     });

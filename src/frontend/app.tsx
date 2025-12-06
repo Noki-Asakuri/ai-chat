@@ -61,7 +61,6 @@ function ChatPage() {
 
   useEffect(() => {
     if (hasRunned.current) return;
-
     console.log("ChatPage", nextPathname, location.pathname, nextPathname !== location.pathname);
 
     if (nextPathname !== location.pathname) {
