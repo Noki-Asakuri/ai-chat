@@ -80,7 +80,7 @@ export interface ChatState {
   popupRetryMessageId: string;
   setPopupRetryMessageId: (messageId: string) => void;
 
-  assistantMessages: Record<
+  assistantMessages: Map<
     string,
     {
       id: string;
@@ -133,12 +133,12 @@ export interface ChatState {
     item: { type: "thread"; item: Doc<"threads"> } | { type: "group"; item: Doc<"groups"> } | null,
   ) => void;
 
-  activeStreams: string[];
+  activeStreams: Set<string>;
   markStreamStart: (assistantMessageId: string | Id<"messages">) => void;
   markStreamEnd: (assistantMessageId: string | Id<"messages">) => void;
   hasActiveStream: (assistantMessageId: string | Id<"messages">) => boolean;
 
-  controllers: Record<string, AbortController>;
+  controllers: Map<string, AbortController>;
   setController: (assistantMessageId: string | Id<"messages">, controller: AbortController) => void;
   clearController: (assistantMessageId: string | Id<"messages">) => void;
   getController: (assistantMessageId: string | Id<"messages">) => AbortController | undefined;
@@ -167,24 +167,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
   removeAttachment: (attachmentId) =>
     set((state) => ({ attachments: state.attachments.filter((a) => a.id !== attachmentId) })),
 
-  assistantMessages: {},
+  assistantMessages: new Map(),
   setAssistantMessage: (message) =>
     set((state) => {
       const id = message.id;
-      const prev = state.assistantMessages[id] ?? { id, parts: [], metadata: undefined };
+      const prev = state.assistantMessages.get(id) ?? { id, parts: [], metadata: undefined };
 
-      return {
-        assistantMessages: { ...state.assistantMessages, [id]: { ...prev, ...message, id } },
-      };
-    }),
-  clearAssistantMessage: (assistantMessageId) =>
-    set((state) => {
-      const next = { ...state.assistantMessages };
-      delete next[assistantMessageId];
+      const next = new Map(state.assistantMessages);
+      next.set(id, { ...prev, ...message, id });
 
       return { assistantMessages: next };
     }),
-  clearAssistantMessages: () => set({ assistantMessages: {} }),
+  clearAssistantMessage: (assistantMessageId) =>
+    set((state) => {
+      const next = new Map(state.assistantMessages);
+      next.delete(assistantMessageId);
+
+      return { assistantMessages: next };
+    }),
+  clearAssistantMessages: () => set({ assistantMessages: new Map() }),
 
   // Previews
   previewImages: {},
@@ -215,32 +216,39 @@ export const useChatStore = create<ChatState>((set, get) => ({
       threadCommandOpen: typeof open === "function" ? open(state.threadCommandOpen) : open,
     })),
 
-  activeStreams: [],
-  hasActiveStream: (assistantMessageId) => get().activeStreams.includes(assistantMessageId),
+  activeStreams: new Set(),
+  hasActiveStream: (assistantMessageId) => get().activeStreams.has(assistantMessageId),
 
   markStreamStart: (assistantMessageId) =>
     set((state) => {
-      if (state.activeStreams.includes(assistantMessageId)) {
-        return state;
-      }
-      return { activeStreams: [...state.activeStreams, assistantMessageId] };
+      const next = new Set(state.activeStreams);
+      next.add(assistantMessageId);
+
+      return { activeStreams: next };
     }),
   markStreamEnd: (assistantMessageId) =>
-    set((state) => ({
-      activeStreams: state.activeStreams.filter((id) => id !== assistantMessageId),
-    })),
+    set((state) => {
+      const next = new Set(state.activeStreams);
+      next.delete(assistantMessageId);
 
-  controllers: {},
-  getController: (assistantMessageId) => get().controllers[assistantMessageId],
+      return { activeStreams: next };
+    }),
+
+  controllers: new Map(),
+  getController: (assistantMessageId) => get().controllers.get(assistantMessageId),
 
   setController: (assistantMessageId, controller) =>
-    set((state) => ({
-      controllers: { ...state.controllers, [assistantMessageId]: controller },
-    })),
+    set((state) => {
+      const next = new Map(state.controllers);
+      next.set(assistantMessageId, controller);
+
+      return { controllers: next };
+    }),
   clearController: (assistantMessageId) =>
     set((state) => {
-      const next = { ...state.controllers };
-      delete next[assistantMessageId];
+      const next = new Map(state.controllers);
+      next.delete(assistantMessageId);
+
       return { controllers: next };
     }),
 
@@ -301,8 +309,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const previews = { ...state.previewImages };
 
       for (const m of messages) {
-        const key = m._id as string;
-        if (!!previews[key]?.length && !!m.attachments?.length) {
+        const key = String(m._id);
+
+        if ((previews[key]?.length ?? 0) > 0 && (m.attachments?.length ?? 0) > 0) {
           delete previews[key];
         }
       }
@@ -320,7 +329,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       lastUserMessageId: null,
       lastUserMessageHeight: null,
       previewImages: {},
-      assistantMessages: {},
+      assistantMessages: new Map(),
     })),
 }));
 

@@ -1,4 +1,3 @@
-import type { MyUIMessage } from "@/lib/chat/conversion";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "../ui/ai-elements/reasoning";
 
 import { getModelData } from "@/lib/chat/models";
@@ -17,8 +16,7 @@ export function MessageReasoning({ model, parts, status, metadata }: ThinkingTog
   const isReasoningModel = getModelData(model).capabilities.reasoning;
   if (!isReasoningModel) return null;
 
-  const reasoning = (parts as MyUIMessage["parts"])
-    .filter((p) => p.type === "reasoning")
+  const reasoning = (parts as { type: "reasoning"; text: string }[])
     .map((p) => p.text)
     .join("\n\n");
 
