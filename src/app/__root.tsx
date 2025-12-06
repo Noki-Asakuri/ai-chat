@@ -2,18 +2,25 @@
 
 import appCss from "@/styles/globals.css?url";
 
+import { type ConvexQueryClient } from "@convex-dev/react-query";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
+import { useEffect } from "react";
+
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { getAuth } from "@/lib/authkit/serverFunctions";
+import { getConvexReactClient } from "@/lib/convex/client";
 
-type RootContext = { queryClient: QueryClient };
+type RootContext = {
+  queryClient: QueryClient;
+  convexClient: ConvexQueryClient;
+};
 
 export const Route = createRootRouteWithContext<RootContext>()({
   head: () => ({
@@ -40,9 +47,17 @@ export const Route = createRootRouteWithContext<RootContext>()({
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
-  beforeLoad: async () => {
-    const { user } = await getAuth();
-    return { user };
+  beforeLoad: async ({ context }) => {
+    const { user, accessToken } = await getAuth();
+
+    if (user) {
+      context.convexClient.serverHttpClient?.setAuth(accessToken);
+      context.convexClient.convexClient.setAuth(async () => accessToken);
+    }
+    return { user, accessToken };
+  },
+  loader: async ({ context }) => {
+    return { user: context.user, accessToken: context.accessToken };
   },
 
   shellComponent: RootLayout,
@@ -58,13 +73,19 @@ export function RootLayout() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const { accessToken } = Route.useLoaderData();
+
+  useEffect(() => {
+    if (accessToken) getConvexReactClient().setAuth(async () => accessToken);
+  }, []);
+
   return (
-    <html>
+    <html lang="en" className="antialiased">
       <head>
         <HeadContent />
       </head>
 
-      <body>
+      <body className="dark isolate font-sans">
         {children}
         <Scripts />
 
@@ -76,7 +97,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         )}
 
         <TanStackDevtools
-          config={{ position: "bottom-left" }}
+          config={{ position: "bottom-right" }}
           plugins={[
             {
               name: "Tanstack Router",

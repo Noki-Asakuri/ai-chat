@@ -2,7 +2,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { useCallback } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { v4 as uuidv4 } from "uuid";
 
 import { getConvexReactClient } from "../convex/client";
@@ -64,7 +64,7 @@ export async function sendChatRequest(data: SendChatRequestParams) {
 
   try {
     let streamId = data.resumeId;
-    const url = new URL("/api/ai/chat", env.NEXT_PUBLIC_API_ENDPOINT);
+    const url = new URL("/api/ai/chat", env.VITE_API_ENDPOINT);
 
     if (!streamId) {
       const response = await fetch("/api/chat", {
@@ -193,7 +193,7 @@ export async function submitChatMessage({ navigate, threadId }: SubmitChatMessag
 
   if (!threadId) {
     threadId = await convexClient.mutation(api.functions.threads.createThread, {});
-    await navigate(`/threads/${toUUID(threadId)}`);
+    await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(threadId) } });
   }
 
   const uploadedAttachmentPaths = new Map<Id<"attachments">, string>();
@@ -342,7 +342,7 @@ export async function abortChatRequest() {
 
 export function useChatRequest() {
   const navigate = useNavigate();
-  const { threadId } = useParams<{ threadId: string }>();
+  const { threadId } = useParams({ from: "/_chat_layout/threads/$threadId" });
 
   const retryMessageCallback = useCallback(
     (index: number, options: Parameters<typeof retryMessage>[2]) => {

@@ -1,5 +1,6 @@
 import { api } from "@/convex/_generated/api";
 
+import { Link, useParams } from "@tanstack/react-router";
 import {
   DeleteIcon,
   EllipsisIcon,
@@ -12,7 +13,6 @@ import {
   RefreshCwIcon,
 } from "lucide-react";
 import { useRef, useState, useTransition, type ComponentProps } from "react";
-import { NavLink, useParams } from "react-router";
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -38,7 +38,7 @@ type ThreadItemProps = {
 };
 
 export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
-  const { threadId } = useParams<{ threadId?: string }>();
+  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: thread._id,
     disabled,
@@ -58,7 +58,7 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
       ref={setNodeRef}
       style={style}
       data-thread-id={thread._id}
-      data-thread-active={threadId === toUUID(thread._id)}
+      data-thread-active={params?.threadId === toUUID(thread._id)}
       data-thread-index={thread.order}
       data-thread-status={thread.status}
       data-is-dragging={isDragging || isOverlay}
@@ -70,14 +70,15 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
         "data-[is-dragging=true]:bg-primary/30",
       )}
     >
-      <NavLink
+      <Link
         title={thread.title}
-        to={`/threads/${toUUID(thread._id)}`}
+        to="/threads/$threadId"
+        params={{ threadId: toUUID(thread._id) }}
         className="flex w-full min-w-0 items-center gap-2 py-1.5"
       >
         {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
         <span className="truncate text-sm">{thread.title}</span>
-      </NavLink>
+      </Link>
 
       <div className="flex items-center gap-2">
         <ThreadActions thread={thread} isStreaming={isStreaming} />
@@ -170,7 +171,7 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
           data-slot="thread-actions"
           {...props}
           className={cn(
-            "pointer-events-auto hidden items-center justify-center group-hover/thread:flex group-data-[thread-active=true]/thread:flex data-[popup-open]:flex",
+            "pointer-events-auto hidden items-center justify-center group-hover/thread:flex group-data-[thread-active=true]/thread:flex data-popup-open:flex",
             className,
           )}
         >
@@ -184,11 +185,17 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
             className="p-1"
             sideOffset={isStreaming ? 20 : 50}
           >
-            <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col overflow-hidden rounded-md border bg-sidebar/60 backdrop-blur-md backdrop-saturate-150">
+            <Menu.Popup className="flex w-max origin-(--transform-origin) flex-col overflow-hidden rounded-md border bg-sidebar/60 backdrop-blur-md backdrop-saturate-150">
               {thread.branchedFrom && (
                 <Menu.Item
                   title="Go to parent thread"
-                  render={<NavLink to={`/threads/${toUUID(thread.branchedFrom)}`} />}
+                  render={
+                    <Link
+                      preload={false}
+                      to="/threads/$threadId"
+                      params={{ threadId: thread.branchedFrom }}
+                    />
+                  }
                   className={cn(
                     buttonVariants({ variant: "ghost" }),
                     "w-full justify-start rounded-b-none",
@@ -266,10 +273,10 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
 
       <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-[opacity] duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:opacity-70" />
+          <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 dark:opacity-70" />
           <Dialog.Popup
             finalFocus={menuTriggerRef}
-            className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0"
+            className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
           >
             <div className="mb-2">
               <h2 className="text-lg font-semibold">Edit thread</h2>

@@ -6,7 +6,7 @@ import { useDebounce } from "@uidotdev/usehooks";
 import { CommandLoading } from "cmdk";
 import { LoaderIcon, PinIcon, PinOffIcon, SearchIcon } from "lucide-react";
 import { useState } from "react";
-import { NavLink, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 
 import { Button } from "../ui/button";
 import {
@@ -55,10 +55,10 @@ export function ThreadCommand() {
 
 function PinThread() {
   const defaultThreads = useChatStore((state) => state.threads);
-  const { threadId } = useParams<{ threadId: string }>();
+  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
 
-  const thread = defaultThreads.find((thread) => thread._id === fromUUID(threadId));
-  if (!threadId) return null;
+  const thread = defaultThreads.find((thread) => thread._id === fromUUID(params?.threadId));
+  if (!params?.threadId) return null;
 
   function toggleThreadPin() {
     if (!thread) return;
@@ -150,18 +150,19 @@ function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
           value={thread._id}
           className="p-0!"
           onSelect={async () => {
-            await navigate(`/threads/${toUUID(thread._id)}`);
+            await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(thread._id) } });
             useChatStore.getState().setThreadCommandOpen(false);
           }}
         >
-          <NavLink
+          <Link
             title={thread.title}
             className="w-full truncate px-2 py-1.5"
             onClick={() => useChatStore.getState().setThreadCommandOpen(false)}
-            to={{ pathname: `/threads/${toUUID(thread._id)}` }}
+            to="/threads/$threadId"
+            params={{ threadId: toUUID(thread._id) }}
           >
             {thread.title}
-          </NavLink>
+          </Link>
         </CommandItem>
       ))}
     </CommandGroup>

@@ -50,7 +50,6 @@ export const Route = createFileRoute("/api/auth/callback")({
             const response = redirectWithFallback(url.toString());
 
             if (!accessToken || !refreshToken) throw new Error("response is missing tokens");
-
             await saveSession({ accessToken, refreshToken, user, impersonator });
 
             return response;

@@ -29,6 +29,9 @@ export class Configuration {
     // act as the actual time-limited aspects of the session.
     cookieMaxAge: 60 * 60 * 24 * 400,
     apiHostname: "api.workos.com",
+
+    clientId: import.meta.env.VITE_WORKOS_CLIENT_ID,
+    redirectUri: import.meta.env.VITE_WORKOS_REDIRECT_URI,
   };
 
   private valueSource: ValueSource = defaultSource;

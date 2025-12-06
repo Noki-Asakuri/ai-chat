@@ -18,6 +18,7 @@ import { Route as AuthLoginRouteImport } from './app/auth/login'
 import { Route as Chat_layoutThreadsIndexRouteImport } from './app/_chat_layout/threads/index'
 import { Route as ApiAuthCallbackRouteImport } from './app/api/auth/callback'
 import { Route as Chat_layoutThreadsThreadIdRouteImport } from './app/_chat_layout/threads/$threadId'
+import { Route as ApiClientAuthCallbackRouteImport } from './app/api/client/auth/callback'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -64,6 +65,11 @@ const Chat_layoutThreadsThreadIdRoute =
     path: '/threads/$threadId',
     getParentRoute: () => Chat_layoutRoute,
   } as any)
+const ApiClientAuthCallbackRoute = ApiClientAuthCallbackRouteImport.update({
+  id: '/api/client/auth/callback',
+  path: '/api/client/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteWithChildren
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
   '/threads': typeof Chat_layoutThreadsIndexRoute
+  '/api/client/auth/callback': typeof ApiClientAuthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/settings': typeof SettingsRouteWithChildren
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
   '/threads': typeof Chat_layoutThreadsIndexRoute
+  '/api/client/auth/callback': typeof ApiClientAuthCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/_chat_layout/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
   '/_chat_layout/threads/': typeof Chat_layoutThreadsIndexRoute
+  '/api/client/auth/callback': typeof ApiClientAuthCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/threads/$threadId'
     | '/api/auth/callback'
     | '/threads'
+    | '/api/client/auth/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/settings'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/threads/$threadId'
     | '/api/auth/callback'
     | '/threads'
+    | '/api/client/auth/callback'
   id:
     | '__root__'
     | '/_chat_layout'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/_chat_layout/threads/$threadId'
     | '/api/auth/callback'
     | '/_chat_layout/threads/'
+    | '/api/client/auth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -137,6 +149,7 @@ export interface RootRouteChildren {
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLogoutRoute: typeof AuthLogoutRoute
   ApiAuthCallbackRoute: typeof ApiAuthCallbackRoute
+  ApiClientAuthCallbackRoute: typeof ApiClientAuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -204,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Chat_layoutThreadsThreadIdRouteImport
       parentRoute: typeof Chat_layoutRoute
     }
+    '/api/client/auth/callback': {
+      id: '/api/client/auth/callback'
+      path: '/api/client/auth/callback'
+      fullPath: '/api/client/auth/callback'
+      preLoaderRoute: typeof ApiClientAuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -241,6 +261,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthLoginRoute: AuthLoginRoute,
   AuthLogoutRoute: AuthLogoutRoute,
   ApiAuthCallbackRoute: ApiAuthCallbackRoute,
+  ApiClientAuthCallbackRoute: ApiClientAuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

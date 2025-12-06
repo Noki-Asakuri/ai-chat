@@ -1,9 +1,9 @@
-import { NavLink } from "react-router";
+import { ClientOnly, Link } from "@tanstack/react-router";
 
 import { ThreadContents } from "./thread-content";
 import { ThreadUserProfile } from "./thread-user-profile";
 
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/_components/ui/sidebar";
 
 export function ThreadSidebar() {
   return (
@@ -17,14 +17,12 @@ export function ThreadSidebar() {
       </div>
 
       <SidebarHeader>
-        <NavLink to="/" className="text-center text-xl">
+        <Link to="/" className="text-center text-xl">
           AI Chat
-        </NavLink>
+        </Link>
       </SidebarHeader>
 
-      <SidebarContent className="flex flex-1 flex-col">
-        <ThreadContents />
-      </SidebarContent>
+      <SidebarContent className="flex flex-1 flex-col">{/* <ThreadContents /> */}</SidebarContent>
 
       <SidebarFooter>
         <hr className="border-sidebar-accent" />
