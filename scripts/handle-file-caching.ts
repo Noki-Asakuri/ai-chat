@@ -1,6 +1,6 @@
 import type { Experimental_DownloadFunction } from "ai";
 
-import { cacheRedis, logger } from "./chat";
+import { cacheRedis, logger } from "./server";
 
 import { env } from "@/env";
 import { tryCatch } from "@/lib/utils";
