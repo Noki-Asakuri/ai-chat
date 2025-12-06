@@ -70,9 +70,7 @@ export async function encryptSession(session: Session) {
 export async function withAuth() {
   const session = await getSessionFromCookie();
 
-  if (!session?.user) {
-    return { user: null };
-  }
+  if (!session?.user) return { user: null };
 
   const {
     sid: sessionId,
@@ -98,9 +96,7 @@ export async function getSessionFromCookie() {
   const cookieName = getConfig("cookieName") || "wos-session";
   const cookie = getCookie(cookieName);
 
-  if (cookie) {
-    return decryptSession(cookie);
-  }
+  if (cookie) return decryptSession(cookie);
 }
 
 export async function saveSession(
@@ -108,6 +104,7 @@ export async function saveSession(
 ): Promise<void> {
   const cookieName = getConfig("cookieName") || "wos-session";
   const encryptedSession = await encryptSession(sessionOrResponse);
+
   setCookie(cookieName, encryptedSession);
 }
 
@@ -132,6 +129,29 @@ function getReturnPathname(url: string): string {
   return `${newUrl.pathname}${newUrl.searchParams.size > 0 ? "?" + newUrl.searchParams.toString() : ""}`;
 }
 
+/**
+ * Updates and validates the current AuthKit session based on the request's session cookie.
+ *
+ * Behavior:
+ * - Reads the session cookie and attempts to decrypt it.
+ * - Verifies the stored access token against the remote JWKS.
+ * - If the token is valid, attaches the encrypted session to returned headers for downstream middleware.
+ * - If the token is expired/invalid, attempts to refresh it using the refresh token and returns updated
+ *   headers including a Set-Cookie header with the new encrypted session on success.
+ * - If refreshing fails or no session exists, returns an authorization URL to begin authentication and headers
+ *   indicating the middleware executed. When a cookie is deleted it is returned via `Set-Cookie` with Max-Age=0.
+ *
+ * @param request - The incoming Request object; its URL is recorded in headers for return-path tracking.
+ * @param options - Optional settings (AuthkitOptions):
+ *   - debug: enable console logging (default: false)
+ *   - redirectUri: override redirect URI used when generating authorization URLs
+ *   - screenHint: optional screen hint passed to getAuthorizationUrl
+ *
+ * @returns A Promise that resolves to an AuthkitResponse containing:
+ *   - session: the resolved session information (or { user: null } if unauthenticated)
+ *   - headers: Headers to be applied by middleware/edge (may include Set-Cookie, x-workos-session, x-workos-middleware)
+ *   - authorizationUrl: present when the client must be redirected to AuthKit for login
+ */
 export async function updateSession(
   request: Request,
   options: AuthkitOptions = { debug: false },
