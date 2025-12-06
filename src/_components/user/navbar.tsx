@@ -8,7 +8,7 @@ import {
   UserRoundPenIcon,
 } from "lucide-react";
 
-import { Tab, Tabs, TabsList } from "@/_components/ui/tabs";
+import { Tab, Tabs, TabsList } from "@/components/ui/tabs";
 
 const paths = [
   {
@@ -22,8 +22,8 @@ const paths = [
     icon: ChartNoAxesColumnIcon,
   },
   {
-    name: "Customize",
-    path: "/settings/customize",
+    name: "Customization",
+    path: "/settings/customization",
     icon: Columns3CogIcon,
   },
   {

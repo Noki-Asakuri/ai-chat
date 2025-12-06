@@ -2,17 +2,19 @@
 
 import appCss from "@/styles/globals.css?url";
 
-import { useConvex, type ConvexQueryClient } from "@convex-dev/react-query";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
+import { useConvex, type ConvexQueryClient } from "@convex-dev/react-query";
 import { useEffect } from "react";
 
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+
+import { Toaster } from "@/components/ui/sonner";
 
 import { getAuth } from "@/lib/authkit/serverFunctions";
 
@@ -84,7 +86,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
       <body className="dark isolate font-sans">
         {children}
+
         <Scripts />
+        <Toaster />
 
         {import.meta.env.PROD && (
           <>

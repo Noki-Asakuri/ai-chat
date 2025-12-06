@@ -1,12 +1,13 @@
-"use client";
-
 import { api } from "@/convex/_generated/api";
-import { useMutation } from "convex/react";
 
 import { convexQuery } from "@convex-dev/react-query";
+import { useMutation } from "convex/react";
+
 import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ImagePlusIcon, TrashIcon } from "lucide-react";
-import React, { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { ImagePreviewDialog } from "@/components/image-preview-dialog";
@@ -18,42 +19,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { useStorage } from "@/lib/hooks/use-storage";
 
-function LoadingSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold">Customize AI</h2>
-        <p className="text-muted-foreground">
-          Customize the assistant's personality to your liking.
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label>What should AI call you?</Label>
-          <Input disabled className="bg-input/30" />
-        </div>
-
-        <div className="space-y-2">
-          <Label>What do you do?</Label>
-          <Input disabled className="bg-input/30" />
-        </div>
-
-        <div className="space-y-2">
-          <Label>What traits should AI have?</Label>
-          <Input disabled className="bg-input/30" />
-        </div>
-
-        <div className="space-y-2">
-          <Label>System instruction (Global)</Label>
-          <Textarea disabled className="min-h-[200px] bg-input/30" />
-        </div>
-
-        <Button disabled>Save Preferences</Button>
-      </div>
-    </div>
-  );
-}
+export const Route = createFileRoute("/settings/customization")({
+  component: RouteComponent,
+});
 
 function getFormValue<T extends File | string>(key: string, formData: FormData): T {
   const value = formData.get(key) ?? "";
@@ -62,14 +30,14 @@ function getFormValue<T extends File | string>(key: string, formData: FormData):
   return value as T;
 }
 
-export default function CustomizePage() {
-  const { data } = useQuery(convexQuery(api.functions.users.currentUser, {}));
-  const update = useMutation(api.functions.users.updateUserCustomization);
+function RouteComponent() {
+  const { data, isPending } = useQuery(convexQuery(api.functions.users.currentUser, {}));
+  const updateUserCustomization = useMutation(api.functions.users.updateUserCustomization);
 
   const { uploadFile, deleteFile } = useStorage();
 
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const [pending, startTransition] = useTransition();
+  const [pendingUpdate, startTransition] = useTransition();
 
   const [backgroundImage, setBackgroundImage] = useState<File | null>(null);
 
@@ -80,7 +48,7 @@ export default function CustomizePage() {
       async function removeBackground() {
         if (!data?.customization?.backgroundId) return;
 
-        await update({ data: { backgroundId: null } });
+        await updateUserCustomization({ data: { backgroundId: null } });
         await deleteFile(data.customization.backgroundId);
       }
 
@@ -92,7 +60,7 @@ export default function CustomizePage() {
     });
   }
 
-  function updateUserCustomization(event: React.FormEvent<HTMLFormElement>) {
+  function handleUpdateUserCustomization(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
@@ -123,15 +91,13 @@ export default function CustomizePage() {
         updates.backgroundId = await uploadFile({ file: backgroundImage });
       }
 
-      toast.promise(update({ data: updates }), {
+      toast.promise(updateUserCustomization({ data: updates }), {
         loading: "Saving preferences...",
         success: "Preferences saved",
         error: "Failed to save preferences",
       });
     });
   }
-
-  if (!data) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-4">
@@ -142,7 +108,7 @@ export default function CustomizePage() {
         </p>
       </div>
 
-      <form className="space-y-4" onSubmit={updateUserCustomization}>
+      <form className="space-y-4" onSubmit={handleUpdateUserCustomization}>
         <div className="space-y-2">
           <Label htmlFor="name">What should AI call you?</Label>
           <ControlledInput
@@ -151,7 +117,7 @@ export default function CustomizePage() {
             autoComplete="off"
             placeholder="Enter your name"
             className="bg-input/30"
-            disabled={pending}
+            disabled={pendingUpdate || isPending}
             defaultValue={data?.customization?.name ?? ""}
           />
         </div>
@@ -164,7 +130,7 @@ export default function CustomizePage() {
             autoComplete="off"
             placeholder="Engineer, student, etc."
             className="bg-input/30"
-            disabled={pending}
+            disabled={pendingUpdate || isPending}
             defaultValue={data?.customization?.occupation ?? ""}
           />
         </div>
@@ -177,7 +143,7 @@ export default function CustomizePage() {
             autoComplete="off"
             placeholder="Type a trait and press Enter or Tab..."
             className="bg-input/30"
-            disabled={pending}
+            disabled={pendingUpdate || isPending}
             defaultValue={data?.customization?.traits?.join(", ") ?? ""}
           />
         </div>
@@ -189,7 +155,7 @@ export default function CustomizePage() {
             id="system-instruction"
             name="system-instruction"
             className="min-h[150px]"
-            disabled={pending}
+            disabled={pendingUpdate || isPending}
             defaultValue={data?.customization?.systemInstruction ?? "You are a helpful assistant."}
           />
         </div>
@@ -202,6 +168,7 @@ export default function CustomizePage() {
               <Label htmlFor="disable-blur">Disable Blur</Label>
 
               <ControlledSwitch
+                disabled={pendingUpdate || isPending}
                 id="disable-blur"
                 name="disable-blur"
                 defaultChecked={data?.customization?.disableBlur ?? false}
@@ -212,6 +179,7 @@ export default function CustomizePage() {
               <Label htmlFor="disable-blur">Show Full Code</Label>
 
               <ControlledSwitch
+                disabled={pendingUpdate || isPending}
                 id="show-full-code"
                 name="show-full-code"
                 defaultChecked={data?.customization?.showFullCode ?? false}
@@ -222,6 +190,7 @@ export default function CustomizePage() {
           <div className="flex items-start gap-x-2">
             <div className="flex flex-col items-center justify-center gap-2">
               <Button
+                disabled={pendingUpdate || isPending}
                 type="button"
                 size="icon"
                 variant="outline"
@@ -233,6 +202,7 @@ export default function CustomizePage() {
 
               {data?.customization?.backgroundId && (
                 <Button
+                  disabled={pendingUpdate || isPending}
                   size="icon"
                   type="button"
                   className="size-12"
@@ -259,7 +229,7 @@ export default function CustomizePage() {
                 <img
                   src={
                     objectUrl ??
-                    `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization!.backgroundId}`
+                    `https://ik.imagekit.io/gmethsnvl/ai-chat/${data!.customization!.backgroundId}`
                   }
                   alt="User Background Image"
                   className="h-full w-full rounded-md object-cover"
@@ -285,7 +255,7 @@ export default function CustomizePage() {
           />
         </div>
 
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={isPending || pendingUpdate}>
           Save Preferences
         </Button>
       </form>

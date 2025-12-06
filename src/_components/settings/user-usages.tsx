@@ -1,39 +1,34 @@
 "use client";
 
-import type { api } from "@/convex/_generated/api";
-import { usePreloadedQuery, type Preloaded } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { convexQuery } from "@convex-dev/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { Meter } from "@base-ui-components/react/meter";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 import { format } from "@/lib/utils";
 
-export function UserUsages({
-  preloaded,
-}: {
-  preloaded: Preloaded<typeof api.functions.usages.getUserUsages>;
-}) {
-  const usages = usePreloadedQuery(preloaded);
-  if (!usages) return null;
+export function UserUsages() {
+  const { data } = useQuery(convexQuery(api.functions.usages.getUserUsages));
+  if (!data) return null;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between gap-2 text-xl">
-          <span>{usages.resetType === "daily" ? "Daily" : "Monthly"} Usages</span>
+          <span>{data.resetType === "daily" ? "Daily" : "Monthly"} Usages</span>
 
-          {usages && (
-            <span className="text-sm text-muted-foreground">
-              {format.number(usages.used)} / {format.number(usages.base)}
-            </span>
-          )}
+          <span className="text-sm text-muted-foreground">
+            {format.number(data.used)} / {format.number(data.base)}
+          </span>
         </CardTitle>
       </CardHeader>
 
       <CardContent>
         <Meter.Root
           className="box-border flex w-full items-center gap-2"
-          value={(usages.used * 100) / usages.base}
+          value={(data.used * 100) / data.base}
         >
           <Meter.Track className="block h-4 w-full overflow-hidden rounded-md border">
             <Meter.Indicator className="block bg-accent transition-all duration-500" />

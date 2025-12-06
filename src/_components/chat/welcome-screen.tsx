@@ -1,6 +1,5 @@
-import { useUser } from "@clerk/react-router";
+import { useLoaderData, useParams } from "@tanstack/react-router";
 import { BookOpenIcon, CodeIcon, CompassIcon, SparklesIcon } from "lucide-react";
-import { useParams } from "react-router";
 
 import { Tab, Tabs, TabsList, TabsPanel } from "../ui/tabs";
 
@@ -48,8 +47,8 @@ const categories: CategoryButton[] = [
 ];
 
 export function WelcomeScreen() {
-  const { user } = useUser();
-  const { threadId } = useParams<{ threadId: string }>();
+  const { user } = useLoaderData({ from: "/_chat_layout" });
+  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
 
   const chatInput = useChatStore((state) => state.chatInput.length);
   const textareaHeight = useChatStore((state) => state.textareaHeight);
@@ -63,7 +62,7 @@ export function WelcomeScreen() {
     }, 100);
   };
 
-  if (chatInput > 0 || !!threadId) return null;
+  if (chatInput > 0 || !!params?.threadId) return null;
 
   return (
     <div
@@ -72,8 +71,8 @@ export function WelcomeScreen() {
       className="pointer-events-none absolute flex w-full flex-col items-center justify-center transition-opacity"
     >
       <div className="mx-auto max-w-2xl space-y-4 text-center">
-        <h1 className="font-light text-4xl text-foreground">
-          How can I help you, <span className="capitalize">{user?.username}</span>?
+        <h1 className="text-4xl font-light text-foreground">
+          How can I help you, <span className="capitalize">{user?.firstName}</span>?
         </h1>
 
         <div className="w-full px-4 md:min-w-[650px]">
@@ -94,7 +93,7 @@ export function WelcomeScreen() {
                     <button
                       key={index}
                       onClick={() => handlePromptClick(prompt)}
-                      className="pointer-events-auto flex items-center justify-center text-pretty rounded-md bg-muted/70 px-4 py-2 text-sm backdrop-blur-md backdrop-saturate-150 transition-colors hover:bg-muted/40 group-data-[disable-blur=true]/sidebar-provider:bg-muted hover:group-data-[disable-blur=true]/sidebar-provider:bg-muted/80 md:min-w-max md:justify-start md:text-base"
+                      className="pointer-events-auto flex items-center justify-center rounded-md bg-muted/70 px-4 py-2 text-sm text-pretty backdrop-blur-md backdrop-saturate-150 transition-colors group-data-[disable-blur=true]/sidebar-provider:bg-muted hover:bg-muted/40 hover:group-data-[disable-blur=true]/sidebar-provider:bg-muted/80 md:min-w-max md:justify-start md:text-base"
                     >
                       {prompt}
                     </button>

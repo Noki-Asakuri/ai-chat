@@ -3,7 +3,7 @@ import { ClientOnly, Link } from "@tanstack/react-router";
 import { ThreadContents } from "./thread-content";
 import { ThreadUserProfile } from "./thread-user-profile";
 
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/_components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
 
 export function ThreadSidebar() {
   return (
@@ -22,7 +22,9 @@ export function ThreadSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="flex flex-1 flex-col">{/* <ThreadContents /> */}</SidebarContent>
+      <SidebarContent className="flex flex-1 flex-col">
+        <ThreadContents />
+      </SidebarContent>
 
       <SidebarFooter>
         <hr className="border-sidebar-accent" />

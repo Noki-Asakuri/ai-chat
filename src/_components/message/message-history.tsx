@@ -106,7 +106,6 @@ export function MessageHistory() {
         abortController.current = new AbortController();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleOnScroll(event: React.UIEvent<HTMLDivElement>) {

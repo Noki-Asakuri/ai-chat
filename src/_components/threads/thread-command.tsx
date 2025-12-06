@@ -2,11 +2,11 @@ import { api } from "@/convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
 
 import { useQuery } from "@tanstack/react-query";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useDebounce } from "@uidotdev/usehooks";
 import { CommandLoading } from "cmdk";
 import { LoaderIcon, PinIcon, PinOffIcon, SearchIcon } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "@tanstack/react-router";
 
 import { Button } from "../ui/button";
 import {
@@ -18,16 +18,16 @@ import {
   CommandList,
 } from "../ui/command";
 
-import { useChatStore } from "@/lib/chat/store";
+import { getConvexReactClient } from "@/lib/convex/client";
+import { threadStore, useThreadStore } from "@/lib/store/thread-store";
 import { groupByDate } from "@/lib/threads/group-by-date";
 import type { Thread } from "@/lib/types";
 import { fromUUID, toUUID } from "@/lib/utils";
-import { getConvexReactClient } from "@/lib/convex/client";
 
 const convexClient = getConvexReactClient();
 
 export function ThreadCommand() {
-  const threadCommandOpen = useChatStore((state) => state.threadCommandOpen);
+  const threadCommandOpen = useThreadStore((state) => state.threadCommandOpen);
 
   return (
     <div className="flex items-center justify-center gap-2">
@@ -37,7 +37,7 @@ export function ThreadCommand() {
         variant="ghost"
         title="Search Threads"
         data-expanded={threadCommandOpen}
-        onClick={() => useChatStore.getState().setThreadCommandOpen(true)}
+        onClick={() => threadStore.getState().setThreadCommandOpen(true)}
         className="h-7 rounded-md border px-2 py-1 opacity-100 transition-opacity"
       >
         <SearchIcon />
@@ -54,7 +54,7 @@ export function ThreadCommand() {
 }
 
 function PinThread() {
-  const defaultThreads = useChatStore((state) => state.threads);
+  const defaultThreads = useThreadStore((state) => state.threads);
   const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
 
   const thread = defaultThreads.find((thread) => thread._id === fromUUID(params?.threadId));
@@ -84,8 +84,8 @@ function PinThread() {
 }
 
 function ThreadCommandDialog() {
-  const defaultThreads = useChatStore((state) => state.threads);
-  const threadCommandOpen = useChatStore((state) => state.threadCommandOpen);
+  const defaultThreads = useThreadStore((state) => state.threads);
+  const threadCommandOpen = useThreadStore((state) => state.threadCommandOpen);
 
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 1000);
@@ -102,7 +102,7 @@ function ThreadCommandDialog() {
   return (
     <CommandDialog
       open={threadCommandOpen}
-      onOpenChange={useChatStore.getState().setThreadCommandOpen}
+      onOpenChange={threadStore.getState().setThreadCommandOpen}
     >
       <CommandInput placeholder="Search threads..." value={query} onValueChange={setQuery} />
 
@@ -151,13 +151,13 @@ function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
           className="p-0!"
           onSelect={async () => {
             await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(thread._id) } });
-            useChatStore.getState().setThreadCommandOpen(false);
+            threadStore.getState().setThreadCommandOpen(false);
           }}
         >
           <Link
             title={thread.title}
             className="w-full truncate px-2 py-1.5"
-            onClick={() => useChatStore.getState().setThreadCommandOpen(false)}
+            onClick={() => threadStore.getState().setThreadCommandOpen(false)}
             to="/threads/$threadId"
             params={{ threadId: toUUID(thread._id) }}
           >

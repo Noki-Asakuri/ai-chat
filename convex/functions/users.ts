@@ -175,16 +175,18 @@ async function getUserById(ctx: QueryCtx, userId: string) {
 
 export const updateUserCustomization = mutation({
   args: {
-    data: v.object({
-      name: v.optional(v.string()),
-      occupation: v.optional(v.string()),
-      traits: v.optional(v.array(v.string())),
-      systemInstruction: v.optional(v.string()),
-      backgroundId: v.optional(v.nullable(v.string())),
-      disableBlur: v.optional(v.boolean()),
-      hiddenModels: v.optional(v.array(v.string())),
-      showFullCode: v.optional(v.boolean()),
-    }),
+    data: v
+      .object({
+        name: v.string(),
+        occupation: v.string(),
+        traits: v.array(v.string()),
+        systemInstruction: v.string(),
+        backgroundId: v.nullable(v.string()),
+        disableBlur: v.boolean(),
+        hiddenModels: v.array(v.string()),
+        showFullCode: v.boolean(),
+      })
+      .partial(),
   },
   handler: async (ctx, { data }) => {
     const userId = await ctx.auth.getUserIdentity();

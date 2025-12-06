@@ -1,10 +1,13 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+
+import { convexQuery } from "@convex-dev/react-query";
+import { useMutation } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
-import { Link } from "@tanstack/react-router";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { useEffect, useRef, useState } from "react";
 
@@ -31,7 +34,7 @@ import { ThreadGroup } from "./thread-group";
 import { ThreadItem } from "./thread-items";
 import { UngroupedThreadGroup } from "./thread-ungrouped";
 
-// import { useChatStore } from "@/lib/chat/store";
+import { threadStore, useThreadStore } from "@/lib/store/thread-store";
 
 export function ThreadContents() {
   return (
@@ -113,15 +116,15 @@ function CreateGroupButton() {
 
 const LOCAL_STORAGE_KEY = "local-threads-cache";
 function ThreadListWrapper() {
-  // const [localData, setLocalData] = useLocalStorage<ListGroupData | null>(LOCAL_STORAGE_KEY);
-  const data = useQuery(api.functions.groups.listGroups);
+  const [localData, setLocalData] = useLocalStorage<ListGroupData | null>(LOCAL_STORAGE_KEY);
+  const { data } = useQuery(convexQuery(api.functions.groups.listGroups));
 
-  // useEffect(() => {
-  //   if (data) setLocalData(data);
-  // }, [data, setLocalData]);
+  useEffect(() => {
+    if (data) setLocalData(data);
+  }, [data, setLocalData]);
 
-  // if (data) return <ThreadList data={data} />;
-  // if (localData) return <ThreadList data={localData} />;
+  if (data) return <ThreadList data={data} />;
+  if (localData) return <ThreadList data={localData} />;
 
   return null;
 }
@@ -201,13 +204,13 @@ function ThreadList({ data }: ThreadListProps) {
     switch (activeData.type) {
       case "thread": {
         const thread = data.threads.find((t) => t._id === activeData.threadId)!;
-        useChatStore.getState().setActiveDraggingItem({ type: "thread", item: thread });
+        threadStore.getState().setActiveDraggingItem({ type: "thread", item: thread });
         break;
       }
 
       case "group": {
         const group = data.groups.find((g) => g._id === activeData.groupId)!;
-        useChatStore.getState().setActiveDraggingItem({ type: "group", item: group });
+        threadStore.getState().setActiveDraggingItem({ type: "group", item: group });
         break;
       }
     }
@@ -365,65 +368,49 @@ function ThreadList({ data }: ThreadListProps) {
   async function handleDragEnd(event: DragEndEvent) {
     console.debug("[Thread] Drag end", event.active.id);
 
-    try {
-      const pending = pendingDropRef.current;
-      if (!pending) return;
+    const pending = pendingDropRef.current;
+    if (!pending) return;
 
-      const activeItems = pending.type === "group" ? data.groups : data.threads;
-      const item = activeItems.find((t) => t._id === (event.active.id as Id<"groups" | "threads">));
+    const activeItems = pending.type === "group" ? data.groups : data.threads;
+    const item = activeItems.find((t) => t._id === (event.active.id as Id<"groups" | "threads">));
 
-      if (!item) return;
+    if (!item) return;
 
-      console.log("[Dnd]: Reorder", pending, item);
+    console.log("[Dnd]: Reorder", pending, item);
 
-      switch (true) {
-        case pending.type === "thread" && "groupId" in item && pending.toGroupId === null: {
-          await removeGroupId({ threadId: item._id });
-          break;
-        }
-
-        case pending.type === "thread" && "groupId" in item && pending.toGroupId === item.groupId: {
-          console.log("[Dnd]: Reorder within group");
-          await reorderThread({ threadId: item._id, toIndex: pending.index });
-          break;
-        }
-
-        case pending.type === "thread" && "groupId" in item && pending.toGroupId !== item.groupId: {
-          console.log("[Dnd]: Move thread to group");
-          await moveThreadToGroup({
-            threadId: item._id,
-            toGroupId: pending.toGroupId,
-            toIndex: pending.index,
-          });
-          break;
-        }
-
-        case pending.type === "group": {
-          console.log("[Dnd]: Move group");
-          await moveGroupToIndex({ groupId: item._id as Id<"groups">, toIndex: pending.index });
-          break;
-        }
-      }
-
-      setOptimisticGrouped(null);
-      setOptimisticGroups(null);
-      useChatStore.getState().setActiveDraggingItem(null);
-    } catch (error) {
-      console.error("[Thread] Reorder failed", error);
-      // Rollback
-      if (snapshotRef.current) setOptimisticGrouped(snapshotRef.current);
-      setOptimisticGroups(data.groups);
-    } finally {
-      pendingDropRef.current = null;
-      snapshotRef.current = null;
+    if (pending.type === "thread" && "groupId" in item && pending.toGroupId === null) {
+      await removeGroupId({ threadId: item._id });
     }
+    //
+    else if (pending.type === "thread" && "groupId" in item && pending.toGroupId === item.groupId) {
+      await reorderThread({ threadId: item._id, toIndex: pending.index });
+    }
+    //
+    else if (pending.type === "thread" && "groupId" in item && pending.toGroupId !== item.groupId) {
+      await moveThreadToGroup({
+        threadId: item._id,
+        toGroupId: pending.toGroupId,
+        toIndex: pending.index,
+      });
+    }
+    //
+    else if (pending.type === "group") {
+      await moveGroupToIndex({ groupId: item._id as Id<"groups">, toIndex: pending.index });
+    }
+
+    setOptimisticGrouped(null);
+    setOptimisticGroups(null);
+    threadStore.getState().setActiveDraggingItem(null);
+
+    pendingDropRef.current = null;
+    snapshotRef.current = null;
   }
 
   function handleDragCancel(_: DragCancelEvent) {
     console.debug("[Thread] Drag cancel");
     setOptimisticGrouped(null);
     setOptimisticGroups(null);
-    useChatStore.getState().setActiveDraggingItem(null);
+    threadStore.getState().setActiveDraggingItem(null);
 
     pendingDropRef.current = null;
     snapshotRef.current = null;
@@ -460,7 +447,7 @@ function ThreadList({ data }: ThreadListProps) {
 }
 
 function ThreadDraggingOverlay() {
-  const activeDraggingItem = useChatStore((state) => state.activeDraggingItem);
+  const activeDraggingItem = useThreadStore((state) => state.activeDraggingItem);
 
   return (
     <DragOverlay modifiers={[restrictToFirstScrollableAncestor, restrictToVerticalAxis]}>
