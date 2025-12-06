@@ -3,8 +3,6 @@ import { ArrowLeftIcon, LogOutIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-import { signOut } from "@/lib/authkit/serverFunctions";
-
 export function TopSettingHeaders() {
   const searchParams = useSearch({ from: "/settings" });
 

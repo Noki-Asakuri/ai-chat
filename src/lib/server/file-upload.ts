@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { logger } from "@/app/api/_server/chat";
+import { logger } from "@/";
 import { type ServerConvexClient } from "../convex/server";
 import { tryCatch } from "../utils";
 

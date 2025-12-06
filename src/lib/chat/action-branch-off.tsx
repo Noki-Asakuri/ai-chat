@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 
-import type { useNavigate } from "react-router";
+import type { useNavigate } from "@tanstack/react-router";
 
 import { getConvexReactClient } from "../convex/client";
 import type { ChatMessage } from "../types";
@@ -19,5 +19,5 @@ export async function branchOffThreadMessage(
     threadId: message.threadId,
   });
 
-  await navigate(`/threads/${toUUID(newThreadId)}`);
+  await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(newThreadId) } });
 }

@@ -2,6 +2,8 @@ import type { Doc } from "@/convex/_generated/dataModel";
 
 import { create } from "zustand";
 
+import type { Thread } from "../types";
+
 export interface ThreadStore {
   threads: Thread[];
   setThreads: (threads: Thread[]) => void;
