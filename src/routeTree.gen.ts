@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './app/__root'
 import { Route as SettingsRouteImport } from './app/settings'
 import { Route as Chat_layoutRouteImport } from './app/_chat_layout'
 import { Route as Chat_layoutIndexRouteImport } from './app/_chat_layout/index'
+import { Route as SettingsCustomizationRouteImport } from './app/settings/customization'
 import { Route as SettingsAccountRouteImport } from './app/settings/account'
 import { Route as AuthLogoutRouteImport } from './app/auth/logout'
 import { Route as AuthLoginRouteImport } from './app/auth/login'
@@ -32,6 +33,11 @@ const Chat_layoutIndexRoute = Chat_layoutIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => Chat_layoutRoute,
+} as any)
+const SettingsCustomizationRoute = SettingsCustomizationRouteImport.update({
+  id: '/customization',
+  path: '/customization',
+  getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsAccountRoute = SettingsAccountRouteImport.update({
   id: '/account',
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/settings/account': typeof SettingsAccountRoute
+  '/settings/customization': typeof SettingsCustomizationRoute
   '/': typeof Chat_layoutIndexRoute
   '/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/settings/account': typeof SettingsAccountRoute
+  '/settings/customization': typeof SettingsCustomizationRoute
   '/': typeof Chat_layoutIndexRoute
   '/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/settings/account': typeof SettingsAccountRoute
+  '/settings/customization': typeof SettingsCustomizationRoute
   '/_chat_layout/': typeof Chat_layoutIndexRoute
   '/_chat_layout/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/logout'
     | '/settings/account'
+    | '/settings/customization'
     | '/'
     | '/threads/$threadId'
     | '/api/auth/callback'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/logout'
     | '/settings/account'
+    | '/settings/customization'
     | '/'
     | '/threads/$threadId'
     | '/api/auth/callback'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/logout'
     | '/settings/account'
+    | '/settings/customization'
     | '/_chat_layout/'
     | '/_chat_layout/threads/$threadId'
     | '/api/auth/callback'
@@ -161,6 +173,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof Chat_layoutIndexRouteImport
       parentRoute: typeof Chat_layoutRoute
+    }
+    '/settings/customization': {
+      id: '/settings/customization'
+      path: '/customization'
+      fullPath: '/settings/customization'
+      preLoaderRoute: typeof SettingsCustomizationRouteImport
+      parentRoute: typeof SettingsRoute
     }
     '/settings/account': {
       id: '/settings/account'
@@ -225,10 +244,12 @@ const Chat_layoutRouteWithChildren = Chat_layoutRoute._addFileChildren(
 
 interface SettingsRouteChildren {
   SettingsAccountRoute: typeof SettingsAccountRoute
+  SettingsCustomizationRoute: typeof SettingsCustomizationRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAccountRoute: SettingsAccountRoute,
+  SettingsCustomizationRoute: SettingsCustomizationRoute,
 }
 
 const SettingsRouteWithChildren = SettingsRoute._addFileChildren(

@@ -9,7 +9,7 @@ import { ProfileDisplay } from "./profile-display";
 import { useChatStore } from "@/lib/chat/store";
 
 export function ThreadProfileSidebar() {
-  const { data, isPending } = useQuery(convexQuery(api.functions.profiles.listProfiles, {}));
+  const { data, isPending } = useQuery(convexQuery(api.functions.profiles.listProfiles));
 
   useEffect(() => {
     if (data) useChatStore.getState().setProfiles(data);

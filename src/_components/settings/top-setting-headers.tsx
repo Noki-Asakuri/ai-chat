@@ -1,7 +1,7 @@
 import { Link, useSearch } from "@tanstack/react-router";
 import { ArrowLeftIcon, LogOutIcon } from "lucide-react";
 
-import { Button } from "@/_components/ui/button";
+import { Button } from "@/components/ui/button";
 
 import { signOut } from "@/lib/authkit/serverFunctions";
 
@@ -22,7 +22,11 @@ export function TopSettingHeaders() {
         </Button>
 
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" className="cursor-pointer">
+          <Button
+            asChild
+            variant="none"
+            className="cursor-pointer border border-destructive/50 bg-destructive/30 hover:bg-destructive/40"
+          >
             <Link to="/auth/logout">
               <LogOutIcon />
               Sign out

@@ -4,7 +4,5 @@ import axiomClient from "./axiom";
 import { env } from "@/env";
 
 export const logger = new Logger({
-  transports: [
-    new AxiomJSTransport({ axiom: axiomClient, dataset: env.NEXT_PUBLIC_AXIOM_DATASET }),
-  ],
+  transports: [new AxiomJSTransport({ axiom: axiomClient, dataset: env.VITE_AXIOM_DATASET })],
 });

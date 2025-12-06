@@ -1,9 +1,9 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { z } from "zod/v4";
 
-import { SettingsSidebar } from "@/_components/settings/settings-sidebar";
-import { TopSettingHeaders } from "@/_components/settings/top-setting-headers";
-import { UserNavbar } from "@/_components/user/navbar";
+import { SettingsSidebar } from "@/components/settings/settings-sidebar";
+import { TopSettingHeaders } from "@/components/settings/top-setting-headers";
+import { UserNavbar } from "@/components/user/navbar";
 
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
 

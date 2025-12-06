@@ -1,13 +1,16 @@
 import type { User } from "@workos-inc/node";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/_components/ui/avatar";
-import { Button } from "@/_components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/_components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { UserUsages } from "./user-usages";
 
 export function SettingsSidebar({ user }: { user: User }) {
   return (
     <aside className="space-y-4">
       <UserInfo user={user} />
+      <UserUsages />
       <KeyboardShortcuts />
     </aside>
   );

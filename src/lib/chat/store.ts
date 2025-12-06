@@ -4,7 +4,7 @@ import { z } from "zod";
 import { create } from "zustand";
 
 import { profileIdSchema } from "../server/validate-request-body";
-import type { ChatMessage, ReasoningEffort, Thread, UserAttachment } from "../types";
+import type { ChatMessage, ReasoningEffort, UserAttachment } from "../types";
 import { getModelData } from "./models";
 
 type PreviewImage = {
@@ -116,22 +116,8 @@ export interface ChatState {
   textareaHeight: number;
   setTextareaHeight: (height: number) => void;
 
-  threads: Thread[];
-  setThreads: (threads: Thread[]) => void;
-
-  threadCommandOpen: boolean;
-  setThreadCommandOpen: (open: boolean | ((open: boolean) => boolean)) => void;
-
   lastUserMessageHeight?: number | null;
   setMessageHeight: (height?: number | null) => void;
-
-  activeDraggingItem:
-    | { type: "thread"; item: Doc<"threads"> }
-    | { type: "group"; item: Doc<"groups"> }
-    | null;
-  setActiveDraggingItem: (
-    item: { type: "thread"; item: Doc<"threads"> } | { type: "group"; item: Doc<"groups"> } | null,
-  ) => void;
 
   activeStreams: Set<string>;
   markStreamStart: (assistantMessageId: string | Id<"messages">) => void;
@@ -203,18 +189,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   popupRetryMessageId: "",
   setPopupRetryMessageId: (messageId) => set({ popupRetryMessageId: messageId }),
-
-  threads: [],
-  setThreads: (threads) => set({ threads }),
-
-  activeDraggingItem: null,
-  setActiveDraggingItem: (item) => set({ activeDraggingItem: item }),
-
-  threadCommandOpen: false,
-  setThreadCommandOpen: (open) =>
-    set((state) => ({
-      threadCommandOpen: typeof open === "function" ? open(state.threadCommandOpen) : open,
-    })),
 
   activeStreams: new Set(),
   hasActiveStream: (assistantMessageId) => get().activeStreams.has(assistantMessageId),

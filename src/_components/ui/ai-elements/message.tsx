@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/nextjs";
+import { useLoaderData } from "@tanstack/react-router";
 import type { UIMessage } from "ai";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps, HTMLAttributes } from "react";
@@ -54,12 +54,12 @@ export const MessageContent = ({ children, className, variant, ...props }: Messa
 );
 
 export const MessageAvatar = ({ className, ...props }: ComponentProps<typeof Avatar>) => {
-  const { user } = useUser();
+  const { user } = useLoaderData({ from: "/_chat_layout" });
 
   return (
     <Avatar className={cn("size-11 rounded-md ring-1 ring-border", className)} {...props}>
-      <AvatarImage alt="" className="mt-0 mb-0" src={user?.imageUrl} />
-      <AvatarFallback>{user?.username?.slice(0, 2) || "You"}</AvatarFallback>
+      <AvatarImage alt="" className="mt-0 mb-0" src={user.profilePictureUrl as string} />
+      <AvatarFallback>{user?.firstName?.slice(0, 2) || "You"}</AvatarFallback>
     </Avatar>
   );
 };

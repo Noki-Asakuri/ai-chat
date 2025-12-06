@@ -1,9 +1,9 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute, redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 
-import { ThreadSidebar } from "@/_components/threads/thread-sidebar";
-import { SIDEBAR_COOKIE_NAME, SidebarProvider } from "@/_components/ui/sidebar";
+import { ThreadSidebar } from "@/components/threads/thread-sidebar";
+import { SIDEBAR_COOKIE_NAME, SidebarProvider } from "@/components/ui/sidebar";
 
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
 
@@ -16,6 +16,9 @@ const getCookiesServerFunction = createServerFn({ method: "GET" }).handler(async
 
 export const Route = createFileRoute("/_chat_layout")({
   component: RouteComponent,
+  preload: false,
+  ssr: "data-only",
+
   beforeLoad: async ({ context, location }) => {
     if (!context.user) {
       const path = location.pathname;
