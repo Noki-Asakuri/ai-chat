@@ -1,4 +1,4 @@
-import { createEnv } from "@t3-oss/env-nextjs";
+import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod/v4";
 
 export const env = createEnv({
@@ -15,35 +15,48 @@ export const env = createEnv({
     PROXY_KEY: z.string(),
     REDIS_URL: z.string(),
 
-    CLERK_SECRET_KEY: z.string(),
-    CLERK_WEBHOOK_SIGNING_SECRET: z.string(),
+    WORKOS_REDIRECT_URI: z.url(),
+    WORKOS_API_KEY: z.string(),
+    WORKOS_CLIENT_ID: z.string(),
+    WORKOS_COOKIE_PASSWORD: z.string(),
   },
 
   /**
    * Specify your client-side environment variables schema here. This way you can ensure the app
    * isn't built with invalid env vars. To expose them to the client, prefix them with
-   * `NEXT_PUBLIC_`.
+   * `VITE_`.
    */
   client: {
-    NEXT_PUBLIC_CONVEX_URL: z.string(),
+    VITE_CONVEX_URL: z.string(),
 
-    NEXT_PUBLIC_AXIOM_TOKEN: z.string(),
-    NEXT_PUBLIC_AXIOM_DATASET: z.string(),
+    VITE_AXIOM_TOKEN: z.string(),
+    VITE_AXIOM_DATASET: z.string(),
 
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string(),
-    NEXT_PUBLIC_API_ENDPOINT: z.string(),
+    VITE_API_ENDPOINT: z.string(),
   },
 
-  experimental__runtimeEnv: {
-    NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL,
-
-    NEXT_PUBLIC_AXIOM_TOKEN: process.env.NEXT_PUBLIC_AXIOM_TOKEN,
-    NEXT_PUBLIC_AXIOM_DATASET: process.env.NEXT_PUBLIC_AXIOM_DATASET,
-
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-    NEXT_PUBLIC_API_ENDPOINT: process.env.NEXT_PUBLIC_API_ENDPOINT,
-  },
+  clientPrefix: "VITE_",
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
+
+  /**
+   * What object holds the environment variables at runtime. This is usually
+   * `process.env` or `import.meta.env`.
+   */
+  runtimeEnv: import.meta.env,
+
+  /**
+   * By default, this library will feed the environment variables directly to
+   * the Zod validator.
+   *
+   * This means that if you have an empty string for a value that is supposed
+   * to be a number (e.g. `PORT=` in a ".env" file), Zod will incorrectly flag
+   * it as a type mismatch violation. Additionally, if you have an empty string
+   * for a value that is supposed to be a string with a default value (e.g.
+   * `DOMAIN=` in an ".env" file), the default value will never be applied.
+   *
+   * In order to solve these issues, we recommend that all new projects
+   * explicitly specify this option as true.
+   */
   emptyStringAsUndefined: true,
 });
