@@ -2,7 +2,7 @@
 
 import appCss from "@/styles/globals.css?url";
 
-import { type ConvexQueryClient } from "@convex-dev/react-query";
+import { useConvex, type ConvexQueryClient } from "@convex-dev/react-query";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
@@ -15,7 +15,6 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { getAuth } from "@/lib/authkit/serverFunctions";
-import { getConvexReactClient } from "@/lib/convex/client";
 
 type RootContext = {
   queryClient: QueryClient;
@@ -50,10 +49,7 @@ export const Route = createRootRouteWithContext<RootContext>()({
   beforeLoad: async ({ context }) => {
     const { user, accessToken } = await getAuth();
 
-    if (user) {
-      context.convexClient.serverHttpClient?.setAuth(accessToken);
-      context.convexClient.convexClient.setAuth(async () => accessToken);
-    }
+    if (user) context.convexClient.serverHttpClient?.setAuth(accessToken);
     return { user, accessToken };
   },
   loader: async ({ context }) => {
@@ -74,9 +70,10 @@ export function RootLayout() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { accessToken } = Route.useLoaderData();
+  const client = useConvex();
 
   useEffect(() => {
-    if (accessToken) getConvexReactClient().setAuth(async () => accessToken);
+    if (accessToken) client.setAuth(async () => accessToken);
   }, []);
 
   return (
