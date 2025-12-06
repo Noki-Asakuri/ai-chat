@@ -241,6 +241,8 @@
 .codeblock pre.shiki,
 .custom-scroll,
 #textarea-chat-input {
+  scrollbar-gutter: stable both-edges;
+
   scrollbar-width: thin;
   scrollbar-color: var(--color-ring) transparent;
 }

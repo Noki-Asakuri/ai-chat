@@ -25,6 +25,7 @@ export interface UserInfo {
   impersonator?: Impersonator;
   accessToken: string;
 }
+
 export interface NoUserInfo {
   user: null;
   sessionId?: undefined;

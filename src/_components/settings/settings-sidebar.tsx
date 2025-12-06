@@ -1,46 +1,36 @@
-import { currentUser } from "@clerk/nextjs/server";
+import type { User } from "@workos-inc/node";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/_components/ui/avatar";
+import { Button } from "@/_components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/_components/ui/card";
 
-import { UserUsagesWrapper } from "./user-usages-wrapper";
-
-export function SettingsSidebar() {
+export function SettingsSidebar({ user }: { user: User }) {
   return (
     <aside className="space-y-4">
-      <UserInfo />
-      <UserUsagesWrapper />
+      <UserInfo user={user} />
       <KeyboardShortcuts />
     </aside>
   );
 }
 
-async function UserInfo() {
-  const user = await currentUser();
-  if (!user) return null;
-
-  const fallback = user.username
-    ?.split(" ")
-    .map((name) => name[0])
+function UserInfo({ user }: { user: User }) {
+  const fallback = [user.lastName, user.firstName]
+    .filter(Boolean)
+    .map((name) => name![0])
     .join("");
 
-  const mainEmailAddress = user.emailAddresses.find(
-    (email) => email.id === user.primaryEmailAddressId,
-  );
+  const username = user.firstName || user.lastName || "Unknown";
 
   return (
     <div className="space-y-2">
       <Avatar className="mx-auto size-40">
-        <AvatarImage src={user?.imageUrl as string | undefined} alt={`${user?.username} avatar`} />
+        <AvatarImage src={user.profilePictureUrl as string} alt={`${username} avatar`} />
         <AvatarFallback>{fallback}</AvatarFallback>
       </Avatar>
 
       <div className="text-center">
-        <h1 className="text-xl font-semibold capitalize">{user.username}</h1>
-        <p className="text-muted-foreground blur-xs hover:blur-none">
-          {mainEmailAddress?.emailAddress}
-        </p>
+        <h1 className="text-xl font-semibold capitalize">{username}</h1>
+        <p className="text-muted-foreground blur-xs hover:blur-none">{user.email}</p>
 
         <Button variant="ghost" size="sm" className="mt-2 capitalize">
           Free Plan

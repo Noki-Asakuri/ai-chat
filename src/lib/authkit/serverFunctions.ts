@@ -37,6 +37,7 @@ export const signOut = createServerFn({ method: "POST" })
   .handler(async ({ data: returnTo }) => {
     const cookieName = getConfig("cookieName") || "wos_session";
     deleteCookie(cookieName);
+
     await terminateSession({ returnTo });
   });
 

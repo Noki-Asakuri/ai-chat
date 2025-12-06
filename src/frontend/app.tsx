@@ -4,17 +4,8 @@ import { useConvexAuth } from "convex/react";
 
 import { usePathname as useNextPathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import {
-  createBrowserRouter,
-  Navigate,
-  Outlet,
-  RouterProvider,
-  useLocation,
-  useNavigate,
-} from "react-router";
-import { toast } from "sonner";
 
-import { LoadingPage } from "@/components/loading-page";
+import { toast } from "sonner";
 
 import Home from "./home";
 

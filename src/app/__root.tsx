@@ -11,6 +11,8 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
+import { getAuth } from "@/lib/authkit/serverFunctions";
+
 type RootContext = { queryClient: QueryClient };
 
 export const Route = createRootRouteWithContext<RootContext>()({
@@ -38,7 +40,13 @@ export const Route = createRootRouteWithContext<RootContext>()({
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
+  beforeLoad: async () => {
+    const { user } = await getAuth();
+    return { user };
+  },
+
   shellComponent: RootLayout,
+  notFoundComponent: () => <p>Not Found</p>,
 });
 
 export function RootLayout() {
