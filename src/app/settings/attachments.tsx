@@ -1,11 +1,10 @@
-"use client";
-
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useMutation } from "convex/react";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 import {
   ArrowDownAZIcon,
@@ -18,7 +17,6 @@ import {
   SearchIcon,
   TrashIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -47,6 +45,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { format, toUUID, tryCatch } from "@/lib/utils";
+
+export const Route = createFileRoute("/settings/attachments")({
+  component: AttachmentsPage,
+  head: () => ({ meta: [{ title: "Attachments - AI Chat" }] }),
+});
 
 type SourceFilter = "all" | "user" | "assistant";
 type AttachmentTypeFilter = "all" | "image" | "pdf";
@@ -83,7 +86,7 @@ function LoadingSkeleton() {
   );
 }
 
-export default function AttachmentsPage() {
+function AttachmentsPage() {
   const { data, isPending } = useQuery(
     convexQuery(api.functions.attachments.getAllAttachments, {}),
   );
@@ -469,7 +472,7 @@ export default function AttachmentsPage() {
                   </ImagePreviewDialog>
                 ) : (
                   <Link
-                    href={fileUrl}
+                    to={fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block size-full"
@@ -528,9 +531,9 @@ export default function AttachmentsPage() {
 
                 {attachment.thread && (
                   <Link
-                    prefetch={false}
+                    to="/threads/$threadId"
+                    params={{ threadId: toUUID(attachment.threadId) }}
                     title={attachment.thread.title}
-                    href={`/threads/${toUUID(attachment.threadId)}`}
                     className="line-clamp-1 w-fit text-sm underline-offset-4 hover:underline"
                   >
                     Thread: {attachment.thread.title}

@@ -1,83 +1,38 @@
-"use client";
-
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icons } from "@/components/ui/icons";
-import { Skeleton } from "@/components/ui/skeleton";
 
 import { getModelData } from "@/lib/chat/models";
 import { format, toUUID } from "@/lib/utils";
 
-function LoadingSkeleton() {
-  return (
-    <main className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold">Statistics</h2>
-        <p className="text-muted-foreground">View your chat statistics and activity.</p>
-      </div>
+import { LoadingSkeleton } from "./-pending";
 
-      <div className="grid grid-cols-3 gap-2">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="rounded-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <Skeleton className="h-5 w-20" />
-            </CardHeader>
+export const Route = createFileRoute("/settings/statistics/")({
+  component: StatisticsPage,
+  pendingComponent: LoadingSkeleton,
+  head: () => ({ meta: [{ title: "Statistics - AI Chat" }] }),
 
-            <CardContent>
-              <Skeleton className="h-9 w-16" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+  loader: async ({ context }) => {
+    const data = await context.queryClient.ensureQueryData(
+      convexQuery(api.functions.statistics.getStatistics),
+    );
 
-      <div>
-        <Skeleton className="h-7 w-40" />
-        <Skeleton className="mt-4 h-42" />
+    return { statistics: data };
+  },
+});
 
-        <div className="mt-2 flex h-5 items-center justify-between">
-          <Skeleton className="h-4 w-64" />
-          <Skeleton className="h-4 w-40" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-8 sm:grid-cols-1 lg:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i}>
-            <Skeleton className="h-7 w-40" />
-
-            <div className="mt-4 flex items-center justify-between text-gray-500">
-              <Skeleton className="h-6 w-20" />
-              <Skeleton className="h-6 w-24" />
-            </div>
-
-            <div className="mt-2 flex flex-col gap-2">
-              {Array.from({ length: 5 }).map((_, j) => (
-                <div key={j} className="flex h-10 justify-between">
-                  <Skeleton className="h-10 w-full rounded-md" />
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </main>
-  );
-}
-
-export default function StatisticsPage() {
-  const { data, isPending } = useQuery(convexQuery(api.functions.statistics.getStatistics, {}));
+function StatisticsPage() {
+  const statistics = useSuspenseQuery(convexQuery(api.functions.statistics.getStatistics));
   const thisYear = new Date(Date.now());
 
-  if (isPending) return <LoadingSkeleton />;
-
-  const { stats, modelRank, threadRank, activity, aiProfileRank } = data!;
+  const { stats, modelRank, threadRank, activity, aiProfileRank } = statistics.data!;
 
   return (
     <main className="space-y-4">
@@ -104,7 +59,7 @@ export default function StatisticsPage() {
 
           <CardContent>
             <div className="text-3xl font-bold">{format.number(stats.messages.assistant)}</div>
-            <div className="text-muted-foreground mt-1 text-xs">
+            <div className="mt-1 text-xs text-muted-foreground">
               Words: {format.number(stats.wordsByRole?.assistant ?? 0)}
             </div>
           </CardContent>
@@ -117,7 +72,7 @@ export default function StatisticsPage() {
 
           <CardContent>
             <div className="text-3xl font-bold">{format.number(stats.messages.user)}</div>
-            <div className="text-muted-foreground mt-1 text-xs">
+            <div className="mt-1 text-xs text-muted-foreground">
               Words: {format.number(stats.wordsByRole?.user ?? 0)}
             </div>
           </CardContent>
@@ -154,7 +109,7 @@ export default function StatisticsPage() {
             {format.number(Math.max(...activity.map((d) => d.value)))} messages on a single day.
           </p>
 
-          <div className="text-foreground/70 flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs text-foreground/70">
             <p>Inactive</p>
             <div className="size-4 rounded-xs" style={{ backgroundColor: "var(--border)" }} />
             <div className="size-4 rounded-xs" style={{ backgroundColor: "#0e4429" }} />
@@ -196,8 +151,8 @@ export default function StatisticsPage() {
             {threadRank
               .slice(0, 5)
               .map((item: { id: Id<"threads">; name: string; value: number }) => (
-                <Link href={`/threads/${toUUID(item.id)}`} key={item.id}>
-                  <div className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2">
+                <Link to="/threads/$threadId" params={{ threadId: toUUID(item.id) }} key={item.id}>
+                  <div className="flex h-10 justify-between gap-4 rounded-md border px-4 py-2 hover:bg-card">
                     <p className="truncate">{item.name}</p>
                     <span>{item.value}</span>
                   </div>
@@ -218,7 +173,7 @@ export default function StatisticsPage() {
           {aiProfileRank?.slice(0, 5)?.map((item: { name: string; value: number }) => (
             <div
               key={item.name}
-              className="hover:bg-card flex h-10 justify-between gap-4 rounded-md border px-4 py-2"
+              className="flex h-10 justify-between gap-4 rounded-md border px-4 py-2 hover:bg-card"
             >
               <p className="truncate">{item.name}</p>
               <span>{item.value}</span>
@@ -226,7 +181,7 @@ export default function StatisticsPage() {
           ))}
 
           {(!aiProfileRank || aiProfileRank.length === 0) && (
-            <div className="text-muted-foreground text-sm">No AI profile usage yet.</div>
+            <div className="text-sm text-muted-foreground">No AI profile usage yet.</div>
           )}
         </div>
       </div>
@@ -258,9 +213,9 @@ function ModelRank({
   const percentage = (model.value / assistantMessages) * 100;
 
   return (
-    <div className="hover:bg-card relative flex h-10 justify-between gap-4 overflow-hidden rounded-md border px-4 py-2">
+    <div className="relative flex h-10 justify-between gap-4 overflow-hidden rounded-md border px-4 py-2 hover:bg-card">
       <div
-        className="bg-sidebar-primary/60 absolute top-0 left-0 h-full rounded-md"
+        className="absolute top-0 left-0 h-full rounded-md bg-sidebar-primary/60"
         style={{ width: `${percentage}%` }}
       />
 

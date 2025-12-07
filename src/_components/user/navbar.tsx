@@ -38,7 +38,7 @@ const paths = [
   },
   {
     name: "Profiles",
-    path: "/settings/ai-profiles",
+    path: "/settings/profiles",
     icon: UserRoundPenIcon,
   },
 ];

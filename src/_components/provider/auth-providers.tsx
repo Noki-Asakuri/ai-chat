@@ -1,28 +1,30 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
+import z from "zod";
 
 import { useConvex } from "convex/react";
 import { useEffect, useRef } from "react";
 
-import { updateSession, verifyAccessToken, withAuth } from "@/lib/authkit/ssr/session";
+import { getSessionFromCookie, refreshSession } from "@/lib/authkit/ssr/session";
 
-async function getNewAccessToken() {
-  console.debug("[Server] Refreshing access token at", new Date());
-  const { session } = await updateSession(getRequest());
-  return session.accessToken!;
-}
+export const refreshAccessToken = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      source: z.literal(["client", "server"]),
+      forceRefreshToken: z.boolean().optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    console.log("[Server] Received request to refresh token at", new Date(), "from", data.source);
 
-const refreshAccessToken = createServerFn({ method: "GET" }).handler(async () => {
-  console.log("[Server] Received request to refresh token at", new Date());
+    const session = await getSessionFromCookie();
+    if (!session) {
+      console.log("[Server] No session found, returning null");
+      return null;
+    }
 
-  const { accessToken } = await withAuth();
-  if (!accessToken) return getNewAccessToken();
-
-  const isValid = await verifyAccessToken(accessToken);
-  if (isValid) return accessToken;
-
-  return getNewAccessToken();
-});
+    const newSession = await refreshSession(session, data.forceRefreshToken);
+    return newSession.accessToken;
+  });
 
 export function AuthProviders({ children }: { children: React.ReactNode }) {
   const client = useConvex();
@@ -32,7 +34,10 @@ export function AuthProviders({ children }: { children: React.ReactNode }) {
     async function refresh() {
       console.debug("[Client] Refreshing access token at", new Date());
       try {
-        const token = await refreshAccessToken();
+        // We always force refresh the token on the client to ensure we always have a valid token.
+        const token = await refreshAccessToken({
+          data: { source: "client", forceRefreshToken: true },
+        });
         client.setAuth(async () => token);
         localStorage.setItem("last_auth_refresh_time", Date.now().toString());
       } catch (err) {

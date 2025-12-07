@@ -1,5 +1,3 @@
-"use client";
-
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -18,6 +16,7 @@ import { useMemo, useState } from "react";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation } from "convex/react";
 
 import {
@@ -43,9 +42,14 @@ import {
 
 import { uploadAiProfileImage } from "@/lib/convex/uploadFiles";
 
+export const Route = createFileRoute("/settings/profiles")({
+  component: AiProfilesPage,
+  head: () => ({ meta: [{ title: "AI Profiles - AI Chat" }] }),
+});
+
 type SortOption = "az" | "za" | "newest" | "oldest" | "recently-updated";
 
-export default function AiProfilesPage() {
+function AiProfilesPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("recently-updated");
   const [dialogOpen, setDialogOpen] = useState(false);
