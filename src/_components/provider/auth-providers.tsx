@@ -7,9 +7,8 @@ import { useEffect, useRef } from "react";
 import { updateSession, verifyAccessToken, withAuth } from "@/lib/authkit/ssr/session";
 
 async function getNewAccessToken() {
-  console.log("[Server] Refreshing access token at", new Date());
+  console.debug("[Server] Refreshing access token at", new Date());
   const { session } = await updateSession(getRequest());
-
   return session.accessToken!;
 }
 
@@ -31,7 +30,7 @@ export function AuthProviders({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function refresh() {
-      console.log("[Client] Refreshing access token at", new Date());
+      console.debug("[Client] Refreshing access token at", new Date());
       try {
         const token = await refreshAccessToken();
         client.setAuth(async () => token);

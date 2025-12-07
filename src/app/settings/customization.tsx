@@ -6,8 +6,8 @@ import { useMutation } from "convex/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { useEffect, useRef, useState, useTransition } from "react";
 import { ImagePlusIcon, TrashIcon } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { ImagePreviewDialog } from "@/components/image-preview-dialog";
@@ -21,6 +21,7 @@ import { useStorage } from "@/lib/hooks/use-storage";
 
 export const Route = createFileRoute("/settings/customization")({
   component: RouteComponent,
+  head: () => ({ meta: [{ title: "Customization - AI Chat" }] }),
 });
 
 function getFormValue<T extends File | string>(key: string, formData: FormData): T {
