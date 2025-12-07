@@ -49,10 +49,8 @@ export const Route = createRootRouteWithContext<RootContext>()({
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async () => {
     const { user, accessToken } = await getAuth();
-
-    if (user) context.convexClient.serverHttpClient?.setAuth(accessToken);
     return { user, accessToken };
   },
   loader: async ({ context }) => {

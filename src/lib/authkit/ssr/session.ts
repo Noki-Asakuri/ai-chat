@@ -69,7 +69,6 @@ export async function encryptSession(session: Session) {
 
 export async function withAuth() {
   const session = await getSessionFromCookie();
-
   if (!session?.user) return { user: null };
 
   const {
@@ -291,6 +290,74 @@ export async function updateSession(
       }),
     };
   }
+}
+
+export async function refreshSession(session: Session, forceRefreshToken: boolean = false) {
+  const now = Date.now();
+  console.debug("[Server] Refreshing access token at", new Date(now), {
+    forceRefreshToken,
+  });
+
+  const decoded = decodeJwt<AccessToken>(session.accessToken);
+
+  const TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes total lifetime
+  const REFRESH_AGE_THRESHOLD_MS = 4 * 60 * 1000; // start refreshing when token age ≥ 4 minutes
+  const MIN_FORCE_REFRESH_AGE_MS = 1 * 60 * 1000; // ignore "force" if token age < 1 minute
+
+  let timeUntilExpiryMs: number | null = null;
+  let approxAgeMs: number | null = null;
+
+  if (typeof decoded.exp === "number") {
+    const expMs = decoded.exp * 1000;
+    timeUntilExpiryMs = expMs - now;
+
+    // Approximate age using the known TTL (5m): age ≈ TTL - timeLeft
+    approxAgeMs = TOKEN_TTL_MS - timeUntilExpiryMs;
+  }
+
+  const tokenIsNew = approxAgeMs != null && approxAgeMs < MIN_FORCE_REFRESH_AGE_MS;
+
+  const isNearExpiry =
+    timeUntilExpiryMs != null && timeUntilExpiryMs <= TOKEN_TTL_MS - REFRESH_AGE_THRESHOLD_MS; // ~1 minute left
+
+  const effectiveForceRefresh = forceRefreshToken && !tokenIsNew;
+  const isValid = await verifyAccessToken(session.accessToken);
+  const shouldRefresh = !isValid || isNearExpiry || effectiveForceRefresh;
+
+  if (!shouldRefresh) {
+    console.debug("[Server] Access token is valid and not near expiry; skipping refresh", {
+      isValid,
+      isNearExpiry,
+      forceRefreshToken,
+      effectiveForceRefresh,
+      timeUntilExpiryMs,
+      approxAgeMs,
+    });
+
+    return session;
+  }
+
+  console.debug(
+    "[Server] Access token is invalid, near expiry, or force refresh is effective; refreshing",
+    {
+      isValid,
+      isNearExpiry,
+      forceRefreshToken,
+      effectiveForceRefresh,
+      timeUntilExpiryMs,
+      approxAgeMs,
+    },
+  );
+
+  const newSession = await getWorkOS().userManagement.authenticateWithRefreshToken({
+    clientId: getConfig("clientId"),
+    refreshToken: session.refreshToken,
+  });
+
+  console.debug("[Server] Access token refreshed");
+  await saveSession(newSession);
+
+  return newSession;
 }
 
 export async function terminateSession({ returnTo }: { returnTo?: string } = {}) {

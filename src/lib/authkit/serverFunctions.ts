@@ -5,7 +5,7 @@ import { cache } from "react";
 
 import { getConfig } from "./ssr/config";
 import type { GetAuthURLOptions, NoUserInfo, UserInfo } from "./ssr/interfaces";
-import { terminateSession, withAuth } from "./ssr/session";
+import { getSessionFromCookie, refreshSession, terminateSession, withAuth } from "./ssr/session";
 import { getWorkOS } from "./ssr/workos";
 
 export const getAuthorizationUrl = createServerFn({ method: "GET" })
@@ -51,3 +51,11 @@ const getAuthFn = createServerFn({ method: "GET" }).handler(
 );
 
 export const getAuth = cache(getAuthFn);
+
+export const refreshAccessToken = createServerFn({ method: "GET" }).handler(async () => {
+  const session = await getSessionFromCookie();
+  if (!session) return null;
+
+  const newSession = await refreshSession(session);
+  return newSession.accessToken;
+});

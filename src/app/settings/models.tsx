@@ -1,10 +1,9 @@
-"use client";
-
 import { api } from "@/convex/_generated/api";
 import { useMutation } from "convex/react";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -17,6 +16,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 
 import { AllModelIds, getModelData, prettifyProviderName } from "@/lib/chat/models";
+
+export const Route = createFileRoute("/settings/models")({
+  component: ModelsPage,
+  head: () => ({ meta: [{ title: "Models - AI Chat" }] }),
+});
 
 function LoadingSkeleton() {
   return (
@@ -60,7 +64,7 @@ function LoadingSkeleton() {
   );
 }
 
-export default function ModelsPage() {
+function ModelsPage() {
   const { data, isPending } = useQuery(convexQuery(api.functions.users.currentUser, {}));
   const updateCustomization = useMutation(api.functions.users.updateUserCustomization);
 

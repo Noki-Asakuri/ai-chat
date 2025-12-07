@@ -61,7 +61,7 @@ export function ThreadUserProfile() {
               Statistics
             </UserMenuSettingItem>
 
-            <UserMenuSettingItem href="/settings/customize">
+            <UserMenuSettingItem href="/settings/customization">
               <Columns3CogIcon className="size-5" />
               Customize
             </UserMenuSettingItem>
@@ -76,7 +76,7 @@ export function ThreadUserProfile() {
               Models
             </UserMenuSettingItem>
 
-            <UserMenuSettingItem href="/settings/ai-profiles">
+            <UserMenuSettingItem href="/settings/profiles">
               <UserRoundPenIcon className="size-5" />
               Profiles
             </UserMenuSettingItem>
