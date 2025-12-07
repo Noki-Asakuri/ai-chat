@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
+import { DefaultCatchBoundary } from "@/components/default-catch-oundary";
 import { Toaster } from "@/components/ui/sonner";
 
 import { getAuth } from "@/lib/authkit/serverFunctions";
@@ -60,6 +61,7 @@ export const Route = createRootRouteWithContext<RootContext>()({
 
   shellComponent: RootLayout,
   notFoundComponent: () => <p>Not Found</p>,
+  errorComponent: () => DefaultCatchBoundary,
 });
 
 export function RootLayout() {
