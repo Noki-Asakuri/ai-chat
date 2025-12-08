@@ -1,14 +1,13 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useMutation } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
-import { useLocalStorage } from "@uidotdev/usehooks";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -116,7 +115,7 @@ function CreateGroupButton() {
 
 function ThreadListWrapper() {
   const cachedData = useThreadStore((state) => state.groupedThreads);
-  const { data } = useSuspenseQuery(convexQuery(api.functions.groups.listGroups));
+  const { data } = useQuery(convexQuery(api.functions.groups.listGroups));
 
   // Update the local cache when the data is fetched
   useEffect(() => {

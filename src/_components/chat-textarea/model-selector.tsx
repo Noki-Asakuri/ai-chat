@@ -1,6 +1,5 @@
 import { Popover } from "@base-ui-components/react/popover";
 import { useMemo } from "react";
-import { useShallow } from "zustand/shallow";
 
 import { buttonVariants } from "../ui/button";
 import {
@@ -16,7 +15,7 @@ import { Icons } from "../ui/icons";
 import { ModelCapability } from "../capability-icon";
 
 import { AllModelIds, getModelData } from "@/lib/chat/models";
-import { useChatStore } from "@/lib/chat/store";
+import { configStore, useConfigStore } from "@/lib/store/config-store";
 import { cn } from "@/lib/utils";
 
 type ModelSelectorProps = {
@@ -27,22 +26,21 @@ type ModelSelectorProps = {
 };
 
 function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelectorProps) {
-  const storeModel = useChatStore.getState().chatConfig.model;
+  const storeModel = configStore.model;
   const selectedModel = value ?? storeModel;
 
-  const hiddenModel = useChatStore(
-    useShallow((state) => state.userCustomization?.hiddenModels ?? []),
-  );
+  // const hiddenModel = useChatStore(
+  //   useShallow((state) => state.userCustomization?.hiddenModels ?? []),
+  // );
 
   const visibleModels = useMemo(() => {
-    return AllModelIds.slice()
-      .sort((a, b) => a.localeCompare(b))
-      .filter((id) => !hiddenModel.includes(id));
-  }, [hiddenModel]);
+    return AllModelIds.slice().sort((a, b) => a.localeCompare(b));
+    // .filter((id) => !hiddenModel.includes(id));
+  }, []);
 
   function handleChange(model: string) {
     if (onChange) onChange(model);
-    else useChatStore.getState().setChatConfig({ model });
+    else configStore.setConfig({ model });
   }
 
   function renderTriggerValue(value: string) {
@@ -62,7 +60,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
         id={triggerId}
         className={cn(
           buttonVariants({ variant: "ghost" }),
-          "flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 hover:!bg-primary/15",
+          "flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 hover:bg-primary/15!",
           className,
         )}
       >
@@ -71,7 +69,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
 
       <Popover.Portal>
         <Popover.Positioner sideOffset={8}>
-          <Popover.Popup className="origin-[var(--transform-origin)] rounded-md transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
+          <Popover.Popup className="origin-(--transform-origin) rounded-md transition-[transform,scale,opacity] data-ending-style:scale-90 data-ending-style:opacity-0 data-starting-style:scale-90 data-starting-style:opacity-0">
             <Command
               loop
               value={selectedModel}
@@ -106,7 +104,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
 }
 
 export function ChatModelSelector() {
-  const storeModel = useChatStore((state) => state.chatConfig.model);
+  const storeModel = useConfigStore((state) => state.model);
   return <ModelSelectorBase value={storeModel} triggerId="button-chat-model-selector-trigger" />;
 }
 
@@ -123,7 +121,7 @@ function ModelItem({ selected, value, onChange }: ModelSelectorProps & { selecte
       onSelect={onChange}
       data-model-selected={selected}
       title={data.display.unique ?? data.display.name}
-      className="mt-1 cursor-pointer justify-between gap-2 rounded-md border border-transparent px-3 py-1.5 text-sm leading-4 transition-[border-color] outline-none select-none first:mt-0 data-[model-selected=true]:!bg-secondary data-[model-selected=true]:!text-secondary-foreground data-[selected=true]:border-ring/60 data-[selected=true]:bg-card data-[selected=true]:text-card-foreground"
+      className="mt-1 cursor-pointer justify-between gap-2 rounded-md border border-transparent px-3 py-1.5 text-sm leading-4 transition-[border-color] outline-none select-none first:mt-0 data-[model-selected=true]:bg-secondary! data-[model-selected=true]:text-secondary-foreground! data-[selected=true]:border-ring/60 data-[selected=true]:bg-card data-[selected=true]:text-card-foreground"
     >
       <div className="flex items-center justify-center gap-2">
         <Icons.provider provider={data.provider} className="size-4" />

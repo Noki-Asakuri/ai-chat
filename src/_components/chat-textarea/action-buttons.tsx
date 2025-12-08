@@ -8,7 +8,7 @@ import { ChatEffortSelector } from "./effort-selector";
 import { ChatModelSelector } from "./model-selector";
 
 import { getModelData } from "@/lib/chat/models";
-import { useChatStore } from "@/lib/chat/store";
+import { configStore, useConfigStore } from "@/lib/store/config-store";
 import { cn } from "@/lib/utils";
 
 export function ChatActionButtons() {
@@ -24,21 +24,20 @@ export function ChatActionButtons() {
 }
 
 function WebSearchButton() {
-  const config = useChatStore(
-    useShallow((state) => ({
-      webSearch: state.chatConfig.webSearch,
-      model: state.chatConfig.model,
-    })),
+  const config = useConfigStore(
+    useShallow((state) => ({ webSearch: state.webSearch, model: state.model })),
   );
+
+  const canDoWebSearch = getModelData(config.model)?.capabilities.webSearch ?? false;
 
   return (
     <ButtonWithTip
       type="button"
       variant="ghost"
+      hidden={!canDoWebSearch}
       data-active={config.webSearch}
       className="size-9 cursor-pointer border px-2 py-1.5 text-xs data-[active=true]:border-blue-400"
-      hidden={!getModelData(config.model)?.capabilities.webSearch}
-      onMouseDown={() => useChatStore.getState().setChatConfig({ webSearch: !config.webSearch })}
+      onMouseDown={() => configStore.setConfig({ webSearch: !config.webSearch })}
       title={config.webSearch ? "Disable Web Search" : "Enable Web Search"}
     >
       <GlobeIcon className={cn("transition-colors", { "stroke-blue-400": config.webSearch })} />

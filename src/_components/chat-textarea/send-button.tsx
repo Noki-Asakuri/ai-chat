@@ -5,12 +5,10 @@ import * as React from "react";
 import { ButtonWithTip } from "../ui/button";
 import { Menu, MenuArrow } from "../ui/menu";
 
-import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { STORAGE_KEY, type SendPreference } from "@/lib/chat/send-preference";
 import { useChatStore } from "@/lib/chat/store";
 
 export function ChatSendButton() {
-  const { submitChatMessage, abortChatRequest } = useChatRequest();
   const isStreaming = useChatStore((state) =>
     state.hasActiveStream(state.messages.at(-1)?._id ?? ""),
   );
@@ -21,8 +19,8 @@ export function ChatSendButton() {
   });
 
   async function handleSend() {
-    if (isStreaming) await abortChatRequest();
-    else await submitChatMessage();
+    // if (isStreaming) await abortChatRequest();
+    // else await submitChatMessage();
   }
 
   return (
@@ -42,7 +40,7 @@ export function ChatSendButton() {
           {isStreaming ? (
             <SquareIcon className="size-4" />
           ) : (
-            <SendHorizontalIcon className="-rotate-45 size-4" />
+            <SendHorizontalIcon className="size-4 -rotate-45" />
           )}
 
           <span>{isStreaming ? "Abort" : "Send"}</span>
@@ -60,10 +58,10 @@ export function ChatSendButton() {
 
       <Menu.Portal>
         <Menu.Positioner className="outline-none" sideOffset={8} align="end" side="top">
-          <Menu.Popup className="flex w-64 origin-[var(--transform-origin)] flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[starting-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+          <Menu.Popup className="dadata-starting-style:scale-90ata-[ending-style]:opacity-0 flex w-64 origin-(--transform-origin) flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-ending-style:scale-90 data-starting-style:opacity-0">
             <MenuArrow className="fill-card" />
 
-            <div className="px-2 pt-1 pb-2 text-muted-foreground text-sm">Choose how to send</div>
+            <div className="px-2 pt-1 pb-2 text-sm text-muted-foreground">Choose how to send</div>
 
             <Menu.Item
               className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"

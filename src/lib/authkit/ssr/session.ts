@@ -1,7 +1,7 @@
 import { redirect } from "@tanstack/react-router";
-import { getCookie, setCookie } from "@tanstack/react-start/server";
+import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server";
 
-import type { AccessToken, AuthenticationResponse } from "@workos-inc/node";
+import { OauthException, type AccessToken, type AuthenticationResponse } from "@workos-inc/node";
 import { sealData, unsealData } from "iron-session";
 import { createRemoteJWKSet, decodeJwt, jwtVerify } from "jose";
 
@@ -15,6 +15,7 @@ import type {
 } from "./interfaces";
 import { lazy } from "./utils";
 import { getWorkOS } from "./workos";
+import { tryCatch } from "@/lib/utils";
 
 const sessionHeaderName = "x-workos-session";
 const middlewareHeaderName = "x-workos-middleware";
@@ -349,10 +350,21 @@ export async function refreshSession(session: Session, forceRefreshToken: boolea
     },
   );
 
-  const newSession = await getWorkOS().userManagement.authenticateWithRefreshToken({
-    clientId: getConfig("clientId"),
-    refreshToken: session.refreshToken,
-  });
+  const [newSession, error] = await tryCatch(
+    getWorkOS().userManagement.authenticateWithRefreshToken({
+      clientId: getConfig("clientId"),
+      refreshToken: session.refreshToken,
+    }),
+  );
+
+  if (error) {
+    console.error("[Server] Failed to refresh access token, redirecting to login", error);
+
+    const cookieName = getConfig("cookieName") || "wos-session";
+    deleteCookie(cookieName);
+
+    throw redirect({ to: "/auth/login", throw: true, reloadDocument: true });
+  }
 
   console.debug("[Server] Access token refreshed");
   await saveSession(newSession);

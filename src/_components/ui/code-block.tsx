@@ -13,6 +13,8 @@ import { useChatStore } from "@/lib/chat/store";
 import { useThrottledDebouncedValue } from "@/lib/hooks/use-throttled-debounced-value";
 import { getHighlightFromCache, setHighlightInCache } from "@/lib/code-highlight-cache";
 import { cn } from "@/lib/utils";
+import { configStore, useConfigStore } from "@/lib/store/config-store";
+import { useLoaderData } from "@tanstack/react-router";
 
 function trimOneEdgeNewline(input: string): string {
   let s = input;
@@ -226,10 +228,13 @@ export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
   language,
   code,
 }: CodeBlockProps) {
-  const wrapline = useChatStore((state) => state.wrapline);
-  const defaultOpen = useChatStore((state) => state.userCustomization?.showFullCode ?? false);
+  const wrapline = useConfigStore((state) => state.wrapline);
+  const { customization } = useLoaderData({ from: "/_chat_layout" });
 
-  const [expanded, setExpanded] = React.useState(defaultOpen);
+  const [expanded, setExpanded] = React.useState(
+    customization?.customization.showFullCode ?? false,
+  );
+
   const onToggleExpanded = React.useCallback(() => setExpanded((v) => !v), []);
   const onExpandAll = React.useCallback(() => setExpanded(true), []);
 
@@ -282,7 +287,7 @@ export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
             side="top"
             variant="ghost"
             className="size-8"
-            onMouseDown={useChatStore.getState().toggleWrapline}
+            onMouseDown={configStore.toggleWrapline}
           >
             {wrapline ? <TextIcon className="size-4" /> : <WrapTextIcon className="size-4" />}
           </ButtonWithTip>

@@ -12,7 +12,7 @@ import { ChatActionButtons } from "./action-buttons";
 import { ChatAttachmentDisplay } from "./attachment-display";
 import { ChatSendButton } from "./send-button";
 
-import { useChatRequest } from "@/lib/chat/send-chat-request";
+// import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { shouldSend, useGetSendDescription } from "@/lib/chat/send-preference";
 import { useChatStore } from "@/lib/chat/store";
 
@@ -64,8 +64,8 @@ export function ChatTextarea() {
 }
 
 function InputTextArea() {
-  const input = useChatStore((state) => state.chatInput);
-  const { submitChatMessage } = useChatRequest();
+  // const input = useChatStore((state) => state.chatInput);
+  // const { submitChatMessage } = useChatRequest();
 
   function handleAddAttachments({ files }: { files: File[] }) {
     const acceptFiles = files.filter(
@@ -102,8 +102,8 @@ function InputTextArea() {
         aria-describedby="textarea-description"
         aria-label="Type your message here..."
         placeholder="Type your message here..."
-        value={input}
-        onChange={(event) => useChatStore.getState().setChatInput(event.target.value)}
+        // value={input}
+        // onChange={(event) => useChatStore.getState().setChatInput(event.target.value)}
         data-slot="textarea-chat-input"
         className="max-h-[250px] w-full resize-none rounded-none border-0 bg-transparent! p-0 ring-0!"
         onPaste={(event) => {
@@ -130,7 +130,7 @@ function InputTextArea() {
 
           if (send) {
             event.preventDefault();
-            void submitChatMessage();
+            // void submitChatMessage();
           }
         }}
       />

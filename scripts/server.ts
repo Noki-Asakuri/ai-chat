@@ -317,7 +317,6 @@ ${JSON.stringify(responseBody, null, 2)}
     let textStartTime = 0;
 
     return result.toUIMessageStreamResponse({
-      originalMessages: messages,
       generateMessageId: () => requestId,
       status: 200,
       headers: {
