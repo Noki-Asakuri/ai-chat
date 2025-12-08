@@ -40,6 +40,14 @@ export const Route = createFileRoute("/_chat_layout")({
 
     return { backgroundImage, defaultOpenSidebar, user: context.user! };
   },
+
+  head: ({ loaderData }) => ({
+    links: [
+      loaderData?.backgroundImage
+        ? { rel: "preload", as: "image", href: loaderData.backgroundImage }
+        : undefined,
+    ],
+  }),
 });
 
 function RouteComponent() {
