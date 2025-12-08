@@ -1,9 +1,9 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { logger } from "@/";
-import { type ServerConvexClient } from "../convex/server";
-import { tryCatch } from "../utils";
+import { logger } from "@/lib/axiom/logger";
+import { type ServerConvexClient } from "@/lib/convex/server";
+import { tryCatch } from "@/lib/utils";
 
 type UploadFileR2 = {
   buffer: Uint8Array;

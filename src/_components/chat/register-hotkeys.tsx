@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { abortChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore, useChatStore } from "@/lib/chat/store";
+import { threadStore } from "@/lib/store/thread-store";
 
 const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
@@ -13,7 +14,9 @@ const MODEL_SELECTOR_KEYBOARD_SHORTCUT = "m";
 
 export function RegisterHotkeys() {
   const navigate = useNavigate();
+
   const editMessage = useChatStore((state) => state.editMessage);
+  const status = useChatStore((state) => state.messages.at(-1)?.status ?? "complete");
 
   const { setEditMessage, addAttachment, setChatInput } = chatStore.getState();
 
@@ -127,7 +130,7 @@ export function RegisterHotkeys() {
         (event.metaKey || event.ctrlKey)
       ) {
         event.preventDefault();
-        setThreadCommandOpen((open) => !open);
+        threadStore.getState().setThreadCommandOpen((open) => !open);
       }
 
       if (
@@ -166,7 +169,7 @@ export function RegisterHotkeys() {
       window.removeEventListener("keydown", handleKeyboardShortcut);
       window.removeEventListener("paste", onPaste);
     };
-  }, [editMessage, navigate, setEditMessage, setThreadCommandOpen, addAttachment, setChatInput]);
+  }, [editMessage, navigate, setEditMessage, addAttachment, setChatInput]);
 
   return null;
 }

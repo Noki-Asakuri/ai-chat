@@ -1,9 +1,11 @@
 import type { Experimental_DownloadFunction } from "ai";
 
-import { cacheRedis, logger } from "./server";
+import { cacheRedis } from "./server";
+
+import { logger } from "@/lib/axiom/logger";
+import { tryCatch } from "@/lib/utils";
 
 import { env } from "@/env";
-import { tryCatch } from "@/lib/utils";
 
 type InputType = Parameters<Experimental_DownloadFunction>[0][number];
 type OutputType = Awaited<ReturnType<Experimental_DownloadFunction>>[number];

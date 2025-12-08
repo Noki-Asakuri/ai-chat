@@ -12,12 +12,11 @@ import { Redis } from "ioredis";
 import { execSync } from "node:child_process";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 
-import { smoothStream, stepCountIs, streamText, type AISDKError, APICallError } from "ai";
+import { APICallError, smoothStream, stepCountIs, streamText } from "ai";
 
 import { handleFileCaching } from "./handle-file-caching";
 
-import { logger as baseLogger } from "@/lib/axiom/logger";
-import { convertV4MessageToV5 } from "@/lib/chat/conversion";
+import { logger } from "@/lib/axiom/logger";
 import { createServerConvexClient } from "@/lib/convex/server";
 import { serverUploadFileR2 } from "@/lib/server/file-upload";
 import { registry } from "@/lib/server/model-registry";
@@ -43,23 +42,6 @@ const serverStartedAt = Date.now();
 let shuttingDown = false;
 let activeRequests = 0;
 const activeStreams = 0;
-
-type LogParams = Parameters<typeof baseLogger.info>;
-
-export const logger = {
-  info: function (...args: LogParams) {
-    console.log(...args);
-    baseLogger.info(...args);
-  },
-  error: function (...args: LogParams) {
-    console.error(...args);
-    baseLogger.error(...args);
-  },
-  warn: function (...args: LogParams) {
-    console.warn(...args);
-    baseLogger.warn(...args);
-  },
-};
 
 function getCommitSha() {
   // Prefer explicit env provided via Docker build/run
@@ -334,10 +316,8 @@ ${JSON.stringify(responseBody, null, 2)}
     let reasoningStartTime = 0;
     let textStartTime = 0;
 
-    const v5Messages = messages.map(convertV4MessageToV5);
-
     return result.toUIMessageStreamResponse({
-      originalMessages: v5Messages,
+      originalMessages: messages,
       generateMessageId: () => requestId,
       status: 200,
       headers: {
