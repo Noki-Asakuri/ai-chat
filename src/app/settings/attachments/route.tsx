@@ -3,7 +3,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useMutation } from "convex/react";
 
 import { convexQuery } from "@convex-dev/react-query";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import {
@@ -42,13 +42,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+
+import { LoadingSkeleton } from "./-pending";
 
 import { format, toUUID, tryCatch } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings/attachments")({
   component: AttachmentsPage,
+  pendingComponent: LoadingSkeleton,
   head: () => ({ meta: [{ title: "Attachments - AI Chat" }] }),
+
+  loader: async ({ context }) => {
+    context.queryClient.ensureQueryData(convexQuery(api.functions.attachments.getAllAttachments));
+  },
 });
 
 type SourceFilter = "all" | "user" | "assistant";
@@ -58,38 +64,9 @@ type SortDirection = "asc" | "desc";
 
 const PAGE_SIZE = 20;
 
-function LoadingSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold">Attachments</h2>
-        <p className="text-muted-foreground">View and manage your attachments.</p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-        {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="flex w-full flex-col rounded-md border">
-            <Skeleton className="relative aspect-square size-full rounded-none" />
-
-            <div className="flex flex-col gap-1 border-t p-2">
-              <div className="flex items-center justify-between gap-2">
-                <Skeleton className="h-6 w-20" />
-                <Skeleton className="h-5 w-14" />
-              </div>
-
-              <Skeleton className="h-5 w-full" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function AttachmentsPage() {
-  const { data, isPending } = useQuery(
-    convexQuery(api.functions.attachments.getAllAttachments, {}),
-  );
+  const { data } = useSuspenseQuery(convexQuery(api.functions.attachments.getAllAttachments));
+  const deleteAttachments = useMutation(api.functions.attachments.deleteAttachments);
 
   const [searchText, setSearchText] = useState<string>("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
@@ -100,7 +77,6 @@ function AttachmentsPage() {
   const [selected, setSelected] = useState<Set<Id<"attachments">>>(() => new Set());
   const [page, setPage] = useState<number>(1);
   const [bulkPending, startBulkTransition] = useTransition();
-  const deleteAttachments = useMutation(api.functions.attachments.deleteAttachments);
 
   function toggleSelectionMode() {
     setSelectionMode((s) => {
@@ -253,8 +229,6 @@ function AttachmentsPage() {
       toast.success("Selected files deleted");
     });
   }
-
-  if (isPending) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-4">
