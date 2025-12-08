@@ -18,6 +18,8 @@ export const env = createEnv({
     REDIS_URL: z.string(),
 
     WORKOS_API_KEY: z.string(),
+    WORKOS_CLIENT_ID: z.string(),
+    WORKOS_REDIRECT_URI: z.string(),
     WORKOS_COOKIE_PASSWORD: z.string(),
   },
 
@@ -28,9 +30,6 @@ export const env = createEnv({
    */
   client: {
     VITE_CONVEX_URL: z.string(),
-
-    VITE_WORKOS_REDIRECT_URI: z.string(),
-    VITE_WORKOS_CLIENT_ID: z.string(),
 
     VITE_AXIOM_TOKEN: z.string(),
     VITE_AXIOM_DATASET: z.string(),

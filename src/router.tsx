@@ -5,8 +5,8 @@ import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query
 import { ConvexQueryClient } from "@convex-dev/react-query";
 import { ConvexProvider } from "convex/react";
 import { StrictMode } from "react";
+import { SessionProvider } from "convex-helpers/react/sessions";
 
-import { AuthProviders } from "./_components/provider/auth-providers";
 import { getConvexReactClient } from "./lib/convex/client";
 
 import { routeTree } from "./routeTree.gen";
@@ -18,7 +18,7 @@ export function getRouter() {
   const convexClient = getConvexReactClient();
   const convexQueryClient = new ConvexQueryClient(convexClient);
 
-  const queryClient: QueryClient = new QueryClient({
+  const queryClient = new QueryClient({
     defaultOptions: {
       queries: { queryKeyHashFn: convexQueryClient.hashFn(), queryFn: convexQueryClient.queryFn() },
     },
@@ -33,9 +33,7 @@ export function getRouter() {
 
     Wrap: ({ children }) => (
       <StrictMode>
-        <ConvexProvider client={convexClient}>
-          <AuthProviders>{children}</AuthProviders>
-        </ConvexProvider>
+        <ConvexProvider client={convexClient}>{children}</ConvexProvider>
       </StrictMode>
     ),
   });

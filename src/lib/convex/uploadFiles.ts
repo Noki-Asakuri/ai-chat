@@ -24,6 +24,7 @@ export async function uploadFile(file: File, threadId: Id<"threads">, fileId: st
   } catch (error) {
     throw new Error(`Failed to upload image: ${error}`);
   }
+
   await convexClient.mutation(api.functions.files.syncMetadata, { key });
   return key;
 }

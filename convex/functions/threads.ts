@@ -1,23 +1,23 @@
 import { v } from "convex/values";
 
-import { mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { authenticatedMutation, authenticatedQuery, authKit } from "../components";
 
-export const createThread = mutation({
+export const createThread = authenticatedMutation({
   args: { title: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = await authKit.getAuthUser(ctx);
     if (!user) throw new Error("Not authenticated");
 
     await ctx.runMutation(internal.functions.userStats.incrementThreads, {
-      userId: user.subject,
+      userId: user.id,
     });
 
     return await ctx.db.insert("threads", {
       title: args.title ?? "New Chat",
       pinned: false,
       status: "complete",
-      userId: user.subject,
+      userId: user.id,
       updatedAt: Date.now() + 1,
       groupId: null,
       order: 0,
@@ -25,15 +25,15 @@ export const createThread = mutation({
   },
 });
 
-export const branchThread = mutation({
+export const branchThread = authenticatedMutation({
   args: { threadId: v.id("threads"), lastMessageCreatedAt: v.number() },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
-    if (thread.userId !== user.subject) throw new Error("Not authorized");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
 
     const messages = await ctx.db
       .query("messages")
@@ -45,7 +45,7 @@ export const branchThread = mutation({
 
     const newThreadId = await ctx.db.insert("threads", {
       updatedAt: Date.now() + 1,
-      userId: user.subject,
+      userId: user.userId,
       status: "complete",
       pinned: false,
       title: thread.title,
@@ -60,7 +60,7 @@ export const branchThread = mutation({
         ...message,
         createdAt: Date.now(),
         updatedAt: Date.now() + 1,
-        userId: user.subject,
+        userId: user.userId,
         threadId: newThreadId,
         messageId: crypto.randomUUID(),
       });
@@ -70,13 +70,13 @@ export const branchThread = mutation({
   },
 });
 
-export const getAllThreads = query({
+export const getAllThreads = authenticatedQuery({
   args: {
     query: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) return [];
 
     const limit = args.limit ?? 200;
@@ -86,14 +86,14 @@ export const getAllThreads = query({
       const pinned = await ctx.db
         .query("threads")
         .withIndex("by_userId_pinned_updatedAt", (q) =>
-          q.eq("userId", user.subject).eq("pinned", true),
+          q.eq("userId", user.userId).eq("pinned", true),
         )
         .order("desc")
         .collect();
 
       const nonPinned = await ctx.db
         .query("threads")
-        .withIndex("by_userId_updatedAt", (q) => q.eq("userId", user.subject))
+        .withIndex("by_userId_updatedAt", (q) => q.eq("userId", user.userId))
         .order("desc")
         .filter((q) => q.neq(q.field("pinned"), true))
         .take(limit);
@@ -110,13 +110,13 @@ export const getAllThreads = query({
     const pinnedMatches = await ctx.db
       .query("threads")
       .withSearchIndex("search_title", (q) =>
-        q.search("title", search).eq("userId", user.subject).eq("pinned", true),
+        q.search("title", search).eq("userId", user.userId).eq("pinned", true),
       )
       .take(1024);
 
     const nonPinnedMatches = await ctx.db
       .query("threads")
-      .withSearchIndex("search_title", (q) => q.search("title", search).eq("userId", user.subject))
+      .withSearchIndex("search_title", (q) => q.search("title", search).eq("userId", user.userId))
       .filter((q) => q.neq(q.field("pinned"), true))
       .take(limit);
 
@@ -124,29 +124,29 @@ export const getAllThreads = query({
   },
 });
 
-export const updateThreadTitle = mutation({
+export const updateThreadTitle = authenticatedMutation({
   args: { threadId: v.id("threads"), title: v.string() },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
-    if (thread.userId !== user.subject) throw new Error("Not authorized");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
 
     await ctx.db.patch(args.threadId, { title: args.title });
   },
 });
 
-export const deleteThread = mutation({
+export const deleteThread = authenticatedMutation({
   args: { threadId: v.id("threads"), deleteAttachments: v.boolean() },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
-    if (thread.userId !== user.subject) throw new Error("Not authorized");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
 
     await ctx.db.delete(args.threadId);
 
@@ -172,15 +172,15 @@ export const deleteThread = mutation({
   },
 });
 
-export const pinThread = mutation({
+export const pinThread = authenticatedMutation({
   args: { threadId: v.id("threads"), pinned: v.boolean() },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
-    if (thread.userId !== user.subject) throw new Error("Not authorized");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
 
     await ctx.db.patch(args.threadId, { pinned: args.pinned });
   },

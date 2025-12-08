@@ -1,10 +1,11 @@
 import { redirect } from "@tanstack/react-router";
 import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server";
 
-import { OauthException, type AccessToken, type AuthenticationResponse } from "@workos-inc/node";
+import { type AccessToken, type AuthenticationResponse } from "@workos-inc/node";
 import { sealData, unsealData } from "iron-session";
 import { createRemoteJWKSet, decodeJwt, jwtVerify } from "jose";
 
+import { tryCatch } from "@/lib/utils";
 import { getConfig } from "./config";
 import type {
   AuthkitOptions,
@@ -15,7 +16,6 @@ import type {
 } from "./interfaces";
 import { lazy } from "./utils";
 import { getWorkOS } from "./workos";
-import { tryCatch } from "@/lib/utils";
 
 const sessionHeaderName = "x-workos-session";
 const middlewareHeaderName = "x-workos-middleware";
@@ -55,17 +55,11 @@ export function serializeCookie(
 }
 
 export async function decryptSession(encryptedSession: string): Promise<Session> {
-  const cookiePassword = getConfig("cookiePassword");
-  return unsealData<Session>(encryptedSession, {
-    password: cookiePassword,
-  });
+  return unsealData<Session>(encryptedSession, { password: getConfig("cookiePassword") });
 }
 
 export async function encryptSession(session: Session) {
-  return sealData(session, {
-    password: getConfig("cookiePassword"),
-    ttl: 0,
-  });
+  return sealData(session, { password: getConfig("cookiePassword"), ttl: 0 });
 }
 
 export async function withAuth() {

@@ -34,6 +34,7 @@ import { ThreadItem } from "./thread-item";
 import { UngroupedThreadGroup } from "./thread-ungrouped";
 
 import { threadStore, useThreadStore } from "@/lib/store/thread-store";
+import { convexSessionQuery } from "@/lib/convex/helpers";
 
 export function ThreadContents() {
   return (
@@ -115,7 +116,7 @@ function CreateGroupButton() {
 
 function ThreadListWrapper() {
   const cachedData = useThreadStore((state) => state.groupedThreads);
-  const { data } = useQuery(convexQuery(api.functions.groups.listGroups));
+  const { data } = useQuery(convexSessionQuery(api.functions.groups.listGroups));
 
   // Update the local cache when the data is fetched
   useEffect(() => {

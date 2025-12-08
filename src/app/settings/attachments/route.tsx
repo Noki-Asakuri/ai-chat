@@ -1,8 +1,9 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { useMutation } from "convex/react";
 
 import { convexQuery } from "@convex-dev/react-query";
+import { useMutation } from "convex/react";
+
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
@@ -45,6 +46,7 @@ import {
 
 import { LoadingSkeleton } from "./-pending";
 
+import { convexSessionQuery } from "@/lib/convex/helpers";
 import { format, toUUID, tryCatch } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings/attachments")({
@@ -53,7 +55,9 @@ export const Route = createFileRoute("/settings/attachments")({
   head: () => ({ meta: [{ title: "Attachments - AI Chat" }] }),
 
   loader: async ({ context }) => {
-    context.queryClient.ensureQueryData(convexQuery(api.functions.attachments.getAllAttachments));
+    context.queryClient.ensureQueryData(
+      convexQuery(api.functions.attachments.getAllAttachments, { sessionId: context.sessionId }),
+    );
   },
 });
 
@@ -65,7 +69,9 @@ type SortDirection = "asc" | "desc";
 const PAGE_SIZE = 20;
 
 function AttachmentsPage() {
-  const { data } = useSuspenseQuery(convexQuery(api.functions.attachments.getAllAttachments));
+  const { data } = useSuspenseQuery(
+    convexSessionQuery(api.functions.attachments.getAllAttachments),
+  );
   const deleteAttachments = useMutation(api.functions.attachments.deleteAttachments);
 
   const [searchText, setSearchText] = useState<string>("");

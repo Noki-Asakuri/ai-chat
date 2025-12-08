@@ -1,9 +1,9 @@
 import { v } from "convex/values";
 
 import type { Doc, Id } from "../_generated/dataModel";
-import { query } from "../_generated/server";
+import { authenticatedQuery } from "../components";
 
-export const getStatistics = query({
+export const getStatistics = authenticatedQuery({
   args: {},
   returns: v.object({
     stats: v.object({
@@ -26,13 +26,13 @@ export const getStatistics = query({
     aiProfileRank: v.array(v.object({ name: v.string(), value: v.number() })),
   }),
   handler: async (ctx) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const statsDoc =
       (await ctx.db
         .query("user_stats")
-        .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+        .withIndex("by_userId", (q) => q.eq("userId", user.userId))
         .unique()) ?? null;
 
     // Defaults when no stats exist yet
@@ -125,7 +125,7 @@ export const getStatistics = query({
     // Collect all threads for this user
     const userThreads = await ctx.db
       .query("threads")
-      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", user.userId))
       .collect();
 
     // For each thread, count only 'user' role messages in current year
@@ -148,7 +148,7 @@ export const getStatistics = query({
     // aiProfileRank: map ids to names for current user
     const profiles = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", user.userId))
       .collect();
 
     const idToName: Record<string, string> = {};

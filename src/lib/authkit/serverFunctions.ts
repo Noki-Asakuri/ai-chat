@@ -51,11 +51,3 @@ const getAuthFn = createServerFn({ method: "GET" }).handler(
 );
 
 export const getAuth = cache(getAuthFn);
-
-export const refreshAccessToken = createServerFn({ method: "GET" }).handler(async () => {
-  const session = await getSessionFromCookie();
-  if (!session) return null;
-
-  const newSession = await refreshSession(session);
-  return newSession.accessToken;
-});

@@ -1,16 +1,14 @@
-"use client";
-
 import { api } from "@/convex/_generated/api";
-import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
 import { Meter } from "@base-ui-components/react/meter";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
+import { convexSessionQuery } from "@/lib/convex/helpers";
 import { format } from "@/lib/utils";
 
 export function UserUsages() {
-  const { data } = useQuery(convexQuery(api.functions.usages.getUserUsages));
+  const { data } = useQuery(convexSessionQuery(api.functions.usages.getUserUsages));
   if (!data) return null;
 
   return (

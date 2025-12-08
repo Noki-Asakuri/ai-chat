@@ -1,5 +1,4 @@
 import { api } from "@/convex/_generated/api";
-import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
 
 import { useCallback, useEffect, useRef } from "react";
@@ -15,6 +14,7 @@ import { ChatSendButton } from "./send-button";
 // import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { shouldSend, useGetSendDescription } from "@/lib/chat/send-preference";
 import { useChatStore } from "@/lib/chat/store";
+import { convexSessionQuery } from "@/lib/convex/helpers";
 
 export function ChatTextarea() {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -174,7 +174,7 @@ function getResetDate(type: "monthly" | "daily"): string {
 }
 
 function UsageBanner() {
-  const { data, isPending } = useQuery(convexQuery(api.functions.usages.getUserUsages, {}));
+  const { data, isPending } = useQuery(convexSessionQuery(api.functions.usages.getUserUsages));
   if (isPending || !data || data.used < data.base) return null;
 
   const resetStr = getResetDate(data.resetType ?? "monthly");

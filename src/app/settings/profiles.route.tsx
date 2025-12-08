@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/select";
 
 import { uploadAiProfileImage } from "@/lib/convex/uploadFiles";
+import { convexSessionQuery } from "@/lib/convex/helpers";
 
 export const Route = createFileRoute("/settings/profiles")({
   component: AiProfilesPage,
@@ -49,7 +50,11 @@ export const Route = createFileRoute("/settings/profiles")({
   head: () => ({ meta: [{ title: "AI Profiles - AI Chat" }] }),
   loader: async ({ context }) => {
     context.queryClient.ensureQueryData(
-      convexQuery(api.functions.profiles.listProfiles, { search: "", sort: "recently-updated" }),
+      convexQuery(api.functions.profiles.listProfiles, {
+        search: "",
+        sort: "recently-updated",
+        sessionId: context.sessionId,
+      }),
     );
   },
 });
@@ -82,7 +87,7 @@ function AiProfilesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data, refetch } = useSuspenseQuery(
-    convexQuery(api.functions.profiles.listProfiles, { search, sort }),
+    convexSessionQuery(api.functions.profiles.listProfiles, { search, sort }),
   );
 
   const profiles = data ?? [];

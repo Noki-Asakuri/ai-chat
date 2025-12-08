@@ -2,24 +2,25 @@ import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
-import { internalMutation, mutation, query } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
+import { authenticatedMutation, authenticatedQuery } from "../components";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
-export const getAllMessagesFromThread = query({
+export const getAllMessagesFromThread = authenticatedQuery({
   args: { threadId: v.optional(v.id("threads")) },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
 
     if (!user) throw new Error("Not authenticated");
     if (!args.threadId) return { messages: [], thread: null };
 
     const thread = await ctx.db.get(args.threadId);
-    if (thread?.userId !== user.subject) throw new Error("Not authorized");
+    if (thread?.userId !== user.userId) throw new Error("Not authorized");
 
     const messagesFromThread = await ctx.db
       .query("messages")
       .withIndex("by_userId_threadId", (q) =>
-        q.eq("userId", user.subject).eq("threadId", args.threadId!),
+        q.eq("userId", user.userId).eq("threadId", args.threadId!),
       )
       .order("asc")
       .collect();
@@ -38,10 +39,10 @@ export const getAllMessagesFromThread = query({
   },
 });
 
-export const addAttachmentsToMessage = mutation({
+export const addAttachmentsToMessage = authenticatedMutation({
   args: { messageId: v.string(), attachmentId: v.id("attachments") },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const message = await ctx.db
@@ -50,13 +51,13 @@ export const addAttachmentsToMessage = mutation({
       .first();
 
     if (!message) throw new Error("Message not found");
-    if (message.userId !== user.subject) throw new Error("Not authorized");
+    if (message.userId !== user.userId) throw new Error("Not authorized");
 
     await ctx.db.patch(message._id, { attachments: [args.attachmentId] });
   },
 });
 
-export const addMessagesToThread = mutation({
+export const addMessagesToThread = authenticatedMutation({
   args: {
     threadId: v.id("threads"),
     messages: v.array(
@@ -78,12 +79,12 @@ export const addMessagesToThread = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
-    if (thread.userId !== user.subject) throw new Error("Not authorized");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
 
     const [userMessage, assistantMessage] = args.messages as [
       (typeof args.messages)[0],
@@ -91,16 +92,16 @@ export const addMessagesToThread = mutation({
     ];
 
     const [, assistantMessageId] = await Promise.all([
-      ctx.db.insert("messages", { threadId: args.threadId, userId: user.subject, ...userMessage }),
+      ctx.db.insert("messages", { threadId: args.threadId, userId: user.userId, ...userMessage }),
       ctx.db.insert("messages", {
         threadId: args.threadId,
-        userId: user.subject,
+        userId: user.userId,
         ...assistantMessage,
       }),
     ]);
 
     await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
-      userId: user.subject,
+      userId: user.userId,
       threadId: args.threadId,
       content: userMessage.content,
       createdAt: userMessage.createdAt,
@@ -110,7 +111,7 @@ export const addMessagesToThread = mutation({
   },
 });
 
-export const updateErrorMessage = mutation({
+export const updateErrorMessage = authenticatedMutation({
   args: {
     messageId: v.id("messages"),
     error: v.string(),
@@ -118,12 +119,12 @@ export const updateErrorMessage = mutation({
     modelParams: AISDKModelParams,
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const message = await ctx.db.get(args.messageId);
     if (!message) throw new Error("Message not found");
-    if (message.userId !== user.subject) throw new Error("User not authorized");
+    if (message.userId !== user.userId) throw new Error("User not authorized");
 
     await ctx.db.patch(args.messageId, {
       status: "error",
@@ -141,7 +142,7 @@ export const updateErrorMessage = mutation({
   },
 });
 
-export const updateMessageById = mutation({
+export const updateMessageById = authenticatedMutation({
   args: {
     messageId: v.id("messages"),
     updates: v.object({
@@ -158,12 +159,12 @@ export const updateMessageById = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const message = await ctx.db.get(args.messageId);
     console.log("Updating message by Id", {
-      userId: user.subject,
+      userId: user.userId,
       messageId: args.messageId,
       messageUserId: message?.userId ?? "Message not found",
       status: args.updates.status,
@@ -171,7 +172,7 @@ export const updateMessageById = mutation({
     });
 
     if (!message) throw new Error("Message not found");
-    if (message.userId !== user.subject) throw new Error("User not authorized");
+    if (message.userId !== user.userId) throw new Error("User not authorized");
     if (message.status === "error") return;
 
     await ctx.db.patch(args.messageId, { ...args.updates, updatedAt: Date.now() });
@@ -191,7 +192,7 @@ export const updateMessageById = mutation({
       const profileId = args.updates.metadata?.profile?.id ?? message.metadata?.profile?.id;
 
       await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
-        userId: user.subject,
+        userId: user.userId,
         threadId: message.threadId,
         content,
         modelUniqueId,
@@ -202,7 +203,7 @@ export const updateMessageById = mutation({
   },
 });
 
-export const retryChatMessage = mutation({
+export const retryChatMessage = authenticatedMutation({
   args: {
     threadId: v.id("threads"),
     assistantMessageId: v.id("messages"),
@@ -217,12 +218,12 @@ export const retryChatMessage = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
-    if (thread.userId !== user.subject) throw new Error("Not authorized");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
 
     const assistantMessage = await ctx.db.get(args.assistantMessageId);
     if (!assistantMessage) throw new Error("Message not found");
@@ -231,7 +232,7 @@ export const retryChatMessage = mutation({
       .query("messages")
       .withIndex("by_userId_threadId", (q) =>
         q
-          .eq("userId", user.subject)
+          .eq("userId", user.userId)
           .eq("threadId", args.threadId)
           .gt("_creationTime", assistantMessage._creationTime),
       )

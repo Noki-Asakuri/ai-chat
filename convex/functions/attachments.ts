@@ -1,11 +1,10 @@
 import { v } from "convex/values";
 
-import { r2 } from "..";
 import type { Id } from "../_generated/dataModel";
-import { mutation, query } from "../_generated/server";
+import { authenticatedMutation, authenticatedQuery, r2 } from "../components";
 import { validExtensions } from "./files";
 
-export const createAttachment = mutation({
+export const createAttachment = authenticatedMutation({
   args: {
     id: v.string(),
     name: v.string(),
@@ -16,14 +15,14 @@ export const createAttachment = mutation({
     mimeType: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const ext = args.mimeType.split("/")[1];
-    const path = `${user.subject}/${args.threadId}/${args.id}.${ext}`;
+    const path = `${user.userId}/${args.threadId}/${args.id}.${ext}`;
 
     if (validExtensions.includes(args.mimeType)) {
-      const docId = await ctx.db.insert("attachments", { ...args, userId: user.subject, path });
+      const docId = await ctx.db.insert("attachments", { ...args, userId: user.userId, path });
       return { uniqueId: args.id, docId, path };
     }
 
@@ -31,15 +30,15 @@ export const createAttachment = mutation({
   },
 });
 
-export const getAllAttachments = query({
+export const getAllAttachments = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const attachments = await ctx.db
       .query("attachments")
-      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", user.userId))
       .order("desc")
       .collect();
 
@@ -52,21 +51,21 @@ export const getAllAttachments = query({
   },
 });
 
-export const deleteAttachment = mutation({
+export const deleteAttachment = authenticatedMutation({
   args: { attachmentId: v.id("attachments") },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const attachment = await ctx.db.get(args.attachmentId);
     if (!attachment) throw new Error("Attachment not found");
-    if (attachment.userId !== user.subject) throw new Error("Not authorized");
+    if (attachment.userId !== user.userId) throw new Error("Not authorized");
 
     // Unlink this attachment from any messages in the same thread for this user
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_userId_threadId", (q) =>
-        q.eq("userId", user.subject).eq("threadId", attachment.threadId),
+        q.eq("userId", user.userId).eq("threadId", attachment.threadId),
       )
       .collect();
 
@@ -91,10 +90,10 @@ export const deleteAttachment = mutation({
  * - Unlinks all provided attachments from any of the user's messages in the corresponding threads.
  * - Deletes files from R2 and removes attachment documents.
  */
-export const deleteAttachments = mutation({
+export const deleteAttachments = authenticatedMutation({
   args: { attachmentIds: v.array(v.id("attachments")) },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
     if (args.attachmentIds.length === 0) return;
 
@@ -104,7 +103,7 @@ export const deleteAttachments = mutation({
     if (notFound !== -1) throw new Error("Attachment not found");
     const owned = attachments as NonNullable<(typeof attachments)[number]>[];
     for (const a of owned) {
-      if (a.userId !== user.subject) throw new Error("Not authorized");
+      if (a.userId !== user.userId) throw new Error("Not authorized");
     }
 
     // Group by threadId to minimize message scans
@@ -122,7 +121,7 @@ export const deleteAttachments = mutation({
       const messages = await ctx.db
         .query("messages")
         .withIndex("by_userId_threadId", (q) =>
-          q.eq("userId", user.subject).eq("threadId", threadId),
+          q.eq("userId", user.userId).eq("threadId", threadId),
         )
         .collect();
 
