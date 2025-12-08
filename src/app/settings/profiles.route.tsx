@@ -15,7 +15,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { convexQuery } from "@convex-dev/react-query";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation } from "convex/react";
 
@@ -44,8 +44,28 @@ import { uploadAiProfileImage } from "@/lib/convex/uploadFiles";
 
 export const Route = createFileRoute("/settings/profiles")({
   component: AiProfilesPage,
+  pendingComponent: LoadingSkeleton,
+
   head: () => ({ meta: [{ title: "AI Profiles - AI Chat" }] }),
+  loader: async ({ context }) => {
+    context.queryClient.ensureQueryData(
+      convexQuery(api.functions.profiles.listProfiles, { search: "", sort: "recently-updated" }),
+    );
+  },
 });
+
+function LoadingSkeleton() {
+  return (
+    <main className="space-y-4">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-2xl font-bold">AI Profiles</h2>
+        <p className="text-muted-foreground">Create reusable AI personas for your chats.</p>
+      </div>
+
+      <p className="text-sm text-muted-foreground">Loading profiles…</p>
+    </main>
+  );
+}
 
 type SortOption = "az" | "za" | "newest" | "oldest" | "recently-updated";
 
@@ -61,7 +81,7 @@ function AiProfilesPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data, isPending, refetch } = useQuery(
+  const { data, refetch } = useSuspenseQuery(
     convexQuery(api.functions.profiles.listProfiles, { search, sort }),
   );
 
@@ -101,18 +121,9 @@ function AiProfilesPage() {
       if (file) imageKey = await uploadAiProfileImage(file);
 
       if (editingId) {
-        await updateProfile({
-          profileId: editingId,
-          name,
-          systemPrompt,
-          imageKey: imageKey ?? undefined,
-        });
+        await updateProfile({ profileId: editingId, name, systemPrompt, imageKey: imageKey });
       } else {
-        await createProfile({
-          name,
-          systemPrompt,
-          imageKey: imageKey ?? undefined,
-        });
+        await createProfile({ name, systemPrompt, imageKey: imageKey });
       }
 
       setDialogOpen(false);
@@ -120,9 +131,9 @@ function AiProfilesPage() {
       void refetch();
     } catch (e) {
       console.error("[AI Profiles] submit error:", e);
-    } finally {
-      setIsSubmitting(false);
     }
+
+    setIsSubmitting(false);
   }
 
   async function onConfirmDelete(id: Id<"profiles">) {
@@ -200,9 +211,7 @@ function AiProfilesPage() {
 
       <div className="block sm:hidden">{SortControl}</div>
 
-      {isPending ? (
-        <p className="text-sm text-muted-foreground">Loading profiles…</p>
-      ) : profiles.length === 0 ? (
+      {profiles.length === 0 ? (
         <p className="text-sm text-muted-foreground">No profiles found.</p>
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

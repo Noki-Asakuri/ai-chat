@@ -3,7 +3,7 @@ import { api } from "@/convex/_generated/api";
 import { convexQuery } from "@convex-dev/react-query";
 import { useMutation } from "convex/react";
 
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { ImagePlusIcon, TrashIcon } from "lucide-react";
@@ -22,6 +22,10 @@ import { useStorage } from "@/lib/hooks/use-storage";
 export const Route = createFileRoute("/settings/customization")({
   component: RouteComponent,
   head: () => ({ meta: [{ title: "Customization - AI Chat" }] }),
+
+  loader: async ({ context }) => {
+    context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser));
+  },
 });
 
 function getFormValue<T extends File | string>(key: string, formData: FormData): T {
@@ -32,7 +36,7 @@ function getFormValue<T extends File | string>(key: string, formData: FormData):
 }
 
 function RouteComponent() {
-  const { data, isPending } = useQuery(convexQuery(api.functions.users.currentUser, {}));
+  const { data, isPending } = useSuspenseQuery(convexQuery(api.functions.users.currentUser));
   const updateUserCustomization = useMutation(api.functions.users.updateUserCustomization);
 
   const { uploadFile, deleteFile } = useStorage();

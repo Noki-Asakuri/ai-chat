@@ -3,28 +3,24 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icons } from "@/components/ui/icons";
 
+import { LoadingSkeleton } from "./-pending";
+
 import { getModelData } from "@/lib/chat/models";
 import { format, toUUID } from "@/lib/utils";
 
-import { LoadingSkeleton } from "./-pending";
-
-export const Route = createFileRoute("/settings/statistics/")({
+export const Route = createFileRoute("/settings/statistics")({
   component: StatisticsPage,
   pendingComponent: LoadingSkeleton,
   head: () => ({ meta: [{ title: "Statistics - AI Chat" }] }),
 
   loader: async ({ context }) => {
-    const data = await context.queryClient.ensureQueryData(
-      convexQuery(api.functions.statistics.getStatistics),
-    );
-
-    return { statistics: data };
+    await context.queryClient.ensureQueryData(convexQuery(api.functions.statistics.getStatistics));
   },
 });
 
