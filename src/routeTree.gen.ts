@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './app/__root'
 import { Route as SettingsRouteImport } from './app/settings'
 import { Route as Chat_layoutRouteImport } from './app/_chat_layout'
-import { Route as Chat_layoutIndexRouteImport } from './app/_chat_layout/index'
+import { Route as Chat_layoutIndexRouteImport } from './app/_chat_layout.index'
 import { Route as SettingsAccountRouteImport } from './app/settings/account'
 import { Route as AuthLogoutRouteImport } from './app/auth/logout'
 import { Route as AuthLoginRouteImport } from './app/auth/login'
@@ -20,9 +20,9 @@ import { Route as SettingsProfilesRouteRouteImport } from './app/settings/profil
 import { Route as SettingsModelsRouteRouteImport } from './app/settings/models/route'
 import { Route as SettingsCustomizationRouteRouteImport } from './app/settings/customization.route'
 import { Route as SettingsAttachmentsRouteRouteImport } from './app/settings/attachments/route'
-import { Route as Chat_layoutThreadsRouteRouteImport } from './app/_chat_layout/threads.route'
+import { Route as Chat_layoutThreadsRouteRouteImport } from './app/_chat_layout.threads.route'
 import { Route as ApiAuthCallbackRouteImport } from './app/api/auth/callback'
-import { Route as Chat_layoutThreadsThreadIdRouteImport } from './app/_chat_layout/threads.$threadId'
+import { Route as Chat_layoutThreadsThreadIdRouteImport } from './app/_chat_layout.threads.$threadId'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
