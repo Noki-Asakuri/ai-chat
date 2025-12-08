@@ -31,7 +31,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
 import { ThreadGroup } from "./thread-group";
-import { ThreadItem } from "./thread-items";
+import { ThreadItem } from "./thread-item";
 import { UngroupedThreadGroup } from "./thread-ungrouped";
 
 import { threadStore, useThreadStore } from "@/lib/store/thread-store";

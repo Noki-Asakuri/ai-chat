@@ -13,7 +13,7 @@ import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from "../ui/side
 
 import type { ActiveGroupData, ActiveThreadData } from "./thread-content";
 import { ThreadGroupActions } from "./thread-group-actions";
-import { ThreadItem } from "./thread-items";
+import { ThreadItem } from "./thread-item";
 
 import { cn } from "@/lib/utils";
 

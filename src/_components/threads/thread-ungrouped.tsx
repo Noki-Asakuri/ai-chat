@@ -7,7 +7,7 @@ import { useDroppable } from "@dnd-kit/core";
 
 import { SidebarGroup, SidebarGroupLabel } from "../ui/sidebar";
 
-import { ThreadItem } from "./thread-items";
+import { ThreadItem } from "./thread-item";
 
 import { groupByDate } from "@/lib/threads/group-by-date";
 
