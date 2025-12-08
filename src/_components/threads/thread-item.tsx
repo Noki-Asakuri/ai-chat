@@ -1,6 +1,8 @@
 import { api } from "@/convex/_generated/api";
 
 import { Link, useParams } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+
 import {
   DeleteIcon,
   EllipsisIcon,
@@ -19,10 +21,12 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { Dialog } from "@base-ui-components/react/dialog";
 import { Menu } from "@base-ui-components/react/menu";
+import { toast } from "sonner";
 
 import { buttonVariants } from "../ui/button";
 import { Input } from "../ui/input";
 
+import { regenerateThreadTitleServerFn } from "./server-function/regenerate-thread-title";
 import { ThreadDeleteDialog } from "./thread-delete-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
@@ -121,6 +125,8 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const regenerateThreadTitle = useServerFn(regenerateThreadTitleServerFn);
+
   function toggleThreadPin() {
     console.debug("[Thread] Pin thread", thread);
     void convexClient.mutation(api.functions.threads.pinThread, {
@@ -148,19 +154,12 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
     });
   }
 
-  function regenerateTitle(): void {
-    // Optimistically set the title to "Regenerating" on the server
-    void convexClient.mutation(api.functions.threads.updateThreadTitle, {
-      threadId: thread._id,
-      title: "Regenerating",
-    });
+  async function regenerateTitle() {
+    const { error } = await regenerateThreadTitle({ data: { threadId: thread._id } });
+    if (!error) return;
 
-    // Trigger server-side regeneration using the existing updateTitle() pipeline
-    void fetch("/api/threads/regenerate-title", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ threadId: thread._id }),
-    });
+    console.error("[Thread] Regenerate title error:", error);
+    toast.error(error);
   }
 
   return (
@@ -220,6 +219,7 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
                   ) : (
                     <PinIcon className="size-4" />
                   )}
+
                   <span className="pointer-events-none">
                     {thread.pinned ? "Unpin Thread" : "Pin Thread"}
                   </span>
