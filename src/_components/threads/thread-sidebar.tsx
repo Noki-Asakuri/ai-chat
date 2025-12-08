@@ -1,4 +1,4 @@
-import { ClientOnly, Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 
 import { ThreadContents } from "./thread-content";
 import { ThreadUserProfile } from "./thread-user-profile";

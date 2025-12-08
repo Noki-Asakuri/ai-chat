@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
@@ -101,9 +101,9 @@ export function RegisterHotkeys() {
         target.tagName !== "TEXTAREA" &&
         !target.isContentEditable
       ) {
-        const chatInput = document.getElementById(
-          editMessage ? "textarea-user-message-edit" : "textarea-chat-input",
-        );
+        const textareId = editMessage ? "textarea-user-message-edit" : "textarea-chat-input";
+        const chatInput = document.getElementById(textareId);
+
         if (chatInput) chatInput.focus();
       }
 
@@ -130,7 +130,7 @@ export function RegisterHotkeys() {
         (event.metaKey || event.ctrlKey)
       ) {
         event.preventDefault();
-        threadStore.getState().setThreadCommandOpen((open) => !open);
+        threadStore.setThreadCommandOpen((open) => !open);
       }
 
       if (
