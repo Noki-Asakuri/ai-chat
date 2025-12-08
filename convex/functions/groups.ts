@@ -1,26 +1,26 @@
 import { v } from "convex/values";
 
 import type { Doc, Id } from "../_generated/dataModel";
-import { mutation, query } from "../_generated/server";
+import { authenticatedMutation, authenticatedQuery } from "../components";
 
 /**
  * List all groups for the current user ordered by `order` asc.
  */
-export const listGroups = query({
+export const listGroups = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const groupsPromise = ctx.db
       .query("groups")
-      .withIndex("by_userId_order", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId_order", (q) => q.eq("userId", user.userId))
       .order("asc")
       .collect();
 
     const threadsPromise = ctx.db
       .query("threads")
-      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.userId))
       .order("asc")
       .collect();
 
@@ -53,15 +53,15 @@ export const listGroups = query({
 /**
  * Create a group with the next available order for the current user.
  */
-export const createGroup = mutation({
+export const createGroup = authenticatedMutation({
   args: { title: v.string() },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const last = await ctx.db
       .query("groups")
-      .withIndex("by_userId_order", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId_order", (q) => q.eq("userId", user.userId))
       .order("desc")
       .take(1);
 
@@ -70,7 +70,7 @@ export const createGroup = mutation({
     const id = await ctx.db.insert("groups", {
       title: args.title,
       order: nextOrder,
-      userId: user.subject,
+      userId: user.userId,
     });
 
     return id;
@@ -81,21 +81,21 @@ export const createGroup = mutation({
  * Delete a group.
  * All threads in this group are moved to the "Ungrouped" (groupId = null) container.
  */
-export const deleteGroup = mutation({
+export const deleteGroup = authenticatedMutation({
   args: { groupId: v.id("groups") },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const group = await ctx.db.get(args.groupId);
     if (!group) throw new Error("Group not found");
-    if (group.userId !== user.subject) throw new Error("Not authorized");
+    if (group.userId !== user.userId) throw new Error("Not authorized");
 
     // Move threads from this group to ungrouped with increasing order
     const threadsInGroup = await ctx.db
       .query("threads")
       .withIndex("by_userId_groupId_order", (q) =>
-        q.eq("userId", user.subject).eq("groupId", args.groupId),
+        q.eq("userId", user.userId).eq("groupId", args.groupId),
       )
       .order("asc")
       .collect();
@@ -113,16 +113,16 @@ export const deleteGroup = mutation({
 /**
  * Update a group's title.
  */
-export const updateGroupTitle = mutation({
+export const updateGroupTitle = authenticatedMutation({
   args: { groupId: v.id("groups"), title: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const group = await ctx.db.get(args.groupId);
     if (!group) throw new Error("Group not found");
-    if (group.userId !== user.subject) throw new Error("Not authorized");
+    if (group.userId !== user.userId) throw new Error("Not authorized");
 
     await ctx.db.patch(args.groupId, { title: args.title.trim() });
     return null;
@@ -132,20 +132,20 @@ export const updateGroupTitle = mutation({
 /**
  * Re-order thread within same group
  */
-export const reorderThreadWithinGroup = mutation({
+export const reorderThreadWithinGroup = authenticatedMutation({
   args: { threadId: v.id("threads"), toIndex: v.number() },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
-    if (thread.userId !== user.subject) throw new Error("Not authorized");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
 
     const threadsInGroup = await ctx.db
       .query("threads")
       .withIndex("by_userId_groupId_order", (q) =>
-        q.eq("userId", user.subject).eq("groupId", thread.groupId),
+        q.eq("userId", user.userId).eq("groupId", thread.groupId),
       )
       .order("asc")
       .collect();
@@ -166,15 +166,15 @@ export const reorderThreadWithinGroup = mutation({
   },
 });
 
-export const removeGroupId = mutation({
+export const removeGroupId = authenticatedMutation({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
-    if (thread.userId !== user.subject) throw new Error("Not authorized");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
 
     if (thread.groupId === null) return;
 
@@ -183,7 +183,7 @@ export const removeGroupId = mutation({
     const threadsInOldGroup = await ctx.db
       .query("threads")
       .withIndex("by_userId_groupId_order", (q) =>
-        q.eq("userId", user.subject).eq("groupId", thread.groupId),
+        q.eq("userId", user.userId).eq("groupId", thread.groupId),
       )
       .order("asc")
       .collect();
@@ -199,19 +199,19 @@ export const removeGroupId = mutation({
   },
 });
 
-export const moveThreadToGroup = mutation({
+export const moveThreadToGroup = authenticatedMutation({
   args: {
     threadId: v.id("threads"),
     toGroupId: v.nullable(v.id("groups")),
     toIndex: v.number(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
-    if (thread.userId !== user.subject) throw new Error("Not authorized");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
 
     const oldIndex = thread.order!;
     const oldGroupId = thread.groupId;
@@ -219,7 +219,7 @@ export const moveThreadToGroup = mutation({
     const threadsInOldGroupPromise = ctx.db
       .query("threads")
       .withIndex("by_userId_groupId_order", (q) =>
-        q.eq("userId", user.subject).eq("groupId", oldGroupId),
+        q.eq("userId", user.userId).eq("groupId", oldGroupId),
       )
       .order("asc")
       .collect();
@@ -227,7 +227,7 @@ export const moveThreadToGroup = mutation({
     const threadsInNewGroupPromise = ctx.db
       .query("threads")
       .withIndex("by_userId_groupId_order", (q) =>
-        q.eq("userId", user.subject).eq("groupId", args.toGroupId),
+        q.eq("userId", user.userId).eq("groupId", args.toGroupId),
       )
       .order("asc")
       .collect();
@@ -266,19 +266,19 @@ export const moveThreadToGroup = mutation({
   },
 });
 
-export const moveGroupToIndex = mutation({
+export const moveGroupToIndex = authenticatedMutation({
   args: { groupId: v.id("groups"), toIndex: v.number() },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const group = await ctx.db.get(args.groupId);
     if (!group) throw new Error("Group not found");
-    if (group.userId !== user.subject) throw new Error("Not authorized");
+    if (group.userId !== user.userId) throw new Error("Not authorized");
 
     const groups = await ctx.db
       .query("groups")
-      .withIndex("by_userId_order", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId_order", (q) => q.eq("userId", user.userId))
       .order("asc")
       .collect();
 

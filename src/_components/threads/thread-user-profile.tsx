@@ -1,5 +1,4 @@
 import { api } from "@/convex/_generated/api";
-import { convexQuery } from "@convex-dev/react-query";
 
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLoaderData, useParams } from "@tanstack/react-router";
@@ -18,6 +17,7 @@ import type { ComponentProps } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Menu } from "../ui/menu";
 
+import { convexSessionQuery } from "@/lib/convex/helpers";
 import { cn } from "@/lib/utils";
 
 export function ThreadUserProfile() {
@@ -119,7 +119,7 @@ function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSe
 }
 
 function UserQuota() {
-  const { data, isPending } = useQuery(convexQuery(api.functions.usages.getUserUsages));
+  const { data, isPending } = useQuery(convexSessionQuery(api.functions.usages.getUserUsages));
   if (isPending || !data) return null;
 
   const percentage = (data.used / data.base) * 100;

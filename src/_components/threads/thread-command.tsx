@@ -1,8 +1,7 @@
 import { api } from "@/convex/_generated/api";
-import { convexQuery } from "@convex-dev/react-query";
 
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 
 import { useDebounce } from "@uidotdev/usehooks";
 import { CommandLoading } from "cmdk";
@@ -20,6 +19,7 @@ import {
 } from "../ui/command";
 
 import { getConvexReactClient } from "@/lib/convex/client";
+import { convexSessionQuery } from "@/lib/convex/helpers";
 import { threadStore, useThreadStore } from "@/lib/store/thread-store";
 import { groupByDate } from "@/lib/threads/group-by-date";
 import type { Thread } from "@/lib/types";
@@ -94,7 +94,7 @@ function ThreadCommandDialog() {
   const { data, isFetching } = useQuery({
     enabled: debouncedQuery.length > 0 && threadCommandOpen,
     placeholderData: defaultThreads,
-    ...convexQuery(api.functions.threads.getAllThreads, { query: debouncedQuery }),
+    ...convexSessionQuery(api.functions.threads.getAllThreads, { query: debouncedQuery }),
   });
 
   const isLoading = isFetching || debouncedQuery !== query;

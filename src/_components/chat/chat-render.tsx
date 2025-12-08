@@ -1,6 +1,5 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { convexQuery } from "@convex-dev/react-query";
 
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
@@ -8,6 +7,7 @@ import { useParams } from "@tanstack/react-router";
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { convexSessionQuery } from "@/lib/convex/helpers";
 import { fromUUID } from "@/lib/utils";
 
 export function Chat() {
@@ -15,7 +15,7 @@ export function Chat() {
 
   const { data, isLoading } = useQuery({
     enabled: Boolean(params?.threadId),
-    ...convexQuery(api.functions.messages.getAllMessagesFromThread, {
+    ...convexSessionQuery(api.functions.messages.getAllMessagesFromThread, {
       threadId: fromUUID<Id<"threads">>(params?.threadId),
     }),
   });

@@ -1,12 +1,8 @@
 import { httpRouter } from "convex/server";
 
-// import { clerkWebhook } from "./functions/users";
+import { authKit } from "./components";
 
 const http = httpRouter();
-// http.route({
-//   method: "POST",
-//   path: "/webhook/clerk",
-//   handler: clerkWebhook,
-// });
+authKit.registerRoutes(http);
 
 export default http;

@@ -8,8 +8,10 @@
  * @module
  */
 
+import type * as components_ from "../components.js";
 import type * as crons from "../crons.js";
 import type * as functions_attachments from "../functions/attachments.js";
+import type * as functions_auth from "../functions/auth.js";
 import type * as functions_files from "../functions/files.js";
 import type * as functions_groups from "../functions/groups.js";
 import type * as functions_messages from "../functions/messages.js";
@@ -20,7 +22,6 @@ import type * as functions_usages from "../functions/usages.js";
 import type * as functions_userStats from "../functions/userStats.js";
 import type * as functions_users from "../functions/users.js";
 import type * as http from "../http.js";
-import type * as index from "../index.js";
 import type * as migrations from "../migrations.js";
 
 import type {
@@ -30,8 +31,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  components: typeof components_;
   crons: typeof crons;
   "functions/attachments": typeof functions_attachments;
+  "functions/auth": typeof functions_auth;
   "functions/files": typeof functions_files;
   "functions/groups": typeof functions_groups;
   "functions/messages": typeof functions_messages;
@@ -42,7 +45,6 @@ declare const fullApi: ApiFromModules<{
   "functions/userStats": typeof functions_userStats;
   "functions/users": typeof functions_users;
   http: typeof http;
-  index: typeof index;
   migrations: typeof migrations;
 }>;
 
@@ -331,6 +333,43 @@ export declare const components: {
           processed: number;
           state: "inProgress" | "success" | "failed" | "canceled" | "unknown";
         }
+      >;
+    };
+  };
+  workOSAuthKit: {
+    lib: {
+      enqueueWebhookEvent: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          apiKey: string;
+          event: string;
+          eventId: string;
+          eventTypes?: Array<string>;
+          logLevel?: "DEBUG";
+          onEventHandle?: string;
+          updatedAt?: string;
+        },
+        any
+      >;
+      getAuthUser: FunctionReference<
+        "query",
+        "internal",
+        { id: string },
+        {
+          createdAt: string;
+          email: string;
+          emailVerified: boolean;
+          externalId?: null | string;
+          firstName?: null | string;
+          id: string;
+          lastName?: null | string;
+          lastSignInAt?: null | string;
+          locale?: null | string;
+          metadata: Record<string, any>;
+          profilePictureUrl?: null | string;
+          updatedAt: string;
+        } | null
       >;
     };
   };

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { r2 } from "..";
-import { internalMutation, mutation, query, type QueryCtx } from "../_generated/server";
+
+import { internalMutation, type QueryCtx } from "../_generated/server";
+import { authenticatedMutation, authenticatedQuery, r2 } from "../components";
 
 export const deleteUserData = internalMutation({
   args: { userId: v.string() },
@@ -82,98 +83,7 @@ async function getUserById(ctx: QueryCtx, userId: string) {
     .unique();
 }
 
-// export const upsertFromClerk = internalMutation({
-//   // no runtime validation, Clerk webhook always return valid data
-//   args: {
-//     data: v.any() as Validator<UserJSON>,
-//     event: v.union(v.literal("created"), v.literal("updated")),
-//   },
-//   async handler(ctx, { data, event }) {
-//     const mainEmailAddress = data.email_addresses?.find(
-//       (email) => email.id === data.primary_email_address_id,
-//     );
-
-//     const userAttributes = {
-//       userId: data.id,
-
-//       username: data.username,
-//       emailAddress: mainEmailAddress?.email_address ?? null,
-//       imageUrl: data.image_url,
-
-//       isBanned: data.banned,
-
-//       createdAt: data.created_at,
-//       updatedAt: data.updated_at,
-//     };
-
-//     switch (event) {
-//       case "updated":
-//         const existUserData = await getUserByClerkUserId(ctx, data.id);
-//         if (existUserData) await ctx.db.patch(existUserData._id, userAttributes);
-
-//       case "created":
-//         await ctx.db.insert("usages", { userId: data.id, used: 0, base: 25, resetType: "daily" });
-
-//         return await ctx.db.insert("users", {
-//           ...userAttributes,
-//           customization: {
-//             name: data.username!,
-//             systemInstruction: "You are a helpful assistant.",
-//             traits: [],
-//             backgroundId: null,
-//             hiddenModels: [],
-//             showFullCode: false,
-//             disableBlur: false,
-//           },
-//         });
-//     }
-//   },
-// });
-
-// export const clerkWebhook = httpAction(async (ctx, request) => {
-//   const event = await validateRequest(request);
-//   if (!event) return new Response("Error occurred", { status: 400 });
-
-//   switch (event.type) {
-//     case "user.created":
-//     case "user.updated":
-//       await ctx.runMutation(internal.functions.users.upsertFromClerk, {
-//         data: event.data,
-//         event: event.type === "user.created" ? "created" : "updated",
-//       });
-//       break;
-
-//     case "user.deleted": {
-//       const userId = event.data.id!;
-//       await ctx.runMutation(internal.functions.users.deleteFromClerk, { userId });
-//       break;
-//     }
-//     default:
-//       console.log("Ignored Clerk webhook event", event.type);
-//   }
-
-//   return new Response(null, { status: 200 });
-// });
-
-// async function validateRequest(req: Request): Promise<WebhookEvent | null> {
-//   const payloadString = await req.text();
-//   const svixHeaders = {
-//     "svix-id": req.headers.get("svix-id")!,
-//     "svix-timestamp": req.headers.get("svix-timestamp")!,
-//     "svix-signature": req.headers.get("svix-signature")!,
-//   };
-
-//   const wh = new Webhook(process.env.CLERK_WEBHOOK_SIGNING_SECRET!);
-
-//   try {
-//     return wh.verify(payloadString, svixHeaders) as WebhookEvent;
-//   } catch (error) {
-//     console.error("Error verifying webhook event", error);
-//     return null;
-//   }
-// }
-
-export const updateUserCustomization = mutation({
+export const updateUserCustomization = authenticatedMutation({
   args: {
     data: v
       .object({
@@ -189,23 +99,17 @@ export const updateUserCustomization = mutation({
       .partial(),
   },
   handler: async (ctx, { data }) => {
-    const userId = await ctx.auth.getUserIdentity();
-    if (!userId) throw new Error("Not authenticated");
-
-    const user = await getUserById(ctx, userId.subject);
-    if (!user) throw new Error("User not found");
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
 
     await ctx.db.patch(user._id, { customization: { ...user.customization, ...data } });
   },
 });
 
-export const currentUser = query({
+export const currentUser = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
-    const userId = await ctx.auth.getUserIdentity();
-    if (!userId) return null;
-
-    const user = await getUserById(ctx, userId.subject);
+    const user = ctx.user;
     if (!user) return null;
 
     // Ensure hiddenModels is always defined for clients

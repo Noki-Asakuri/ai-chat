@@ -40,6 +40,7 @@ export const Route = createFileRoute("/_chat_layout")({
   },
 
   head: ({ loaderData }) => ({
+    meta: [{ name: "robots", content: "noindex, nofollow" }],
     links: [
       loaderData?.backgroundImage
         ? { rel: "preload", as: "image", href: loaderData.backgroundImage }
@@ -59,9 +60,9 @@ function RouteComponent() {
       defaultOpen={defaultOpenSidebar}
     >
       <ThreadSidebar />
-      <Outlet />
+      {/* <Outlet />
 
-      <RegisterHotkeys />
+      <RegisterHotkeys /> */}
     </SidebarProvider>
   );
 }

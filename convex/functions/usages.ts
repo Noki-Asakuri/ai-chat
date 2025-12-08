@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
-import { internalMutation, mutation, query } from "../_generated/server";
+import { internalMutation } from "../_generated/server";
+import { authenticatedMutation, authenticatedQuery } from "../components";
 
 // Default daily limit for new users
 const DEFAULT_BASE = 25;
@@ -8,14 +9,15 @@ const DEFAULT_BASE = 25;
 /**
  * Public query to retrieve current usage inf for user.
  */
-export const getUserUsages = query({
+export const getUserUsages = authenticatedQuery({
+  args: {},
   handler: async (ctx) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) return null;
 
     return await ctx.db
       .query("usages")
-      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", user.userId))
       .unique();
   },
 });
@@ -24,7 +26,7 @@ export const getUserUsages = query({
  * Public mutation to check and increment usage by a given amount (default 1).
  * Ensures monthly reset semantics.
  */
-export const checkAndIncrement = mutation({
+export const checkAndIncrement = authenticatedMutation({
   args: { amount: v.number() },
   returns: v.object({
     allowed: v.boolean(),
@@ -33,12 +35,12 @@ export const checkAndIncrement = mutation({
     resetType: v.string(),
   }),
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const usage = await ctx.db
       .query("usages")
-      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", user.userId))
       .unique();
 
     if (!usage) return { allowed: true, used: args.amount, base: DEFAULT_BASE, resetType: "daily" };
@@ -62,15 +64,15 @@ export const checkAndIncrement = mutation({
   },
 });
 
-export const refundRequest = mutation({
+export const refundRequest = authenticatedMutation({
   args: { amount: v.number() },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const usage = await ctx.db
       .query("usages")
-      .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", user.userId))
       .unique();
 
     if (!usage) return;

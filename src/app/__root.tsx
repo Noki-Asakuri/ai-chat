@@ -8,17 +8,16 @@ import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
-import { useConvex, type ConvexQueryClient } from "@convex-dev/react-query";
-import { useEffect } from "react";
+import { type ConvexQueryClient } from "@convex-dev/react-query";
 
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { DefaultCatchBoundary } from "@/components/default-catch-oundary";
-import { refreshSessionFn } from "@/components/provider/auth-providers";
 import { Toaster } from "@/components/ui/sonner";
 
 import { getAuth } from "@/lib/authkit/serverFunctions";
+import { SessionProvider } from "convex-helpers/react/sessions";
 
 type RootContext = {
   queryClient: QueryClient;
@@ -50,20 +49,15 @@ export const Route = createRootRouteWithContext<RootContext>()({
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
-  beforeLoad: async ({ context }) => {
-    const session = await refreshSessionFn({ data: { source: "server" } });
-    if (typeof window === "undefined" && session) {
-      context.convexClient.serverHttpClient?.setAuth(session.accessToken);
-    }
-
-    return { user: session?.user, accessToken: session?.accessToken };
+  beforeLoad: async () => {
+    const { user, sessionId } = await getAuth();
+    return { user, sessionId };
   },
   loader: async ({ context }) => {
-    return { user: context.user, accessToken: context.accessToken };
+    return { user: context.user, sessionId: context.sessionId };
   },
 
   shellComponent: RootLayout,
-  notFoundComponent: () => <p>Not Found</p>,
   errorComponent: () => DefaultCatchBoundary,
 });
 
@@ -76,12 +70,7 @@ export function RootLayout() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { accessToken } = Route.useLoaderData();
-  const client = useConvex();
-
-  useEffect(() => {
-    if (accessToken) client.setAuth(async () => accessToken);
-  }, []);
+  const { sessionId } = Route.useLoaderData();
 
   return (
     <html lang="en" className="antialiased">
@@ -90,7 +79,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
 
       <body className="dark isolate font-sans">
-        {children}
+        <SessionProvider idGenerator={() => sessionId ?? ""}>{children}</SessionProvider>
 
         <Scripts />
         <Toaster />

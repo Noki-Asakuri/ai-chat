@@ -30,8 +30,8 @@ export class Configuration {
     cookieMaxAge: 60 * 60 * 24 * 400,
     apiHostname: "api.workos.com",
 
-    clientId: import.meta.env.VITE_WORKOS_CLIENT_ID,
-    redirectUri: import.meta.env.VITE_WORKOS_REDIRECT_URI,
+    clientId: import.meta.env.WORKOS_CLIENT_ID,
+    redirectUri: import.meta.env.WORKOS_REDIRECT_URI,
   };
 
   private valueSource: ValueSource = defaultSource;

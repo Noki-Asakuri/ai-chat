@@ -2,6 +2,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { convexQuery } from "@convex-dev/react-query";
+
 import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -12,6 +13,7 @@ import { Icons } from "@/components/ui/icons";
 import { LoadingSkeleton } from "./-pending";
 
 import { getModelData } from "@/lib/chat/models";
+import { convexSessionQuery } from "@/lib/convex/helpers";
 import { format, toUUID } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings/statistics")({
@@ -20,12 +22,14 @@ export const Route = createFileRoute("/settings/statistics")({
   head: () => ({ meta: [{ title: "Statistics - AI Chat" }] }),
 
   loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(convexQuery(api.functions.statistics.getStatistics));
+    context.queryClient.ensureQueryData(
+      convexQuery(api.functions.statistics.getStatistics, { sessionId: context.sessionId }),
+    );
   },
 });
 
 function StatisticsPage() {
-  const statistics = useSuspenseQuery(convexQuery(api.functions.statistics.getStatistics));
+  const statistics = useSuspenseQuery(convexSessionQuery(api.functions.statistics.getStatistics));
   const thisYear = new Date(Date.now());
 
   const { stats, modelRank, threadRank, activity, aiProfileRank } = statistics.data!;

@@ -1,8 +1,7 @@
 import { v } from "convex/values";
 
-import { r2 } from "..";
-import { mutation, query } from "../_generated/server";
 import type { Doc } from "../_generated/dataModel";
+import { authenticatedMutation, authenticatedQuery, r2 } from "../components";
 
 /**
  * List AI Profiles for current user with optional search and sorting.
@@ -13,7 +12,7 @@ import type { Doc } from "../_generated/dataModel";
  * - "oldest": by createdAt (oldest first)
  * - "recently-updated": by updatedAt (newest first)
  */
-export const listProfiles = query({
+export const listProfiles = authenticatedQuery({
   args: {
     search: v.optional(v.string()),
     sort: v.optional(
@@ -27,7 +26,7 @@ export const listProfiles = query({
     ),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const term = (args.search ?? "").trim();
@@ -37,7 +36,7 @@ export const listProfiles = query({
       if (args.sort === "newest") {
         const docs = await ctx.db
           .query("profiles")
-          .withIndex("by_userId_createdAt", (q) => q.eq("userId", user.subject))
+          .withIndex("by_userId_createdAt", (q) => q.eq("userId", user.userId))
           .order("desc")
           .collect();
 
@@ -47,7 +46,7 @@ export const listProfiles = query({
       if (args.sort === "oldest") {
         const docs = await ctx.db
           .query("profiles")
-          .withIndex("by_userId_createdAt", (q) => q.eq("userId", user.subject))
+          .withIndex("by_userId_createdAt", (q) => q.eq("userId", user.userId))
           .order("asc")
           .collect();
         return docs;
@@ -56,7 +55,7 @@ export const listProfiles = query({
       if (args.sort === "recently-updated") {
         const docs = await ctx.db
           .query("profiles")
-          .withIndex("by_userId_updatedAt", (q) => q.eq("userId", user.subject))
+          .withIndex("by_userId_updatedAt", (q) => q.eq("userId", user.userId))
           .order("desc")
           .collect();
         return docs;
@@ -65,7 +64,7 @@ export const listProfiles = query({
       // Default fetch by user, then in-memory sort for name-based sorts
       const docs = await ctx.db
         .query("profiles")
-        .withIndex("by_userId", (q) => q.eq("userId", user.subject))
+        .withIndex("by_userId", (q) => q.eq("userId", user.userId))
         .collect();
 
       if (args.sort === "az") {
@@ -86,7 +85,7 @@ export const listProfiles = query({
     // With search, use search index and then apply sorting in-memory
     const searched = await ctx.db
       .query("profiles")
-      .withSearchIndex("search_name", (q) => q.search("name", term).eq("userId", user.subject))
+      .withSearchIndex("search_name", (q) => q.search("name", term).eq("userId", user.userId))
       .collect();
 
     switch (args.sort) {
@@ -113,17 +112,17 @@ export const listProfiles = query({
 /**
  * Fetch a single profile (ownership enforced).
  */
-export const getProfile = query({
+export const getProfile = authenticatedQuery({
   args: { profileId: v.optional(v.id("profiles")) },
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     if (!args.profileId) return null;
 
     const doc = await ctx.db.get(args.profileId);
     if (!doc) return null;
-    if (doc.userId !== user.subject) throw new Error("Not authorized");
+    if (doc.userId !== user.userId) throw new Error("Not authorized");
     return doc;
   },
 });
@@ -131,7 +130,7 @@ export const getProfile = query({
 /**
  * Create a profile for the current user.
  */
-export const createProfile = mutation({
+export const createProfile = authenticatedMutation({
   args: {
     name: v.string(),
     systemPrompt: v.string(),
@@ -139,12 +138,12 @@ export const createProfile = mutation({
   },
   returns: v.id("profiles"),
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const now = Date.now();
     const id = await ctx.db.insert("profiles", {
-      userId: user.subject,
+      userId: user.userId,
       name: args.name,
       systemPrompt: args.systemPrompt,
       imageKey: args.imageKey,
@@ -158,7 +157,7 @@ export const createProfile = mutation({
 /**
  * Update a profile (ownership enforced).
  */
-export const updateProfile = mutation({
+export const updateProfile = authenticatedMutation({
   args: {
     profileId: v.id("profiles"),
     name: v.optional(v.string()),
@@ -167,12 +166,12 @@ export const updateProfile = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const doc = await ctx.db.get(args.profileId);
     if (!doc) throw new Error("Profile not found");
-    if (doc.userId !== user.subject) throw new Error("Not authorized");
+    if (doc.userId !== user.userId) throw new Error("Not authorized");
 
     const updates: Partial<Doc<"profiles">> = { updatedAt: Date.now() };
 
@@ -183,7 +182,7 @@ export const updateProfile = mutation({
       if (args.imageKey === null) {
         // Remove image key and delete existing image if present
         if (doc.imageKey) {
-          if (!doc.imageKey.startsWith(`${user.subject}/`)) {
+          if (!doc.imageKey.startsWith(`${user.userId}/`)) {
             throw new Error("Not authorized to delete this image");
           }
           await r2.deleteObject(ctx, doc.imageKey);
@@ -203,20 +202,20 @@ export const updateProfile = mutation({
 /**
  * Delete a profile and its associated image in R2 (if any).
  */
-export const deleteProfile = mutation({
+export const deleteProfile = authenticatedMutation({
   args: { profileId: v.id("profiles") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     const doc = await ctx.db.get(args.profileId);
     if (!doc) throw new Error("Profile not found");
-    if (doc.userId !== user.subject) throw new Error("Not authorized");
+    if (doc.userId !== user.userId) throw new Error("Not authorized");
 
     if (doc.imageKey) {
       // Only allow deletion within user's namespace
-      if (!doc.imageKey.startsWith(`${user.subject}/`)) {
+      if (!doc.imageKey.startsWith(`${user.userId}/`)) {
         throw new Error("Not authorized to delete this image");
       }
       await r2.deleteObject(ctx, doc.imageKey);
@@ -232,14 +231,14 @@ export const deleteProfile = mutation({
  * Client should PUT the file to the returned url with proper Content-Type,
  * then pass back the "key" to createProfile/updateProfile mutations.
  */
-export const generateAiProfileUploadUrl = mutation({
+export const generateAiProfileUploadUrl = authenticatedMutation({
   args: {},
   returns: v.object({ url: v.string(), key: v.string() }),
   handler: async (ctx) => {
-    const user = await ctx.auth.getUserIdentity();
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const key = `${user.subject}/profiles/${crypto.randomUUID()}`;
+    const key = `${user.userId}/profiles/${crypto.randomUUID()}`;
     // r2.generateUploadUrl returns { url, key }
     return r2.generateUploadUrl(key);
   },

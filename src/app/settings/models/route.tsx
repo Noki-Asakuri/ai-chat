@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { LoadingSkeleton } from "./-pending";
 
 import { AllModelIds, getModelData, prettifyProviderName } from "@/lib/chat/models";
+import { convexSessionQuery } from "@/lib/convex/helpers";
 
 export const Route = createFileRoute("/settings/models")({
   component: ModelsPage,
@@ -24,12 +25,14 @@ export const Route = createFileRoute("/settings/models")({
 
   head: () => ({ meta: [{ title: "Models - AI Chat" }] }),
   loader: async ({ context }) => {
-    context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser));
+    context.queryClient.ensureQueryData(
+      convexQuery(api.functions.users.currentUser, { sessionId: context.sessionId }),
+    );
   },
 });
 
 function ModelsPage() {
-  const { data } = useSuspenseQuery(convexQuery(api.functions.users.currentUser));
+  const { data } = useSuspenseQuery(convexSessionQuery(api.functions.users.currentUser));
   const updateCustomization = useMutation(api.functions.users.updateUserCustomization);
 
   const [pending, startTransition] = useTransition();

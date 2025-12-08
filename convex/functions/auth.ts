@@ -1,0 +1,72 @@
+import { authKit } from "../components";
+
+export const { authKitEvent } = authKit.events({
+  "user.created": async (ctx, event) => {
+    await ctx.db.insert("users", {
+      customization: {},
+      userId: event.data.id,
+
+      emailAddress: event.data.email,
+      imageUrl: event.data.profilePictureUrl,
+      username: `${event.data.firstName} ${event.data.lastName}`,
+    });
+  },
+  "user.updated": async (ctx, event) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", event.data.id))
+      .unique();
+
+    if (!user) {
+      console.warn(`User not found: ${event.data.id}`);
+      return;
+    }
+
+    await ctx.db.patch(user._id, {
+      emailAddress: event.data.email,
+      imageUrl: event.data.profilePictureUrl,
+      username: `${event.data.firstName} ${event.data.lastName}`,
+      updatedAt: Date.now(),
+    });
+  },
+  "user.deleted": async (ctx, event) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", event.data.id))
+      .unique();
+
+    if (!user) {
+      console.warn(`User not found: ${event.data.id}`);
+      return;
+    }
+
+    await ctx.db.delete(user._id);
+  },
+
+  // Handle any event type
+  "session.created": async (ctx, event) => {
+    const { userId, id } = event.data;
+
+    await ctx.db.insert("session", {
+      userId,
+      sessionId: id,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+
+  "session.revoked": async (ctx, event) => {
+    const { id } = event.data;
+    const session = await ctx.db
+      .query("session")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", id))
+      .unique();
+
+    if (!session) {
+      console.warn(`Session not found: ${id}`);
+      return;
+    }
+
+    await ctx.db.delete(session._id);
+  },
+});
