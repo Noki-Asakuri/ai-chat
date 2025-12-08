@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
-import { abortChatRequest } from "@/lib/chat/send-chat-request";
 import { chatStore, useChatStore } from "@/lib/chat/store";
 import { threadStore } from "@/lib/store/thread-store";
 
@@ -18,7 +17,7 @@ export function RegisterHotkeys() {
   const editMessage = useChatStore((state) => state.editMessage);
   const status = useChatStore((state) => state.messages.at(-1)?.status ?? "complete");
 
-  const { setEditMessage, addAttachment, setChatInput } = chatStore.getState();
+  const { setEditMessage, addAttachment } = chatStore.getState();
 
   useEffect(() => {
     function onPaste(event: ClipboardEvent) {
@@ -87,7 +86,7 @@ export function RegisterHotkeys() {
       event.stopPropagation();
 
       chatInput.focus();
-      setChatInput((prev) => prev + text);
+      chatInput.value += text;
     }
 
     function handleKeyboardShortcut(event: KeyboardEvent) {
@@ -110,7 +109,7 @@ export function RegisterHotkeys() {
       if (event.key === "Escape") {
         if (status === "pending" || status === "streaming") {
           event.preventDefault();
-          void abortChatRequest();
+          // void abortChatRequest();
         } else if (editMessage) {
           event.preventDefault();
           setEditMessage(null);
@@ -165,11 +164,12 @@ export function RegisterHotkeys() {
 
     window.addEventListener("keydown", handleKeyboardShortcut);
     window.addEventListener("paste", onPaste);
+
     return () => {
       window.removeEventListener("keydown", handleKeyboardShortcut);
       window.removeEventListener("paste", onPaste);
     };
-  }, [editMessage, navigate, setEditMessage, addAttachment, setChatInput]);
+  }, [editMessage, navigate, setEditMessage, addAttachment]);
 
   return null;
 }

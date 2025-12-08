@@ -7,10 +7,11 @@ import { ButtonWithTip } from "../ui/button";
 
 import { getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
+import { useConfigStore } from "@/lib/store/config-store";
 import { format } from "@/lib/utils";
 
 export function ChatAttachmentButton() {
-  const model = useChatStore((state) => state.chatConfig.model);
+  const model = useConfigStore((state) => state.model);
   const hasImageVision = getModelData(model)?.capabilities.vision;
 
   if (!hasImageVision) return null;
@@ -130,7 +131,7 @@ function AttachmentPreview({ attachment, images }: { attachment: Preview; images
     <div className="relative flex items-center justify-center gap-2">
       {attachment.type === "image" ? (
         <ImagePreviewDialog
-          className="h-12 max-w-[12rem] overflow-hidden rounded-md"
+          className="h-12 max-w-48 overflow-hidden rounded-md"
           image={{
             src: attachment.url,
             alt: attachment.name,
@@ -143,7 +144,7 @@ function AttachmentPreview({ attachment, images }: { attachment: Preview; images
           <img
             src={attachment.url}
             alt="Attachment"
-            className="h-12 max-w-[12rem] rounded-md object-contain"
+            className="h-12 max-w-48 rounded-md object-contain"
           />
         </ImagePreviewDialog>
       ) : (

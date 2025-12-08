@@ -3,6 +3,7 @@ import { convexQuery } from "@convex-dev/react-query";
 
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
+
 import { useDebounce } from "@uidotdev/usehooks";
 import { CommandLoading } from "cmdk";
 import { LoaderIcon, PinIcon, PinOffIcon, SearchIcon } from "lucide-react";
@@ -54,7 +55,7 @@ export function ThreadCommand() {
 }
 
 function PinThread() {
-  const defaultThreads = useThreadStore((state) => state.threads);
+  const defaultThreads = useThreadStore((state) => state.groupedThreads.threads);
   const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
 
   const thread = defaultThreads.find((thread) => thread._id === fromUUID(params?.threadId));
@@ -84,7 +85,7 @@ function PinThread() {
 }
 
 function ThreadCommandDialog() {
-  const defaultThreads = useThreadStore((state) => state.threads);
+  const defaultThreads = useThreadStore((state) => state.groupedThreads.threads);
   const threadCommandOpen = useThreadStore((state) => state.threadCommandOpen);
 
   const [query, setQuery] = useState("");
@@ -136,7 +137,6 @@ type ThreadCommandGroupProps = {
 
 function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
   const navigate = useNavigate();
-
   if (threads.length === 0) return null;
 
   return (
@@ -151,15 +151,9 @@ function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
             threadStore.setThreadCommandOpen(false);
           }}
         >
-          <Link
-            title={thread.title}
-            className="w-full truncate px-2 py-1.5"
-            onClick={() => threadStore.setThreadCommandOpen(false)}
-            to="/threads/$threadId"
-            params={{ threadId: toUUID(thread._id) }}
-          >
+          <span title={thread.title} className="w-full truncate px-2 py-1.5">
             {thread.title}
-          </Link>
+          </span>
         </CommandItem>
       ))}
     </CommandGroup>

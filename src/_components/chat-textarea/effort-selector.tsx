@@ -6,7 +6,7 @@ import { Button, buttonVariants } from "../ui/button";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 import { getModelData } from "@/lib/chat/models";
-import { useChatStore } from "@/lib/chat/store";
+import { configStore, useConfigStore } from "@/lib/store/config-store";
 import type { ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -18,8 +18,8 @@ type EffortSelectorProps = {
 };
 
 export function ChatEffortSelector() {
-  const config = useChatStore(
-    useShallow((state) => ({ effort: state.chatConfig.effort, model: state.chatConfig.model })),
+  const config = useConfigStore(
+    useShallow((state) => ({ effort: state.effort, model: state.model })),
   );
   return <EffortSelectorBase value={config.effort} modelId={config.model} />;
 }
@@ -46,7 +46,7 @@ export function EffortSelectorBase(props: EffortSelectorProps) {
 
   function handleChange(effort: ReasoningEffort) {
     if (props.onChange) props.onChange(effort);
-    else useChatStore.getState().setChatConfig({ effort });
+    else configStore.setConfig({ effort });
   }
 
   if (shouldHideSelector) return null;
@@ -71,7 +71,7 @@ export function EffortSelectorBase(props: EffortSelectorProps) {
       <PopoverTrigger
         className={cn(
           buttonVariants({ variant: "ghost" }),
-          "flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 capitalize hover:!bg-primary/15",
+          "flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 capitalize hover:bg-primary/15!",
           props.className,
         )}
       >
