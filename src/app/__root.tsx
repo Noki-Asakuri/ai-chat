@@ -15,6 +15,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { DefaultCatchBoundary } from "@/components/default-catch-oundary";
+import { refreshSessionFn } from "@/components/provider/auth-providers";
 import { Toaster } from "@/components/ui/sonner";
 
 import { getAuth } from "@/lib/authkit/serverFunctions";
@@ -49,9 +50,13 @@ export const Route = createRootRouteWithContext<RootContext>()({
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
-  beforeLoad: async () => {
-    const { user, accessToken } = await getAuth();
-    return { user, accessToken };
+  beforeLoad: async ({ context }) => {
+    const session = await refreshSessionFn({ data: { source: "server" } });
+    if (typeof window === "undefined" && session) {
+      context.convexClient.serverHttpClient?.setAuth(session.accessToken);
+    }
+
+    return { user: session?.user, accessToken: session?.accessToken };
   },
   loader: async ({ context }) => {
     return { user: context.user, accessToken: context.accessToken };

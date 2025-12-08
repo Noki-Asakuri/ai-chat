@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 import { convexQuery } from "@convex-dev/react-query";
@@ -114,19 +114,16 @@ function CreateGroupButton() {
   );
 }
 
-const LOCAL_STORAGE_KEY = "local-threads-cache";
 function ThreadListWrapper() {
-  const [localData, setLocalData] = useLocalStorage<ListGroupData | null>(LOCAL_STORAGE_KEY);
-  const { data } = useQuery(convexQuery(api.functions.groups.listGroups));
+  const cachedData = useThreadStore((state) => state.groupedThreads);
+  const { data } = useSuspenseQuery(convexQuery(api.functions.groups.listGroups));
 
+  // Update the local cache when the data is fetched
   useEffect(() => {
-    if (data) setLocalData(data);
-  }, [data, setLocalData]);
+    if (data) threadStore.setGroupedThreads(data);
+  }, [data]);
 
-  if (data) return <ThreadList data={data} />;
-  if (localData) return <ThreadList data={localData} />;
-
-  return null;
+  return <ThreadList data={data ?? cachedData} />;
 }
 
 type SortableData = {
@@ -204,13 +201,13 @@ function ThreadList({ data }: ThreadListProps) {
     switch (activeData.type) {
       case "thread": {
         const thread = data.threads.find((t) => t._id === activeData.threadId)!;
-        threadStore.getState().setActiveDraggingItem({ type: "thread", item: thread });
+        threadStore.setActiveDraggingItem({ type: "thread", item: thread });
         break;
       }
 
       case "group": {
         const group = data.groups.find((g) => g._id === activeData.groupId)!;
-        threadStore.getState().setActiveDraggingItem({ type: "group", item: group });
+        threadStore.setActiveDraggingItem({ type: "group", item: group });
         break;
       }
     }
@@ -400,7 +397,7 @@ function ThreadList({ data }: ThreadListProps) {
 
     setOptimisticGrouped(null);
     setOptimisticGroups(null);
-    threadStore.getState().setActiveDraggingItem(null);
+    threadStore.setActiveDraggingItem(null);
 
     pendingDropRef.current = null;
     snapshotRef.current = null;
@@ -410,7 +407,7 @@ function ThreadList({ data }: ThreadListProps) {
     console.debug("[Thread] Drag cancel");
     setOptimisticGrouped(null);
     setOptimisticGroups(null);
-    threadStore.getState().setActiveDraggingItem(null);
+    threadStore.setActiveDraggingItem(null);
 
     pendingDropRef.current = null;
     snapshotRef.current = null;

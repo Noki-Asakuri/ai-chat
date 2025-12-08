@@ -5,7 +5,6 @@ import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import { TopSettingHeaders } from "@/components/settings/top-setting-headers";
 import { UserNavbar } from "@/components/user/navbar";
 
-import { refreshAccessToken } from "@/components/provider/auth-providers";
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
 
 export const Route = createFileRoute("/settings")({
@@ -24,12 +23,7 @@ export const Route = createFileRoute("/settings")({
       throw redirect({ to: "/settings/account" });
     }
 
-    const accessToken = await refreshAccessToken({ data: { source: "server" } });
-    if (typeof window === "undefined" && accessToken) {
-      context.convexClient.serverHttpClient?.setAuth(accessToken);
-    }
-
-    return { user: context.user!, accessToken: accessToken };
+    return { user: context.user };
   },
 
   loader: async ({ context }) => {

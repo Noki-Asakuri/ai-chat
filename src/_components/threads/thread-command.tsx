@@ -37,7 +37,7 @@ export function ThreadCommand() {
         variant="ghost"
         title="Search Threads"
         data-expanded={threadCommandOpen}
-        onClick={() => threadStore.getState().setThreadCommandOpen(true)}
+        onClick={() => threadStore.setThreadCommandOpen(true)}
         className="h-7 rounded-md border px-2 py-1 opacity-100 transition-opacity"
       >
         <SearchIcon />
@@ -100,10 +100,7 @@ function ThreadCommandDialog() {
   const groupedThreads = groupByDate(isLoading ? [] : (data ?? []));
 
   return (
-    <CommandDialog
-      open={threadCommandOpen}
-      onOpenChange={threadStore.getState().setThreadCommandOpen}
-    >
+    <CommandDialog open={threadCommandOpen} onOpenChange={threadStore.setThreadCommandOpen}>
       <CommandInput placeholder="Search threads..." value={query} onValueChange={setQuery} />
 
       <CommandList className="custom-scroll max-h-[400px]">
@@ -151,13 +148,13 @@ function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
           className="p-0!"
           onSelect={async () => {
             await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(thread._id) } });
-            threadStore.getState().setThreadCommandOpen(false);
+            threadStore.setThreadCommandOpen(false);
           }}
         >
           <Link
             title={thread.title}
             className="w-full truncate px-2 py-1.5"
-            onClick={() => threadStore.getState().setThreadCommandOpen(false)}
+            onClick={() => threadStore.setThreadCommandOpen(false)}
             to="/threads/$threadId"
             params={{ threadId: toUUID(thread._id) }}
           >
