@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
@@ -8,17 +8,18 @@ import { getCookie } from "@tanstack/react-start/server";
 import { PlusIcon } from "lucide-react";
 import { useEffect } from "react";
 
-import { ChatLoadingPage } from "@/components/chat-loading-page";
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
-import { ThreadTitle } from "@/components/chat/chat-render";
+import { ThreadTitle } from "@/components/chat/chat-history";
 import { RegisterHotkeys } from "@/components/chat/register-hotkeys";
 import { ThreadProfileSidebar } from "@/components/threads/profile/profile-sidebar";
 import { ThreadCommand } from "@/components/threads/thread-command";
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
+import { ConfigStoreProvider } from "@/components/provider/config-store-provider";
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
 import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 
 const getCookiesServerFunction = createServerFn({ method: "GET" }).handler(async () => {
   const backgroundImage = getCookie("background-image");
@@ -29,8 +30,6 @@ const getCookiesServerFunction = createServerFn({ method: "GET" }).handler(async
 
 export const Route = createFileRoute("/_chat_layout")({
   component: RouteComponent,
-  pendingComponent: ChatLoadingPage,
-
   preload: false,
 
   beforeLoad: async ({ context, location }) => {
@@ -44,6 +43,11 @@ export const Route = createFileRoute("/_chat_layout")({
 
   loader: async ({ context }) => {
     const { backgroundImage, defaultOpenSidebar } = await getCookiesServerFunction();
+
+    await context.queryClient.ensureQueryData(
+      convexQuery(api.functions.users.currentUser, { sessionId: context.sessionId }),
+    );
+
     return { backgroundImage, defaultOpenSidebar, user: context.user! };
   },
 
@@ -59,7 +63,7 @@ export const Route = createFileRoute("/_chat_layout")({
 
 function RouteComponent() {
   const { backgroundImage, defaultOpenSidebar } = Route.useLoaderData();
-  const { data } = useQuery(convexSessionQuery(api.functions.users.currentUser));
+  const { data } = useSuspenseQuery(convexSessionQuery(api.functions.users.currentUser));
 
   const backgroundImageUrl = data?.customization.backgroundId
     ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization.backgroundId}`
@@ -102,10 +106,17 @@ function RouteComponent() {
           <ThreadCommand />
         </div>
 
-        <ThreadProfileSidebar />
-        <Outlet />
+        <ConfigStoreProvider
+          initialState={{
+            hiddenModels: data?.customization.hiddenModels,
+            defaultShowFullCode: data?.customization.showFullCode,
+          }}
+        >
+          <ThreadProfileSidebar />
+          <Outlet />
 
-        <ChatTextarea />
+          <ChatTextarea />
+        </ConfigStoreProvider>
       </main>
 
       <RegisterHotkeys />

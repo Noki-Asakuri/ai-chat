@@ -3,11 +3,11 @@ import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { ImagePreviewDialog } from "../image-preview-dialog";
+import { useConfigStore } from "../provider/config-store-provider";
 import { ButtonWithTip } from "../ui/button";
 
 import { getModelData } from "@/lib/chat/models";
 import { useChatStore } from "@/lib/chat/store";
-import { useConfigStore } from "@/lib/store/config-store";
 import { format } from "@/lib/utils";
 
 export function ChatAttachmentButton() {

@@ -1,12 +1,12 @@
 import { BrainIcon, SignalHighIcon, SignalLowIcon, SignalMediumIcon } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useEffectEvent } from "react";
 import { useShallow } from "zustand/shallow";
 
+import { useConfigStore, useConfigStoreState } from "../provider/config-store-provider";
 import { Button, buttonVariants } from "../ui/button";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 import { getModelData } from "@/lib/chat/models";
-import { configStore, useConfigStore } from "@/lib/store/config-store";
 import type { ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -38,18 +38,17 @@ const EFFORT_OPTIONS: Record<ReasoningEffort, { label: string; icon: typeof Sign
 
 export function EffortSelectorBase(props: EffortSelectorProps) {
   const modelData = getModelData(props.modelId);
+  const configStore = useConfigStoreState();
 
   const shouldHideSelector =
     typeof modelData.capabilities.reasoning === "undefined" ||
     modelData.capabilities.reasoning === "always" ||
     modelData.capabilities.reasoning === false;
 
-  function handleChange(effort: ReasoningEffort) {
+  const handleChange = useEffectEvent((effort: ReasoningEffort) => {
     if (props.onChange) props.onChange(effort);
     else configStore.setConfig({ effort });
-  }
-
-  if (shouldHideSelector) return null;
+  });
 
   // If they don't have customReasoningLevel, we fallback to the only 3 levels.
   const validOptions = Object.entries(EFFORT_OPTIONS).filter(([key]) =>
@@ -64,7 +63,9 @@ export function EffortSelectorBase(props: EffortSelectorProps) {
     if (!validKeys.includes(props.value)) {
       handleChange(validKeys[0] as ReasoningEffort);
     }
-  }, [modelData]);
+  }, [props.value, validOptions]);
+
+  if (shouldHideSelector) return null;
 
   return (
     <Popover>

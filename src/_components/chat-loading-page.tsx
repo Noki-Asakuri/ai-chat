@@ -11,7 +11,7 @@ import {
 } from "./ui/sidebar";
 import { Skeleton } from "./ui/skeleton";
 import { PlusIcon } from "lucide-react";
-import { ThreadTitle } from "./chat/chat-render";
+import { ThreadTitle } from "./chat/chat-history";
 import { ThreadCommand } from "./threads/thread-command";
 import { ChatTextarea } from "./chat-textarea/main-textarea";
 

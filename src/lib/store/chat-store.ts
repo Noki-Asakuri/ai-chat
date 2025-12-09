@@ -12,7 +12,7 @@ export type ChatStore = {
   removeAttachment: (attachmentId: string) => void;
 };
 
-export const useChatStore = create<ChatStore>((set, get) => ({
+export const useChatStore = create<ChatStore>((set) => ({
   messages: [],
   setMessages: (messages) => set({ messages }),
 
