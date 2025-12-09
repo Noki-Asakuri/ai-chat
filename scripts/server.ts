@@ -87,7 +87,7 @@ app.use(
   cors({
     origin: env.NODE_ENV === "production" ? "https://chat.asakuri.me" : "http://localhost:3000",
     allowMethods: ["POST", "GET", "OPTIONS"],
-    allowHeaders: ["Authorization", "Upgrade-Insecure-Requests", "X-User-Id"],
+    allowHeaders: ["Authorization", "Upgrade-Insecure-Requests", "X-User-Id", "X-Session-Id"],
     exposeHeaders: ["Content-Type", "X-Request-Id"],
     credentials: true,
     maxAge: 604_800,
@@ -141,16 +141,16 @@ app.post("/api/ai/chat", async (ctx) => {
 
   const requestId = ctx.get("requestId");
   const userId = req.header("X-User-Id");
-  const convexAuthToken = req.header("Authorization")?.replace("Bearer ", "");
+  const sessionId = req.header("X-Session-Id");
 
   logger.info("[Chat] Chat request received", { userId, requestId });
 
-  if (!convexAuthToken || !userId) {
-    logger.error("[Chat Error]: Unauthenticated POST request!", { userId, convexAuthToken });
+  if (!userId || !sessionId) {
+    logger.error("[Chat Error]: Unauthenticated POST request!", { userId, sessionId });
     return Response.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
   }
 
-  const serverConvexClient = createServerConvexClient(convexAuthToken);
+  const convexClient = createServerConvexClient();
 
   try {
     const body = await req.json();
@@ -177,18 +177,20 @@ app.post("/api/ai/chat", async (ctx) => {
     } = requestBody;
 
     // Enforce per-user usage limit before processing the request
-    const usage = await serverConvexClient.mutation(api.functions.usages.checkAndIncrement, {
+    const usage = await convexClient.mutation(api.functions.usages.checkAndIncrement, {
       amount: 1,
+      sessionId,
     });
 
     if (!usage.allowed) {
       const type = usage.resetType === "daily" ? "Daily" : "Monthly";
 
-      await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
+      await convexClient.mutation(api.functions.messages.updateErrorMessage, {
         model: model.uniqueId,
         error: `${type} message limit reached (${usage.used}/${usage.base}).`,
         modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
         messageId: assistantMessageId,
+        sessionId,
       });
 
       logger.error("[Chat Error]: User max message limit reached!", {
@@ -204,30 +206,32 @@ app.post("/api/ai/chat", async (ctx) => {
       );
     }
 
-    const dataCustomization = await serverConvexClient.query(api.functions.users.currentUser);
     let systemInstruction = "";
+    const userCustomization = await convexClient.query(api.functions.users.currentUser, {
+      sessionId,
+    });
 
-    if (dataCustomization?.customization?.name) {
+    if (userCustomization?.customization?.name) {
       systemInstruction += dedent`
-		<user>
-		## User Information:
-		User basic information. Avoid mentioning the user's name or occupation during the conversation.
-		Keep it in mind and use it when necessary.
+			<user>
+			## User Information:
+			User basic information. Avoid mentioning the user's name or occupation during the conversation.
+			Keep it in mind and use it when necessary.
 
-		Name: ${dataCustomization.customization.name ?? "user"}
-		Occupation: ${dataCustomization.customization.occupation ?? "unknown"}
-		</user>
-		\n`;
+			Name: ${userCustomization.customization.name ?? "user"}
+			Occupation: ${userCustomization.customization.occupation ?? "unknown"}
+			</user>
+			\n`;
     }
 
     systemInstruction += dedent`
-	<global>
-	## Global System Instruction:
-	This is the global system instruction. It should be followed unless there is a conflicting instruction in the AI Profile Instruction.
+		<global>
+		## Global System Instruction:
+		This is the global system instruction. It should be followed unless there is a conflicting instruction in the AI Profile Instruction.
 
-	${dataCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}
-	</global>
-	`;
+		${userCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}
+		</global>
+		`;
 
     const profilePrompt = config.profile?.systemPrompt?.trim();
     if (profilePrompt && profilePrompt.length > 0) {
@@ -240,7 +244,7 @@ app.post("/api/ai/chat", async (ctx) => {
 
 		<traits>
 		## Traits (Optional):
-		You should have these traits: ${dataCustomization?.customization?.traits?.join(", ") ?? "None"}.
+		You should have these traits: ${userCustomization?.customization?.traits?.join(", ") ?? "None"}.
 		</traits>
 		</profile>
 		`;
@@ -271,13 +275,14 @@ app.post("/api/ai/chat", async (ctx) => {
 
         if (APICallError.isInstance(err)) {
           const responseBody = JSON.parse(err.responseBody || "{}");
-          errorMessage = dedent`
+
+          errorMessage = dedent.withOptions({ trimWhitespace: true, alignValues: true })`
 					An error have occurred. This is likely a server-side error, Please report to the developer.
 
-Error:
-\`\`\`
-${JSON.stringify(responseBody, null, 2)}
-\`\`\`
+					Error:
+					\`\`\`
+					${JSON.stringify(responseBody, null, 2)}
+					\`\`\`
 					`;
         }
 
@@ -290,8 +295,9 @@ ${JSON.stringify(responseBody, null, 2)}
           model: model.uniqueId,
         });
 
-        await serverConvexClient.mutation(api.functions.usages.refundRequest, { amount: 1 });
-        await serverConvexClient.mutation(api.functions.messages.updateErrorMessage, {
+        await convexClient.mutation(api.functions.usages.refundRequest, { amount: 1, sessionId });
+        await convexClient.mutation(api.functions.messages.updateErrorMessage, {
+          sessionId,
           error: errorMessage,
           model: model.uniqueId,
           modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
@@ -311,7 +317,7 @@ ${JSON.stringify(responseBody, null, 2)}
 
     if (config.profile) metadata.profile = { id: config.profile.id, name: config.profile.name };
 
-    void updateTitle({ messages, threadId, serverConvexClient });
+    void updateTitle({ messages, threadId, serverConvexClient: convexClient, sessionId });
 
     let reasoningStartTime = 0;
     let textStartTime = 0;
@@ -330,7 +336,8 @@ ${JSON.stringify(responseBody, null, 2)}
 
         await Promise.all([
           streamContext.createNewResumableStream(requestId, () => stream),
-          serverConvexClient.mutation(api.functions.messages.updateMessageById, {
+          convexClient.mutation(api.functions.messages.updateMessageById, {
+            sessionId,
             messageId: assistantMessageId,
             updates: {
               status: "streaming",
@@ -398,7 +405,8 @@ ${JSON.stringify(responseBody, null, 2)}
 
       async onFinish({ responseMessage, isAborted }) {
         if (isAborted) {
-          await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
+          await convexClient.mutation(api.functions.messages.updateMessageById, {
+            sessionId,
             messageId: assistantMessageId,
             updates: { resumableStreamId: null, status: "complete" },
           });
@@ -424,9 +432,10 @@ ${JSON.stringify(responseBody, null, 2)}
         const generatedFiles = (await result.files).map(async (file, index) => {
           const data = await serverUploadFileR2({
             threadId,
+            sessionId,
             buffer: file.uint8Array,
             mediaType: file.mediaType,
-            serverConvexClient,
+            serverConvexClient: convexClient,
           });
 
           if (!data) return;
@@ -481,9 +490,10 @@ ${JSON.stringify(responseBody, null, 2)}
           });
         }
 
-        await serverConvexClient.mutation(api.functions.messages.updateMessageById, {
-          messageId: assistantMessageId,
+        await convexClient.mutation(api.functions.messages.updateMessageById, {
+          sessionId,
           updates,
+          messageId: assistantMessageId,
         });
       },
     });

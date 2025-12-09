@@ -9,14 +9,15 @@ import { Textarea } from "../ui/textarea";
 
 import { ChatActionButtons } from "./action-buttons";
 import { ChatAttachmentDisplay } from "./attachment-display";
-import { ChatSendButton } from "./send-button";
 
 // import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { shouldSend, useGetSendDescription } from "@/lib/chat/send-preference";
 import { useChatStore } from "@/lib/chat/store";
 import { convexSessionQuery } from "@/lib/convex/helpers";
+import { useRouterState } from "@tanstack/react-router";
 
 export function ChatTextarea() {
+  const { status } = useRouterState();
   const parentRef = useRef<HTMLDivElement>(null);
 
   const onResize = useCallback((entries: ResizeObserverEntry[]) => {
@@ -54,7 +55,7 @@ export function ChatTextarea() {
 
             <div className="flex items-end justify-between border-t px-2.5 py-2">
               <ChatActionButtons />
-              <ChatSendButton />
+              {/* <ChatSendButton /> */}
             </div>
           </div>
         </div>
@@ -120,22 +121,22 @@ function InputTextArea() {
 
           handleAddAttachments({ files });
         }}
-        onKeyDown={(event) => {
-          const send = shouldSend({
-            key: event.key,
-            shiftKey: event.shiftKey,
-            ctrlKey: event.ctrlKey,
-            metaKey: event.metaKey,
-          });
+        // onKeyDown={(event) => {
+        //   const send = shouldSend({
+        //     key: event.key,
+        //     shiftKey: event.shiftKey,
+        //     ctrlKey: event.ctrlKey,
+        //     metaKey: event.metaKey,
+        //   });
 
-          if (send) {
-            event.preventDefault();
-            // void submitChatMessage();
-          }
-        }}
+        //   if (send) {
+        //     event.preventDefault();
+        //     // void submitChatMessage();
+        //   }
+        // }}
       />
 
-      <TextareaDescription />
+      {/* <TextareaDescription /> */}
     </div>
   );
 }

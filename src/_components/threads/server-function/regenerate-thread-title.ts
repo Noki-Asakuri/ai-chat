@@ -11,20 +11,21 @@ export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
   .inputValidator((data: { threadId: Id<"threads"> }) => data)
   .handler(async ({ data }) => {
     try {
-      const { user, accessToken } = await withAuth();
+      const { user, sessionId } = await withAuth();
       if (!user) return { error: "Not authenticated" };
 
-      const serverConvexClient = createServerConvexClient(accessToken);
+      const serverConvexClient = createServerConvexClient();
 
       // Optimistically mark the title as regenerating on the server.
       await serverConvexClient.mutation(api.functions.threads.updateThreadTitle, {
+        sessionId,
         threadId: data.threadId,
         title: "Regenerating...",
       });
 
       const { messages } = await serverConvexClient.query(
         api.functions.messages.getAllMessagesFromThread,
-        { threadId: data.threadId },
+        { threadId: data.threadId, sessionId },
       );
 
       if (messages.length === 0) return { error: "No messages found" };
@@ -36,7 +37,13 @@ export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
         { role: "user", content: firstUser.content },
       ];
 
-      await updateTitle({ threadId: data.threadId, messages: input, serverConvexClient });
+      await updateTitle({
+        threadId: data.threadId,
+        messages: input,
+        serverConvexClient,
+        sessionId,
+      });
+
       return { status: "ok" };
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));

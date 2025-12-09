@@ -1,20 +1,17 @@
-"use client";
-
 import { transformerColorizedBrackets } from "@shikijs/colorized-brackets";
 import { EllipsisIcon, ExpandIcon, ShrinkIcon, TextIcon, WrapTextIcon } from "lucide-react";
 import * as React from "react";
 import { useShikiHighlighter, type HighlighterOptions } from "react-shiki";
+import { useShallow } from "zustand/shallow";
 
 import { CopyButton } from "../copy-button";
 import { ButtonWithTip } from "./button";
 import { Icons } from "./icons";
 
-import { useChatStore } from "@/lib/chat/store";
-import { useThrottledDebouncedValue } from "@/lib/hooks/use-throttled-debounced-value";
 import { getHighlightFromCache, setHighlightInCache } from "@/lib/code-highlight-cache";
-import { cn } from "@/lib/utils";
+import { useThrottledDebouncedValue } from "@/lib/hooks/use-throttled-debounced-value";
 import { configStore, useConfigStore } from "@/lib/store/config-store";
-import { useLoaderData } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
 
 function trimOneEdgeNewline(input: string): string {
   let s = input;
@@ -224,16 +221,10 @@ const HighlightPane = React.memo(function HighlightPane(props: {
   );
 });
 
-export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
-  language,
-  code,
-}: CodeBlockProps) {
-  const wrapline = useConfigStore((state) => state.wrapline);
-  const { customization } = useLoaderData({ from: "/_chat_layout" });
+export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
+  const { wrapline } = useConfigStore(useShallow((state) => ({ wrapline: state.wrapline })));
 
-  const [expanded, setExpanded] = React.useState(
-    customization?.customization.showFullCode ?? false,
-  );
+  const [expanded, setExpanded] = React.useState<boolean>(false);
 
   const onToggleExpanded = React.useCallback(() => setExpanded((v) => !v), []);
   const onExpandAll = React.useCallback(() => setExpanded(true), []);
@@ -317,4 +308,4 @@ export const ShikiCodeBlock = React.memo(function ShikiCodeBlock({
       )}
     </div>
   );
-});
+}

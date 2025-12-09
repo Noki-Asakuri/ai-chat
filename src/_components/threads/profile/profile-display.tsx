@@ -3,11 +3,11 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { ButtonWithTip } from "@/components/ui/button";
 import { Avatar } from "@base-ui-components/react/avatar";
 
-import { useChatStore } from "@/lib/chat/store";
+import { configStore, useConfigStore } from "@/lib/store/config-store";
 import { cn } from "@/lib/utils";
 
 export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
-  const activeProfile = useChatStore((state) => state.chatConfig.profile);
+  const activeProfile = useConfigStore((state) => state.profile);
   const isActive = activeProfile?.id === profile._id;
 
   return (
@@ -20,7 +20,7 @@ export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
         isActive ? "bg-primary/40 ring-2 ring-primary ring-offset-4 ring-offset-sidebar/80" : "",
       )}
       onClick={() =>
-        useChatStore.getState().setChatConfig({
+        configStore.setConfig({
           profile: isActive
             ? null
             : { id: profile._id, name: profile.name, systemPrompt: profile.systemPrompt },
