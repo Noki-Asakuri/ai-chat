@@ -12,34 +12,45 @@ type ChatConfig = {
   profile?: { id: Id<"profiles">; name: string; systemPrompt: string } | null;
 };
 
-export type ConfigStore = ChatConfig & {
-  setConfig: (config: Partial<ChatConfig>) => void;
-
+type UserCustomization = {
   wrapline: boolean;
-  toggleWrapline: () => void;
+  defaultShowFullCode: boolean;
+  hiddenModels: string[];
 };
 
-const DEFAULT_CONFIG: ChatConfig = {
-  webSearch: false,
-  effort: "medium",
-  model: "openai/gpt-5-nano",
-  profile: null,
-} as const;
+export type ConfigStoreData = ChatConfig & UserCustomization;
 
-export const useConfigStore = create<ConfigStore>()(
-  persist(
-    (set) => ({
-      ...DEFAULT_CONFIG,
-      setConfig: (config) => set((state) => ({ ...state, ...config })),
+export type ConfigStore = ConfigStoreData & {
+  setConfig: (config: Partial<ChatConfig>) => void;
+  toggleWrapline: () => void;
+  setHiddenModels: (hiddenModels: string[]) => void;
+};
 
-      wrapline: false,
-      toggleWrapline: () => set((state) => ({ wrapline: !state.wrapline })),
-    }),
-    {
-      name: "local-config-store",
-      storage: createJSONStorage(() => localStorage),
-    },
-  ),
-);
+export function createConfigStore(initialState: Partial<ConfigStoreData>) {
+  return create<ConfigStore>()(
+    persist(
+      (set) => ({
+        effort: "medium",
+        webSearch: false,
+        model: "google/gemini-2.5-flash",
+        profile: null,
 
-export const configStore = useConfigStore.getInitialState();
+        setConfig: (config) => set((state) => ({ ...state, ...config })),
+
+        wrapline: false,
+        toggleWrapline: () => set((state) => ({ wrapline: !state.wrapline })),
+
+        defaultShowFullCode: false,
+
+        hiddenModels: [],
+        setHiddenModels: (hiddenModels) => set({ hiddenModels }),
+
+        ...initialState,
+      }),
+      {
+        name: "local-config-store",
+        storage: createJSONStorage(() => localStorage),
+      },
+    ),
+  );
+}

@@ -8,9 +8,10 @@ import { CopyButton } from "../copy-button";
 import { ButtonWithTip } from "./button";
 import { Icons } from "./icons";
 
+import { useConfigStore, useConfigStoreState } from "@/components/provider/config-store-provider";
+
 import { getHighlightFromCache, setHighlightInCache } from "@/lib/code-highlight-cache";
 import { useThrottledDebouncedValue } from "@/lib/hooks/use-throttled-debounced-value";
-import { configStore, useConfigStore } from "@/lib/store/config-store";
 import { cn } from "@/lib/utils";
 
 function trimOneEdgeNewline(input: string): string {
@@ -222,9 +223,15 @@ const HighlightPane = React.memo(function HighlightPane(props: {
 });
 
 export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
-  const { wrapline } = useConfigStore(useShallow((state) => ({ wrapline: state.wrapline })));
+  const configStore = useConfigStoreState();
+  const { wrapline, defaultShowFullCode } = useConfigStore(
+    useShallow((state) => ({
+      wrapline: state.wrapline,
+      defaultShowFullCode: state.defaultShowFullCode,
+    })),
+  );
 
-  const [expanded, setExpanded] = React.useState<boolean>(false);
+  const [expanded, setExpanded] = React.useState<boolean>(defaultShowFullCode);
 
   const onToggleExpanded = React.useCallback(() => setExpanded((v) => !v), []);
   const onExpandAll = React.useCallback(() => setExpanded(true), []);

@@ -4,7 +4,7 @@ import { useShallow } from "zustand/shallow";
 import { Icons } from "../ui/icons";
 
 import { MessageContent } from "./message-content";
-import { MessageEditComposer } from "./message-edit-composer";
+// import { MessageEditComposer } from "./message-edit-composer";
 import { MessageFooter } from "./message-footer";
 
 import { getModelData } from "@/lib/chat/models";
@@ -131,9 +131,7 @@ function MessageInner({ message, index, isLast }: MessageProps) {
 
   return (
     <>
-      {isUserMessageEdit ? (
-        <MessageEditComposer message={message} index={index} />
-      ) : (
+      {isUserMessageEdit ? null : ( // <MessageEditComposer message={message} index={index} />
         <MessageContent parts={renderMessage.parts} message={message} />
       )}
 

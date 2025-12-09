@@ -1,14 +1,17 @@
 import type { Doc } from "@/convex/_generated/dataModel";
 
-import { ButtonWithTip } from "@/components/ui/button";
 import { Avatar } from "@base-ui-components/react/avatar";
 
-import { configStore, useConfigStore } from "@/lib/store/config-store";
+import { useConfigStore, useConfigStoreState } from "@/components/provider/config-store-provider";
+import { ButtonWithTip } from "@/components/ui/button";
+
 import { cn } from "@/lib/utils";
 
 export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
-  const activeProfile = useConfigStore((state) => state.profile);
-  const isActive = activeProfile?.id === profile._id;
+  const configStore = useConfigStoreState();
+  const state = useConfigStore((state) => state);
+
+  const isActive = state.profile?.id === profile._id;
 
   return (
     <ButtonWithTip

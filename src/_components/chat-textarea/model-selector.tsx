@@ -1,7 +1,9 @@
 import { Popover } from "@base-ui-components/react/popover";
 import { useMemo } from "react";
+import { useShallow } from "zustand/shallow";
 
-import { buttonVariants } from "../ui/button";
+import { useConfigStore, useConfigStoreState } from "@/components/provider/config-store-provider";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -9,13 +11,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "../ui/command";
-import { Icons } from "../ui/icons";
+} from "@/components/ui/command";
+import { Icons } from "@/components/ui/icons";
 
 import { ModelCapability } from "../capability-icon";
 
 import { AllModelIds, getModelData } from "@/lib/chat/models";
-import { configStore, useConfigStore } from "@/lib/store/config-store";
 import { cn } from "@/lib/utils";
 
 type ModelSelectorProps = {
@@ -26,17 +27,18 @@ type ModelSelectorProps = {
 };
 
 function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelectorProps) {
+  const configStore = useConfigStoreState();
+
   const storeModel = configStore.model;
   const selectedModel = value ?? storeModel;
 
-  // const hiddenModel = useChatStore(
-  //   useShallow((state) => state.userCustomization?.hiddenModels ?? []),
-  // );
+  const hiddenModel = useConfigStore(useShallow((state) => state.hiddenModels));
 
   const visibleModels = useMemo(() => {
-    return AllModelIds.slice().sort((a, b) => a.localeCompare(b));
-    // .filter((id) => !hiddenModel.includes(id));
-  }, []);
+    return AllModelIds.slice()
+      .sort((a, b) => a.localeCompare(b))
+      .filter((id) => !hiddenModel.includes(id));
+  }, [hiddenModel]);
 
   function handleChange(model: string) {
     if (onChange) onChange(model);

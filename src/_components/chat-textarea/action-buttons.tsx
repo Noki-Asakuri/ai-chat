@@ -1,14 +1,14 @@
 import { GlobeIcon } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 
-import { ButtonWithTip } from "../ui/button";
+import { useConfigStore, useConfigStoreState } from "@/components/provider/config-store-provider";
+import { ButtonWithTip } from "@/components/ui/button";
 
 import { ChatAttachmentButton } from "./attachment-display";
 import { ChatEffortSelector } from "./effort-selector";
 import { ChatModelSelector } from "./model-selector";
 
 import { getModelData } from "@/lib/chat/models";
-import { configStore, useConfigStore } from "@/lib/store/config-store";
 import { cn } from "@/lib/utils";
 
 export function ChatActionButtons() {
@@ -24,6 +24,7 @@ export function ChatActionButtons() {
 }
 
 function WebSearchButton() {
+  const configStore = useConfigStoreState();
   const config = useConfigStore(
     useShallow((state) => ({ webSearch: state.webSearch, model: state.model })),
   );

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef } from "react";
 
 import { Message } from "./message";
 
 import { useChatStore } from "@/lib/chat/store";
+import type { ChatMessage } from "@/lib/types";
 
-export function MessageHistory() {
+export function MessageHistory({ messages }: { messages: ChatMessage[] }) {
   const textareaHeight = useChatStore((state) => state.textareaHeight);
 
   const abortController = useRef<AbortController>(new AbortController());
@@ -75,10 +76,10 @@ export function MessageHistory() {
     };
   }, [onResize, scrollToBottom]);
 
-  function handleForceScrollBottom() {
+  const handleForceScrollBottom = useEffectEvent(() => {
     autoScroll.current = true;
     scrollToBottom("smooth");
-  }
+  });
 
   useEffect(() => {
     const controller = abortController.current;
@@ -151,15 +152,13 @@ export function MessageHistory() {
         className="mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 py-20"
         style={{ paddingBottom: `${textareaHeight}px` }}
       >
-        <Messages />
+        <Messages messages={messages} />
       </div>
     </div>
   );
 }
 
-function Messages() {
-  const messages = useChatStore((state) => state.messages);
-
+function Messages({ messages }: { messages: ChatMessage[] }) {
   return messages.map((message, index) => (
     <Message
       key={message.messageId}

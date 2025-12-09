@@ -8,27 +8,28 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { fromUUID } from "@/lib/utils";
+import { MessageHistory } from "../message/message-history";
 
-export function Chat() {
+export function ChatHistory() {
   const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
 
-  const { data, isLoading } = useQuery({
-    enabled: Boolean(params?.threadId),
+  const { data } = useQuery({
+    enabled: typeof params?.threadId === "string",
     ...convexSessionQuery(api.functions.messages.getAllMessagesFromThread, {
-      threadId: fromUUID<Id<"threads">>(params?.threadId),
+      threadId: fromUUID<Id<"threads">>(params?.threadId)!,
     }),
   });
 
-  return null;
+  return <MessageHistory messages={data?.messages ?? []} />;
 }
 
 export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
   const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
 
   const { data, isPending } = useQuery({
-    enabled: Boolean(params?.threadId) || isSkeleton,
+    enabled: typeof params?.threadId === "string" && !isSkeleton,
     ...convexSessionQuery(api.functions.messages.getAllMessagesFromThread, {
-      threadId: fromUUID<Id<"threads">>(params?.threadId),
+      threadId: fromUUID<Id<"threads">>(params?.threadId)!,
     }),
   });
 

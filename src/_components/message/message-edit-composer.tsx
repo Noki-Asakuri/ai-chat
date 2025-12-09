@@ -15,7 +15,7 @@ import { ModelSelector } from "../chat-textarea/model-selector";
 import { MessageEditAttachments } from "./message-edit-attachments";
 
 import { getModelData } from "@/lib/chat/models";
-import { useChatRequest } from "@/lib/chat/send-chat-request";
+// import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { shouldSend } from "@/lib/chat/send-preference";
 import { useChatStore } from "@/lib/chat/store";
 import { getConvexReactClient } from "@/lib/convex/client";
@@ -23,6 +23,7 @@ import { uploadFile } from "@/lib/convex/uploadFiles";
 import type { ChatMessage, UserAttachment } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useShallow } from "zustand/shallow";
+import { useConfigStore } from "../provider/config-store-provider";
 
 const convexClient = getConvexReactClient();
 
@@ -43,15 +44,15 @@ type AttachmentOverride = {
 
 export function MessageEditComposer({ message, index }: MessageEditComposerProps) {
   const assistantMessage = useChatStore((s) => s.messages[index + 1]);
-  const chatConfig = useChatStore(
+  const chatConfig = useConfigStore(
     useShallow((state) => ({
-      model: state.chatConfig.model,
-      effort: state.chatConfig.effort,
-      webSearch: state.chatConfig.webSearch,
+      model: state.model,
+      effort: state.effort,
+      webSearch: state.webSearch,
     })),
   );
 
-  const { retryMessage } = useChatRequest();
+  // const { retryMessage } = useChatRequest();
 
   const initialModel =
     assistantMessage && assistantMessage.model.length > 0
@@ -192,31 +193,33 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
     const hasUploads = newFiles.length > 0;
     setSavingPhase(hasUploads ? "uploading" : "saving");
 
-    try {
-      // Apply local attachment changes (create + link, unlink removed)
-      const { attachmentsOverride } = await persistAttachmentChanges();
+    // try {
+    //   // Apply local attachment changes (create + link, unlink removed)
+    //   const { attachmentsOverride } = await persistAttachmentChanges();
 
-      // If there were uploads, we are past upload stage now
-      if (hasUploads) setSavingPhase("saving");
+    //   // If there were uploads, we are past upload stage now
+    //   if (hasUploads) setSavingPhase("saving");
 
-      // Retry message with one-shot overrides
-      const bodyEdited =
-        text.trim() !== message.content.trim()
-          ? { _id: message._id, content: text.trim() }
-          : undefined;
+    //   // Retry message with one-shot overrides
+    //   const bodyEdited =
+    //     text.trim() !== message.content.trim()
+    //       ? { _id: message._id, content: text.trim() }
+    //       : undefined;
 
-      await retryMessage(index, {
-        editedUserMessage: bodyEdited,
-        modelId,
-        effort,
-        webSearch: canWebSearch ? webSearch : false,
-        attachmentsOverride,
-      });
+    // await retryMessage(index, {
+    //   editedUserMessage: bodyEdited,
+    //   modelId,
+    //   effort,
+    //   webSearch: canWebSearch ? webSearch : false,
+    //   attachmentsOverride,
+    // });
 
-      useChatStore.getState().setEditMessage(null);
-    } finally {
-      setSavingPhase("idle");
-    }
+    //   useChatStore.getState().setEditMessage(null);
+    // } catch {
+    //   setSavingPhase("idle");
+    // }
+
+    // setSavingPhase("idle");
   }
 
   function handleCancel() {
@@ -265,7 +268,7 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
             placeholder="Edit your message here..."
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="!bg-transparent !ring-0 max-h-[250px] w-full resize-none rounded-none border-0 p-0"
+            className="max-h-[250px] w-full resize-none rounded-none border-0 !bg-transparent p-0 !ring-0"
             onPaste={(event) => {
               const { items } = event.clipboardData;
               const files = Array.from(items)

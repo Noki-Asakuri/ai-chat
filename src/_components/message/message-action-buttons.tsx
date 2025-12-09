@@ -4,7 +4,7 @@ import { CopyButton } from "../copy-button";
 import { ButtonWithTip } from "../ui/button";
 import { MessageRetryMenu } from "./message-retry-menu";
 
-import { useChatRequest } from "@/lib/chat/send-chat-request";
+// import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,7 @@ type MessageActionButtonsProps = {
 
 export function MessageActionButtons({ index, message }: MessageActionButtonsProps) {
   const editMessage = useChatStore((state) => state.editMessage);
-  const { retryMessage, branchOffThreadMessage } = useChatRequest();
+  // const { retryMessage, branchOffThreadMessage } = useChatRequest();
 
   async function handleEditMessage() {
     if (message.role === "assistant") return;
@@ -24,9 +24,9 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
       useChatStore.getState().setEditMessage(null);
 
       if (editMessage.content !== message.content) {
-        await retryMessage(index, {
-          editedUserMessage: { _id: editMessage._id, content: editMessage.content },
-        });
+        // await retryMessage(index, {
+        //   editedUserMessage: { _id: editMessage._id, content: editMessage.content },
+        // });
       }
       return;
     }
@@ -47,7 +47,7 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
           variant="ghost"
           side="bottom"
           className="size-8"
-          onMouseDown={() => branchOffThreadMessage(message)}
+          // onMouseDown={() => branchOffThreadMessage(message)}
           title="Branch off at this message"
           disabled={message.status === "pending" || message.status === "streaming"}
         >

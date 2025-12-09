@@ -20,7 +20,6 @@ import {
   type ModelData,
   type Provider,
 } from "@/lib/chat/models";
-import { useChatRequest } from "@/lib/chat/send-chat-request";
 import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage, ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -34,7 +33,6 @@ type ModelWithId = ModelData & { modelId: string };
 type GroupedModels = Partial<Record<Provider, ModelWithId[]>>;
 
 export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupProps) {
-  const { retryMessage } = useChatRequest();
   const [open, setOpen] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
 
@@ -106,7 +104,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
 
       <Menu.Portal>
         <Menu.Positioner className="outline-none" sideOffset={8} align="center" side="top">
-          <Menu.Popup className="flex w-50 origin-[var(--transform-origin)] flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
+          <Menu.Popup className="flex w-50 origin-(--transform-origin) flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
             <MenuArrow className="fill-card" />
 
             <Menu.Item

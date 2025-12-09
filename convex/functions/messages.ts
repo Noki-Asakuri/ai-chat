@@ -7,7 +7,7 @@ import { authenticatedMutation, authenticatedQuery } from "../components";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
 export const getAllMessagesFromThread = authenticatedQuery({
-  args: { threadId: v.optional(v.id("threads")) },
+  args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
     const user = ctx.user;
 

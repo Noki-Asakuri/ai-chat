@@ -1,7 +1,7 @@
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 import { FileIcon } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@tanstack/react-router";
 
 import { ImagePreviewDialog } from "../image-preview-dialog";
 
@@ -139,7 +139,7 @@ function AttachmentPreview({ attachment }: { attachment: Doc<"attachments"> }) {
 
     return (
       <Link
-        href={fileUrl}
+        to={fileUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="flex size-20 flex-col items-center justify-center gap-2 rounded-md border p-2"
