@@ -7,7 +7,7 @@
   "globals": {},
   "ignorePatterns": [],
   "jsPlugins": null,
-  "plugins": ["unicorn", "typescript", "oxc", "react", "nextjs"],
+  "plugins": ["unicorn", "typescript", "oxc", "react"],
   "rules": {
     "for-direction": "warn",
     "nextjs/no-img-element": "allow",
@@ -129,9 +129,6 @@
       "attributes": {},
       "components": {},
       "polymorphicPropName": null
-    },
-    "next": {
-      "rootDir": []
     },
     "react": {
       "formComponents": [],

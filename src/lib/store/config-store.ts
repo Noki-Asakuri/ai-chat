@@ -42,4 +42,4 @@ export const useConfigStore = create<ConfigStore>()(
   ),
 );
 
-export const configStore = useConfigStore.getState();
+export const configStore = useConfigStore.getInitialState();

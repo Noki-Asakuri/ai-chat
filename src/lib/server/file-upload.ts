@@ -8,6 +8,7 @@ import { tryCatch } from "@/lib/utils";
 type UploadFileR2 = {
   buffer: Uint8Array;
   threadId: Id<"threads">;
+  sessionId: string;
   mediaType: string;
   serverConvexClient: ServerConvexClient;
 };
@@ -34,6 +35,7 @@ export async function serverUploadFileR2(data: UploadFileR2): Promise<UploadFile
         id: randomId,
         name: randomId,
         threadId: data.threadId,
+        sessionId: data.sessionId,
         size: data.buffer.length,
         type: "image",
         source: "assistant",
@@ -62,7 +64,12 @@ export async function serverUploadFileR2(data: UploadFileR2): Promise<UploadFile
 
         const { key, url } = await data.serverConvexClient.mutation(
           api.functions.files.generateAttachmentUploadUrl,
-          { fileId: uniqueId, threadId: data.threadId, mimeType: data.mediaType },
+          {
+            fileId: uniqueId,
+            threadId: data.threadId,
+            mimeType: data.mediaType,
+            sessionId: data.sessionId,
+          },
         );
 
         const result = await fetch(url, {

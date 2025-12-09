@@ -1,14 +1,13 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
-import { convexQuery } from "@convex-dev/react-query";
 import { useMutation } from "convex/react";
 
 import { Dialog } from "@base-ui-components/react/dialog";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 import {
   closestCorners,
@@ -28,13 +27,14 @@ import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-ki
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Skeleton } from "../ui/skeleton";
 
 import { ThreadGroup } from "./thread-group";
 import { ThreadItem } from "./thread-item";
 import { UngroupedThreadGroup } from "./thread-ungrouped";
 
-import { threadStore, useThreadStore } from "@/lib/store/thread-store";
 import { convexSessionQuery } from "@/lib/convex/helpers";
+import { threadStore, useThreadStore } from "@/lib/store/thread-store";
 
 export function ThreadContents() {
   return (
@@ -47,7 +47,10 @@ export function ThreadContents() {
       </div>
 
       <hr className="border-sidebar-border" />
-      <ThreadListWrapper />
+
+      <Suspense fallback={<Skeleton className="h-full w-full" />}>
+        <ThreadListWrapper />
+      </Suspense>
     </>
   );
 }
@@ -116,7 +119,7 @@ function CreateGroupButton() {
 
 function ThreadListWrapper() {
   const cachedData = useThreadStore((state) => state.groupedThreads);
-  const { data } = useQuery(convexSessionQuery(api.functions.groups.listGroups));
+  const { data } = useSuspenseQuery(convexSessionQuery(api.functions.groups.listGroups));
 
   // Update the local cache when the data is fetched
   useEffect(() => {

@@ -11,7 +11,7 @@ export default defineConfig({
   server: { port: 3000 },
   plugins: [
     devtools(),
-    nitro(),
+    nitro({ compatibilityDate: "2025-07-15" }),
     tsconfigPaths(),
     tanstackStart({ srcDirectory: "src", router: { routesDirectory: "app" } }),
     viteReact({ babel: { plugins: ["babel-plugin-react-compiler"] } }),

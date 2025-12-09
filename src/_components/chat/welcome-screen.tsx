@@ -1,68 +1,10 @@
-import { useLoaderData, useParams } from "@tanstack/react-router";
-import { BookOpenIcon, CodeIcon, CompassIcon, SparklesIcon } from "lucide-react";
-
-import { Tab, Tabs, TabsList, TabsPanel } from "../ui/tabs";
+import { useLoaderData } from "@tanstack/react-router";
 
 import { useChatStore } from "@/lib/chat/store";
 
-interface CategoryButton {
-  icon: React.ComponentType<{ className?: string }>;
-  topic: string;
-  prompts: string[];
-}
-
-const createPrompts = [
-  "Give me 5 creative writing prompts for flash fiction",
-  "Write a short story about a robot discovering emotions",
-  "Help me outline a sci-fi novel set in a post-apocalyptic world",
-  "Create a character profile for a complex villain with sympathetic motives",
-];
-
-const explorePrompts = [
-  "Tell me about the history of the Silk Road.",
-  "Explain the theory of relativity in simple terms.",
-  "What are the latest discoveries in space exploration?",
-  "What are some of the most mysterious places on Earth?",
-];
-
-const codePrompts = [
-  "Write a Python script to scrape a website.",
-  "How do I set up a React project with Next.js?",
-  "Explain the difference between SQL and NoSQL databases.",
-  "Generate a function to calculate the factorial of a number in JavaScript.",
-];
-
-const learnPrompts = [
-  "Teach me the basics of machine learning.",
-  "How can I improve my public speaking skills?",
-  "What are the fundamentals of financial literacy?",
-  "Summarize the main ideas of 'Sapiens' by Yuval Noah Harari.",
-];
-
-const categories: CategoryButton[] = [
-  { icon: SparklesIcon, topic: "create", prompts: createPrompts },
-  { icon: CompassIcon, topic: "explore", prompts: explorePrompts },
-  { icon: CodeIcon, topic: "code", prompts: codePrompts },
-  { icon: BookOpenIcon, topic: "learn", prompts: learnPrompts },
-];
-
 export function WelcomeScreen() {
   const { user } = useLoaderData({ from: "/_chat_layout" });
-  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
-
-  const chatInput = useChatStore((state) => state.chatInput.length);
   const textareaHeight = useChatStore((state) => state.textareaHeight);
-
-  const handlePromptClick = (prompt: string) => {
-    useChatStore.getState().setChatInput(prompt);
-
-    setTimeout(() => {
-      const textarea = document.getElementById("textarea-chat-input");
-      textarea?.focus();
-    }, 100);
-  };
-
-  if (chatInput > 0 || !!params?.threadId) return null;
 
   return (
     <div
@@ -74,35 +16,6 @@ export function WelcomeScreen() {
         <h1 className="text-4xl font-light text-foreground">
           How can I help you, <span className="capitalize">{user?.firstName}</span>?
         </h1>
-
-        <div className="w-full px-4 md:min-w-[650px]">
-          <Tabs defaultValue="create">
-            <TabsList className="pointer-events-auto z-10 w-full bg-muted/70 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-muted">
-              {categories.map((category) => (
-                <Tab key={category.topic} value={category.topic} className="h-10">
-                  <category.icon className="size-4" />
-                  <span className="capitalize">{category.topic}</span>
-                </Tab>
-              ))}
-            </TabsList>
-
-            {categories.map((category) => (
-              <TabsPanel key={category.topic} value={category.topic} className="z-10">
-                <div className="grid grid-cols-1 gap-1">
-                  {category.prompts.map((prompt, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handlePromptClick(prompt)}
-                      className="pointer-events-auto flex items-center justify-center rounded-md bg-muted/70 px-4 py-2 text-sm text-pretty backdrop-blur-md backdrop-saturate-150 transition-colors group-data-[disable-blur=true]/sidebar-provider:bg-muted hover:bg-muted/40 hover:group-data-[disable-blur=true]/sidebar-provider:bg-muted/80 md:min-w-max md:justify-start md:text-base"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-              </TabsPanel>
-            ))}
-          </Tabs>
-        </div>
       </div>
     </div>
   );

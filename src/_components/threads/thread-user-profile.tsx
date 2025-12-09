@@ -16,6 +16,7 @@ import type { ComponentProps } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Menu } from "../ui/menu";
+import { Skeleton } from "../ui/skeleton";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { cn } from "@/lib/utils";
@@ -120,7 +121,8 @@ function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSe
 
 function UserQuota() {
   const { data, isPending } = useQuery(convexSessionQuery(api.functions.usages.getUserUsages));
-  if (isPending || !data) return null;
+  if (isPending) return <Skeleton className="h-3.5 w-24" />;
+  if (!data) return <span className="text-sm">0 / 0 (0%)</span>;
 
   const percentage = (data.used / data.base) * 100;
 

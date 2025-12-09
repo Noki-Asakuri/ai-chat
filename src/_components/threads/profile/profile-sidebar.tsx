@@ -1,20 +1,13 @@
 import { api } from "@/convex/_generated/api";
 
-import { convexQuery } from "@convex-dev/react-query";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
 
 import { ProfileDisplay } from "./profile-display";
 
-import { useChatStore } from "@/lib/chat/store";
+import { convexSessionQuery } from "@/lib/convex/helpers";
 
 export function ThreadProfileSidebar() {
-  const { data, isPending } = useQuery(convexQuery(api.functions.profiles.listProfiles));
-
-  useEffect(() => {
-    if (data) useChatStore.getState().setProfiles(data);
-  }, [data]);
-
+  const { data, isPending } = useQuery(convexSessionQuery(api.functions.profiles.listProfiles));
   if (isPending || !data || data.length === 0) return null;
 
   return (

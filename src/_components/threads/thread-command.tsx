@@ -27,15 +27,16 @@ import { fromUUID, toUUID } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
 
-export function ThreadCommand() {
+export function ThreadCommand({ isSkeleton }: { isSkeleton?: boolean }) {
   const threadCommandOpen = useThreadStore((state) => state.threadCommandOpen);
 
   return (
     <div className="flex items-center justify-center gap-2">
-      <PinThread />
+      {!isSkeleton && <PinThread />}
 
       <Button
         variant="ghost"
+        disabled={isSkeleton}
         title="Search Threads"
         data-expanded={threadCommandOpen}
         onClick={() => threadStore.setThreadCommandOpen(true)}
@@ -49,7 +50,7 @@ export function ThreadCommand() {
         </kbd>
       </Button>
 
-      <ThreadCommandDialog />
+      {!isSkeleton && <ThreadCommandDialog />}
     </div>
   );
 }

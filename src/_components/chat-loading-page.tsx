@@ -1,4 +1,4 @@
-import { Link, useLoaderData } from "@tanstack/react-router";
+import { Link, Outlet, useLoaderData } from "@tanstack/react-router";
 
 import { Button } from "./ui/button";
 import {
@@ -7,8 +7,13 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarProvider,
+  SidebarTrigger,
 } from "./ui/sidebar";
 import { Skeleton } from "./ui/skeleton";
+import { PlusIcon } from "lucide-react";
+import { ThreadTitle } from "./chat/chat-render";
+import { ThreadCommand } from "./threads/thread-command";
+import { ChatTextarea } from "./chat-textarea/main-textarea";
 
 export function ChatLoadingPage() {
   const { backgroundImage, defaultOpenSidebar } = useLoaderData({ from: "/_chat_layout" });
@@ -21,6 +26,29 @@ export function ChatLoadingPage() {
       defaultOpen={defaultOpenSidebar}
     >
       <SidebarSkeleton />
+
+      <main data-slot="chat" className="relative inset-0 h-dvh w-screen overflow-hidden">
+        <div className="absolute top-0 z-10 flex h-10 w-full items-center justify-between gap-2 border-x border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger />
+
+            <Link
+              to="/"
+              className="rounded-md p-1.5 text-center transition-colors hover:bg-primary/20"
+            >
+              <PlusIcon className="size-4" />
+              <span className="sr-only">Create new thread</span>
+            </Link>
+
+            <ThreadTitle isSkeleton />
+          </div>
+
+          <ThreadCommand isSkeleton />
+        </div>
+
+        <Outlet />
+        <ChatTextarea />
+      </main>
     </SidebarProvider>
   );
 }

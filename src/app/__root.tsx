@@ -9,6 +9,7 @@ import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanst
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
 import { type ConvexQueryClient } from "@convex-dev/react-query";
+import { SessionProvider } from "convex-helpers/react/sessions";
 
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -17,7 +18,6 @@ import { DefaultCatchBoundary } from "@/components/default-catch-oundary";
 import { Toaster } from "@/components/ui/sonner";
 
 import { getAuth } from "@/lib/authkit/serverFunctions";
-import { SessionProvider } from "convex-helpers/react/sessions";
 
 type RootContext = {
   queryClient: QueryClient;
@@ -70,7 +70,7 @@ export function RootLayout() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { sessionId } = Route.useLoaderData();
+  const loaderData = Route.useLoaderData();
 
   return (
     <html lang="en" className="antialiased">
@@ -79,7 +79,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
 
       <body className="dark isolate font-sans">
-        <SessionProvider idGenerator={() => sessionId ?? ""}>{children}</SessionProvider>
+        <SessionProvider idGenerator={() => loaderData?.sessionId ?? ""}>
+          {children}
+        </SessionProvider>
 
         <Scripts />
         <Toaster />
