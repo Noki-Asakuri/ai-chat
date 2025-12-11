@@ -127,22 +127,26 @@ export const AISDKParts = v.array(
   ),
 );
 
+export const AISDKModelParams = v.object({
+  webSearchEnabled: v.boolean(),
+  effort: effort,
+});
+
 export const AISDKMetadata = v.object({
   model: v.string(),
   finishReason: v.string(),
+
   usages: v.object({
     inputTokens: v.number(),
     outputTokens: v.number(),
     reasoningTokens: v.number(),
   }),
+
   timeToFirstTokenMs: v.number(),
   profile: v.optional(v.object({ id: v.id("profiles"), name: v.string() })),
   durations: v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
-});
 
-export const AISDKModelParams = v.object({
-  webSearchEnabled: v.boolean(),
-  effort: effort,
+  modelParams: v.optional(AISDKModelParams),
 });
 
 export default defineSchema({
@@ -190,13 +194,9 @@ export default defineSchema({
     userId: v.string(),
 
     messageId: v.string(),
-    content: v.string(),
-    reasoning: v.optional(v.string()),
     error: v.optional(v.string()),
 
     parts: AISDKParts,
-
-    model: v.string(),
     status: status,
 
     role: v.union(v.literal("assistant"), v.literal("user")),
@@ -208,6 +208,11 @@ export default defineSchema({
 
     createdAt: v.number(),
     updatedAt: v.number(),
+
+    // @deprecate
+    model: v.optional(v.string()),
+    content: v.optional(v.string()),
+    reasoning: v.optional(v.string()),
   })
     .index("by_userId_threadId", ["userId", "threadId"])
     .index("by_threadId", ["threadId"])

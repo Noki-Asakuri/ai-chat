@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "@tanstack/react-query";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
@@ -9,23 +9,21 @@ import { Textarea } from "../ui/textarea";
 
 import { ChatActionButtons } from "./action-buttons";
 import { ChatAttachmentDisplay } from "./attachment-display";
+import { ChatSendButton } from "./send-button";
 
-// import { useChatRequest } from "@/lib/chat/send-chat-request";
-import { shouldSend, useGetSendDescription } from "@/lib/chat/send-preference";
-import { useChatStore } from "@/lib/chat/store";
+import { useGetSendDescription } from "@/lib/chat/send-preference";
 import { convexSessionQuery } from "@/lib/convex/helpers";
-import { useRouterState } from "@tanstack/react-router";
+import { chatStore, useChatStore } from "@/lib/store/chat-store";
 
 export function ChatTextarea() {
-  const { status } = useRouterState();
   const parentRef = useRef<HTMLDivElement>(null);
 
-  const onResize = useCallback((entries: ResizeObserverEntry[]) => {
+  const onResize = useEffectEvent((entries: ResizeObserverEntry[]) => {
     const entry = entries[0];
     if (!entry) return;
 
-    useChatStore.getState().setTextareaHeight(entry.target.clientHeight);
-  }, []);
+    chatStore.setTextareaHeight(entry.target.clientHeight);
+  });
 
   useEffect(() => {
     if (!parentRef.current) return;
@@ -37,7 +35,7 @@ export function ChatTextarea() {
     return () => {
       resizeObserver.disconnect();
     };
-  }, [onResize]);
+  }, []);
 
   return (
     <div
@@ -55,7 +53,7 @@ export function ChatTextarea() {
 
             <div className="flex items-end justify-between border-t px-2.5 py-2">
               <ChatActionButtons />
-              {/* <ChatSendButton /> */}
+              <ChatSendButton />
             </div>
           </div>
         </div>
@@ -65,23 +63,20 @@ export function ChatTextarea() {
 }
 
 function InputTextArea() {
-  // const input = useChatStore((state) => state.chatInput);
-  // const { submitChatMessage } = useChatRequest();
-
+  const input = useChatStore((state) => state.input);
   function handleAddAttachments({ files }: { files: File[] }) {
     const acceptFiles = files.filter(
       (file) => file.type.includes("image") || file.type.includes("pdf"),
     );
 
     if (acceptFiles.length > 0) {
-      const attachments = acceptFiles.map((file) => {
-        let type: "image" | "pdf" = "image";
-        if (file.type.includes("pdf")) type = "pdf";
+      const attachments = acceptFiles.map((file) => ({
+        id: uuidv4(),
+        file,
+        type: (file.type.includes("image") ? "image" : "pdf") as "image" | "pdf",
+      }));
 
-        return { id: uuidv4(), name: file.name, size: file.size, file, type, mimeType: file.type };
-      });
-
-      useChatStore.getState().addAttachment(attachments);
+      chatStore.addAttachments(attachments);
     }
 
     if (acceptFiles.length < files.length) {
@@ -103,8 +98,8 @@ function InputTextArea() {
         aria-describedby="textarea-description"
         aria-label="Type your message here..."
         placeholder="Type your message here..."
-        // value={input}
-        // onChange={(event) => useChatStore.getState().setChatInput(event.target.value)}
+        value={input}
+        onChange={(event) => chatStore.setInput(event.target.value)}
         data-slot="textarea-chat-input"
         className="max-h-[250px] w-full resize-none rounded-none border-0 bg-transparent! p-0 ring-0!"
         onPaste={(event) => {
@@ -136,7 +131,7 @@ function InputTextArea() {
         // }}
       />
 
-      {/* <TextareaDescription /> */}
+      <TextareaDescription />
     </div>
   );
 }

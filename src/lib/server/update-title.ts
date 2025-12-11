@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { generateText } from "ai";
+import { generateText, type ModelMessage } from "ai";
 import dedent from "dedent";
 
 import { type ServerConvexClient } from "../convex/server";
@@ -14,7 +14,7 @@ export async function updateTitle({
   sessionId,
 }: {
   threadId: Id<"threads">;
-  messages: { role: string; content: string }[];
+  messages: ModelMessage[];
   serverConvexClient: ServerConvexClient;
   sessionId: string;
 }) {

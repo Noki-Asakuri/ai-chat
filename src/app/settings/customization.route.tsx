@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 
-import { useMutation } from "convex/react";
 import { convexQuery } from "@convex-dev/react-query";
+import { useSessionMutation } from "convex-helpers/react/sessions";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -40,7 +40,7 @@ function getFormValue<T extends File | string>(key: string, formData: FormData):
 
 function RouteComponent() {
   const { data, isPending } = useSuspenseQuery(convexSessionQuery(api.functions.users.currentUser));
-  const updateUserCustomization = useMutation(api.functions.users.updateUserCustomization);
+  const updateUserCustomization = useSessionMutation(api.functions.users.updateUserCustomization);
 
   const { uploadFile, deleteFile } = useStorage();
 

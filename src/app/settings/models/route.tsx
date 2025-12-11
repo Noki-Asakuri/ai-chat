@@ -1,7 +1,8 @@
 import { api } from "@/convex/_generated/api";
-import { useMutation } from "convex/react";
 
 import { convexQuery } from "@convex-dev/react-query";
+import { useSessionMutation } from "convex-helpers/react/sessions";
+
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/settings/models")({
 
 function ModelsPage() {
   const { data } = useSuspenseQuery(convexSessionQuery(api.functions.users.currentUser));
-  const updateCustomization = useMutation(api.functions.users.updateUserCustomization);
+  const updateCustomization = useSessionMutation(api.functions.users.updateUserCustomization);
 
   const [pending, startTransition] = useTransition();
   const [query, setQuery] = useState("");

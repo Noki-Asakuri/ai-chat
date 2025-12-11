@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 
 import { Button } from "../ui/button";
 import { SidebarTrigger, useSidebar } from "../ui/sidebar";
+
 import { ThreadCommand } from "./thread-command";
 
 import { cn } from "@/lib/utils";

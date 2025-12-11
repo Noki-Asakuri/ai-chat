@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
-import { chatStore, useChatStore } from "@/lib/chat/store";
+// import { chatStore, useChatStore } from "@/lib/chat/store";
 import { threadStore } from "@/lib/store/thread-store";
 
 const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
@@ -14,10 +14,12 @@ const MODEL_SELECTOR_KEYBOARD_SHORTCUT = "m";
 export function RegisterHotkeys() {
   const navigate = useNavigate();
 
-  const editMessage = useChatStore((state) => state.editMessage);
-  const status = useChatStore((state) => state.messages.at(-1)?.status ?? "complete");
+  return null;
 
-  const { setEditMessage, addAttachment } = chatStore.getState();
+  // const editMessage = useChatStore((state) => state.editMessage);
+  // const status = useChatStore((state) => state.messages.at(-1)?.status ?? "complete");
+
+  // const { setEditMessage, addAttachment } = chatStore.getState();
 
   useEffect(() => {
     function onPaste(event: ClipboardEvent) {

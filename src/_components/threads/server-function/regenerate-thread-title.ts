@@ -6,6 +6,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { withAuth } from "@/lib/authkit/ssr/session";
 import { createServerConvexClient } from "@/lib/convex/server";
 import { updateTitle } from "@/lib/server/update-title";
+import { tryCatch } from "@/lib/utils";
 
 export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
   .inputValidator((data: { threadId: Id<"threads"> }) => data)
@@ -16,6 +17,14 @@ export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
 
       const serverConvexClient = createServerConvexClient();
 
+      const { title } = await serverConvexClient.query(api.functions.threads.getThreadTitle, {
+        threadId: data.threadId,
+        sessionId,
+      });
+
+      // Either user is not logged in or thread doesn't belong to user.
+      if (title === null) return { error: "Thread not found" };
+
       // Optimistically mark the title as regenerating on the server.
       await serverConvexClient.mutation(api.functions.threads.updateThreadTitle, {
         sessionId,
@@ -23,14 +32,17 @@ export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
         title: "Regenerating...",
       });
 
-      const { messages } = await serverConvexClient.query(
-        api.functions.messages.getAllMessagesFromThread,
-        { threadId: data.threadId, sessionId },
+      const [result, error] = await tryCatch(
+        serverConvexClient.query(api.functions.messages.getAllMessagesFromThread, {
+          threadId: data.threadId,
+          sessionId,
+        }),
       );
 
-      if (messages.length === 0) return { error: "No messages found" };
+      if (error) return { error: error.message };
+      if (result.messages.length === 0) return { error: "No messages found" };
 
-      const firstUser = messages.find((m) => m.role === "user");
+      const firstUser = result.messages.find((m) => m.role === "user");
       if (!firstUser || !firstUser.content) return { error: "No user message found" };
 
       const input: Array<{ role: string; content: string }> = [

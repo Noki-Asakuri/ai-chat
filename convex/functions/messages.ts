@@ -1,3 +1,5 @@
+import { asyncMap } from "convex-helpers";
+import { getAll, getManyFrom } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
@@ -6,18 +8,39 @@ import { internalMutation } from "../_generated/server";
 import { authenticatedMutation, authenticatedQuery } from "../components";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
+import type { ChatMessage } from "../../src/lib/types";
+
 export const getAllMessagesFromThread = authenticatedQuery({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
     const user = ctx.user;
 
     if (!user) throw new Error("Not authenticated");
-    if (!args.threadId) return { messages: [], thread: null };
+    if (!args.threadId) return { messages: [] as ChatMessage[], thread: null };
 
     const thread = await ctx.db.get(args.threadId);
+    if (!thread) throw new Error("Thread not found");
     if (thread?.userId !== user.userId) throw new Error("Not authorized");
 
-    const messagesFromThread = await ctx.db
+    const messages = await asyncMap(
+      await getManyFrom(ctx.db, "messages", "by_userId_threadId", args.threadId, "userId"),
+      async (message) => {
+        const attachments = await getAll(ctx.db, message.attachments);
+        return { ...message, attachments };
+      },
+    );
+
+    return { messages, thread };
+  },
+});
+
+export const getAllMessagesWithoutAttachments = authenticatedQuery({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const messages = await ctx.db
       .query("messages")
       .withIndex("by_userId_threadId", (q) =>
         q.eq("userId", user.userId).eq("threadId", args.threadId!),
@@ -25,17 +48,7 @@ export const getAllMessagesFromThread = authenticatedQuery({
       .order("asc")
       .collect();
 
-    const messages = await Promise.all(
-      messagesFromThread.map(async (message) => {
-        const attachmentDocs = await Promise.all(
-          (message.attachments ?? []).map((attachmentId) => ctx.db.get(attachmentId)),
-        );
-        const attachments = attachmentDocs.filter((a): a is Doc<"attachments"> => a !== null);
-        return { ...message, attachments };
-      }),
-    );
-
-    return { messages, thread };
+    return messages;
   },
 });
 

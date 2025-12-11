@@ -1,14 +1,13 @@
 import { MessageActionButtons } from "./message-action-buttons";
 import { MessageMetadata } from "./message-metadata";
 
-import type { ChatMessage } from "@/lib/types";
+import type { UIChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type MessageFooterProps = {
   index: number;
   isLast: boolean;
-  message: ChatMessage;
-  renderMessage: { metadata?: ChatMessage["metadata"] };
+  message: UIChatMessage;
 };
 
 export function MessageFooter({ index, isLast, message, renderMessage }: MessageFooterProps) {

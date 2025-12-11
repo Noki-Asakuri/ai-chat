@@ -1,4 +1,4 @@
-import type { User } from "@workos-inc/node";
+import { useLoaderData } from "@tanstack/react-router";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -6,17 +6,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { UserUsages } from "./user-usages";
 
-export function SettingsSidebar({ user }: { user: User }) {
+export function SettingsSidebar() {
+  const { user } = useLoaderData({ from: "/settings" });
+
   return (
     <aside className="space-y-4">
-      <UserInfo user={user} />
+      <UserInfo />
       <UserUsages />
       <KeyboardShortcuts />
+
+      <span className="block w-full text-center text-xs blur-xs transition-[filter] hover:blur-none">
+        {user.id}
+      </span>
     </aside>
   );
 }
 
-function UserInfo({ user }: { user: User }) {
+function UserInfo() {
+  const { user } = useLoaderData({ from: "/settings" });
+
   const fallback = [user.lastName, user.firstName]
     .filter(Boolean)
     .map((name) => name![0])
@@ -33,7 +41,9 @@ function UserInfo({ user }: { user: User }) {
 
       <div className="text-center">
         <h1 className="text-xl font-semibold capitalize">{username}</h1>
-        <p className="text-muted-foreground blur-xs hover:blur-none">{user.email}</p>
+        <p className="text-muted-foreground blur-xs transition-[filter] hover:blur-none">
+          {user.email}
+        </p>
 
         <Button variant="ghost" size="sm" className="mt-2 capitalize">
           Free Plan

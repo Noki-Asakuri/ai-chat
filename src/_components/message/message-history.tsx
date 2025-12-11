@@ -2,11 +2,11 @@ import { useCallback, useEffect, useEffectEvent, useRef } from "react";
 
 import { Message } from "./message";
 
-import { useChatStore } from "@/lib/chat/store";
-import type { ChatMessage } from "@/lib/types";
+// import { useChatStore } from "@/lib/chat/store";
+import type { UIChatMessage } from "@/lib/types";
 
-export function MessageHistory({ messages }: { messages: ChatMessage[] }) {
-  const textareaHeight = useChatStore((state) => state.textareaHeight);
+export function MessageHistory() {
+  // const textareaHeight = useChatStore((state) => state.textareaHeight);
 
   const abortController = useRef<AbortController>(new AbortController());
   // Outer scrollable container (with overflow-y-scroll)
@@ -30,15 +30,15 @@ export function MessageHistory({ messages }: { messages: ChatMessage[] }) {
     const scroller = outerScrollRef.current;
     if (!scroller) return;
 
-    if (scroller.scrollHeight === scroller.clientHeight && scroller.scrollTop === 0) {
-      useChatStore.getState().setScrollPosition(null);
-    } else if (scroller.scrollTop === 0 && scroller.scrollHeight > scroller.clientHeight) {
-      useChatStore.getState().setScrollPosition("top");
-    } else if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 50) {
-      useChatStore.getState().setScrollPosition("bottom");
-    } else {
-      useChatStore.getState().setScrollPosition("middle");
-    }
+    // if (scroller.scrollHeight === scroller.clientHeight && scroller.scrollTop === 0) {
+    //   useChatStore.getState().setScrollPosition(null);
+    // } else if (scroller.scrollTop === 0 && scroller.scrollHeight > scroller.clientHeight) {
+    //   useChatStore.getState().setScrollPosition("top");
+    // } else if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 50) {
+    //   useChatStore.getState().setScrollPosition("bottom");
+    // } else {
+    //   useChatStore.getState().setScrollPosition("middle");
+    // }
   }, []);
 
   // Observe inner content size changes to maintain stick-to-bottom when autoScroll is enabled.
@@ -127,15 +127,15 @@ export function MessageHistory({ messages }: { messages: ChatMessage[] }) {
     prevScrollTopRef.current = currentScrollTop;
 
     // Update position state
-    if (scroller.scrollHeight === scroller.clientHeight && scroller.scrollTop === 0) {
-      useChatStore.getState().setScrollPosition(null);
-    } else if (scroller.scrollTop === 0 && scroller.scrollHeight > scroller.clientHeight) {
-      useChatStore.getState().setScrollPosition("top");
-    } else if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 1) {
-      useChatStore.getState().setScrollPosition("bottom");
-    } else {
-      useChatStore.getState().setScrollPosition("middle");
-    }
+    // if (scroller.scrollHeight === scroller.clientHeight && scroller.scrollTop === 0) {
+    //   useChatStore.getState().setScrollPosition(null);
+    // } else if (scroller.scrollTop === 0 && scroller.scrollHeight > scroller.clientHeight) {
+    //   useChatStore.getState().setScrollPosition("top");
+    // } else if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 1) {
+    //   useChatStore.getState().setScrollPosition("bottom");
+    // } else {
+    //   useChatStore.getState().setScrollPosition("middle");
+    // }
   }
 
   return (
@@ -150,23 +150,25 @@ export function MessageHistory({ messages }: { messages: ChatMessage[] }) {
         ref={scrollContainerRef}
         data-slot="message-history"
         className="mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 py-20"
-        style={{ paddingBottom: `${textareaHeight}px` }}
+        // style={{ paddingBottom: `${textareaHeight}px` }}
       >
-        <Messages messages={messages} />
+        <Messages />
       </div>
     </div>
   );
 }
 
-function Messages({ messages }: { messages: ChatMessage[] }) {
-  return messages.map((message, index) => (
-    <Message
-      key={message.messageId}
-      message={message}
-      index={index}
-      isLast={
-        message.role === "user" ? index === messages.length - 2 : index === messages.length - 1
-      }
-    />
-  ));
+function Messages() {
+  return null;
+
+  // return messages.map((message, index) => (
+  //   <Message
+  //     key={message.id}
+  //     message={message}
+  //     index={index}
+  //     isLast={
+  //       message.role === "user" ? index === messages.length - 2 : index === messages.length - 1
+  //     }
+  //   />
+  // ));
 }

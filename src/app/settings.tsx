@@ -33,15 +33,13 @@ export const Route = createFileRoute("/settings")({
 });
 
 function AuthLayout() {
-  const { user } = Route.useLoaderData();
-
   return (
     <div className="flex h-svh w-full flex-col">
       <TopSettingHeaders />
 
       <main className="container mx-auto w-full flex-1 p-4 lg:overflow-hidden">
         <div className="grid h-full w-full grid-rows-[auto_1fr] gap-4 lg:grid-cols-[300px_1fr] lg:grid-rows-1">
-          <SettingsSidebar user={user} />
+          <SettingsSidebar />
 
           <div className="flex h-full flex-col overflow-hidden">
             <UserNavbar />
