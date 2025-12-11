@@ -9,50 +9,44 @@ import { MemoizedMarkdownBlock } from "./message-markdown";
 import { MessageReasoning } from "./message-reasoning";
 
 import { useIsMobile } from "@/lib/hooks/use-mobile";
-import type { ChatMessage } from "@/lib/types";
+import type { UIChatMessage } from "@/lib/types";
 
 type MessageContentProps = {
-  message: ChatMessage;
-  parts: ChatMessage["parts"];
+  message: UIChatMessage;
 };
 
-export function MessageContent({ message, parts }: MessageContentProps) {
+export function MessageContent({ message }: MessageContentProps) {
   const isMobile = useIsMobile();
 
-  if (message.status === "error") {
-    const error = message.error?.length
-      ? message.error
-      : "An error have occurred. Please try again.";
+  // if (message.status === "error") {
+  //   const error = message.error?.length
+  //     ? message.error
+  //     : "An error have occurred. Please try again.";
 
-    return <MessageError message={error} />;
-  }
+  //   return <MessageError message={error} />;
+  // }
 
-  if (!parts || parts.length === 0) return null;
+  if (!message.parts || message.parts.length === 0) return null;
 
-  const reasoningParts = parts.filter((p) => p.type === "reasoning");
-  const textParts = parts.filter((p) => p.type === "text") as { type: "text"; text: string }[];
+  const reasoningParts = message.parts.filter((p) => p.type === "reasoning");
+  const textParts = message.parts.filter((p) => p.type === "text");
 
   return (
     <>
-      <MessageReasoning
-        model={message.model}
-        status={message.status}
-        metadata={message.metadata}
-        parts={reasoningParts}
-      />
+      <MessageReasoning parts={reasoningParts} metadata={message.metadata} />
 
       <Message from={message.role} className="relative items-start">
         {textParts.map((part, i) => (
           <MessageContentElement
-            key={`${message._id}-${i}`}
+            key={`${message.id}-${i}`}
             className="backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
           >
             <MemoizedMarkdownBlock
               content={part.text}
-              isStreaming={message.status === "streaming"}
+              // isStreaming={message.status === "streaming"}
             />
 
-            <MessageAttachmentDisplay attachments={message.attachments} messageId={message._id} />
+            {/* <MessageAttachmentDisplay attachments={message.attachments} messageId={message._id} /> */}
           </MessageContentElement>
         ))}
 

@@ -31,6 +31,10 @@ export function toUUID(str: string) {
   ].join("-");
 }
 
+export function fromUUID<T extends string>(uuid: T | string): T;
+export function fromUUID<T extends string>(uuid: T | string | null): T | null;
+export function fromUUID<T extends string>(uuid: T | string | undefined): T | undefined;
+
 export function fromUUID<T extends string>(uuid?: T | string | null) {
   return uuid?.replaceAll("-", "") as T | undefined;
 }

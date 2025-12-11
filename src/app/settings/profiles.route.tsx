@@ -15,9 +15,10 @@ import {
 import { useMemo, useState } from "react";
 
 import { convexQuery } from "@convex-dev/react-query";
+import { useSessionMutation } from "convex-helpers/react/sessions";
+
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation } from "convex/react";
 
 import {
   AlertDialog,
@@ -113,9 +114,9 @@ function AiProfilesPage() {
     setDialogOpen(true);
   }
 
-  const createProfile = useMutation(api.functions.profiles.createProfile);
-  const updateProfile = useMutation(api.functions.profiles.updateProfile);
-  const deleteProfile = useMutation(api.functions.profiles.deleteProfile);
+  const createProfile = useSessionMutation(api.functions.profiles.createProfile);
+  const updateProfile = useSessionMutation(api.functions.profiles.updateProfile);
+  const deleteProfile = useSessionMutation(api.functions.profiles.deleteProfile);
 
   async function onSubmit() {
     if (!name.trim() || !systemPrompt.trim()) return;

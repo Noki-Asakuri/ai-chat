@@ -1,8 +1,45 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useShallow } from "zustand/shallow";
 
-import { WelcomeScreen } from "@/components/chat/welcome-screen";
+import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
+
+import { useChatStore } from "@/lib/store/chat-store";
 
 export const Route = createFileRoute("/_chat_layout/")({
   preload: false,
-  component: WelcomeScreen,
+  component: RouteComponent,
+  loader: async ({ context }) => {
+    return { user: context.user! };
+  },
 });
+
+function RouteComponent() {
+  return (
+    <>
+      <WelcomeScreen />
+      <ChatTextarea key="main-chat-textarea" />
+    </>
+  );
+}
+
+export function WelcomeScreen() {
+  const { user } = Route.useLoaderData();
+
+  const { textareaHeight, input } = useChatStore(
+    useShallow((state) => ({ input: state.input, textareaHeight: state.textareaHeight })),
+  );
+
+  return (
+    <div
+      id="welcome-screen"
+      data-invisible={!!input.length}
+      style={{ height: `calc(100% - ${textareaHeight}px)` }}
+      className="pointer-events-none absolute flex w-full items-center justify-center opacity-100 transition-opacity data-[invisible=true]:opacity-0"
+    >
+      <h1 className="text-4xl font-light text-foreground">
+        What can I help you with today,{" "}
+        <span className="capitalize">{user?.firstName ?? "user"}</span>?
+      </h1>
+    </div>
+  );
+}

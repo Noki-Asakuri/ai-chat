@@ -1,5 +1,5 @@
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -22,7 +22,8 @@ import { serverUploadFileR2 } from "@/lib/server/file-upload";
 import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
 import { validateRequestBody } from "@/lib/server/validate-request-body";
-import { fixMarkdownCodeBlocks, tryCatch, tryCatchSync } from "@/lib/utils";
+import type { UIChatMessage } from "@/lib/types";
+import { fixMarkdownCodeBlocks, tryCatch } from "@/lib/utils";
 
 import { env } from "@/env";
 
@@ -155,7 +156,7 @@ app.post("/api/ai/chat", async (ctx) => {
   try {
     const body = await req.json();
 
-    const [requestBody, validateError] = tryCatchSync(() => validateRequestBody(body, userId));
+    const [requestBody, validateError] = await tryCatch(validateRequestBody(body));
     if (validateError) {
       logger.error("[Chat Error]: Failed to parse request body!", {
         error: validateError,
@@ -167,7 +168,7 @@ app.post("/api/ai/chat", async (ctx) => {
 
     const {
       messages,
-      transformedMessages,
+      modelMessages,
       assistantMessageId,
       threadId,
       model,
@@ -255,7 +256,7 @@ app.post("/api/ai/chat", async (ctx) => {
     const result = streamText({
       model: registry.languageModel(model.id),
       system: systemInstruction.trim(),
-      messages: transformedMessages,
+      messages: modelMessages,
       providerOptions,
       tools,
 
@@ -306,23 +307,33 @@ app.post("/api/ai/chat", async (ctx) => {
       },
     });
 
-    const metadata: Doc<"messages">["metadata"] = {
+    const metadata: UIChatMessage["metadata"] = {
       model: model.uniqueId,
-      profile: undefined,
       finishReason: "",
       timeToFirstTokenMs: 0,
       usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
       durations: { request: 0, reasoning: 0, text: 0 },
+
+      modelParams: {
+        webSearchEnabled: config.webSearch,
+        effort: config.effort,
+      },
     };
 
-    if (config.profile) metadata.profile = { id: config.profile.id, name: config.profile.name };
+    // if (config.profile) metadata.profile = { id: config.profile.id, name: config.profile.name };
 
-    void updateTitle({ messages, threadId, serverConvexClient: convexClient, sessionId });
+    void updateTitle({
+      messages: modelMessages,
+      threadId,
+      serverConvexClient: convexClient,
+      sessionId,
+    });
 
     let reasoningStartTime = 0;
     let textStartTime = 0;
 
     return result.toUIMessageStreamResponse({
+      originalMessages: messages,
       generateMessageId: () => requestId,
       status: 200,
       headers: {
@@ -397,6 +408,7 @@ app.post("/api/ai/chat", async (ctx) => {
 
               metadata.usages.outputTokens = actualOutputTokens;
             }
+
             return metadata;
         }
 

@@ -37,7 +37,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   const visibleModels = useMemo(() => {
     return AllModelIds.slice()
       .sort((a, b) => a.localeCompare(b))
-      .filter((id) => !hiddenModel.includes(id));
+      .filter((id) => !(hiddenModel ?? []).includes(id));
   }, [hiddenModel]);
 
   function handleChange(model: string) {

@@ -4,47 +4,31 @@ import { z } from "zod/v4";
 
 import { google, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { openai, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
-import type { ModelMessage, ToolSet, UserContent } from "ai";
+import { convertToModelMessages, validateUIMessages, type ToolSet } from "ai";
 
 import { getModelData } from "../chat/models";
-import { tryCatchSync } from "../utils";
+import { metadataSchema, type UIChatMessage } from "../types";
+import { tryCatch, tryCatchSync } from "../utils";
 
 export const threadIdSchema = z.custom<Id<"threads">>((data) => z.string().parse(data));
 export const messageIdSchema = z.custom<Id<"messages">>((data) => z.string().parse(data));
 export const attachmentIdSchema = z.custom<Id<"attachments">>((data) => z.string().parse(data));
 export const profileIdSchema = z.custom<Id<"profiles">>((data) => z.string().parse(data));
 
-const attachmentSchema = z.object({
-  _id: attachmentIdSchema,
-  threadId: threadIdSchema,
-  id: z.string(),
-
-  name: z.string(),
-  size: z.number(),
-  type: z.enum(["image", "pdf"]),
-  path: z.string(),
-});
-
 const inputSchema = z.object({
   assistantMessageId: messageIdSchema,
   threadId: threadIdSchema,
 
-  messages: z.array(
-    z.object({
-      id: z.string(),
-      role: z.enum(["assistant", "user"]),
-      content: z.string(),
-      attachments: attachmentSchema.array().optional(),
-    }),
-  ),
+  messages: z.unknown().array(),
 
-  config: z.object({
-    model: z.string(),
+  model: z.string(),
+  modelParams: z.object({
     webSearch: z.boolean().default(false),
     effort: z.enum(["none", "minimal", "low", "medium", "high"]).default("medium"),
     profile: z
       .object({ id: profileIdSchema, name: z.string(), systemPrompt: z.string() })
-      .nullish(),
+      .nullish()
+      .default(null),
   }),
 });
 
@@ -66,21 +50,26 @@ const reasoningToBudget = {
   high: 20_000,
 };
 
-export function validateRequestBody(body: Record<string, unknown>, userId: string) {
+export async function validateRequestBody(body: Record<string, unknown>) {
   const { success, data, error } = inputSchema.safeParse(body);
   if (!success) throw new Error(z.prettifyError(error));
 
-  const { messages, assistantMessageId, threadId, config } = data;
+  const [messages, messagesError] = await tryCatch(
+    validateUIMessages<UIChatMessage>({ messages: data.messages, metadataSchema }),
+  );
+
+  if (messagesError) throw new Error(`Invalid messages format: ${messagesError.message}`);
+
   const [modelData, modelError] = tryCatchSync(() => {
-    if (!config.model || config.model.length === 0) throw new Error("No model provided");
-    return { data: getModelData(config.model), model: config.model };
+    if (!data.model || data.model.length === 0) throw new Error("No model provided");
+    return { data: getModelData(data.model), model: data.model };
   });
 
   if (modelError) throw new Error(`Invalid model: ${modelError.message}`);
 
-  const { data: modelInfo, model } = modelData;
   const tools: ToolSet = {};
-  const transformedMessages = transformMessages(messages, userId);
+  const { data: modelInfo, model } = modelData;
+  const modelMessages = convertToModelMessages(messages);
 
   const providerOptions = {
     openai: { store: false } as OpenAIResponsesProviderOptions,
@@ -93,7 +82,7 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
   };
 
   if (modelInfo.capabilities.reasoning) {
-    const effort = config.effort ?? "medium";
+    const effort = data.modelParams.effort ?? "medium";
 
     providerOptions.openai.reasoningEffort = effort;
     providerOptions.openai.reasoningSummary = "detailed";
@@ -115,7 +104,7 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
       providerOptions.google.thinkingConfig = {
         includeThoughts: true,
         // Currently gemini-3-pro only supports high and low thinking level.
-        thinkingLevel: config.effort === "high" ? "high" : "low",
+        thinkingLevel: data.modelParams.effort === "high" ? "high" : "low",
       };
     }
   }
@@ -132,7 +121,7 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
         }
       }
 
-      if (config?.webSearch && modelInfo.capabilities.webSearch) {
+      if (data.modelParams.webSearch && modelInfo.capabilities.webSearch) {
         tools.url_context = google.tools.urlContext({});
         tools.google_search = google.tools.googleSearch({});
       }
@@ -146,7 +135,7 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
         });
       }
 
-      if (config?.webSearch && modelInfo.capabilities.webSearch) {
+      if (data.modelParams.webSearch && modelInfo.capabilities.webSearch) {
         tools.web_search = openai.tools.webSearch({});
       }
       break;
@@ -154,43 +143,12 @@ export function validateRequestBody(body: Record<string, unknown>, userId: strin
 
   return {
     messages,
-    transformedMessages,
-    assistantMessageId,
-    threadId,
-    config,
+    modelMessages,
+    assistantMessageId: data.assistantMessageId,
+    threadId: data.threadId,
+    modelParams: data.modelParams,
     model: { id: modelInfo.id, uniqueId: model },
     providerOptions,
     tools,
   };
-}
-
-function transformMessages(messages: z.infer<typeof inputSchema>["messages"], _userId: string) {
-  return messages.map((message): ModelMessage => {
-    if (message.role === "assistant") return { role: "assistant", content: message.content };
-
-    const parts = message.attachments
-      ? message.attachments.map((attachment): Exclude<UserContent[number], string> => {
-          if (attachment.type === "image") {
-            const url = `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.path}`;
-            return { type: "image" as const, image: url };
-          }
-
-          if (attachment.type === "pdf") {
-            const url = `https://files.chat.asakuri.me/${attachment.path}`;
-            return { type: "file" as const, data: url, mediaType: "application/pdf" };
-          }
-
-          return {
-            type: "text" as const,
-            text: `https://files.chat.asakuri.me/${attachment.path}`,
-          };
-        })
-      : [];
-
-    return {
-      role: "user",
-      content:
-        parts.length === 0 ? message.content : [{ type: "text", text: message.content }, ...parts],
-    };
-  });
 }

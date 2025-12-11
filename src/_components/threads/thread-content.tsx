@@ -2,9 +2,9 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { ClientOnly, Link } from "@tanstack/react-router";
 
-import { useMutation } from "convex/react";
+import { useSessionMutation } from "convex-helpers/react/sessions";
 
 import { Dialog } from "@base-ui-components/react/dialog";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -39,7 +39,9 @@ import { threadStore, useThreadStore } from "@/lib/store/thread-store";
 export function ThreadContents() {
   return (
     <>
-      <div className="mt-2 flex items-center gap-2 *:flex-1">
+      <hr className="border-sidebar-border" />
+
+      <div className="flex items-center gap-2 *:flex-1">
         <Button size="sm" variant="secondary" asChild>
           <Link to="/">New Chat</Link>
         </Button>
@@ -48,9 +50,11 @@ export function ThreadContents() {
 
       <hr className="border-sidebar-border" />
 
-      <Suspense fallback={<Skeleton className="h-full w-full" />}>
-        <ThreadListWrapper />
-      </Suspense>
+      <ClientOnly fallback={<Skeleton className="h-full w-full" />}>
+        <Suspense fallback={<Skeleton className="h-full w-full" />}>
+          <ThreadListWrapper />
+        </Suspense>
+      </ClientOnly>
     </>
   );
 }
@@ -59,7 +63,7 @@ function CreateGroupButton() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
 
-  const createGroup = useMutation(api.functions.groups.createGroup);
+  const createGroup = useSessionMutation(api.functions.groups.createGroup);
 
   async function onCreate(): Promise<void> {
     const trimmedTitle = title.trim();
@@ -174,10 +178,10 @@ type ThreadListProps = {
 };
 
 function ThreadList({ data }: ThreadListProps) {
-  const removeGroupId = useMutation(api.functions.groups.removeGroupId);
-  const moveThreadToGroup = useMutation(api.functions.groups.moveThreadToGroup);
-  const reorderThread = useMutation(api.functions.groups.reorderThreadWithinGroup);
-  const moveGroupToIndex = useMutation(api.functions.groups.moveGroupToIndex);
+  const removeGroupId = useSessionMutation(api.functions.groups.removeGroupId);
+  const moveThreadToGroup = useSessionMutation(api.functions.groups.moveThreadToGroup);
+  const reorderThread = useSessionMutation(api.functions.groups.reorderThreadWithinGroup);
+  const moveGroupToIndex = useSessionMutation(api.functions.groups.moveGroupToIndex);
 
   // Optimistic local state for grouped threads while dragging
   const snapshotRef = useRef<GroupThreads | null>(null);

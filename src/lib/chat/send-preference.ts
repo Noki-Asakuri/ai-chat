@@ -1,4 +1,4 @@
-import { useLocalStorage } from "@uidotdev/usehooks";
+// import { useLocalStorage } from "@uidotdev/usehooks";
 import { tryCatchSync } from "../utils";
 
 export type SendPreference = { pref: "enter" | "ctrlEnter" };
@@ -20,13 +20,13 @@ export function getSendPreference(): SendPreference {
 }
 
 export function useGetSendDescription(): string {
-  const [sendPreference] = useLocalStorage<SendPreference>(STORAGE_KEY, {
-    pref: "enter",
-  });
+  // const [sendPreference] = useLocalStorage<SendPreference>(STORAGE_KEY, {
+  //   pref: "enter",
+  // });
 
-  if (sendPreference.pref === "ctrlEnter") {
-    return "Press Ctrl or Command plus Enter to send. Press Enter for a new line.";
-  }
+  // if (sendPreference.pref === "ctrlEnter") {
+  //   return "Press Ctrl or Command plus Enter to send. Press Enter for a new line.";
+  // }
 
   return "Press Enter to send. Press Shift + Enter for a new line.";
 }

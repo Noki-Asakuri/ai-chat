@@ -1,27 +1,51 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
-import type { ChatMessage, UserAttachment } from "../types";
+import type { UserAttachment } from "../types";
 
 export type ChatStore = {
-  messages: ChatMessage[];
-  setMessages: (messages: ChatMessage[]) => void;
+  input: string;
+  setInput: (content: string) => void;
 
   attachments: UserAttachment[];
-  setAttachment: (attachments: UserAttachment[]) => void;
-  addAttachment: (attachments: UserAttachment[]) => void;
-  removeAttachment: (attachmentId: string) => void;
+  addAttachments: (attachments: Array<UserAttachment>) => void;
+  removeAttachment: (id: string) => void;
+  clearAttachments: () => void;
+
+  textareaHeight: number;
+  setTextareaHeight: (height: number) => void;
+
+  lastUserMessageHeight?: number | null;
+  setMessageHeight: (height?: number | null) => void;
 };
 
-export const useChatStore = create<ChatStore>((set) => ({
-  messages: [],
-  setMessages: (messages) => set({ messages }),
+export const useChatStore = create<ChatStore>()(
+  persist(
+    (set) => ({
+      input: "",
+      setInput: (content) => set({ input: content }),
 
-  attachments: [],
-  setAttachment: (attachments) => set({ attachments }),
-  addAttachment: (attachments) =>
-    set((state) => ({ attachments: [...state.attachments, ...attachments] })),
-  removeAttachment: (attachmentId) =>
-    set((state) => ({ attachments: state.attachments.filter((a) => a.id !== attachmentId) })),
-}));
+      attachments: [],
+      addAttachments: (attachments) =>
+        set((state) => ({ attachments: [...state.attachments, ...attachments] })),
+      removeAttachment: (id) =>
+        set((state) => ({ attachments: state.attachments.filter((a) => a.id !== id) })),
+      clearAttachments: () => set({ attachments: [] }),
+
+      // Default: 147px + 8px (positon bottom) + 16px (padding above)
+      textareaHeight: 147 + 8 + 16,
+      setTextareaHeight: (height) => set({ textareaHeight: Math.max(height, 147) + 8 + 16 }),
+
+      lastUserMessageHeight: null,
+      setMessageHeight: (height) => set({ lastUserMessageHeight: height }),
+    }),
+    {
+      name: "local-chat-store",
+      storage: createJSONStorage(() => localStorage),
+
+      partialize: (state) => ({ input: state.input }),
+    },
+  ),
+);
 
 export const chatStore = useChatStore.getState();

@@ -124,6 +124,22 @@ export const getAllThreads = authenticatedQuery({
   },
 });
 
+export const getThreadTitle = authenticatedQuery({
+  args: { threadId: v.optional(v.id("threads")) },
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+
+    if (!args.threadId) return { title: null };
+
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) return { title: null };
+    if (thread.userId !== user.userId) return { title: null };
+
+    return { title: thread.title };
+  },
+});
+
 export const updateThreadTitle = authenticatedMutation({
   args: { threadId: v.id("threads"), title: v.string() },
   handler: async (ctx, args) => {

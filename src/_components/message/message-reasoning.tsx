@@ -1,31 +1,24 @@
+import type { ReasoningUIPart } from "ai";
+
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "../ui/ai-elements/reasoning";
 
-import { getModelData } from "@/lib/chat/models";
-import type { ChatMessage } from "@/lib/types";
+import type { UIChatMessage } from "@/lib/types";
 
 type ThinkingToggleProps = {
-  model: ChatMessage["model"];
-  status: ChatMessage["status"];
-  parts: ChatMessage["parts"];
-  metadata: ChatMessage["metadata"];
+  parts: ReasoningUIPart[];
+  metadata: UIChatMessage["metadata"];
 };
 
-export function MessageReasoning({ model, parts, status, metadata }: ThinkingToggleProps) {
-  if (parts.length === 0 || status === "error") return null;
+export function MessageReasoning({ parts, metadata }: ThinkingToggleProps) {
+  if (parts.length === 0) return null;
 
-  const isReasoningModel = getModelData(model).capabilities.reasoning;
-  if (!isReasoningModel) return null;
+  // const isReasoningModel = getModelData(model).capabilities.reasoning;
+  // if (!isReasoningModel) return null;
 
-  const reasoning = (parts as { type: "reasoning"; text: string }[])
-    .map((p) => p.text)
-    .join("\n\n");
+  const reasoning = parts.map((p) => p.text).join("\n\n");
 
   return (
-    <Reasoning
-      defaultOpen={false}
-      isStreaming={status === "streaming"}
-      duration={metadata?.durations?.reasoning}
-    >
+    <Reasoning defaultOpen={false} duration={metadata?.durations?.reasoning}>
       <ReasoningTrigger className="w-max rounded-md bg-background/80 p-2 backdrop-blur-md backdrop-contrast-150" />
       <ReasoningContent className="w-full space-y-3 rounded-md border bg-card/80 p-3 backdrop-blur-md backdrop-contrast-150">
         {reasoning}

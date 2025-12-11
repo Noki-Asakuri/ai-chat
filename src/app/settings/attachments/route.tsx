@@ -2,7 +2,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { convexQuery } from "@convex-dev/react-query";
-import { useMutation } from "convex/react";
+import { useSessionMutation } from "convex-helpers/react/sessions";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -72,7 +72,7 @@ function AttachmentsPage() {
   const { data } = useSuspenseQuery(
     convexSessionQuery(api.functions.attachments.getAllAttachments),
   );
-  const deleteAttachments = useMutation(api.functions.attachments.deleteAttachments);
+  const deleteAttachments = useSessionMutation(api.functions.attachments.deleteAttachments);
 
   const [searchText, setSearchText] = useState<string>("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
@@ -567,7 +567,7 @@ type DeleteAttachmentDialogProps = {
 
 function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachmentDialogProps) {
   const [pending, startTransition] = useTransition();
-  const deleteAttachment = useMutation(api.functions.attachments.deleteAttachment);
+  const deleteAttachment = useSessionMutation(api.functions.attachments.deleteAttachment);
 
   function onDelete() {
     startTransition(async () => {

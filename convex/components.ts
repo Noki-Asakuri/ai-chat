@@ -38,7 +38,7 @@ export const authenticatedQuery = customQuery(query, {
 });
 
 export const authenticatedMutation = customMutation(mutation, {
-  args: { sessionId: v.optional(v.string()) },
+  args: { sessionId: v.string() },
   input: async (ctx, { sessionId }) => {
     if (!sessionId) return { ctx: { ...ctx, user: null }, args: {} };
 

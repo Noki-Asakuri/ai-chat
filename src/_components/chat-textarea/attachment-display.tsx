@@ -7,7 +7,7 @@ import { useConfigStore } from "../provider/config-store-provider";
 import { ButtonWithTip } from "../ui/button";
 
 import { getModelData } from "@/lib/chat/models";
-import { useChatStore } from "@/lib/chat/store";
+// import { useChatStore } from "@/lib/chat/store";
 import { format } from "@/lib/utils";
 
 export function ChatAttachmentButton() {
@@ -23,11 +23,11 @@ export function ChatAttachmentButton() {
     let type: "image" | "pdf" = "image";
     if (file.type.includes("pdf")) type = "pdf";
 
-    useChatStore
-      .getState()
-      .addAttachment([
-        { id: uuidv4(), type, name: file.name, size: file.size, file, mimeType: file.type },
-      ]);
+    // useChatStore
+    //   .getState()
+    //   .addAttachment([
+    //     { id: uuidv4(), type, name: file.name, size: file.size, file, mimeType: file.type },
+    //   ]);
   }
 
   return (
@@ -67,49 +67,51 @@ type Preview = {
 };
 
 export function ChatAttachmentDisplay() {
-  const attachments = useChatStore((state) => state.attachments);
+  return null;
+
+  // const attachments = useChatStore((state) => state.attachments);
   const [preview, setPreview] = useState<Preview[] | null>(null);
 
-  useEffect(() => {
-    if (!attachments.length) {
-      setPreview(null);
-      return;
-    }
+  // useEffect(() => {
+  //   if (!attachments.length) {
+  //     setPreview(null);
+  //     return;
+  //   }
 
-    const preview = attachments.map((attachment) => {
-      const objectUrl = URL.createObjectURL(attachment.file);
-      const preview = {
-        url: objectUrl,
-        id: attachment.id,
-        name: attachment.name,
-        size: attachment.size,
-        type: attachment.type,
-      };
-      return preview;
-    });
-    setPreview(preview);
+  //   const preview = attachments.map((attachment) => {
+  //     const objectUrl = URL.createObjectURL(attachment.file);
+  //     const preview = {
+  //       url: objectUrl,
+  //       id: attachment.id,
+  //       name: attachment.name,
+  //       size: attachment.size,
+  //       type: attachment.type,
+  //     };
+  //     return preview;
+  //   });
+  //   setPreview(preview);
 
-    return () => {
-      preview.forEach(({ url }) => URL.revokeObjectURL(url));
-    };
-  }, [attachments]);
+  //   return () => {
+  //     preview.forEach(({ url }) => URL.revokeObjectURL(url));
+  //   };
+  // }, [attachments]);
 
-  if (attachments.length === 0) return null;
+  // if (attachments.length === 0) return null;
 
   // Build image-only list for carousel navigation
-  const imageList = preview?.filter((p) => p.type === "image") ?? [];
+  // const imageList = preview?.filter((p) => p.type === "image") ?? [];
 
-  return (
-    <div
-      data-slot="attachment-display"
-      data-visible={!!preview}
-      className="custom-scroll flex items-center justify-start gap-4 overflow-x-auto border-b p-2.5 data-[visible=false]:hidden"
-    >
-      {preview?.map((attachment) => (
-        <AttachmentPreview key={attachment.id} attachment={attachment} images={imageList} />
-      ))}
-    </div>
-  );
+  // return (
+  //   <div
+  //     data-slot="attachment-display"
+  //     data-visible={!!preview}
+  //     className="custom-scroll flex items-center justify-start gap-4 overflow-x-auto border-b p-2.5 data-[visible=false]:hidden"
+  //   >
+  //     {preview?.map((attachment) => (
+  //       <AttachmentPreview key={attachment.id} attachment={attachment} images={imageList} />
+  //     ))}
+  //   </div>
+  // );
 }
 
 function AttachmentPreview({ attachment, images }: { attachment: Preview; images: Preview[] }) {
