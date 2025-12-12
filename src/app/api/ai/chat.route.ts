@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/ai/chat")({
 
         const result = streamText({
           providerOptions: { openai: { store: false } },
-          model: registry.languageModel("openai/gpt-5.1-chat"),
+          model: registry("openai/gpt-5.1-chat"),
           messages: convertToModelMessages(messages),
         });
 

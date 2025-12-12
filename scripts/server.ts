@@ -173,7 +173,7 @@ app.post("/api/ai/chat", async (ctx) => {
       threadId,
       model,
       providerOptions,
-      config,
+      modelParams,
       tools,
     } = requestBody;
 
@@ -189,7 +189,7 @@ app.post("/api/ai/chat", async (ctx) => {
       await convexClient.mutation(api.functions.messages.updateErrorMessage, {
         model: model.uniqueId,
         error: `${type} message limit reached (${usage.used}/${usage.base}).`,
-        modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
+        modelParams: { webSearchEnabled: modelParams.webSearch, effort: modelParams.effort },
         messageId: assistantMessageId,
         sessionId,
       });
@@ -234,7 +234,7 @@ app.post("/api/ai/chat", async (ctx) => {
 		</global>
 		`;
 
-    const profilePrompt = config.profile?.systemPrompt?.trim();
+    const profilePrompt = modelParams.profile?.systemPrompt?.trim();
     if (profilePrompt && profilePrompt.length > 0) {
       systemInstruction += dedent`\n
 		<profile>
@@ -254,7 +254,7 @@ app.post("/api/ai/chat", async (ctx) => {
     const startTime = Date.now();
 
     const result = streamText({
-      model: registry.languageModel(model.id),
+      model: registry(model.id),
       system: systemInstruction.trim(),
       messages: modelMessages,
       providerOptions,
@@ -301,7 +301,7 @@ app.post("/api/ai/chat", async (ctx) => {
           sessionId,
           error: errorMessage,
           model: model.uniqueId,
-          modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
+          modelParams: { webSearchEnabled: modelParams.webSearch, effort: modelParams.effort },
           messageId: assistantMessageId,
         });
       },
@@ -315,8 +315,8 @@ app.post("/api/ai/chat", async (ctx) => {
       durations: { request: 0, reasoning: 0, text: 0 },
 
       modelParams: {
-        webSearchEnabled: config.webSearch,
-        effort: config.effort,
+        webSearchEnabled: modelParams.webSearch,
+        effort: modelParams.effort,
       },
     };
 
@@ -354,7 +354,7 @@ app.post("/api/ai/chat", async (ctx) => {
               status: "streaming",
               model: model.uniqueId,
               resumableStreamId: requestId,
-              modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
+              modelParams: { webSearchEnabled: modelParams.webSearch, effort: modelParams.effort },
             },
           }),
         ]);
@@ -471,7 +471,7 @@ app.post("/api/ai/chat", async (ctx) => {
           content: fixMarkdownCodeBlocks(content),
           reasoning: reasoning.length > 0 ? reasoning : undefined,
 
-          modelParams: { webSearchEnabled: config.webSearch, effort: config.effort },
+          modelParams: { webSearchEnabled: modelParams.webSearch, effort: modelParams.effort },
         };
 
         logger.info("[Chat] Chat request completed!", {
@@ -479,7 +479,7 @@ app.post("/api/ai/chat", async (ctx) => {
           threadId,
           assistantMessageId,
           model: model.uniqueId,
-          profileId: config.profile?.id,
+          profileId: modelParams.profile?.id,
           metadata,
           requestId,
           dataLength: {

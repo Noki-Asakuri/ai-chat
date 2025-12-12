@@ -6,6 +6,7 @@ import dedent from "dedent";
 
 import { type ServerConvexClient } from "../convex/server";
 import { registry } from "./model-registry";
+import { safetySettings } from "./validate-request-body";
 
 export async function updateTitle({
   messages,
@@ -22,8 +23,8 @@ export async function updateTitle({
   console.debug("[Server] Updating thread title", threadId);
 
   const { text } = await generateText({
-    model: registry.languageModel("google/gemini-2.5-flash"),
-    providerOptions: {},
+    model: registry("google/gemini-2.5-flash"),
+    providerOptions: { google: { safetySettings } },
     messages: [
       {
         role: "system",
