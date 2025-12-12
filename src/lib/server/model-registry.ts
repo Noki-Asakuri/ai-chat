@@ -1,8 +1,11 @@
+import { createServerOnlyFn } from "@tanstack/react-start";
+
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 
-import { createProviderRegistry, customProvider } from "ai";
+import { devToolsMiddleware } from "@ai-sdk/devtools";
+import { createProviderRegistry, customProvider, wrapLanguageModel } from "ai";
 
 import { env } from "@/env";
 
@@ -57,4 +60,13 @@ const google = customProvider({
   },
 });
 
-export const registry = createProviderRegistry({ google, openai, deepseek }, { separator: "/" });
+const providers = createProviderRegistry({ google, openai, deepseek }, { separator: "/" });
+
+export const registry: typeof providers.languageModel = createServerOnlyFn((...args) => {
+  const middleware = env.NODE_ENV === "development" ? [devToolsMiddleware()] : [];
+
+  return wrapLanguageModel({
+    model: providers.languageModel(...args),
+    middleware,
+  });
+});

@@ -39,15 +39,16 @@ export const Route = createRootRouteWithContext<RootContext>()({
         name: "description",
         content: "An advanced AI chat application, featuring a modern UI and a rich feature set.",
       },
-      { name: "theme-color", content: "#1a1a1a" },
       { name: "color-scheme", content: "dark" },
+      { name: "theme-color", content: "#1a1a1a" },
       { name: "theme-color", content: "#1a1a1a", media: "(prefers-color-scheme: dark)" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
       { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
     ],
+    scripts: [{ crossOrigin: "anonymous", src: "//unpkg.com/react-scan/dist/auto.global.js" }],
   }),
   beforeLoad: async () => {
     const { user, sessionId } = await getAuth();
