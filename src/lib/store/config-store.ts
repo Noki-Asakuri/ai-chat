@@ -50,6 +50,13 @@ export function createConfigStore(initialState: Partial<ConfigStoreData>) {
       {
         name: "local-config-store",
         storage: createJSONStorage(() => localStorage),
+        partialize: (state) => ({
+          effort: state.effort,
+          webSearch: state.webSearch,
+          model: state.model,
+          profile: state.profile,
+          wrapline: state.wrapline,
+        }),
       },
     ),
   );
