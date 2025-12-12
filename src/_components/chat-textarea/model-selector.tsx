@@ -37,7 +37,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   const visibleModels = useMemo(() => {
     return AllModelIds.slice()
       .sort((a, b) => a.localeCompare(b))
-      .filter((id) => !(hiddenModel ?? []).includes(id));
+      .filter((id) => !hiddenModel.includes(id));
   }, [hiddenModel]);
 
   function handleChange(model: string) {
@@ -75,7 +75,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
             <Command
               loop
               value={selectedModel}
-              className="h-[400px] w-max min-w-100 border bg-card text-card-foreground"
+              className="h-100 w-max min-w-100 border bg-card text-card-foreground"
             >
               <CommandInput placeholder="Search models..." className="h-9" />
               <CommandList

@@ -133,6 +133,38 @@ export const openai: Record<ModelIdKey, ModelData> = {
     },
   },
 
+  "openai/gpt-5.2": {
+    display: { name: "GPT 5.2" },
+    id: "openai/gpt-5.2",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+    },
+  },
+
+  "openai/gpt-5.2-chat": {
+    display: { name: "GPT 5.2 Chat" },
+    id: "openai/gpt-5.2-chat",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      vision: true,
+    },
+  },
+
+  "openai/gpt-5.2-pro": {
+    display: { name: "GPT 5.2 Pro" },
+    id: "openai/gpt-5.2-pro",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+    },
+  },
+
   "openai/o3": {
     display: { name: "o3" },
     id: "openai/o3",
