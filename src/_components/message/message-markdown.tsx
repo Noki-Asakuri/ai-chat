@@ -10,6 +10,8 @@ import remarkMath from "remark-math";
 import { ShikiCodeBlock } from "../ui/code-block";
 import { TypographyInlineCode } from "../ui/typography";
 
+import type { ChatMessage } from "@/lib/types";
+
 function escapeInvalidMath(text: string): string {
   const len: number = text.length;
   let out = "";
@@ -146,25 +148,26 @@ function CodeBlock({
 
 type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
   content: string;
-  isStreaming?: boolean;
+  role: ChatMessage["role"];
 };
 
-export function MemoizedMarkdownBlock({ content, isStreaming, ...props }: MarkdownProps) {
+export function MemoizedMarkdownBlock({ content, role, isAnimating, ...props }: MarkdownProps) {
   return (
     <Streamdown
-      isAnimating={isStreaming}
+      mode={role === "user" ? "static" : "streaming"}
+      isAnimating={isAnimating}
       parseIncompleteMarkdown={false}
       rehypePlugins={[
+        rehypeRaw,
+        [rehypeKatex, { errorColor: "var(--color-muted-foreground)" }],
         [
           rehypeHarden,
           {
             allowedLinkPrefixes: ["*"],
-            defaultOrigin: "https://*.asakuri.me",
+            defaultOrigin: "https://chat.asakuri.me",
             allowedImagePrefixes: ["https://files.chat.asakuri.me", "https://ik.imagekit.io"],
           },
         ],
-        rehypeRaw,
-        [rehypeKatex, { errorColor: "var(--color-muted-foreground)" }],
       ]}
       remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
       remarkRehypeOptions={{ allowDangerousHtml: true }}

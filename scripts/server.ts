@@ -440,6 +440,12 @@ app.post("/api/ai/chat", async (ctx) => {
 
         await Promise.all(generatedFiles);
 
+        for (const part of parts) {
+          if ("providerMetadata" in part && part.providerMetadata?.google?.thoughtSignature) {
+            part.providerMetadata.google.thoughtSignature = "skip_thought_signature_validator";
+          }
+        }
+
         type Updates = (typeof api.functions.messages.updateMessageById)["_args"]["updates"];
         const updates: Updates = {
           parts,

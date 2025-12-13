@@ -42,8 +42,9 @@ export function MessageContent({ message }: MessageContentProps) {
         className="relative flex-col items-end [.is-assistant]:flex-col-reverse [.is-assistant]:items-start"
       >
         <MessageAttachmentsDisplay
-          messageId={message._id}
           parts={fileParts}
+          role={message.role}
+          messageId={message._id}
           className={cn({ "mr-13": isMobile })}
         />
 
@@ -54,8 +55,9 @@ export function MessageContent({ message }: MessageContentProps) {
               className="backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
             >
               <MemoizedMarkdownBlock
+                role={message.role}
                 content={part.text}
-                isStreaming={message.status === "streaming"}
+                isAnimating={message.status === "streaming"}
               />
             </MessageContentElement>
           ))}
@@ -75,7 +77,7 @@ function MessageError({ message }: { message: string }) {
       data-slot="message-error"
       className="rounded-md bg-destructive/80 px-4 py-2 text-destructive-foreground backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-destructive"
     >
-      <MemoizedMarkdownBlock content={message} isStreaming={false} />
+      <MemoizedMarkdownBlock role="assistant" content={message} isAnimating={false} />
     </div>
   );
 }
