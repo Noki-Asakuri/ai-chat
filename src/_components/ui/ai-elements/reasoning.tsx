@@ -3,10 +3,12 @@
 import { Collapsible } from "@base-ui-components/react/collapsible";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import { BrainIcon, ChevronDownIcon } from "lucide-react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 
 import { MemoizedMarkdownBlock } from "@/components/message/message-markdown";
+
+import { Shimmer } from "./shimmer";
 
 import { cn, format } from "@/lib/utils";
 
@@ -14,12 +16,12 @@ type ReasoningContextValue = {
   isStreaming: boolean;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  duration: number;
+  duration: number | undefined;
 };
 
 const ReasoningContext = createContext<ReasoningContextValue | null>(null);
 
-const useReasoning = () => {
+export const useReasoning = () => {
   const context = useContext(ReasoningContext);
   if (!context) {
     throw new Error("Reasoning components must be used within Reasoning");
@@ -57,7 +59,7 @@ export const Reasoning = memo(
 
     const [duration, setDuration] = useControllableState({
       prop: durationProp,
-      defaultProp: 0,
+      defaultProp: undefined,
     });
 
     const [hasAutoClosed, setHasAutoClosed] = useState(false);
@@ -108,23 +110,28 @@ export const Reasoning = memo(
 );
 
 export type ReasoningTriggerProps = ComponentProps<typeof Collapsible.Trigger> & {
+  getThinkingMessage?: (isStreaming: boolean, duration?: number) => ReactNode;
   showArrow?: boolean;
 };
 
-const getThinkingMessage = (isStreaming: boolean, duration?: number) => {
+const defaultGetThinkingMessage = (isStreaming: boolean, duration?: number) => {
   if (isStreaming || duration === 0) {
-    return <p>Thinking...</p>;
+    return <Shimmer duration={1}>Thinking...</Shimmer>;
   }
-
   if (duration === undefined) {
     return <p>Thought for a few seconds</p>;
   }
-
   return <p>Thought for {format.time(duration / 1000)} seconds</p>;
 };
 
 export const ReasoningTrigger = memo(
-  ({ className, children, showArrow, ...props }: ReasoningTriggerProps) => {
+  ({
+    className,
+    children,
+    getThinkingMessage = defaultGetThinkingMessage,
+    showArrow,
+    ...props
+  }: ReasoningTriggerProps) => {
     const { isStreaming, isOpen, duration } = useReasoning();
 
     return (
@@ -163,7 +170,7 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
     <Collapsible.Panel
       className={cn(
         "mt-2 text-sm",
-        "text-foreground outline-none group-data-closed:animate-out group-data-closed:fade-out-0 group-data-closed:slide-out-to-top-2 group-data-open:animate-in group-data-open:slide-in-from-top-2",
+        "text-muted-foreground outline-none group-data-closed:animate-out group-data-closed:fade-out-0 group-data-closed:slide-out-to-top-2 group-data-open:animate-in group-data-open:slide-in-from-top-2",
         className,
       )}
       {...props}
