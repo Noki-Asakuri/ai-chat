@@ -1,11 +1,13 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
 
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
-// import { chatStore, useChatStore } from "@/lib/chat/store";
+import { useWindowEvent } from "@/lib/hooks/use-window-event";
+import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
+import { useMessageStore } from "@/lib/store/messages-store";
 import { threadStoreActions } from "@/lib/store/thread-store";
+import type { UserAttachment } from "@/lib/types";
 
 const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
@@ -14,164 +16,144 @@ const MODEL_SELECTOR_KEYBOARD_SHORTCUT = "m";
 export function RegisterHotkeys() {
   const navigate = useNavigate();
 
-  return null;
+  const isEditMessage = useChatStore((state) => state.editMessageId !== null);
+  const status = useMessageStore(
+    (state) => state.messagesById[state.messageIds.at(-1)!]?.status ?? "complete",
+  );
 
-  // const editMessage = useChatStore((state) => state.editMessage);
-  // const status = useChatStore((state) => state.messages.at(-1)?.status ?? "complete");
+  useWindowEvent("paste", function handlePaste(event) {
+    // Handle pasted files
+    if (event.clipboardData?.files.length) {
+      const target = event.target as HTMLTextAreaElement | null;
 
-  // const { setEditMessage, addAttachment } = chatStore.getState();
+      // If paste is inside either composer textarea, let that component handle it
+      if (target && target.tagName === "TEXTAREA") return;
 
-  useEffect(() => {
-    function onPaste(event: ClipboardEvent) {
-      // Route pasted files to the correct composer
-      if (event.clipboardData?.files.length) {
-        const target = event.target as HTMLTextAreaElement | null;
+      // Default behavior: add files to the global chat composer
+      const files = Array.from(event.clipboardData.files ?? []);
 
-        // If paste is inside either composer textarea, let that component handle it
-        if (
-          target &&
-          target.tagName === "TEXTAREA" &&
-          ["textarea-user-message-edit", "textarea-chat-input"].includes(target.id)
-        ) {
-          // The respective textarea onPaste will stop propagation and manage files locally
-          return;
-        }
+      const acceptFiles = files.filter(
+        (file) => file.type.includes("image") || file.type.includes("pdf"),
+      );
 
-        // Default behavior: add files to the global chat composer
-        const files = Array.from(event.clipboardData.files ?? []);
+      if (acceptFiles.length > 0) {
+        event.preventDefault();
+        event.stopPropagation();
 
-        const acceptFiles = files.filter(
-          (file) => file.type.includes("image") || file.type.includes("pdf"),
-        );
+        const attachments = acceptFiles.map((file): UserAttachment => {
+          return { id: uuidv4(), file, type: file.type.includes("image") ? "image" : "pdf" };
+        });
 
-        if (acceptFiles.length > 0) {
-          event.preventDefault();
-          event.stopPropagation();
-
-          const attachments = acceptFiles.map((file) => {
-            let type: "image" | "pdf" = "image";
-            if (file.type.includes("pdf")) type = "pdf";
-
-            return {
-              id: uuidv4(),
-              name: file.name,
-              size: file.size,
-              file,
-              type,
-              mimeType: file.type,
-            };
-          });
-
-          addAttachment(attachments);
-        }
-
-        if (acceptFiles.length < files.length) {
-          toast.error("File type not supported", {
-            description: "Please upload an image or PDF file.",
-          });
-        }
-
-        return;
+        chatStoreActions.addAttachments(attachments);
       }
 
-      // If no files were pasted, handle plain text paste into chat input
-      const text = event.clipboardData?.getData("text") ?? "";
-      if (!text) return;
+      if (acceptFiles.length < files.length) {
+        toast.error("File type not supported", {
+          description: "Please upload an image or PDF file.",
+        });
+      }
 
-      const target = event.target as HTMLElement;
-      if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") return;
-
-      const chatInput = document.querySelector<HTMLTextAreaElement>("#textarea-chat-input");
-      if (!chatInput) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      chatInput.focus();
-      chatInput.value += text;
+      return;
     }
 
-    function handleKeyboardShortcut(event: KeyboardEvent) {
-      const target = event.target as HTMLElement;
-      if (
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.altKey &&
-        event.key.length === 1 &&
-        target.tagName !== "INPUT" &&
-        target.tagName !== "TEXTAREA" &&
-        !target.isContentEditable
-      ) {
-        const textareId = editMessage ? "textarea-user-message-edit" : "textarea-chat-input";
-        const chatInput = document.getElementById(textareId);
+    // If no files were pasted, handle plain text paste into chat input
+    const text = event.clipboardData?.getData("text") ?? "";
+    if (!text) return;
 
+    const target = event.target as HTMLElement;
+    if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") return;
+
+    const chatInput = document.querySelector<HTMLTextAreaElement>("#textarea-chat-input");
+    if (!chatInput) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    chatInput.focus();
+    chatInput.value += text;
+  });
+
+  useWindowEvent("keydown", function handleKeyboardShortcut(event) {
+    const target = event.target as HTMLElement;
+
+    const eventKey = event.key.toLowerCase();
+    const metaKey = event.metaKey || event.ctrlKey;
+
+    if (
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      event.key.length === 1 &&
+      target.tagName !== "INPUT" &&
+      target.tagName !== "TEXTAREA" &&
+      !target.isContentEditable
+    ) {
+      const textareId = isEditMessage ? "textarea-user-message-edit" : "textarea-chat-input";
+      const chatInput = document.getElementById(textareId);
+
+      if (chatInput) chatInput.focus();
+    }
+
+    if (event.key === "Escape") {
+      if (status === "pending" || status === "streaming") {
+        event.preventDefault();
+        // void abortChatRequest();
+      }
+
+      //
+      else if (isEditMessage) {
+        event.preventDefault();
+        chatStoreActions.setEditMessageId(null);
+      }
+
+      //
+      else {
+        event.preventDefault();
+
+        const element = document.querySelector("#messages-scrollarea");
+        element?.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
+
+        const chatInput = document.getElementById("textarea-chat-input");
         if (chatInput) chatInput.focus();
       }
 
-      if (event.key === "Escape") {
-        if (status === "pending" || status === "streaming") {
-          event.preventDefault();
-          // void abortChatRequest();
-        } else if (editMessage) {
-          event.preventDefault();
-          setEditMessage(null);
-        } else {
-          event.preventDefault();
-
-          const element = document.querySelector("#messages-scrollarea");
-          element?.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
-
-          const chatInput = document.getElementById("textarea-chat-input");
-          if (chatInput) chatInput.focus();
-        }
-      }
-
-      if (
-        event.key.toLowerCase() === THREAD_COMMAND_KEYBOARD_SHORTCUT &&
-        (event.metaKey || event.ctrlKey)
-      ) {
-        event.preventDefault();
-        threadStoreActions.setThreadCommandOpen((open) => !open);
-      }
-
-      if (
-        event.key.toLowerCase() === MODEL_SELECTOR_KEYBOARD_SHORTCUT &&
-        (event.metaKey || event.ctrlKey)
-      ) {
-        event.preventDefault();
-        const targetId = editMessage
-          ? "button-edit-model-selector-trigger"
-          : "button-chat-model-selector-trigger";
-
-        const btn = document.getElementById(targetId) as HTMLButtonElement | null;
-        btn?.click();
-
-        // Re-focus the textarea after closing the model selector
-        if (btn?.dataset.popupOpen === "") {
-          const textareId = editMessage ? "textarea-user-message-edit" : "textarea-chat-input";
-          const textarea = document.getElementById(textareId) as HTMLTextAreaElement | null;
-          textarea?.focus();
-        }
-      }
-
-      if (
-        event.key.toLowerCase() === NEW_THREAD_KEYBOARD_SHORTCUT &&
-        event.shiftKey &&
-        (event.metaKey || event.ctrlKey)
-      ) {
-        event.preventDefault();
-        navigate({ to: "/" });
-      }
+      return;
     }
 
-    window.addEventListener("keydown", handleKeyboardShortcut);
-    window.addEventListener("paste", onPaste);
+    if (eventKey === THREAD_COMMAND_KEYBOARD_SHORTCUT && metaKey) {
+      event.preventDefault();
+      threadStoreActions.setThreadCommandOpen((open) => !open);
 
-    return () => {
-      window.removeEventListener("keydown", handleKeyboardShortcut);
-      window.removeEventListener("paste", onPaste);
-    };
-  }, [editMessage, navigate, setEditMessage, addAttachment]);
+      return;
+    }
+
+    if (eventKey === MODEL_SELECTOR_KEYBOARD_SHORTCUT && metaKey) {
+      event.preventDefault();
+      const targetId = isEditMessage
+        ? "button-edit-model-selector-trigger"
+        : "button-chat-model-selector-trigger";
+
+      const btn = document.getElementById(targetId) as HTMLButtonElement | null;
+      btn?.click();
+
+      // Re-focus the textarea after closing the model selector
+      if (btn?.dataset.popupOpen === "") {
+        const textareId = isEditMessage ? "textarea-user-message-edit" : "textarea-chat-input";
+        const textarea = document.getElementById(textareId) as HTMLTextAreaElement | null;
+
+        textarea?.focus();
+      }
+
+      return;
+    }
+
+    if (eventKey === NEW_THREAD_KEYBOARD_SHORTCUT && event.shiftKey && metaKey) {
+      event.preventDefault();
+      navigate({ to: "/" });
+
+      return;
+    }
+  });
 
   return null;
 }
