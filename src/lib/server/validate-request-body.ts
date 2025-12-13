@@ -15,7 +15,7 @@ export const messageIdSchema = z.custom<Id<"messages">>((data) => z.string().par
 export const attachmentIdSchema = z.custom<Id<"attachments">>((data) => z.string().parse(data));
 export const profileIdSchema = z.custom<Id<"profiles">>((data) => z.string().parse(data));
 
-const inputSchema = z.object({
+export const inputSchema = z.object({
   assistantMessageId: messageIdSchema,
   threadId: threadIdSchema,
 
@@ -24,7 +24,7 @@ const inputSchema = z.object({
   model: z.string(),
   modelParams: z.object({
     webSearch: z.boolean().default(false),
-    effort: z.enum(["none", "minimal", "low", "medium", "high"]).default("medium"),
+    effort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]).default("medium"),
     profile: z
       .object({ id: profileIdSchema, name: z.string(), systemPrompt: z.string() })
       .nullish()
@@ -48,9 +48,12 @@ const reasoningToBudget = {
   low: 1_024,
   medium: 10_000,
   high: 20_000,
+  xhigh: 30_000,
 };
 
 export async function validateRequestBody(body: Record<string, unknown>) {
+  console.log(body);
+
   const { success, data, error } = inputSchema.safeParse(body);
   if (!success) throw new Error(z.prettifyError(error));
 
@@ -58,14 +61,18 @@ export async function validateRequestBody(body: Record<string, unknown>) {
     validateUIMessages<UIChatMessage>({ messages: data.messages, metadataSchema }),
   );
 
-  if (messagesError) throw new Error(`Invalid messages format: ${messagesError.message}`);
+  if (messagesError) {
+    throw new Error(`Invalid messages format: ${messagesError.message}`, {
+      cause: messagesError,
+    });
+  }
 
   const [modelData, modelError] = tryCatchSync(() => {
     if (!data.model || data.model.length === 0) throw new Error("No model provided");
     return { data: getModelData(data.model), model: data.model };
   });
 
-  if (modelError) throw new Error(`Invalid model: ${modelError.message}`);
+  if (modelError) throw new Error(`Invalid model: ${modelError.message}`, { cause: modelError });
 
   const tools: ToolSet = {};
   const { data: modelInfo, model } = modelData;

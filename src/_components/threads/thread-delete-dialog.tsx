@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
 
 import { useNavigate } from "@tanstack/react-router";
+import { useSessionMutation } from "convex-helpers/react/sessions";
 import { useState, useTransition } from "react";
 
 import {
@@ -16,7 +17,6 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 
-import { getConvexReactClient } from "@/lib/convex/client";
 import type { Thread } from "@/lib/types";
 
 type ThreadDeleteDialogProps = {
@@ -25,8 +25,6 @@ type ThreadDeleteDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
-
-const convexClient = getConvexReactClient();
 
 export function ThreadDeleteDialog({
   threadId,
@@ -37,16 +35,15 @@ export function ThreadDeleteDialog({
   const navigate = useNavigate();
   const [pending, startTransition] = useTransition();
 
+  const deleteThread = useSessionMutation(api.functions.threads.deleteThread);
+
   const [checked, setChecked] = useState(false);
 
-  function deleteThread() {
+  function deleteThreadHandler() {
     console.debug("[Thread] Delete thread", threadId);
 
     startTransition(async () => {
-      await convexClient.mutation(api.functions.threads.deleteThread, {
-        threadId,
-        deleteAttachments: checked,
-      });
+      await deleteThread({ threadId, deleteAttachments: checked });
       await navigate({ to: "/" });
     });
   }
@@ -81,7 +78,7 @@ export function ThreadDeleteDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={deleteThread} disabled={pending}>
+          <AlertDialogAction onClick={deleteThreadHandler} disabled={pending}>
             {pending ? "Deleting..." : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>

@@ -10,7 +10,7 @@ import { Suspense, useEffect } from "react";
 
 import { RegisterHotkeys } from "@/components/chat/register-hotkeys";
 import { ThreadTitle } from "@/components/chat/top-thread-title";
-import { ConfigStoreProvider } from "@/components/provider/config-store-provider";
+import { ConfigStoreProvider } from "@/components/provider/config-provider";
 import { ThreadCommand } from "@/components/threads/thread-command";
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";

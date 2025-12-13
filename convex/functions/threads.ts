@@ -1,23 +1,23 @@
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
-import { authenticatedMutation, authenticatedQuery, authKit } from "../components";
+import { authenticatedMutation, authenticatedQuery } from "../components";
 
 export const createThread = authenticatedMutation({
   args: { title: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await authKit.getAuthUser(ctx);
+    const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
     await ctx.runMutation(internal.functions.userStats.incrementThreads, {
-      userId: user.id,
+      userId: user.userId,
     });
 
     return await ctx.db.insert("threads", {
       title: args.title ?? "New Chat",
       pinned: false,
-      status: "complete",
-      userId: user.id,
+      status: "pending",
+      userId: user.userId,
       updatedAt: Date.now() + 1,
       groupId: null,
       order: 0,

@@ -5,9 +5,9 @@ import { ButtonWithTip } from "../ui/button";
 import { MessageRetryMenu } from "./message-retry-menu";
 
 // import { useChatRequest } from "@/lib/chat/send-chat-request";
-import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useChatStore } from "@/lib/store/chat-store";
 
 type MessageActionButtonsProps = {
   index: number;
@@ -15,23 +15,18 @@ type MessageActionButtonsProps = {
 };
 
 export function MessageActionButtons({ index, message }: MessageActionButtonsProps) {
-  const editMessage = useChatStore((state) => state.editMessage);
-  // const { retryMessage, branchOffThreadMessage } = useChatRequest();
-
   async function handleEditMessage() {
-    if (message.role === "assistant") return;
-    if (editMessage?._id === message._id) {
-      useChatStore.getState().setEditMessage(null);
-
-      if (editMessage.content !== message.content) {
-        // await retryMessage(index, {
-        //   editedUserMessage: { _id: editMessage._id, content: editMessage.content },
-        // });
-      }
-      return;
-    }
-
-    useChatStore.getState().setEditMessage({ _id: message._id, content: message.content });
+    // if (message.role === "assistant") return;
+    // if (editMessage?._id === message._id) {
+    //   useChatStore.getState().setEditMessage(null);
+    //   if (editMessage.content !== message.content) {
+    //     // await retryMessage(index, {
+    //     //   editedUserMessage: { _id: editMessage._id, content: editMessage.content },
+    //     // });
+    //   }
+    //   return;
+    // }
+    // useChatStore.getState().setEditMessage({ _id: message._id, content: message.content });
   }
 
   return (
@@ -39,7 +34,14 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
       <CopyButton
         className="size-8"
         side="bottom"
-        content={message.status === "error" ? message.error || "" : message.content}
+        content={
+          message.status === "error"
+            ? message.error || ""
+            : message.parts
+                .filter((p) => p.type === "text")
+                .map((p) => p.text)
+                .join("\n\n")
+        }
       />
 
       {message.role === "assistant" && (
@@ -61,8 +63,8 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
             variant="ghost"
             side="bottom"
             disabled={message.status === "pending"}
-            onMouseDown={() => useChatStore.getState().setEditMessage(null)}
-            className={cn("hidden size-8", { flex: editMessage?._id === message._id })}
+            // onMouseDown={() => useChatStore.getState().setEditMessage(null)}
+            // className={cn("hidden size-8", { flex: editMessage?._id === message._id })}
             title="Cancel Edit"
           >
             <XIcon className="size-4" />
@@ -75,17 +77,17 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
             className="size-8"
             onMouseDown={handleEditMessage}
             disabled={message.status === "pending"}
-            title={editMessage?._id === message._id ? "Save Message" : "Edit Message"}
+            // title={editMessage?._id === message._id ? "Save Message" : "Edit Message"}
           >
-            {editMessage?._id === message._id ? (
+            {/* {editMessage?._id === message._id ? (
               <SaveIcon className="size-4" />
             ) : (
               <PencilIcon className="size-4" />
-            )}
+            )} */}
 
-            <span className="sr-only">
+            {/* <span className="sr-only">
               {editMessage?._id === message._id ? "Save Message" : "Edit Message"}
-            </span>
+            </span> */}
           </ButtonWithTip>
         </>
       )}

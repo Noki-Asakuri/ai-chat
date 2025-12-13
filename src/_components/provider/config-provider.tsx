@@ -9,17 +9,18 @@ import { useStore } from "zustand";
 
 export const ConfigStoreContext = createContext<ReturnType<typeof createConfigStore> | null>(null);
 
-export function ConfigStoreProvider({
-  children,
-  initialState,
-}: {
+type ConfigStoreProviderProps = {
   children: React.ReactNode;
   initialState: Partial<ConfigStoreData>;
-}) {
-  const store = useRef(createConfigStore(initialState));
+};
+
+export function ConfigStoreProvider(props: ConfigStoreProviderProps) {
+  const store = useRef(createConfigStore(props.initialState));
 
   return (
-    <ConfigStoreContext.Provider value={store.current}>{children}</ConfigStoreContext.Provider>
+    <ConfigStoreContext.Provider value={store.current}>
+      {props.children}
+    </ConfigStoreContext.Provider>
   );
 }
 

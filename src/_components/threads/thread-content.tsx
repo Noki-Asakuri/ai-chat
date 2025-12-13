@@ -34,7 +34,7 @@ import { ThreadItem } from "./thread-item";
 import { UngroupedThreadGroup } from "./thread-ungrouped";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";
-import { threadStore, useThreadStore } from "@/lib/store/thread-store";
+import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 
 export function ThreadContents() {
   return (
@@ -127,7 +127,7 @@ function ThreadListWrapper() {
 
   // Update the local cache when the data is fetched
   useEffect(() => {
-    if (data) threadStore.setGroupedThreads(data);
+    if (data) threadStoreActions.setGroupedThreads(data);
   }, [data]);
 
   return <ThreadList data={data ?? cachedData} />;
@@ -208,13 +208,13 @@ function ThreadList({ data }: ThreadListProps) {
     switch (activeData.type) {
       case "thread": {
         const thread = data.threads.find((t) => t._id === activeData.threadId)!;
-        threadStore.setActiveDraggingItem({ type: "thread", item: thread });
+        threadStoreActions.setActiveDraggingItem({ type: "thread", item: thread });
         break;
       }
 
       case "group": {
         const group = data.groups.find((g) => g._id === activeData.groupId)!;
-        threadStore.setActiveDraggingItem({ type: "group", item: group });
+        threadStoreActions.setActiveDraggingItem({ type: "group", item: group });
         break;
       }
     }
@@ -404,7 +404,7 @@ function ThreadList({ data }: ThreadListProps) {
 
     setOptimisticGrouped(null);
     setOptimisticGroups(null);
-    threadStore.setActiveDraggingItem(null);
+    threadStoreActions.setActiveDraggingItem(null);
 
     pendingDropRef.current = null;
     snapshotRef.current = null;
@@ -414,7 +414,7 @@ function ThreadList({ data }: ThreadListProps) {
     console.debug("[Thread] Drag cancel");
     setOptimisticGrouped(null);
     setOptimisticGroups(null);
-    threadStore.setActiveDraggingItem(null);
+    threadStoreActions.setActiveDraggingItem(null);
 
     pendingDropRef.current = null;
     snapshotRef.current = null;

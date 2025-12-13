@@ -20,7 +20,7 @@ import {
 
 import { getConvexReactClient } from "@/lib/convex/client";
 import { convexSessionQuery } from "@/lib/convex/helpers";
-import { threadStore, useThreadStore } from "@/lib/store/thread-store";
+import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import { groupByDate } from "@/lib/threads/group-by-date";
 import type { Thread } from "@/lib/types";
 import { fromUUID, toUUID } from "@/lib/utils";
@@ -39,7 +39,7 @@ export function ThreadCommand({ isSkeleton }: { isSkeleton?: boolean }) {
         disabled={isSkeleton}
         title="Search Threads"
         data-expanded={threadCommandOpen}
-        onClick={() => threadStore.setThreadCommandOpen(true)}
+        onClick={() => threadStoreActions.setThreadCommandOpen(true)}
         className="h-7 rounded-md border px-2 py-1 opacity-100 transition-opacity"
       >
         <SearchIcon />
@@ -102,7 +102,7 @@ function ThreadCommandDialog() {
   const groupedThreads = groupByDate(isLoading ? [] : (data ?? []));
 
   return (
-    <CommandDialog open={threadCommandOpen} onOpenChange={threadStore.setThreadCommandOpen}>
+    <CommandDialog open={threadCommandOpen} onOpenChange={threadStoreActions.setThreadCommandOpen}>
       <CommandInput placeholder="Search threads..." value={query} onValueChange={setQuery} />
 
       <CommandList className="custom-scroll max-h-[400px]">
@@ -149,7 +149,7 @@ function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
           className="p-0!"
           onSelect={async () => {
             await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(thread._id) } });
-            threadStore.setThreadCommandOpen(false);
+            threadStoreActions.setThreadCommandOpen(false);
           }}
         >
           <span title={thread.title} className="w-full truncate px-2 py-1.5">

@@ -77,8 +77,8 @@ type ImagePreviewDialogProps = Omit<
   "children"
 > & {
   file?: File | null;
-  image: { src?: string; alt: string; name: string; size?: number };
-  images?: Array<{ src?: string; alt: string; name: string; size?: number }>;
+  image: { src?: string; alt?: string; name: string; size?: number };
+  images?: Array<{ src: string; alt?: string; name: string; size?: number }>;
   initialIndex?: number;
   children: ((objectUrl: string | null) => React.ReactNode) | React.ReactNode;
 };
@@ -319,7 +319,7 @@ export function ImagePreviewDialog({
             )}
 
             <img
-              alt={activeImage.alt}
+              alt={activeImage.alt ?? activeImage.name}
               src={objectUrl ?? activeImage.src}
               className="pointer-events-auto max-h-[80vh] max-w-[80vw] rounded-lg select-none"
             />

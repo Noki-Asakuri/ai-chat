@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { generateText, type ModelMessage } from "ai";
+import { generateText, type ModelMessage, type TextPart } from "ai";
 import dedent from "dedent";
 
 import { type ServerConvexClient } from "../convex/server";
@@ -22,6 +22,8 @@ export async function updateTitle({
   if (messages.length > 1 || !messages[0] || !threadId) return;
   console.debug("[Server] Updating thread title", threadId);
 
+  const content = (messages[0].content as TextPart[])[0]?.text ?? "Empty message";
+
   const { text } = await generateText({
     model: registry("google/gemini-2.5-flash"),
     providerOptions: { google: { safetySettings } },
@@ -36,7 +38,7 @@ export async function updateTitle({
         content: dedent`
 				User message content:
 				"""
-				${messages[0].content}
+				${content}
 				"""
 
 				Please summarize the above conversation into a title, following the following rules.

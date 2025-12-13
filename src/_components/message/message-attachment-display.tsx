@@ -5,9 +5,9 @@ import { Link } from "@tanstack/react-router";
 
 import { ImagePreviewDialog } from "../image-preview-dialog";
 
-import { useChatStore } from "@/lib/chat/store";
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
+import { useChatStore } from "@/lib/store/chat-store";
 
 type MessageAttachmentDisplayProps = {
   attachments: ChatMessage["attachments"];
@@ -24,7 +24,9 @@ export function MessageAttachmentDisplay({
   attachments,
   messageId,
 }: MessageAttachmentDisplayProps) {
-  const previewImagesMap = useChatStore((state) => state.previewImages);
+  const previewImagesMap = useChatStore(
+    (state) => ({}) as Record<Id<"messages">, Array<{ src: string; size?: number; name?: string }>>,
+  );
   const previewImages = previewImagesMap[messageId!] ?? [];
 
   // Split persisted attachments into images vs. others.

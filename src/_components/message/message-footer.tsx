@@ -1,16 +1,16 @@
 import { MessageActionButtons } from "./message-action-buttons";
 import { MessageMetadata } from "./message-metadata";
 
-import type { UIChatMessage } from "@/lib/types";
+import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type MessageFooterProps = {
   index: number;
   isLast: boolean;
-  message: UIChatMessage;
+  message: ChatMessage;
 };
 
-export function MessageFooter({ index, isLast, message, renderMessage }: MessageFooterProps) {
+export function MessageFooter({ index, isLast, message }: MessageFooterProps) {
   const isFinished = message.status === "complete" || message.status === "error";
 
   return (
@@ -24,14 +24,7 @@ export function MessageFooter({ index, isLast, message, renderMessage }: Message
       )}
     >
       {isFinished && <MessageActionButtons index={index} message={message} />}
-
-      {message.role === "assistant" && (
-        <MessageMetadata
-          metadata={renderMessage.metadata}
-          params={message.modelParams}
-          model={message.model}
-        />
-      )}
+      {message.role === "assistant" && <MessageMetadata metadata={message.metadata} />}
     </div>
   );
 }

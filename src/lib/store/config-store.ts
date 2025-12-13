@@ -10,6 +10,8 @@ type ChatConfig = {
   effort: ReasoningEffort;
   webSearch: boolean;
   profile?: { id: Id<"profiles">; name: string; systemPrompt: string } | null;
+
+  pref: "enter" | "ctrlEnter";
 };
 
 type UserCustomization = {
@@ -34,6 +36,7 @@ export function createConfigStore(initialState: Partial<ConfigStoreData>) {
         webSearch: false,
         model: "google/gemini-2.5-flash",
         profile: null,
+        pref: "enter",
 
         setConfig: (config) => set((state) => ({ ...state, ...config })),
 
@@ -56,6 +59,7 @@ export function createConfigStore(initialState: Partial<ConfigStoreData>) {
           model: state.model,
           profile: state.profile,
           wrapline: state.wrapline,
+          pref: state.pref,
         }),
       },
     ),

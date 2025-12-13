@@ -1,16 +1,18 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-import type { UserAttachment } from "../types";
+import type { RemoveAllExceptFunctions, UserAttachment } from "../types";
 
 export type ChatStore = {
   input: string;
   setInput: (content: string) => void;
 
   attachments: UserAttachment[];
-  addAttachments: (attachments: Array<UserAttachment>) => void;
+  addAttachments: (attachments: UserAttachment[]) => void;
   removeAttachment: (id: string) => void;
   clearAttachments: () => void;
+
+  resetInput: () => void;
 
   textareaHeight: number;
   setTextareaHeight: (height: number) => void;
@@ -32,6 +34,8 @@ export const useChatStore = create<ChatStore>()(
         set((state) => ({ attachments: state.attachments.filter((a) => a.id !== id) })),
       clearAttachments: () => set({ attachments: [] }),
 
+      resetInput: () => set({ input: "", attachments: [] }),
+
       // Default: 147px + 8px (positon bottom) + 16px (padding above)
       textareaHeight: 147 + 8 + 16,
       setTextareaHeight: (height) => set({ textareaHeight: Math.max(height, 147) + 8 + 16 }),
@@ -48,4 +52,5 @@ export const useChatStore = create<ChatStore>()(
   ),
 );
 
-export const chatStore = useChatStore.getState();
+export const chatStoreActions =
+  useChatStore.getInitialState() as RemoveAllExceptFunctions<ChatStore>;

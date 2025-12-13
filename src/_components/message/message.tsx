@@ -1,3 +1,5 @@
+import type { Id } from "@/convex/_generated/dataModel";
+
 import { useEffect, useRef } from "react";
 import { useShallow } from "zustand/shallow";
 
@@ -8,34 +10,37 @@ import { MessageContent } from "./message-content";
 import { MessageFooter } from "./message-footer";
 
 import { getModelData } from "@/lib/chat/models";
-import type { UIChatMessage } from "@/lib/types";
+import type { ChatMessage } from "@/lib/types";
+import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
+import { useMessageStore } from "@/lib/store/messages-store";
 
 type MessageProps = {
-  message: UIChatMessage;
+  messageId: Id<"messages">;
   index: number;
-  isLast: boolean;
+  total: number;
 };
 
-export function Message({ message, index, isLast }: MessageProps) {
-  // const { editMessage, lastUserMessageHeight, popupRetryMessageId, textareaHeight } = useChatStore(
-  //   useShallow((state) => ({
-  //     editMessage: state.editMessage,
-  //     popupRetryMessageId: state.popupRetryMessageId,
-  //     textareaHeight: state.textareaHeight,
-  //     lastUserMessageHeight: state.lastUserMessageHeight ?? 114,
-  //   })),
-  // );
+export function Message({ messageId, index, total }: MessageProps) {
+  const message = useMessageStore(useShallow((state) => state.messagesById[messageId]!));
+  const isLast = message.role === "user" ? index === total - 2 : index === total - 1;
+
+  const { lastUserMessageHeight, textareaHeight } = useChatStore(
+    useShallow((state) => ({
+      textareaHeight: state.textareaHeight,
+      lastUserMessageHeight: state.lastUserMessageHeight ?? 114,
+    })),
+  );
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // const userMessageHeight =
-  //   lastUserMessageHeight > window.innerHeight ? 114 : lastUserMessageHeight;
+  const userMessageHeight =
+    lastUserMessageHeight > window.innerHeight ? 114 : lastUserMessageHeight;
 
-  // const minHeight =
-  //   isLast && message.role === "assistant"
-  //     ? // 100vh - (padding top + padding bottom + textarea height + last known user message height)
-  //       `calc(100vh - (40px + ${Math.max(textareaHeight, 165 + 50)}px + 16px + ${userMessageHeight}px))`
-  //     : "auto";
+  const minHeight =
+    isLast && message.role === "assistant"
+      ? // 100vh - (padding top + padding bottom + textarea height + last known user message height)
+        `calc(100vh - (40px + ${Math.max(textareaHeight, 165 + 50)}px + 16px + ${userMessageHeight}px))`
+      : "auto";
 
   // Keep assistant min-height in sync with live changes to the most recent user message
   useEffect(() => {
@@ -46,12 +51,12 @@ export function Message({ message, index, isLast }: MessageProps) {
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const h = Math.round(entry.contentRect.height);
-        // useChatStore.getState().setMessageHeight(h);
+        chatStoreActions.setMessageHeight(h);
       }
     });
 
     // init and observe
-    // useChatStore.getState().setMessageHeight(el.clientHeight);
+    chatStoreActions.setMessageHeight(el.clientHeight);
     ro.observe(el);
 
     return () => {
@@ -62,36 +67,35 @@ export function Message({ message, index, isLast }: MessageProps) {
   return (
     <div
       ref={containerRef}
-      // style={{ minHeight }}
+      style={{ minHeight }}
       data-slot="message"
       className="group flex flex-col gap-2"
-      key={message.id}
+      key={message._id}
       data-index={index}
       data-islast={isLast}
       data-role={message.role}
       data-model={message.metadata?.model}
-      data-id={message.id}
-      // data-height={lastUserMessageHeight}
+      data-id={message._id}
+      data-height={lastUserMessageHeight}
       data-effort={message.metadata?.modelParams.effort}
-      data-web-search={message.metadata?.modelParams.webSearchEnabled ?? false}
+      data-web-search={message.metadata?.modelParams.webSearch ?? false}
       // data-open={popupRetryMessageId === message.id || editMessage?._id === message.id}
     >
-      <MessageInner message={message} index={index} isLast={isLast} />
-
-      {/* {message.status === "pending" ? (
-        <MessageLoading model={message.model} params={message.modelParams} />
-      ) : ( */}
-      {/* )} */}
+      {message.status === "pending" ? (
+        <MessageLoading metadata={message.metadata} />
+      ) : (
+        <MessageInner message={message} index={index} isLast={isLast} />
+      )}
     </div>
   );
 }
 
 type MessageLoadingProps = {
-  metadata: UIChatMessage["metadata"];
+  metadata: ChatMessage["metadata"];
 };
 
 function MessageLoading({ metadata }: MessageLoadingProps) {
-  const modelData = getModelData(metadata?.model || "google/gemini-2.5-flash");
+  const modelData = getModelData(metadata?.model.request || "google/gemini-2.5-flash");
 
   const showEffort =
     typeof modelData.capabilities.reasoning === "boolean" &&
@@ -120,11 +124,14 @@ function MessageLoading({ metadata }: MessageLoadingProps) {
   );
 }
 
-function MessageInner({ message, index, isLast }: MessageProps) {
-  // const editMessage = useChatStore((state) => state.editMessage);
-  // const overlay = useChatStore((state) => state.assistantMessages.get(message.id));
+type MessageInnerProps = {
+  message: ChatMessage;
+  index: number;
+  isLast: boolean;
+};
 
-  // const renderMessage = message.role === "assistant" && overlay ? overlay : message;
+function MessageInner({ message, index, isLast }: MessageInnerProps) {
+  // const editMessage = useChatStore((state) => state.editMessage);
 
   // const shouldShowFooter = editMessage?._id !== message.id;
   // const isUserMessageEdit = message.role === "user" && editMessage?._id === message.id;
@@ -132,17 +139,7 @@ function MessageInner({ message, index, isLast }: MessageProps) {
   return (
     <>
       <MessageContent message={message} />
-      {/* {isUserMessageEdit ? null : ( // <MessageEditComposer message={message} index={index} /> */}
-      {/* )} */}
-
-      {/* {shouldShowFooter && (
-        <MessageFooter
-          index={index}
-          isLast={isLast}
-          message={message}
-          renderMessage={renderMessage}
-        />
-      )} */}
+      <MessageFooter index={index} isLast={isLast} message={message} />
     </>
   );
 }

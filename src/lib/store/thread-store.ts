@@ -2,6 +2,7 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import type { RemoveAllExceptFunctions } from "../types";
 
 type ActiveDraggingItem =
   | { type: "thread"; item: Doc<"threads"> }
@@ -57,4 +58,5 @@ export const useThreadStore = create<ThreadStore>()(
   ),
 );
 
-export const threadStore = useThreadStore.getState();
+export const threadStoreActions =
+  useThreadStore.getInitialState() as RemoveAllExceptFunctions<ThreadStore>;

@@ -2,10 +2,12 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { createServerFn } from "@tanstack/react-start";
+import { convertToModelMessages } from "ai";
 
 import { withAuth } from "@/lib/authkit/ssr/session";
 import { createServerConvexClient } from "@/lib/convex/server";
 import { updateTitle } from "@/lib/server/update-title";
+import type { UIChatMessage } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
 
 export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
@@ -43,18 +45,13 @@ export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
       if (result.messages.length === 0) return { error: "No messages found" };
 
       const firstUser = result.messages.find((m) => m.role === "user");
-      if (!firstUser || !firstUser.content) return { error: "No user message found" };
+      if (!firstUser || !firstUser.parts.length) return { error: "No user message found" };
 
-      const input: Array<{ role: string; content: string }> = [
-        { role: "user", content: firstUser.content },
-      ];
+      const messages = convertToModelMessages([
+        { role: "user", parts: firstUser.parts as UIChatMessage["parts"] },
+      ]);
 
-      await updateTitle({
-        threadId: data.threadId,
-        messages: input,
-        serverConvexClient,
-        sessionId,
-      });
+      await updateTitle({ threadId: data.threadId, messages, serverConvexClient, sessionId });
 
       return { status: "ok" };
     } catch (err) {

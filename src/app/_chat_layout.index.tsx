@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 
 import { useChatStore } from "@/lib/store/chat-store";
+import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 
 export const Route = createFileRoute("/_chat_layout/")({
   preload: false,
@@ -14,6 +16,11 @@ export const Route = createFileRoute("/_chat_layout/")({
 });
 
 function RouteComponent() {
+  useEffect(() => {
+    messageStoreActions.clearMessages();
+    messageStoreActions.setCurrentThreadId(null);
+  }, []);
+
   return (
     <>
       <WelcomeScreen />

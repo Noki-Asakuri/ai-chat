@@ -3,12 +3,22 @@ import { authKit } from "../components";
 export const { authKitEvent } = authKit.events({
   "user.created": async (ctx, event) => {
     await ctx.db.insert("users", {
-      customization: {},
       userId: event.data.id,
 
       emailAddress: event.data.email,
       imageUrl: event.data.profilePictureUrl,
       username: `${event.data.firstName} ${event.data.lastName}`,
+
+      customization: {
+        backgroundId: null,
+        disableBlur: false,
+        hiddenModels: [],
+        name: event.data.firstName ?? "user",
+        occupation: "unknown",
+        showFullCode: false,
+        systemInstruction: "You are a helpful assistant.",
+        traits: [],
+      },
     });
   },
   "user.updated": async (ctx, event) => {

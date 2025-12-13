@@ -1,5 +1,5 @@
 import { asyncMap } from "convex-helpers";
-import { getAll, getManyFrom } from "convex-helpers/server/relationships";
+import { getAll } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
@@ -8,29 +8,33 @@ import { internalMutation } from "../_generated/server";
 import { authenticatedMutation, authenticatedQuery } from "../components";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
-import type { ChatMessage } from "../../src/lib/types";
-
 export const getAllMessagesFromThread = authenticatedQuery({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
     const user = ctx.user;
 
     if (!user) throw new Error("Not authenticated");
-    if (!args.threadId) return { messages: [] as ChatMessage[], thread: null };
+    if (!args.threadId) throw new Error("Thread not found");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread?.userId !== user.userId) throw new Error("Not authorized");
 
-    const messages = await asyncMap(
-      await getManyFrom(ctx.db, "messages", "by_userId_threadId", args.threadId, "userId"),
-      async (message) => {
-        const attachments = await getAll(ctx.db, message.attachments);
-        return { ...message, attachments };
-      },
-    );
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_userId_threadId", (q) =>
+        q.eq("userId", user.userId).eq("threadId", args.threadId),
+      )
+      .order("asc")
+      .collect();
 
-    return { messages, thread };
+    const messagesWithAttachments = await asyncMap(messages, async (message) => {
+      const attachmentsRaw = await getAll(ctx.db, message.attachments);
+      const attachments = attachmentsRaw.filter(Boolean) as Doc<"attachments">[];
+      return { ...message, attachments };
+    });
+
+    return { messages: messagesWithAttachments, thread };
   },
 });
 
@@ -66,7 +70,7 @@ export const addAttachmentsToMessage = authenticatedMutation({
     if (!message) throw new Error("Message not found");
     if (message.userId !== user.userId) throw new Error("Not authorized");
 
-    await ctx.db.patch(message._id, { attachments: [args.attachmentId] });
+    await ctx.db.patch("messages", message._id, { attachments: [args.attachmentId] });
   },
 });
 
@@ -75,18 +79,13 @@ export const addMessagesToThread = authenticatedMutation({
     threadId: v.id("threads"),
     messages: v.array(
       v.object({
-        model: v.string(),
-        content: v.string(),
         messageId: v.string(),
         role: v.union(v.literal("assistant"), v.literal("user")),
 
         status: status,
         parts: AISDKParts,
-        modelParams: AISDKModelParams,
         metadata: v.optional(AISDKMetadata),
 
-        createdAt: v.number(),
-        updatedAt: v.number(),
         attachments: v.array(v.id("attachments")),
       }),
     ),
@@ -104,21 +103,29 @@ export const addMessagesToThread = authenticatedMutation({
       (typeof args.messages)[1],
     ];
 
+    const now = Date.now();
+
+    const shared = {
+      threadId: args.threadId,
+      userId: user.userId,
+      createdAt: now,
+      updatedAt: now,
+
+      metadata: undefined,
+      resumableStreamId: null,
+    };
+
     const [, assistantMessageId] = await Promise.all([
-      ctx.db.insert("messages", { threadId: args.threadId, userId: user.userId, ...userMessage }),
-      ctx.db.insert("messages", {
-        threadId: args.threadId,
-        userId: user.userId,
-        ...assistantMessage,
-      }),
+      ctx.db.insert("messages", { ...shared, ...userMessage }),
+      // So that we can sort by createdAt and have the assistant message come after the user message
+      ctx.db.insert("messages", { ...shared, ...assistantMessage, createdAt: now + 1 }),
     ]);
 
-    await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
-      userId: user.userId,
-      threadId: args.threadId,
-      content: userMessage.content,
-      createdAt: userMessage.createdAt,
-    });
+    // await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
+    //   userId: user.userId,
+    //   threadId: args.threadId,
+    //   createdAt: userMessage.createdAt,
+    // });
 
     return assistantMessageId;
   },
@@ -128,48 +135,42 @@ export const updateErrorMessage = authenticatedMutation({
   args: {
     messageId: v.id("messages"),
     error: v.string(),
-    model: v.string(),
-    modelParams: AISDKModelParams,
+    metadata: AISDKMetadata.partial(),
   },
   handler: async (ctx, args) => {
-    const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
-
-    const message = await ctx.db.get(args.messageId);
-    if (!message) throw new Error("Message not found");
-    if (message.userId !== user.userId) throw new Error("User not authorized");
-
-    await ctx.db.patch(args.messageId, {
-      status: "error",
-      error: args.error,
-      model: args.model,
-      modelParams: args.modelParams,
-      resumableStreamId: null,
-      updatedAt: Date.now(),
-    });
-
-    await ctx.db.patch(message.threadId, {
-      updatedAt: Date.now(),
-      status: "complete",
-    });
+    // const user = ctx.user;
+    // if (!user) throw new Error("Not authenticated");
+    // const message = await ctx.db.get(args.messageId);
+    // if (!message) throw new Error("Message not found");
+    // if (message.userId !== user.userId) throw new Error("User not authorized");
+    // await ctx.db.patch(args.messageId, {
+    //   status: "error",
+    //   error: args.error,
+    //   model: args.model,
+    //   modelParams: args.modelParams,
+    //   resumableStreamId: null,
+    //   updatedAt: Date.now(),
+    // });
+    // await ctx.db.patch(message.threadId, {
+    //   updatedAt: Date.now(),
+    //   status: "complete",
+    // });
   },
 });
 
 export const updateMessageById = authenticatedMutation({
   args: {
     messageId: v.id("messages"),
-    updates: v.object({
-      status: v.optional(status),
-      model: v.optional(v.string()),
-      content: v.optional(v.string()),
-      reasoning: v.optional(v.string()),
-      resumableStreamId: v.optional(v.nullable(v.string())),
+    updates: v
+      .object({
+        status: status,
+        resumableStreamId: v.nullable(v.string()),
 
-      parts: v.optional(AISDKParts),
-      metadata: v.optional(AISDKMetadata),
-      modelParams: v.optional(AISDKModelParams),
-      attachments: v.optional(v.array(v.id("attachments"))),
-    }),
+        parts: AISDKParts,
+        metadata: AISDKMetadata,
+        attachments: v.array(v.id("attachments")),
+      })
+      .partial(),
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
@@ -199,20 +200,20 @@ export const updateMessageById = authenticatedMutation({
 
     const becameComplete = message.status !== "complete" && args.updates.status === "complete";
 
-    if (message.role === "assistant" && becameComplete) {
-      const content = args.updates.content ?? message.content ?? "";
-      const modelUniqueId = args.updates.model ?? message.model ?? "";
-      const profileId = args.updates.metadata?.profile?.id ?? message.metadata?.profile?.id;
+    // if (message.role === "assistant" && becameComplete) {
+    //   const content = args.updates.content ?? message.content ?? "";
+    //   const modelUniqueId = args.updates.model ?? message.model ?? "";
+    //   const profileId = args.updates.metadata?.profile?.id ?? message.metadata?.profile?.id;
 
-      await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
-        userId: user.userId,
-        threadId: message.threadId,
-        content,
-        modelUniqueId,
-        createdAt: message.createdAt,
-        ...(profileId ? { profileId } : {}),
-      });
-    }
+    //   await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
+    //     userId: user.userId,
+    //     threadId: message.threadId,
+    //     content,
+    //     modelUniqueId,
+    //     createdAt: message.createdAt,
+    //     ...(profileId ? { profileId } : {}),
+    //   });
+    // }
   },
 });
 
@@ -221,14 +222,10 @@ export const retryChatMessage = authenticatedMutation({
     threadId: v.id("threads"),
     assistantMessageId: v.id("messages"),
 
-    model: v.optional(v.string()),
-    modelParams: v.optional(AISDKModelParams),
+    model: v.string(),
+    modelParams: AISDKModelParams,
 
-    userMessage: v.object({
-      messageId: v.id("messages"),
-      parts: v.optional(AISDKParts),
-      content: v.optional(v.string()),
-    }),
+    userMessage: v.optional(v.object({ messageId: v.id("messages"), parts: AISDKParts })),
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
@@ -251,55 +248,53 @@ export const retryChatMessage = authenticatedMutation({
       )
       .collect();
 
-    const defaultModelParams = { effort: "medium", webSearchEnabled: false } as const;
-
-    const userUpdates: Partial<Doc<"messages">> = {
-      updatedAt: Date.now(),
-      model: args.model ?? assistantMessage.model ?? "",
-      modelParams: args.modelParams ?? assistantMessage.modelParams ?? defaultModelParams,
-    };
-
-    if (args.userMessage.content) {
-      userUpdates.content = args.userMessage.content;
-      userUpdates.parts = args.userMessage.parts;
+    if (args.userMessage) {
+      await ctx.db.patch(args.userMessage.messageId, {
+        updatedAt: Date.now(),
+        parts: args.userMessage.parts,
+      });
     }
-    await ctx.db.patch(args.userMessage.messageId, userUpdates);
 
     for (const message of deleteMessages) {
       await ctx.db.delete(message._id);
     }
 
     await Promise.all([
-      ctx.db.patch(args.threadId, { status: "pending", updatedAt: Date.now() }),
-      ctx.db.patch(args.assistantMessageId, {
+      ctx.db.patch("threads", args.threadId, { status: "pending", updatedAt: Date.now() }),
+      ctx.db.patch("messages", args.assistantMessageId, {
         messageId: crypto.randomUUID(),
         status: "pending",
-        content: "",
-        reasoning: "",
         parts: [],
-        metadata: undefined,
         resumableStreamId: null,
         error: undefined,
-        modelParams: args.modelParams ?? assistantMessage.modelParams ?? defaultModelParams,
-        model: args.model ?? assistantMessage.model ?? "",
-        attachments: [],
+
         updatedAt: Date.now(),
+
+        metadata: {
+          durations: { request: 0, reasoning: 0, text: 0 },
+          usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+          timeToFirstTokenMs: 0,
+          finishReason: "",
+
+          modelParams: args.modelParams,
+          model: { request: args.model, response: null },
+        },
       }),
     ]);
   },
 });
 
-export const backfillMessageUsageStats = internalMutation({
-  args: { messageId: v.id("messages") },
-  handler: async (ctx, args) => {
-    const message = await ctx.db.get(args.messageId);
-    if (!message || !message.metadata) return;
+// export const backfillMessageUsageStats = internalMutation({
+//   args: { messageId: v.id("messages") },
+//   handler: async (ctx, args) => {
+//     const message = await ctx.db.get(args.messageId);
+//     if (!message || !message.metadata) return;
 
-    const reasoningTokens = message.metadata?.usages.reasoningTokens ?? 0;
-    const outputTokens = message.metadata?.usages.outputTokens ?? 0;
+//     const reasoningTokens = message.metadata?.usages.reasoningTokens ?? 0;
+//     const outputTokens = message.metadata?.usages.outputTokens ?? 0;
 
-    await ctx.db.patch(message._id, {
-      metadata: { ...message.metadata, usages: { inputTokens: 0, outputTokens, reasoningTokens } },
-    });
-  },
-});
+//     await ctx.db.patch(message._id, {
+//       metadata: { ...message.metadata, usages: { inputTokens: 0, outputTokens, reasoningTokens } },
+//     });
+//   },
+// });
