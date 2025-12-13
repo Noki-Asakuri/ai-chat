@@ -1,6 +1,3 @@
-import { api } from "@/convex/_generated/api";
-import { useQuery } from "@tanstack/react-query";
-
 import { useEffect, useEffectEvent, useRef } from "react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
@@ -13,7 +10,6 @@ import { ChatSendButton } from "./send-button";
 
 import { useGetSendDescription, useShouldSend } from "@/lib/chat/send-preference";
 import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message";
-import { convexSessionQuery } from "@/lib/convex/helpers";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
 export function ChatTextarea() {
@@ -23,7 +19,8 @@ export function ChatTextarea() {
     const entry = entries[0];
     if (!entry) return;
 
-    chatStoreActions.setTextareaHeight(entry.target.clientHeight);
+    // Minus the border width (1px) on both sides
+    chatStoreActions.setTextareaHeight(entry.target.clientHeight - 2);
   });
 
   useEffect(() => {
@@ -45,8 +42,7 @@ export function ChatTextarea() {
       className="pointer-events-none absolute bottom-2 w-full px-4"
     >
       <form className="mx-auto space-y-2">
-        <div className="pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150">
-          <UsageBanner />
+        <div className="pointer-events-auto relative mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150">
           <ChatAttachmentsDisplay />
 
           <div>
@@ -148,47 +144,5 @@ function TextareaDescription() {
     <span id="textarea-description" className="sr-only">
       {sendDescription}
     </span>
-  );
-}
-
-function getResetDate(type: "monthly" | "daily"): string {
-  const dateNow = Date.now();
-
-  switch (type) {
-    case "monthly": {
-      const date = new Date(dateNow);
-      date.setMonth(date.getMonth() + 1);
-      date.setDate(1);
-      date.setHours(0, 0, 0, 0);
-
-      return date.toISOString();
-    }
-
-    case "daily": {
-      const date = new Date(dateNow);
-      date.setDate(date.getDate() + 1);
-      date.setHours(0, 0, 0, 0);
-
-      return date.toISOString();
-    }
-  }
-}
-
-function UsageBanner() {
-  const { data, isPending } = useQuery(convexSessionQuery(api.functions.usages.getUserUsages));
-  if (isPending || !data || data.used < data.base) return null;
-
-  const resetStr = getResetDate(data.resetType ?? "monthly");
-
-  return (
-    <div className="border-b text-sm">
-      <div className="px-2.5 py-2">
-        {data.resetType === "monthly" ? "Monthly" : "Daily"} usage:{" "}
-        <span className="font-medium">
-          {data.used} / {data.base}
-        </span>
-        . Resets on <span className="font-medium">{resetStr}</span>.
-      </div>
-    </div>
   );
 }
