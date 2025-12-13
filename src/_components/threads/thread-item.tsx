@@ -32,6 +32,7 @@ import { ThreadDeleteDialog } from "./thread-delete-dialog";
 import { getConvexReactClient } from "@/lib/convex/client";
 import type { Thread } from "@/lib/types";
 import { cn, toUUID } from "@/lib/utils";
+import { useSessionId } from "@/lib/hooks/use-session";
 
 const convexClient = getConvexReactClient();
 
@@ -43,11 +44,12 @@ type ThreadItemProps = {
 
 export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
   const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: thread._id,
-    disabled,
-    data: { type: "thread", threadId: thread._id, belongsTo: thread.groupId ?? null },
-  });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isSorting } =
+    useSortable({
+      id: thread._id,
+      disabled,
+      data: { type: "thread", threadId: thread._id, belongsTo: thread.groupId ?? null },
+    });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -85,7 +87,7 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
       </Link>
 
       <div className="flex items-center gap-2">
-        <ThreadActions thread={thread} isStreaming={isStreaming} />
+        {!(isDragging || disabled) && <ThreadActions thread={thread} isStreaming={isStreaming} />}
 
         {isStreaming && (
           <div className="inline-block">
@@ -96,11 +98,14 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
 
         {!isStreaming && (
           <div
+            data-slot="thread-dnd-handle"
             {...attributes}
             {...listeners}
             className={cn(
               "cursor-grab py-1.5 active:cursor-grabbing",
-              (isDragging || disabled) && "cursor-grabbing",
+              "hidden group-hover/thread:flex",
+              "peer-data-popup-open:flex",
+              (isDragging || disabled) && "flex cursor-grabbing",
             )}
           >
             <GripVerticalIcon className="size-4" />
@@ -125,6 +130,8 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const sessionId = useSessionId();
+
   const regenerateThreadTitle = useServerFn(regenerateThreadTitleServerFn);
 
   function toggleThreadPin() {
@@ -132,6 +139,7 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
     void convexClient.mutation(api.functions.threads.pinThread, {
       threadId: thread._id,
       pinned: !thread.pinned,
+      sessionId,
     });
   }
 
@@ -146,6 +154,7 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
     console.debug("[Thread] Update title", { threadId: thread._id, title });
     startSaving(async () => {
       await convexClient.mutation(api.functions.threads.updateThreadTitle, {
+        sessionId,
         threadId: thread._id,
         title,
       });
@@ -167,10 +176,10 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
       <Menu.Root>
         <Menu.Trigger
           ref={menuTriggerRef}
-          data-slot="thread-actions"
+          data-slot="thread-actions-trigger"
           {...props}
           className={cn(
-            "pointer-events-auto hidden items-center justify-center group-hover/thread:flex group-data-[thread-active=true]/thread:flex data-popup-open:flex",
+            "peer pointer-events-auto hidden items-center justify-center group-hover/thread:flex data-popup-open:flex",
             className,
           )}
         >
