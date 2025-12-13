@@ -21,7 +21,6 @@ import {
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { ImagePreviewDialog } from "@/components/image-preview-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -432,24 +431,13 @@ function AttachmentsPage() {
                     )}
                   </button>
                 ) : attachment.type === "image" ? (
-                  <ImagePreviewDialog
-                    className="block size-full"
-                    image={{
-                      src: imageUrl,
-                      alt: attachment.name,
-                      name: attachment.name,
-                      size: attachment.size,
-                    }}
-                    images={galleryImages}
-                    initialIndex={imageIndexById.get(attachment._id) ?? 0}
-                  >
+                  <div className="size-full overflow-hidden">
                     <img
-                      alt={attachment.name}
-                      className="aspect-square size-full object-cover"
                       src={imageUrl}
-                      loading="lazy"
+                      alt={attachment.name}
+                      className="aspect-square size-full object-cover object-center"
                     />
-                  </ImagePreviewDialog>
+                  </div>
                 ) : (
                   <Link
                     to={fileUrl}

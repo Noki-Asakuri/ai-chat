@@ -10,7 +10,6 @@ import { ImagePlusIcon, TrashIcon } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { ImagePreviewDialog } from "@/components/image-preview-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -222,7 +221,7 @@ function RouteComponent() {
               )}
             </div>
 
-            <ImagePreviewDialog
+            {/* <ImagePreviewDialog
               className="aspect-video h-40"
               file={backgroundImage}
               image={{
@@ -244,7 +243,7 @@ function RouteComponent() {
                   hidden={!data?.customization?.backgroundId && !backgroundImage}
                 />
               )}
-            </ImagePreviewDialog>
+            </ImagePreviewDialog> */}
           </div>
 
           <input
