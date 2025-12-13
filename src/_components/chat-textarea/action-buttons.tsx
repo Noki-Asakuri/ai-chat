@@ -4,7 +4,7 @@ import { useShallow } from "zustand/shallow";
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 import { ButtonWithTip } from "@/components/ui/button";
 
-import { ChatAttachmentButton } from "./attachment-display";
+import { ChatAttachmentsButton } from "./attachments-display";
 import { ChatEffortSelector } from "./effort-selector";
 import { ChatModelSelector } from "./model-selector";
 
@@ -18,7 +18,7 @@ export function ChatActionButtons() {
       <ChatEffortSelector />
 
       <WebSearchButton />
-      <ChatAttachmentButton />
+      <ChatAttachmentsButton />
     </div>
   );
 }
