@@ -159,7 +159,7 @@ export function MessageHistory() {
 }
 
 function Messages() {
-  const messages = useMessageStore((state) => state.messagesIds);
+  const messages = useMessageStore((state) => state.messageIds);
 
   return messages.map((messageId, index) => (
     <Message key={messageId} messageId={messageId} index={index} total={messages.length} />

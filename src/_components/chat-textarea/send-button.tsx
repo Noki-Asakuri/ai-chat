@@ -14,7 +14,7 @@ export function ChatSendButton() {
   const configStore = useConfigStoreState();
 
   const status = useMessageStore(
-    useShallow((state) => state.messages.at(-1)?.status ?? "complete"),
+    useShallow((state) => state.messagesById[state.messageIds.at(-1)!]?.status ?? "complete"),
   );
 
   const { sendChatRequest } = useSendChatMessage();

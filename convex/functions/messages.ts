@@ -2,9 +2,7 @@ import { asyncMap } from "convex-helpers";
 import { getAll } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
 
-import { internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
-import { internalMutation } from "../_generated/server";
 import { authenticatedMutation, authenticatedQuery } from "../components";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
@@ -173,7 +171,7 @@ export const updateMessageById = authenticatedMutation({
         status: status,
         resumableStreamId: v.nullable(v.string()),
 
-        parts: AISDKParts,
+        parts: v.any(),
         metadata: AISDKMetadata,
         attachments: v.array(v.id("attachments")),
       })
@@ -207,20 +205,19 @@ export const updateMessageById = authenticatedMutation({
 
     const becameComplete = message.status !== "complete" && args.updates.status === "complete";
 
-    // if (message.role === "assistant" && becameComplete) {
-    //   const content = args.updates.content ?? message.content ?? "";
-    //   const modelUniqueId = args.updates.model ?? message.model ?? "";
-    //   const profileId = args.updates.metadata?.profile?.id ?? message.metadata?.profile?.id;
-
-    //   await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
-    //     userId: user.userId,
-    //     threadId: message.threadId,
-    //     content,
-    //     modelUniqueId,
-    //     createdAt: message.createdAt,
-    //     ...(profileId ? { profileId } : {}),
-    //   });
-    // }
+    if (message.role === "assistant" && becameComplete) {
+      // const modelUniqueId =
+      //   args.updates.metadata?.model.request ?? message.metadata?.model.request ?? "";
+      // const profileId = args.updates.metadata?.profile?.id ?? message.metadata?.profile?.id;
+      // await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
+      //   userId: user.userId,
+      //   threadId: message.threadId,
+      //   content,
+      //   modelUniqueId,
+      //   createdAt: message.createdAt,
+      //   ...(profileId ? { profileId } : {}),
+      // });
+    }
   },
 });
 

@@ -1,72 +1,79 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
 
 import type { ChatMessage, RemoveAllExceptFunctions } from "../types";
 
 export type MessagesStore = {
   currentThreadId: Id<"threads"> | null;
-  getCurrentThreadId: () => Id<"threads"> | null;
   setCurrentThreadId: (threadId: Id<"threads"> | null) => void;
 
-  messages: ChatMessage[];
-  messagesIds: Id<"messages">[];
+  messageIds: Id<"messages">[];
   messagesById: Record<Id<"messages">, ChatMessage>;
 
-  getMessages: () => ChatMessage[];
   syncMessages: (messages: ChatMessage[]) => void;
   clearMessages: () => void;
 
-  updateMessageById: (messageId: Id<"messages">, updates: Partial<ChatMessage>) => void;
+  setMessageParts: (
+    id: Id<"messages">,
+    parts: ChatMessage["parts"],
+    metadata?: ChatMessage["metadata"],
+  ) => void;
 
-  controllers: Map<Id<"threads">, AbortController>;
+  controllers: Record<Id<"threads">, AbortController>;
   setController: (assistantMessageId: Id<"threads">, controller: AbortController) => void;
   removeController: (assistantMessageId: Id<"threads">) => void;
-  getController: (assistantMessageId: Id<"threads">) => AbortController | undefined;
 };
 
-export const useMessageStore = create<MessagesStore>((set, get) => ({
-  currentThreadId: null,
-  getCurrentThreadId: () => get().currentThreadId,
-  setCurrentThreadId: (threadId) => set({ currentThreadId: threadId }),
+export const useMessageStore = create<MessagesStore>()(
+  immer((set) => {
+    return {
+      currentThreadId: null,
+      setCurrentThreadId: (threadId) => set({ currentThreadId: threadId }),
 
-  messages: [],
-  messagesIds: [],
-  messagesById: {},
+      messageIds: [],
+      messagesById: {},
 
-  getMessages: () => get().messages,
+      clearMessages: function clearMessages() {
+        set(function clear(state) {
+          state.messageIds = [];
+          state.messagesById = {};
+        });
+      },
+      syncMessages: function syncMessages(messages) {
+        set(function sync(state) {
+          const sorted = messages.sort((a, b) => a.createdAt - b.createdAt);
 
-  clearMessages: () => set({ messages: [], messagesIds: [] }),
-  syncMessages: (messages) => {
-    const sorted = messages.sort((a, b) => a.createdAt - b.createdAt);
+          state.messageIds = sorted.map((m) => m._id);
+          state.messagesById = sorted.reduce((acc, m) => ({ ...acc, [m._id]: m }), {});
+        });
+      },
 
-    return set({
-      messages: sorted,
-      messagesIds: sorted.map((m) => m._id),
-      messagesById: sorted.reduce((acc, m) => ({ ...acc, [m._id]: m }), {}),
-    });
-  },
+      setMessageParts(id, parts, metadata) {
+        set(function update(state) {
+          const msg = state.messagesById[id];
+          if (!msg) return;
 
-  updateMessageById: (messageId, updates) => {
-    const messages = get().messages.map((m) => (m._id === messageId ? { ...m, ...updates } : m));
-    get().syncMessages(messages);
-  },
+          msg.parts = parts;
+          if (metadata) msg.metadata = metadata;
+        });
+      },
 
-  controllers: new Map(),
-  setController: (assistantMessageId, controller) =>
-    set((state) => {
-      state.controllers.set(assistantMessageId, controller);
-      return { controllers: new Map(state.controllers) };
-    }),
-  removeController: (assistantMessageId) =>
-    set((state) => {
-      state.controllers.delete(assistantMessageId);
-      return { controllers: new Map(state.controllers) };
-    }),
-  getController: (assistantMessageId) => {
-    return get().controllers.get(assistantMessageId);
-  },
-}));
+      controllers: {},
+      setController: function setController(assistantMessageId, controller) {
+        set(function set(state) {
+          state.controllers[assistantMessageId] = controller;
+        });
+      },
+      removeController: function removeController(assistantMessageId) {
+        set(function remove(state) {
+          delete state.controllers[assistantMessageId];
+        });
+      },
+    };
+  }),
+);
 
 export const messageStoreActions =
   useMessageStore.getInitialState() as RemoveAllExceptFunctions<MessagesStore>;

@@ -1,173 +1,302 @@
-// src/create-stream-response-handler.ts
-import { readUIMessageStream, type UIMessageChunk } from "ai";
+import { readUIMessageStream, type UIMessage, type UIMessageChunk } from "ai";
+import type { ChatMessage } from "../types";
 
-import type { UIChatMessage } from "../types";
+export type UIMessageStreamEvent<UI_MESSAGE extends UIMessage = UIMessage> =
+  | {
+      type: "message";
+      message: UI_MESSAGE;
+      lastChunkType?: UIMessageChunk["type"];
+    }
+  | { type: "chunk"; chunk: UIMessageChunk }
+  | { type: "error"; error: unknown }
+  | { type: "done" };
 
-export type StreamResponseHandlerOptions = {
+export type ConsumeUIMessageStreamResponseOptions<UI_MESSAGE extends UIMessage = UIMessage> = {
+  response: Response;
+
+  /**
+   * Pass this when resuming/continuing a previous assistant message.
+   * This maps to readUIMessageStream({ message }).
+   */
+  message?: UI_MESSAGE;
+
+  /**
+   * Batched (message) events are emitted at most once per frame (default).
+   * If emitChunks is enabled, chunk events are unbatched and can be high volume.
+   */
+  onEvent: (event: UIMessageStreamEvent<UI_MESSAGE>) => void;
+
+  /**
+   * If true, emits every parsed UIMessageChunk as { type: 'chunk' }.
+   * Defaults to false to avoid flooding the main thread.
+   */
+  emitChunks?: boolean;
+
+  /**
+   * Default: 'raf' (best for React UIs).
+   * Falls back to 'timeout' automatically if requestAnimationFrame is unavailable.
+   */
+  flushMode?: "raf" | "timeout";
+
+  /**
+   * Only used when flushMode === 'timeout' (or as a fallback).
+   * Default: 16ms (~60fps).
+   */
+  flushIntervalMs?: number;
+
   signal?: AbortSignal;
-  resumeFrom?: UIChatMessage;
+
+  /**
+   * Passed through to readUIMessageStream.
+   * Defaults to false in the AI SDK.
+   */
   terminateOnError?: boolean;
-  onMessage?: (message: UIChatMessage) => void;
-  onError?: (error: unknown) => void;
 };
 
-export function createStreamResponseHandler(
-  response: Response,
-  options: StreamResponseHandlerOptions = {},
-): AsyncIterable<UIChatMessage> {
-  assertUIMessageStreamResponse(response);
-
-  const chunkStream = createChunkStream(response, options.signal);
-  const iterable = readUIMessageStream<UIChatMessage>({
-    stream: chunkStream,
-    message: options.resumeFrom,
-    onError: options.onError,
-    terminateOnError: options.terminateOnError ?? false,
-  });
-
-  wireMessageForwarding(iterable, options.onMessage, options.onError);
-
-  return iterable;
-}
-
-function assertUIMessageStreamResponse(response: Response): void {
-  if (!response.ok) {
-    throw new Error(`Unexpected status ${response.status}`);
+export function createUIMessageChunkStreamFromResponse(options: {
+  response: Response;
+  onChunk?: (chunk: UIMessageChunk) => void;
+  signal?: AbortSignal;
+}): ReadableStream<UIMessageChunk> {
+  const body = options.response.body;
+  if (body == null) {
+    throw new Error("Response body is null (streaming not enabled / already consumed).");
   }
 
-  const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.includes("text/event-stream")) {
-    throw new Error(`Expected text/event-stream but received ${contentType}.`);
-  }
-}
-
-function createChunkStream(
-  response: Response,
-  signal?: AbortSignal,
-): ReadableStream<UIMessageChunk> {
-  if (!response.body) {
-    throw new Error("Response body is not readable.");
-  }
-  const reader = response.body.getReader();
+  const reader = body.getReader();
   const decoder = new TextDecoder();
-  let buffer = "";
-  let abortHandler: (() => void) | undefined;
+  const pending: UIMessageChunk[] = [];
 
-  return new ReadableStream<UIMessageChunk>({
-    start(controller) {
-      if (signal) {
-        abortHandler = function () {
-          controller.error(signal.reason ?? new DOMException("Aborted", "AbortError"));
-          reader.cancel(signal.reason).catch(() => undefined);
-        };
-        if (signal.aborted) {
-          abortHandler();
-          return;
-        }
-        signal.addEventListener("abort", abortHandler, { once: true });
+  let buffer = "";
+  let streamDone = false;
+
+  function findBoundaryIndex(input: string): { index: number; length: number } | null {
+    const lf = input.indexOf("\n\n");
+    const crlf = input.indexOf("\r\n\r\n");
+
+    if (lf === -1 && crlf === -1) return null;
+    if (lf === -1) return { index: crlf, length: 4 };
+    if (crlf === -1) return { index: lf, length: 2 };
+    return lf < crlf ? { index: lf, length: 2 } : { index: crlf, length: 4 };
+  }
+
+  function extractData(eventBlock: string): string | null {
+    let data: string | null = null;
+
+    let lineStart = 0;
+    for (let i = 0; i <= eventBlock.length; i++) {
+      const isEnd = i === eventBlock.length;
+      const isLf = !isEnd && eventBlock.charCodeAt(i) === 10;
+
+      if (!isEnd && !isLf) continue;
+
+      let lineEnd = i;
+      if (lineEnd > lineStart && eventBlock.charCodeAt(lineEnd - 1) === 13) {
+        lineEnd--;
       }
-    },
-    async pull(controller) {
-      const result = await reader.read();
-      if (result.done) {
-        flushBuffer(controller);
-        cleanup(signal);
-        controller.close();
+
+      const line = eventBlock.slice(lineStart, lineEnd);
+      lineStart = i + 1;
+
+      if (!line.startsWith("data:")) continue;
+
+      let value = line.slice(5);
+      if (value.startsWith(" ")) value = value.slice(1);
+
+      if (data == null) data = value;
+      else data += `\n${value}`;
+    }
+
+    return data;
+  }
+
+  function parseBuffer(): void {
+    while (true) {
+      const boundary = findBoundaryIndex(buffer);
+      if (boundary == null) return;
+
+      const eventBlock = buffer.slice(0, boundary.index);
+      buffer = buffer.slice(boundary.index + boundary.length);
+
+      const data = extractData(eventBlock);
+      if (data == null) continue;
+
+      if (data === "[DONE]") {
+        streamDone = true;
         return;
       }
-      buffer += decoder.decode(result.value, { stream: true });
-      emitChunks(controller);
+
+      const parsed = JSON.parse(data) as unknown;
+
+      if (
+        typeof parsed === "object" &&
+        parsed != null &&
+        "type" in parsed &&
+        typeof (parsed as any).type === "string"
+      ) {
+        const chunk = parsed as UIMessageChunk;
+        pending.push(chunk);
+        options.onChunk?.(chunk);
+      }
+    }
+  }
+
+  async function cancelUpstream(): Promise<void> {
+    try {
+      await reader.cancel();
+    } catch {
+      // ignore
+    }
+  }
+
+  function throwIfAborted(): void {
+    if (options.signal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
+  }
+
+  return new ReadableStream<UIMessageChunk>({
+    async pull(controller) {
+      try {
+        throwIfAborted();
+
+        if (pending.length > 0) {
+          controller.enqueue(pending.shift() as UIMessageChunk);
+          return;
+        }
+
+        while (pending.length === 0 && !streamDone) {
+          const { value, done } = await reader.read();
+          throwIfAborted();
+
+          if (done) {
+            buffer += decoder.decode();
+            parseBuffer();
+            streamDone = true;
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          parseBuffer();
+
+          if (pending.length > 0) break;
+        }
+
+        if (pending.length > 0) {
+          controller.enqueue(pending.shift() as UIMessageChunk);
+          return;
+        }
+
+        await cancelUpstream();
+        controller.close();
+      } catch (error) {
+        await cancelUpstream();
+        controller.error(error);
+      }
     },
-    cancel(reason) {
-      cleanup(signal);
-      reader.cancel(reason).catch(() => undefined);
+
+    async cancel() {
+      await cancelUpstream();
     },
   });
-
-  function emitChunks(controller: ReadableStreamDefaultController<UIMessageChunk>): void {
-    let delimiterIndex = buffer.indexOf("\n\n");
-    while (delimiterIndex !== -1) {
-      const rawEvent = buffer.slice(0, delimiterIndex);
-      buffer = buffer.slice(delimiterIndex + 2);
-      const chunk = parseSSEBlock(rawEvent);
-      if (chunk) {
-        controller.enqueue(chunk);
-      }
-      delimiterIndex = buffer.indexOf("\n\n");
-    }
-  }
-
-  function flushBuffer(controller: ReadableStreamDefaultController<UIMessageChunk>): void {
-    if (!buffer.trim()) {
-      return;
-    }
-    const chunk = parseSSEBlock(buffer);
-    buffer = "";
-    if (chunk) {
-      controller.enqueue(chunk);
-    }
-  }
-
-  function cleanup(activeSignal?: AbortSignal): void {
-    if (abortHandler && activeSignal) {
-      activeSignal.removeEventListener("abort", abortHandler);
-      abortHandler = undefined;
-    }
-  }
 }
 
-function parseSSEBlock(block: string): UIMessageChunk | null {
-  const trimmed = block.trim();
-  if (!trimmed) return null;
+export async function consumeUIMessageStreamResponse<UI_MESSAGE extends UIMessage = UIMessage>(
+  options: ConsumeUIMessageStreamResponseOptions<UI_MESSAGE>,
+): Promise<void> {
+  const flushMode =
+    options.flushMode ?? (typeof requestAnimationFrame === "function" ? "raf" : "timeout");
+  const flushIntervalMs = options.flushIntervalMs ?? 16;
 
-  const lines = trimmed.split(/\r?\n/);
-  const dataLines: string[] = [];
+  let latestMessage: UI_MESSAGE | undefined;
+  let lastChunkType: UIMessageChunk["type"] | undefined;
 
-  for (const line of lines) {
-    if (line.startsWith(":")) {
-      continue;
-    }
+  let flushScheduled = false;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let rafId: number | undefined;
 
-    if (line.startsWith("data:")) {
-      dataLines.push(line.slice(5).trimStart());
+  function emit(event: UIMessageStreamEvent<UI_MESSAGE>): void {
+    options.onEvent(event);
+  }
+
+  function onChunk(chunk: UIMessageChunk): void {
+    lastChunkType = chunk.type;
+    if (options.emitChunks === true) {
+      emit({ type: "chunk", chunk });
     }
   }
 
-  if (dataLines.length === 0) {
-    return null;
+  function flushMessage(): void {
+    if (latestMessage == null) return;
+
+    const snapshot = { ...latestMessage } as UI_MESSAGE;
+    latestMessage = undefined;
+
+    emit({
+      type: "message",
+      message: snapshot,
+      lastChunkType,
+    });
   }
 
-  const payload = dataLines.join("\n").trim();
-  if (!payload || payload === "[DONE]") {
-    return null;
+  function scheduleFlush(): void {
+    if (flushScheduled) return;
+    flushScheduled = true;
+
+    if (flushMode === "raf" && typeof requestAnimationFrame === "function") {
+      rafId = requestAnimationFrame(function handleFrame() {
+        flushScheduled = false;
+        rafId = undefined;
+        flushMessage();
+      });
+      return;
+    }
+
+    timeoutId = setTimeout(function handleTimeout() {
+      flushScheduled = false;
+      timeoutId = undefined;
+      flushMessage();
+    }, flushIntervalMs);
+  }
+
+  function cleanupTimers(): void {
+    if (timeoutId != null) clearTimeout(timeoutId);
+    if (rafId != null && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(rafId);
+    }
+  }
+
+  function handleStreamError(error: unknown): void {
+    emit({ type: "error", error });
   }
 
   try {
-    return JSON.parse(payload) as UIMessageChunk;
+    const chunkStream = createUIMessageChunkStreamFromResponse({
+      response: options.response,
+      onChunk,
+      signal: options.signal,
+    });
+
+    const uiMessageStream = readUIMessageStream({
+      stream: chunkStream,
+      message: options.message as UIMessage | undefined,
+      onError: handleStreamError,
+      terminateOnError: options.terminateOnError,
+    }) as AsyncIterable<UI_MESSAGE>;
+
+    for await (const uiMessage of uiMessageStream) {
+      if (options.signal?.aborted) break;
+
+      latestMessage = uiMessage;
+      scheduleFlush();
+    }
+
+    cleanupTimers();
+    flushMessage();
+    emit({ type: "done" });
   } catch (error) {
-    throw new Error(`Failed to parse UIMessageChunk: ${(error as Error).message}`);
+    cleanupTimers();
+    emit({ type: "error", error });
+    throw error;
   }
-}
-
-function wireMessageForwarding(
-  iterable: AsyncIterable<UIChatMessage>,
-  onMessage: ((message: UIChatMessage) => void) | undefined,
-  onError: ((error: unknown) => void) | undefined,
-): void {
-  if (!onMessage) {
-    return;
-  }
-  async function forward(): Promise<void> {
-    for await (const message of iterable) {
-      onMessage?.(message);
-    }
-  }
-
-  forward().catch((error) => {
-    if (onError) {
-      onError(error);
-    } else {
-      throw error;
-    }
-  });
 }
