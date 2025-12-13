@@ -2,11 +2,11 @@ import { useCallback, useEffect, useEffectEvent, useRef } from "react";
 
 import { Message } from "./message";
 
-// import { useChatStore } from "@/lib/chat/store";
-import type { UIChatMessage } from "@/lib/types";
+import { useChatStore } from "@/lib/store/chat-store";
+import { useMessageStore } from "@/lib/store/messages-store";
 
 export function MessageHistory() {
-  // const textareaHeight = useChatStore((state) => state.textareaHeight);
+  const textareaHeight = useChatStore((state) => state.textareaHeight);
 
   const abortController = useRef<AbortController>(new AbortController());
   // Outer scrollable container (with overflow-y-scroll)
@@ -150,7 +150,7 @@ export function MessageHistory() {
         ref={scrollContainerRef}
         data-slot="message-history"
         className="mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 py-20"
-        // style={{ paddingBottom: `${textareaHeight}px` }}
+        style={{ paddingBottom: `${textareaHeight}px` }}
       >
         <Messages />
       </div>
@@ -159,16 +159,9 @@ export function MessageHistory() {
 }
 
 function Messages() {
-  return null;
+  const messages = useMessageStore((state) => state.messagesIds);
 
-  // return messages.map((message, index) => (
-  //   <Message
-  //     key={message.id}
-  //     message={message}
-  //     index={index}
-  //     isLast={
-  //       message.role === "user" ? index === messages.length - 2 : index === messages.length - 1
-  //     }
-  //   />
-  // ));
+  return messages.map((messageId, index) => (
+    <Message key={messageId} messageId={messageId} index={index} total={messages.length} />
+  ));
 }

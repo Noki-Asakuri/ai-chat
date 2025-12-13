@@ -11,8 +11,9 @@ import dedent from "dedent";
 import { Redis } from "ioredis";
 import { execSync } from "node:child_process";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
+import { decodeJwt } from "jose";
 
-import { APICallError, smoothStream, stepCountIs, streamText } from "ai";
+import { APICallError, smoothStream, stepCountIs, streamText, UI_MESSAGE_STREAM_HEADERS } from "ai";
 
 import { handleFileCaching } from "./handle-file-caching";
 
@@ -22,10 +23,12 @@ import { serverUploadFileR2 } from "@/lib/server/file-upload";
 import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
 import { validateRequestBody } from "@/lib/server/validate-request-body";
-import type { UIChatMessage } from "@/lib/types";
-import { fixMarkdownCodeBlocks, tryCatch } from "@/lib/utils";
+import type { ChatMessage } from "@/lib/types";
+import { tryCatch } from "@/lib/utils";
 
 import { env } from "@/env";
+import { decryptSession } from "@/lib/authkit/ssr/session";
+import type { AccessToken } from "@workos-inc/node";
 
 export const cacheRedis = new Redis(env.REDIS_URL);
 const subscriber = cacheRedis.duplicate();
@@ -88,7 +91,7 @@ app.use(
   cors({
     origin: env.NODE_ENV === "production" ? "https://chat.asakuri.me" : "http://localhost:3000",
     allowMethods: ["POST", "GET", "OPTIONS"],
-    allowHeaders: ["Authorization", "Upgrade-Insecure-Requests", "X-User-Id", "X-Session-Id"],
+    allowHeaders: ["Authorization", "Content-Type", "Cookie"],
     exposeHeaders: ["Content-Type", "X-Request-Id"],
     credentials: true,
     maxAge: 604_800,
@@ -129,9 +132,8 @@ app.get("/api/ai/chat", async (ctx) => {
 
   return new Response(stream, {
     headers: {
-      "X-Accel-Buffering": "no",
+      ...UI_MESSAGE_STREAM_HEADERS,
       "Transfer-Encoding": "chunked",
-      "Cache-Control": "no-cache, no-transform",
       "Content-Type": "text/event-stream; charset=utf-8",
     },
   });
@@ -141,8 +143,13 @@ app.post("/api/ai/chat", async (ctx) => {
   const req = ctx.req;
 
   const requestId = ctx.get("requestId");
-  const userId = req.header("X-User-Id");
-  const sessionId = req.header("X-Session-Id");
+  const cookie = req.header("Cookie");
+
+  const wosSessionEncrypted = cookie?.match(/wos-session=([^;]+)/)?.[1] ?? "";
+  const wosSession = await decryptSession(wosSessionEncrypted ?? "");
+
+  const userId = wosSession.user.id;
+  const { sid: sessionId } = decodeJwt<AccessToken>(wosSession.accessToken);
 
   logger.info("[Chat] Chat request received", { userId, requestId });
 
@@ -187,11 +194,10 @@ app.post("/api/ai/chat", async (ctx) => {
       const type = usage.resetType === "daily" ? "Daily" : "Monthly";
 
       await convexClient.mutation(api.functions.messages.updateErrorMessage, {
-        model: model.uniqueId,
-        error: `${type} message limit reached (${usage.used}/${usage.base}).`,
-        modelParams: { webSearchEnabled: modelParams.webSearch, effort: modelParams.effort },
-        messageId: assistantMessageId,
         sessionId,
+        messageId: assistantMessageId,
+        error: `${type} message limit reached (${usage.used}/${usage.base}).`,
+        metadata: { model: { request: model.uniqueId, response: null }, modelParams },
       });
 
       logger.error("[Chat Error]: User max message limit reached!", {
@@ -300,24 +306,20 @@ app.post("/api/ai/chat", async (ctx) => {
         await convexClient.mutation(api.functions.messages.updateErrorMessage, {
           sessionId,
           error: errorMessage,
-          model: model.uniqueId,
-          modelParams: { webSearchEnabled: modelParams.webSearch, effort: modelParams.effort },
           messageId: assistantMessageId,
+          metadata: { model: { request: model.uniqueId, response: null }, modelParams },
         });
       },
     });
 
-    const metadata: UIChatMessage["metadata"] = {
-      model: model.uniqueId,
+    const metadata: ChatMessage["metadata"] = {
+      model: { request: model.uniqueId, response: null },
       finishReason: "",
       timeToFirstTokenMs: 0,
       usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
       durations: { request: 0, reasoning: 0, text: 0 },
 
-      modelParams: {
-        webSearchEnabled: modelParams.webSearch,
-        effort: modelParams.effort,
-      },
+      modelParams,
     };
 
     // if (config.profile) metadata.profile = { id: config.profile.id, name: config.profile.name };
@@ -335,11 +337,13 @@ app.post("/api/ai/chat", async (ctx) => {
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
       generateMessageId: () => requestId,
+      sendReasoning: true,
+      sendFinish: true,
+      sendStart: true,
       status: 200,
       headers: {
-        "X-Accel-Buffering": "no",
+        ...UI_MESSAGE_STREAM_HEADERS,
         "Transfer-Encoding": "chunked",
-        "Cache-Control": "no-cache, no-transform",
         "Content-Type": "text/event-stream; charset=utf-8",
       },
       consumeSseStream: async ({ stream }) => {
@@ -350,12 +354,7 @@ app.post("/api/ai/chat", async (ctx) => {
           convexClient.mutation(api.functions.messages.updateMessageById, {
             sessionId,
             messageId: assistantMessageId,
-            updates: {
-              status: "streaming",
-              model: model.uniqueId,
-              resumableStreamId: requestId,
-              modelParams: { webSearchEnabled: modelParams.webSearch, effort: modelParams.effort },
-            },
+            updates: { status: "streaming", resumableStreamId: requestId, metadata },
           }),
         ]);
       },
@@ -387,27 +386,16 @@ app.post("/api/ai/chat", async (ctx) => {
             break;
 
           case "finish-step":
-            metadata.model = part.response.modelId;
+            metadata.model.response = part.response.modelId;
             metadata.finishReason = part.finishReason;
             metadata.durations.request = Date.now() - startTime;
             break;
 
           case "finish":
             metadata.usages.inputTokens = part.totalUsage.inputTokens ?? 0;
-            metadata.usages.outputTokens = part.totalUsage.outputTokens ?? 0;
-            metadata.usages.reasoningTokens = part.totalUsage.reasoningTokens ?? 0;
-
-            if (model.id.startsWith("openai/gpt-5")) {
-              // OpenAI GPT 5 output token also includes the reasoning tokens
-              // In case AI SDK change and remove reasoning tokens from output
-              // Then we revert back to original total tokens
-              const actualOutputTokens = Math.min(
-                metadata.usages.outputTokens - metadata.usages.reasoningTokens,
-                metadata.usages.outputTokens,
-              );
-
-              metadata.usages.outputTokens = actualOutputTokens;
-            }
+            metadata.usages.outputTokens = part.totalUsage.outputTokenDetails.textTokens ?? 0;
+            metadata.usages.reasoningTokens =
+              part.totalUsage.outputTokenDetails.reasoningTokens ?? 0;
 
             return metadata;
         }
@@ -427,17 +415,7 @@ app.post("/api/ai/chat", async (ctx) => {
           return;
         }
 
-        const content = responseMessage.parts
-          .filter((part) => part.type === "text")
-          .map((part) => part.text)
-          .join("");
-
-        const reasoning = responseMessage.parts
-          .filter((part) => part.type === "reasoning")
-          .map((part) => part.text)
-          .join("\n\n");
-
-        const parts = responseMessage.parts;
+        const parts = responseMessage.parts as ChatMessage["parts"];
         const fileParts = parts.filter((part) => part.type === "file");
 
         const attachmentIds: Id<"attachments">[] = [];
@@ -460,18 +438,12 @@ app.post("/api/ai/chat", async (ctx) => {
 
         type Updates = (typeof api.functions.messages.updateMessageById)["_args"]["updates"];
         const updates: Updates = {
+          parts,
           metadata,
-          model: model.uniqueId,
           resumableStreamId: null,
-          parts: parts,
           status: "complete" as const,
 
           attachments: attachmentIds,
-
-          content: fixMarkdownCodeBlocks(content),
-          reasoning: reasoning.length > 0 ? reasoning : undefined,
-
-          modelParams: { webSearchEnabled: modelParams.webSearch, effort: modelParams.effort },
         };
 
         logger.info("[Chat] Chat request completed!", {
@@ -482,25 +454,7 @@ app.post("/api/ai/chat", async (ctx) => {
           profileId: modelParams.profile?.id,
           metadata,
           requestId,
-          dataLength: {
-            content: updates.content?.length,
-            reasoning: updates.reasoning?.length,
-            attachments: updates.attachments?.length,
-          },
         });
-
-        if (updates.content?.length === 0) {
-          updates.content = `Upstream returned empty content. Stop reason: ${metadata.finishReason}`;
-          updates.parts?.push({ type: "text", text: updates.content });
-
-          logger.info("[Chat]: Upstream returned empty content!", {
-            userId: userId,
-            threadId,
-            assistantMessageId,
-            model: model.uniqueId,
-            metadata,
-          });
-        }
 
         await convexClient.mutation(api.functions.messages.updateMessageById, {
           sessionId,

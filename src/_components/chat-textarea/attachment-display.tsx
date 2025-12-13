@@ -3,11 +3,11 @@ import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { ImagePreviewDialog } from "../image-preview-dialog";
-import { useConfigStore } from "../provider/config-store-provider";
+import { useConfigStore } from "../provider/config-provider";
 import { ButtonWithTip } from "../ui/button";
 
 import { getModelData } from "@/lib/chat/models";
-// import { useChatStore } from "@/lib/chat/store";
+import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { format } from "@/lib/utils";
 
 export function ChatAttachmentButton() {
@@ -23,11 +23,7 @@ export function ChatAttachmentButton() {
     let type: "image" | "pdf" = "image";
     if (file.type.includes("pdf")) type = "pdf";
 
-    // useChatStore
-    //   .getState()
-    //   .addAttachment([
-    //     { id: uuidv4(), type, name: file.name, size: file.size, file, mimeType: file.type },
-    //   ]);
+    chatStoreActions.addAttachments([{ id: uuidv4(), type, file }]);
   }
 
   return (
@@ -61,69 +57,49 @@ export function ChatAttachmentButton() {
 type Preview = {
   id: string;
   type: "image" | "pdf";
+  file: File;
   url: string;
-  name: string;
-  size: number;
 };
 
 export function ChatAttachmentDisplay() {
-  return null;
+  const attachments = useChatStore((state) => state.attachments);
+  const [preview, setPreview] = useState<Preview[]>([]);
 
-  // const attachments = useChatStore((state) => state.attachments);
-  const [preview, setPreview] = useState<Preview[] | null>(null);
+  useEffect(() => {
+    if (!attachments.length) {
+      setPreview([]);
+      return;
+    }
 
-  // useEffect(() => {
-  //   if (!attachments.length) {
-  //     setPreview(null);
-  //     return;
-  //   }
+    const preview: Preview[] = attachments.map(({ id, type, file }) => {
+      const url = URL.createObjectURL(file);
+      return { id, type, file, url };
+    });
 
-  //   const preview = attachments.map((attachment) => {
-  //     const objectUrl = URL.createObjectURL(attachment.file);
-  //     const preview = {
-  //       url: objectUrl,
-  //       id: attachment.id,
-  //       name: attachment.name,
-  //       size: attachment.size,
-  //       type: attachment.type,
-  //     };
-  //     return preview;
-  //   });
-  //   setPreview(preview);
+    setPreview(preview);
 
-  //   return () => {
-  //     preview.forEach(({ url }) => URL.revokeObjectURL(url));
-  //   };
-  // }, [attachments]);
+    return () => {
+      for (const p of preview) URL.revokeObjectURL(p.url);
+    };
+  }, [attachments]);
 
-  // if (attachments.length === 0) return null;
+  const imageList = preview?.filter((p) => p.type === "image") ?? [];
+  if (attachments.length === 0) return null;
 
-  // Build image-only list for carousel navigation
-  // const imageList = preview?.filter((p) => p.type === "image") ?? [];
-
-  // return (
-  //   <div
-  //     data-slot="attachment-display"
-  //     data-visible={!!preview}
-  //     className="custom-scroll flex items-center justify-start gap-4 overflow-x-auto border-b p-2.5 data-[visible=false]:hidden"
-  //   >
-  //     {preview?.map((attachment) => (
-  //       <AttachmentPreview key={attachment.id} attachment={attachment} images={imageList} />
-  //     ))}
-  //   </div>
-  // );
+  return (
+    <div
+      data-slot="attachment-display"
+      data-visible={!!preview}
+      className="custom-scroll flex items-center justify-start gap-4 overflow-x-auto border-b p-2.5 data-[visible=false]:hidden"
+    >
+      {preview?.map((attachment) => (
+        <AttachmentPreview key={attachment.id} attachment={attachment} images={imageList} />
+      ))}
+    </div>
+  );
 }
 
 function AttachmentPreview({ attachment, images }: { attachment: Preview; images: Preview[] }) {
-  // Prepare carousel images for dialog (image-only)
-  const carouselImages =
-    images.map((img) => ({
-      src: img.url,
-      alt: img.name,
-      name: img.name,
-      size: img.size,
-    })) ?? [];
-
   const initialIndex = Math.max(
     0,
     images.findIndex((img) => img.id === attachment.id),
@@ -134,13 +110,8 @@ function AttachmentPreview({ attachment, images }: { attachment: Preview; images
       {attachment.type === "image" ? (
         <ImagePreviewDialog
           className="h-12 max-w-48 overflow-hidden rounded-md"
-          image={{
-            src: attachment.url,
-            alt: attachment.name,
-            name: attachment.name,
-            size: attachment.size,
-          }}
-          images={carouselImages}
+          image={{ src: attachment.url, name: attachment.file.name, size: attachment.file.size }}
+          images={images.map((img) => ({ src: img.url, name: img.file.name, size: img.file.size }))}
           initialIndex={initialIndex}
         >
           <img
@@ -156,15 +127,15 @@ function AttachmentPreview({ attachment, images }: { attachment: Preview; images
       )}
 
       <div className="flex flex-col gap-0.5">
-        <span className="line-clamp-1 max-w-[12ch]" title={attachment.name}>
-          {attachment.name}
+        <span className="line-clamp-1 max-w-[12ch]" title={attachment.file.name}>
+          {attachment.file.name}
         </span>
 
         <div className="flex items-center justify-between gap-2">
-          <span className="w-max">{format.size(attachment.size)}</span>
+          <span className="w-max">{format.size(attachment.file.size)}</span>
           <button
             className="flex w-10 cursor-pointer items-center justify-center rounded-md border border-destructive bg-destructive/60 p-0"
-            onMouseDown={() => useChatStore.getState().removeAttachment(attachment.id)}
+            onMouseDown={() => chatStoreActions.removeAttachment(attachment.id)}
           >
             <XIcon className="size-4" />
           </button>

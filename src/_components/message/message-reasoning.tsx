@@ -2,23 +2,29 @@ import type { ReasoningUIPart } from "ai";
 
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "../ui/ai-elements/reasoning";
 
-import type { UIChatMessage } from "@/lib/types";
+import { getModelData } from "@/lib/chat/models";
+import type { ChatMessage } from "@/lib/types";
 
 type ThinkingToggleProps = {
   parts: ReasoningUIPart[];
-  metadata: UIChatMessage["metadata"];
+  metadata: ChatMessage["metadata"];
 };
 
 export function MessageReasoning({ parts, metadata }: ThinkingToggleProps) {
-  if (parts.length === 0) return null;
+  if (!metadata) return null;
 
-  // const isReasoningModel = getModelData(model).capabilities.reasoning;
-  // if (!isReasoningModel) return null;
+  const isReasoningModel = getModelData(metadata.model.request).capabilities.reasoning;
+  if (!isReasoningModel || metadata.modelParams.effort === "none") return null;
 
   const reasoning = parts.map((p) => p.text).join("\n\n");
+  const status = parts.some((p) => p.state === "streaming") ? "streaming" : "complete";
 
   return (
-    <Reasoning defaultOpen={false} duration={metadata?.durations?.reasoning}>
+    <Reasoning
+      defaultOpen={false}
+      duration={metadata?.durations?.reasoning}
+      isStreaming={status === "streaming"}
+    >
       <ReasoningTrigger className="w-max rounded-md bg-background/80 p-2 backdrop-blur-md backdrop-contrast-150" />
       <ReasoningContent className="w-full space-y-3 rounded-md border bg-card/80 p-3 backdrop-blur-md backdrop-contrast-150">
         {reasoning}

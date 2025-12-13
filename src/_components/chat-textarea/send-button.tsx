@@ -1,28 +1,28 @@
-import { ChevronDownIcon, SendHorizontalIcon, SquareIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, SendHorizontalIcon, SquareIcon } from "lucide-react";
 import * as React from "react";
-
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore } from "../provider/config-store-provider";
+import { useConfigStore, useConfigStoreState } from "../provider/config-provider";
 import { ButtonWithTip } from "../ui/button";
-import { Menu } from "../ui/menu";
+import { Menu, MenuArrow } from "../ui/menu";
 
-import { sendChatRequest } from "@/lib/chat/server-function/send-chat-request";
-import { useChatStore } from "@/lib/store/chat-store";
+import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message";
+import { useMessageStore } from "@/lib/store/messages-store";
 
 export function ChatSendButton() {
-  const status: string = "pending";
+  const { pref } = useConfigStore(useShallow((state) => ({ pref: state.pref })));
+  const configStore = useConfigStoreState();
 
-  const { model } = useConfigStore(useShallow((state) => ({ model: state.model })));
-  const input = useChatStore((state) => state.input);
+  const status = useMessageStore(
+    useShallow((state) => state.messages.at(-1)?.status ?? "complete"),
+  );
 
+  const { sendChatRequest } = useSendChatMessage();
   const [open, setOpen] = React.useState(false);
-  // const [{ pref }, setSendPreference] = useLocalStorage<SendPreference>(STORAGE_KEY, {
-  //   pref: "enter",
-  // });
 
   async function handleSend() {
-    sendChatRequest({ data: { model } });
+    if (status === "streaming") return;
+    sendChatRequest();
   }
 
   return (
@@ -58,7 +58,7 @@ export function ChatSendButton() {
         </Menu.Trigger>
       </div>
 
-      {/* <Menu.Portal>
+      <Menu.Portal>
         <Menu.Positioner className="outline-none" sideOffset={8} align="end" side="top">
           <Menu.Popup className="dadata-starting-style:scale-90ata-[ending-style]:opacity-0 flex w-64 origin-(--transform-origin) flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-ending-style:scale-90 data-starting-style:opacity-0">
             <MenuArrow className="fill-card" />
@@ -67,7 +67,7 @@ export function ChatSendButton() {
 
             <Menu.Item
               className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-              onClick={() => setSendPreference({ pref: "enter" })}
+              onClick={() => configStore.setConfig({ pref: "enter" })}
             >
               <span className="inline-flex size-4 items-center justify-center">
                 {pref === "enter" ? <CheckIcon className="size-4" /> : null}
@@ -77,7 +77,7 @@ export function ChatSendButton() {
 
             <Menu.Item
               className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-              onClick={() => setSendPreference({ pref: "ctrlEnter" })}
+              onClick={() => configStore.setConfig({ pref: "ctrlEnter" })}
             >
               <span className="inline-flex size-4 items-center justify-center">
                 {pref === "ctrlEnter" ? <CheckIcon className="size-4" /> : null}
@@ -86,7 +86,7 @@ export function ChatSendButton() {
             </Menu.Item>
           </Menu.Popup>
         </Menu.Positioner>
-      </Menu.Portal> */}
+      </Menu.Portal>
     </Menu.Root>
   );
 }

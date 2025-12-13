@@ -1,7 +1,7 @@
 import { GlobeIcon } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-store-provider";
+import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 import { ButtonWithTip } from "@/components/ui/button";
 
 import { ChatAttachmentButton } from "./attachment-display";

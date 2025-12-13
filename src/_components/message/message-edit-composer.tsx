@@ -16,14 +16,14 @@ import { MessageEditAttachments } from "./message-edit-attachments";
 
 import { getModelData } from "@/lib/chat/models";
 // import { useChatRequest } from "@/lib/chat/send-chat-request";
-import { shouldSend } from "@/lib/chat/send-preference";
+import { useShouldSend } from "@/lib/chat/send-preference";
 import { useChatStore } from "@/lib/chat/store";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { uploadFile } from "@/lib/convex/uploadFiles";
 import type { ChatMessage, UserAttachment } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useShallow } from "zustand/shallow";
-import { useConfigStore } from "../provider/config-store-provider";
+import { useConfigStore } from "../provider/config-provider";
 
 const convexClient = getConvexReactClient();
 
@@ -227,7 +227,7 @@ export function MessageEditComposer({ message, index }: MessageEditComposerProps
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    const send = shouldSend({
+    const send = useShouldSend({
       key: event.key,
       shiftKey: event.shiftKey,
       ctrlKey: event.ctrlKey,

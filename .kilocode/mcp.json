@@ -1,9 +1,1 @@
-{
-  "mcpServers": {
-    "convex-mcp": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "convex@latest", "mcp", "start"]
-    }
-  }
-}
+{"mcpServers":{"convex-mcp":{"type":"stdio","command":"npx","args":["-y","convex@latest","mcp","start"],"disabled":true,"alwaysAllow":[]}}}

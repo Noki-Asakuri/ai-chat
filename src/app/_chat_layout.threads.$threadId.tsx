@@ -3,58 +3,41 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Navigate, useParams } from "@tanstack/react-router";
-import { Suspense } from "react";
+import { Suspense, useEffect, useEffectEvent } from "react";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { MessageHistory } from "@/components/message/message-history";
-import { ChatProvider } from "@/components/provider/chat-provider";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";
-import type { ChatMessage, UIChatMessage } from "@/lib/types";
+import { messageStoreActions } from "@/lib/store/messages-store";
+import type { ChatMessage } from "@/lib/types";
 import { fromUUID } from "@/lib/utils";
 
 export const Route = createFileRoute("/_chat_layout/threads/$threadId")({
   preload: false,
   component: ChatComponentPage,
 
-  errorComponent: () => {
+  errorComponent: (err) => {
+    console.error("ChatComponentPage Error:", err);
     return <Navigate to="/" />;
   },
 });
 
-function convertToUIChatMessage(message: ChatMessage): UIChatMessage {
-  const transformedMessage: UIChatMessage = {
-    id: message.messageId,
-    role: message.role,
-    parts: message.parts as UIChatMessage["parts"],
-  };
-
-  if (message.metadata) {
-    message.metadata = {
-      durations: message.metadata.durations,
-      usages: message.metadata.usages,
-      timeToFirstTokenMs: message.metadata.timeToFirstTokenMs,
-      finishReason: message.metadata.finishReason,
-      model: message.metadata.model,
-
-      profile: message.metadata.profile
-        ? { id: message.metadata.profile.id, name: message.metadata.profile.name }
-        : undefined,
-    };
-  }
-
-  return transformedMessage;
-}
-
 function ChatComponentPage() {
+  const params = Route.useParams();
+
+  useEffect(() => {
+    messageStoreActions.setCurrentThreadId(fromUUID<Id<"threads">>(params.threadId));
+  }, [params.threadId]);
+
   return (
-    <ChatProvider>
+    <>
       <Suspense>
         <ChatHistory />
       </Suspense>
 
       <ChatTextarea key="main-chat-textarea" />
-    </ChatProvider>
+    </>
   );
 }
 
@@ -69,6 +52,14 @@ function ChatHistory() {
       return ignoreErrors.some((e) => error.message.includes(e)) ? false : failureCount < 3;
     },
   });
+
+  const syncMessage = useEffectEvent((data: ChatMessage[]) => {
+    messageStoreActions.syncMessages(data);
+  });
+
+  useEffect(() => {
+    if (data) syncMessage(data.messages);
+  }, [data]);
 
   return <MessageHistory />;
 }

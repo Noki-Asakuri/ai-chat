@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
 // import { chatStore, useChatStore } from "@/lib/chat/store";
-import { threadStore } from "@/lib/store/thread-store";
+import { threadStoreActions } from "@/lib/store/thread-store";
 
 const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
@@ -131,7 +131,7 @@ export function RegisterHotkeys() {
         (event.metaKey || event.ctrlKey)
       ) {
         event.preventDefault();
-        threadStore.setThreadCommandOpen((open) => !open);
+        threadStoreActions.setThreadCommandOpen((open) => !open);
       }
 
       if (

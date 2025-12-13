@@ -7,7 +7,7 @@ import type { ChatRequestBody } from "@/lib/server/validate-request-body";
 
 type Thread = Doc<"threads">;
 
-type ReasoningEffort = NonNullable<Doc<"messages">["modelParams"]>["effort"];
+type ReasoningEffort = NonNullable<Doc<"messages">["metadata"]>["modelParams"]["effort"];
 
 type UserAttachment = { id: string; file: File; type: "image" | "pdf" };
 
@@ -19,23 +19,31 @@ type RemoveFunctions<T> = {
   [K in keyof T as T[K] extends Function ? never : K]: T[K];
 };
 
-export const metadataSchema = z.object({
-  model: z.string(),
-  finishReason: z.string(),
-  timeToFirstTokenMs: z.number(),
+type RemoveAllExceptFunctions<T> = {
+  [K in keyof T as T[K] extends Function ? K : never]: T[K];
+};
 
-  durations: z.object({ request: z.number(), reasoning: z.number(), text: z.number() }),
-  usages: z.object({
-    inputTokens: z.number(),
-    outputTokens: z.number(),
-    reasoningTokens: z.number(),
-  }),
+export const metadataSchema = z
+  .object({
+    model: z.object({ request: z.string(), response: z.nullable(z.string()) }),
+    finishReason: z.string(),
+    timeToFirstTokenMs: z.number(),
 
-  modelParams: z.object({
-    webSearchEnabled: z.boolean(),
-    effort: z.string(),
-  }),
-});
+    durations: z.object({ request: z.number(), reasoning: z.number(), text: z.number() }),
+    usages: z.object({
+      inputTokens: z.number(),
+      outputTokens: z.number(),
+      reasoningTokens: z.number(),
+    }),
+
+    modelParams: z.object({
+      webSearch: z.boolean(),
+      effort: z.string(),
+
+      profile: z.object({ id: z.string(), name: z.string() }).nullable(),
+    }),
+  })
+  .optional();
 
 type Metadata = z.infer<typeof metadataSchema>;
 
@@ -49,4 +57,5 @@ export type {
   UIChatMessage,
   UserAttachment,
   RemoveFunctions,
+  RemoveAllExceptFunctions,
 };

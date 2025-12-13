@@ -2,7 +2,7 @@ import { BrainIcon, SignalHighIcon, SignalLowIcon, SignalMediumIcon } from "luci
 import { useEffect, useEffectEvent } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "../provider/config-store-provider";
+import { useConfigStore, useConfigStoreState } from "../provider/config-provider";
 import { Button, buttonVariants } from "../ui/button";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "../ui/popover";
 
@@ -28,12 +28,16 @@ export function EffortSelector(props: EffortSelectorProps) {
   return <EffortSelectorBase {...props} />;
 }
 
-const EFFORT_OPTIONS: Record<ReasoningEffort, { label: string; icon: typeof SignalLowIcon }> = {
+export const EFFORT_OPTIONS: Record<
+  ReasoningEffort,
+  { label: string; icon: typeof SignalLowIcon }
+> = {
   none: { label: "None", icon: SignalLowIcon },
   minimal: { label: "Minimal", icon: SignalLowIcon },
   low: { label: "Low", icon: SignalLowIcon },
   medium: { label: "Medium", icon: SignalMediumIcon },
   high: { label: "High", icon: SignalHighIcon },
+  xhigh: { label: "XHigh", icon: SignalHighIcon },
 };
 
 export function EffortSelectorBase(props: EffortSelectorProps) {

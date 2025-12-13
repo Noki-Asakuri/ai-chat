@@ -2,7 +2,7 @@ import { Popover } from "@base-ui-components/react/popover";
 import { useMemo } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-store-provider";
+import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Command,

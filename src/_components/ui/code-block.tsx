@@ -8,7 +8,7 @@ import { CopyButton } from "../copy-button";
 import { ButtonWithTip } from "./button";
 import { Icons } from "./icons";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-store-provider";
+import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 
 import { getHighlightFromCache, setHighlightInCache } from "@/lib/code-highlight-cache";
 import { useThrottledDebouncedValue } from "@/lib/hooks/use-throttled-debounced-value";

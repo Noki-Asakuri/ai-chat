@@ -11,9 +11,10 @@ import { ChatActionButtons } from "./action-buttons";
 import { ChatAttachmentDisplay } from "./attachment-display";
 import { ChatSendButton } from "./send-button";
 
-import { useGetSendDescription } from "@/lib/chat/send-preference";
+import { useGetSendDescription, useShouldSend } from "@/lib/chat/send-preference";
+import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message";
 import { convexSessionQuery } from "@/lib/convex/helpers";
-import { chatStore, useChatStore } from "@/lib/store/chat-store";
+import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
 export function ChatTextarea() {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -22,7 +23,7 @@ export function ChatTextarea() {
     const entry = entries[0];
     if (!entry) return;
 
-    chatStore.setTextareaHeight(entry.target.clientHeight);
+    chatStoreActions.setTextareaHeight(entry.target.clientHeight);
   });
 
   useEffect(() => {
@@ -63,7 +64,11 @@ export function ChatTextarea() {
 }
 
 function InputTextArea() {
+  const shouldSend = useShouldSend();
   const input = useChatStore((state) => state.input);
+
+  const { sendChatRequest } = useSendChatMessage();
+
   function handleAddAttachments({ files }: { files: File[] }) {
     const acceptFiles = files.filter(
       (file) => file.type.includes("image") || file.type.includes("pdf"),
@@ -76,7 +81,7 @@ function InputTextArea() {
         type: (file.type.includes("image") ? "image" : "pdf") as "image" | "pdf",
       }));
 
-      chatStore.addAttachments(attachments);
+      chatStoreActions.addAttachments(attachments);
     }
 
     if (acceptFiles.length < files.length) {
@@ -99,9 +104,9 @@ function InputTextArea() {
         aria-label="Type your message here..."
         placeholder="Type your message here..."
         value={input}
-        onChange={(event) => chatStore.setInput(event.target.value)}
+        onChange={(event) => chatStoreActions.setInput(event.target.value)}
         data-slot="textarea-chat-input"
-        className="max-h-[250px] w-full resize-none rounded-none border-0 bg-transparent! p-0 ring-0!"
+        className="max-h-62.5 w-full resize-none rounded-none border-0 bg-transparent! p-0 ring-0!"
         onPaste={(event) => {
           const { items } = event.clipboardData;
           const files = Array.from(items)
@@ -116,19 +121,19 @@ function InputTextArea() {
 
           handleAddAttachments({ files });
         }}
-        // onKeyDown={(event) => {
-        //   const send = shouldSend({
-        //     key: event.key,
-        //     shiftKey: event.shiftKey,
-        //     ctrlKey: event.ctrlKey,
-        //     metaKey: event.metaKey,
-        //   });
+        onKeyDown={(event) => {
+          const send = shouldSend({
+            key: event.key,
+            shiftKey: event.shiftKey,
+            ctrlKey: event.ctrlKey,
+            metaKey: event.metaKey,
+          });
 
-        //   if (send) {
-        //     event.preventDefault();
-        //     // void submitChatMessage();
-        //   }
-        // }}
+          if (!send) return;
+
+          event.preventDefault();
+          sendChatRequest();
+        }}
       />
 
       <TextareaDescription />

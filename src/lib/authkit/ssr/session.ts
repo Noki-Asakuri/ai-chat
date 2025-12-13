@@ -99,7 +99,15 @@ export async function saveSession(
   const cookieName = getConfig("cookieName") || "wos-session";
   const encryptedSession = await encryptSession(sessionOrResponse);
 
-  setCookie(cookieName, encryptedSession);
+  setCookie(cookieName, encryptedSession, {
+    httpOnly: true,
+    secure: import.meta.env.PROD,
+    sameSite: "lax",
+    path: "/",
+    priority: "high",
+    maxAge: getConfig("cookieMaxAge"),
+    domain: import.meta.env.PROD ? "chat.asakuri.me" : "localhost",
+  });
 }
 
 // JWKS call only happens once and the result is cached. The lazy function ensures that

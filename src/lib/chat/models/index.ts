@@ -30,7 +30,7 @@ export function prettifyProviderName(provider: Provider | (string & {})) {
   }
 }
 
-type ReasoningEffort = NonNullable<Doc<"messages">["modelParams"]>["effort"];
+type ReasoningEffort = NonNullable<Doc<"messages">["metadata"]>["modelParams"]["effort"];
 
 type Capability = {
   webSearch?: boolean;

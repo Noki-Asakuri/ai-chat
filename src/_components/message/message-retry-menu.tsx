@@ -1,10 +1,4 @@
-import {
-  ChevronRightIcon,
-  RefreshCcwIcon,
-  SignalHighIcon,
-  SignalLowIcon,
-  SignalMediumIcon,
-} from "lucide-react";
+import { ChevronRightIcon, RefreshCcwIcon } from "lucide-react";
 import * as React from "react";
 
 import { ModelCapability } from "@/components/capability-icon";
@@ -20,9 +14,10 @@ import {
   type ModelData,
   type Provider,
 } from "@/lib/chat/models";
-import { useChatStore } from "@/lib/chat/store";
+import { useRetryChatMessage } from "@/lib/chat/server-function/retry-chat-message";
 import type { ChatMessage, ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { EFFORT_OPTIONS } from "../chat-textarea/effort-selector";
 
 type RetryModelPopupProps = React.ComponentPropsWithoutRef<typeof Button> & {
   index: number;
@@ -36,18 +31,22 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
   const [open, setOpen] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
 
+  const { retryChatMessage } = useRetryChatMessage();
+
   const pendingRetry = isPending || message.status === "pending";
 
   const modelsByProvider = AllModelIds.reduce<GroupedModels>((acc, modelId) => {
     const model = ModelsData[modelId]!;
     const provider = model.provider;
-    (acc[provider] ??= []).push({ modelId, ...model });
+
+    if (!acc[provider]) acc[provider] = [];
+    acc[provider].push({ modelId, ...model });
 
     return acc;
   }, {});
 
   function setPopupOpen(open: boolean) {
-    useChatStore.getState().setPopupRetryMessageId(open ? message._id : "");
+    // useChatStore.getState().setPopupRetryMessageId(open ? message._id : "");
     setOpen(open);
   }
 
@@ -61,10 +60,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
       event.stopPropagation();
 
       startTransition(async () => {
-        await retryMessage(index, {
-          modelId: message.model,
-          effort: message.modelParams?.effort ?? "medium",
-        });
+        await retryChatMessage({ index });
       });
     }
   }
@@ -104,17 +100,14 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
 
       <Menu.Portal>
         <Menu.Positioner className="outline-none" sideOffset={8} align="center" side="top">
-          <Menu.Popup className="flex w-50 origin-(--transform-origin) flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
+          <Menu.Popup className="flex w-50 origin-(--transform-origin) flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-ending-style:scale-90 data-ending-style:opacity-0 data-starting-style:scale-90 data-starting-style:opacity-0">
             <MenuArrow className="fill-card" />
 
             <Menu.Item
               className={cn(buttonVariants({ variant: "ghost" }), "w-full justify-start")}
               onClick={async () => {
                 setPopupOpen(false);
-                await retryMessage(index, {
-                  modelId: message.model,
-                  effort: message.modelParams?.effort,
-                });
+                await retryChatMessage({ index });
               }}
             >
               <RefreshCcwIcon className="size-4" />
@@ -143,7 +136,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
 
                   <Menu.Portal>
                     <Menu.Positioner side="right" align="center" className="p-1" sideOffset={12}>
-                      <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
+                      <Menu.Popup className="flex w-max origin-(--transform-origin) flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-ending-style:scale-90 data-ending-style:opacity-0 data-starting-style:scale-90 data-starting-style:opacity-0">
                         <MenuArrow className="fill-card" />
 
                         {models?.map((model) => (
@@ -153,10 +146,6 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
                             index={index}
                             provider={model.provider}
                             messageRole={message.role}
-                            retryMessage={async (effort) => {
-                              setPopupOpen(false);
-                              await retryMessage(index, { modelId: model.modelId, effort });
-                            }}
                           />
                         ))}
                       </Menu.Popup>
@@ -173,15 +162,15 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
 }
 
 type ModelProviderPickerProps = {
+  index: number;
   provider: Provider;
   model: ModelWithId;
-  index: number;
   messageRole: ChatMessage["role"];
-
-  retryMessage: (effort?: ReasoningEffort) => Promise<void>;
 };
 
 function ModelProviderPicker(props: ModelProviderPickerProps) {
+  const { retryChatMessage } = useRetryChatMessage();
+
   if (props.model.capabilities.reasoning === true) {
     return <EffortSelector {...props} />;
   }
@@ -192,7 +181,7 @@ function ModelProviderPicker(props: ModelProviderPickerProps) {
         buttonVariants({ variant: "ghost" }),
         "w-full items-center justify-between gap-4 p-2",
       )}
-      onClick={async () => await props.retryMessage()}
+      onClick={() => retryChatMessage({ index: props.index, modelId: props.model.modelId })}
     >
       <div className="pointer-events-none flex items-center gap-2">
         <Icons.provider provider={props.model.provider} />
@@ -205,6 +194,15 @@ function ModelProviderPicker(props: ModelProviderPickerProps) {
 }
 
 function EffortSelector(props: ModelProviderPickerProps) {
+  const { retryChatMessage } = useRetryChatMessage();
+
+  // If they don't have customReasoningLevel, we fallback to the only 3 levels.
+  const validOptions = Object.entries(EFFORT_OPTIONS).filter(([key]) =>
+    props.model.capabilities.customReasoningLevel
+      ? props.model.capabilities.customReasoningLevel?.includes(key as ReasoningEffort)
+      : ["high", "medium", "low"].includes(key),
+  );
+
   return (
     <Menu.SubmenuRoot>
       <Menu.SubmenuTrigger
@@ -228,42 +226,29 @@ function EffortSelector(props: ModelProviderPickerProps) {
           sideOffset={12}
           side={props.messageRole === "user" ? "left" : "right"}
         >
-          <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-[ending-style]:scale-90 data-[ending-style]:opacity-0 data-[starting-style]:scale-90 data-[starting-style]:opacity-0">
+          <Menu.Popup className="flex w-max origin-(--transform-origin) flex-col gap-1 rounded-md border bg-card p-1 text-card-foreground transition-[transform,scale,opacity] data-ending-style:scale-90 data-ending-style:opacity-0 data-starting-style:scale-90 data-starting-style:opacity-0">
             <MenuArrow className="fill-card" />
 
             <div className="flex flex-col gap-1">
-              <Menu.Item
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  "w-full cursor-pointer justify-start p-0",
-                )}
-                onClick={() => props.retryMessage("low")}
-              >
-                <SignalLowIcon className="size-5" />
-                Low
-              </Menu.Item>
-
-              <Menu.Item
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  "w-full cursor-pointer justify-start p-0",
-                )}
-                onClick={() => props.retryMessage("medium")}
-              >
-                <SignalMediumIcon className="size-5" />
-                Medium
-              </Menu.Item>
-
-              <Menu.Item
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  "w-full cursor-pointer justify-start p-0",
-                )}
-                onClick={() => props.retryMessage("high")}
-              >
-                <SignalHighIcon className="size-5" />
-                High
-              </Menu.Item>
+              {validOptions.map(([key, { label, icon: Icon }]) => (
+                <Menu.Item
+                  key={`effort-selector-${key}`}
+                  className={cn(
+                    buttonVariants({ variant: "ghost" }),
+                    "w-full cursor-pointer justify-start p-0",
+                  )}
+                  onClick={() =>
+                    retryChatMessage({
+                      index: props.index,
+                      modelId: props.model.modelId,
+                      modelParams: { effort: key as ReasoningEffort },
+                    })
+                  }
+                >
+                  <Icon className="size-5" />
+                  {label}
+                </Menu.Item>
+              ))}
             </div>
           </Menu.Popup>
         </Menu.Positioner>

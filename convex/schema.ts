@@ -10,6 +10,7 @@ export const effort = v.union(
   v.literal("low"),
   v.literal("medium"),
   v.literal("high"),
+  v.literal("xhigh"),
 );
 
 export const status = v.union(
@@ -85,7 +86,7 @@ export const AISDKParts = v.array(
       callProviderMetadata: providerMetadata,
     }),
     v.object({
-      type: v.string(),
+      type: v.literal(`tool-${v.string()}`),
       state: v.literal("input-streaming"),
       toolCallId: v.string(),
       input: v.any(),
@@ -94,7 +95,7 @@ export const AISDKParts = v.array(
       errorText: v.optional(v.string()),
     }),
     v.object({
-      type: v.string(),
+      type: v.literal(`tool-${v.string()}`),
       state: v.literal("input-available"),
       toolCallId: v.string(),
       input: v.any(),
@@ -104,7 +105,7 @@ export const AISDKParts = v.array(
       callProviderMetadata: providerMetadata,
     }),
     v.object({
-      type: v.string(),
+      type: v.literal(`tool-${v.string()}`),
       state: v.literal("output-available"),
       toolCallId: v.string(),
       input: v.any(),
@@ -115,7 +116,7 @@ export const AISDKParts = v.array(
       preliminary: v.optional(v.boolean()),
     }),
     v.object({
-      type: v.string(),
+      type: v.literal(`tool-${v.string()}`),
       state: v.literal("output-error"),
       toolCallId: v.string(),
       input: v.any(),
@@ -128,12 +129,13 @@ export const AISDKParts = v.array(
 );
 
 export const AISDKModelParams = v.object({
-  webSearchEnabled: v.boolean(),
   effort: effort,
+  webSearch: v.boolean(),
+  profile: v.optional(v.nullable(v.object({ id: v.id("profiles"), name: v.string() }))),
 });
 
 export const AISDKMetadata = v.object({
-  model: v.string(),
+  model: v.object({ request: v.string(), response: v.nullable(v.string()) }),
   finishReason: v.string(),
 
   usages: v.object({
@@ -146,150 +148,147 @@ export const AISDKMetadata = v.object({
   profile: v.optional(v.object({ id: v.id("profiles"), name: v.string() })),
   durations: v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
 
-  modelParams: v.optional(AISDKModelParams),
+  modelParams: AISDKModelParams,
 });
 
-export default defineSchema({
-  groups: defineTable({
-    title: v.string(),
-    order: v.number(),
-    userId: v.string(),
-  }).index("by_userId_order", ["userId", "order"]),
+export default defineSchema(
+  {
+    groups: defineTable({
+      title: v.string(),
+      order: v.number(),
+      userId: v.string(),
+    }).index("by_userId_order", ["userId", "order"]),
 
-  threads: defineTable({
-    title: v.string(),
-    userId: v.string(),
-    updatedAt: v.number(),
-    pinned: v.boolean(),
-    branchedFrom: v.optional(v.id("threads")),
+    threads: defineTable({
+      title: v.string(),
+      userId: v.string(),
+      updatedAt: v.number(),
+      pinned: v.boolean(),
+      branchedFrom: v.optional(v.id("threads")),
 
-    groupId: v.nullable(v.id("groups")),
-    order: v.number(),
+      groupId: v.nullable(v.id("groups")),
+      order: v.number(),
 
-    status: status,
-  })
-    .index("by_userId", ["userId"])
-    .index("by_userId_updatedAt", ["userId", "updatedAt"])
-    .index("by_userId_groupId_order", ["userId", "groupId", "order"])
-    .index("by_userId_pinned_updatedAt", ["userId", "pinned", "updatedAt"])
-    .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "pinned"] }),
+      status: status,
+    })
+      .index("by_userId", ["userId"])
+      .index("by_userId_updatedAt", ["userId", "updatedAt"])
+      .index("by_userId_groupId_order", ["userId", "groupId", "order"])
+      .index("by_userId_pinned_updatedAt", ["userId", "pinned", "updatedAt"])
+      .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "pinned"] }),
 
-  attachments: defineTable({
-    id: v.string(),
-    name: v.string(),
-    size: v.number(),
-    type: v.union(v.literal("image"), v.literal("pdf")),
-    source: v.union(v.literal("assistant"), v.literal("user")),
-    mimeType: v.string(),
-    path: v.string(),
-
-    userId: v.string(),
-    threadId: v.id("threads"),
-  })
-    .index("by_userId", ["userId"])
-    .index("by_UUID", ["id"]),
-
-  messages: defineTable({
-    threadId: v.id("threads"),
-    userId: v.string(),
-
-    messageId: v.string(),
-    error: v.optional(v.string()),
-
-    parts: AISDKParts,
-    status: status,
-
-    role: v.union(v.literal("assistant"), v.literal("user")),
-    resumableStreamId: v.optional(v.nullable(v.string())),
-
-    metadata: v.optional(AISDKMetadata),
-    modelParams: v.optional(AISDKModelParams),
-    attachments: v.array(v.id("attachments")),
-
-    createdAt: v.number(),
-    updatedAt: v.number(),
-
-    // @deprecate
-    model: v.optional(v.string()),
-    content: v.optional(v.string()),
-    reasoning: v.optional(v.string()),
-  })
-    .index("by_userId_threadId", ["userId", "threadId"])
-    .index("by_threadId", ["threadId"])
-    .index("by_messageId", ["messageId"]),
-
-  profiles: defineTable({
-    userId: v.string(),
-    name: v.string(),
-    systemPrompt: v.string(),
-    imageKey: v.optional(v.string()),
-
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_userId", ["userId"])
-    .index("by_userId_updatedAt", ["userId", "updatedAt"])
-    .index("by_userId_createdAt", ["userId", "createdAt"])
-    .searchIndex("search_name", { searchField: "name", filterFields: ["userId"] }),
-
-  users: defineTable({
-    userId: v.string(),
-
-    username: v.nullable(v.string()),
-    emailAddress: v.nullable(v.string()),
-    imageUrl: v.nullable(v.string()),
-
-    isBanned: v.optional(v.boolean()),
-
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
-
-    customization: v.object({
+    attachments: defineTable({
+      id: v.string(),
       name: v.string(),
-      occupation: v.string(),
-      traits: v.array(v.string()),
-      systemInstruction: v.string(),
-      backgroundId: v.nullable(v.string()),
-      disableBlur: v.boolean(),
-      hiddenModels: v.array(v.string()),
-      showFullCode: v.boolean(),
-    }),
-  }).index("by_userId", ["userId"]),
+      size: v.number(),
+      type: v.union(v.literal("image"), v.literal("pdf")),
+      source: v.union(v.literal("assistant"), v.literal("user")),
+      mimeType: v.string(),
+      path: v.string(),
 
-  usages: defineTable({
-    userId: v.string(),
-    used: v.number(),
-    base: v.number(),
-    resetType: v.optional(v.union(v.literal("monthly"), v.literal("daily"))),
+      userId: v.string(),
+      threadId: v.id("threads"),
+    })
+      .index("by_userId", ["userId"])
+      .index("by_UUID", ["id"]),
 
-    // @deprecate, no point of using this anymore
-    resetAt: v.optional(v.number()),
-  }).index("by_userId", ["userId"]),
+    messages: defineTable({
+      threadId: v.id("threads"),
+      userId: v.string(),
 
-  session: defineTable({
-    userId: v.string(),
-    sessionId: v.string(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_userId", ["userId"])
-    .index("by_sessionId", ["sessionId"]),
+      messageId: v.string(),
+      error: v.optional(v.string()),
 
-  user_stats: defineTable({
-    userId: v.string(),
+      parts: AISDKParts,
+      status: status,
 
-    stats: v.object({
-      threads: v.number(),
-      words: v.number(),
-      messages: v.object({ assistant: v.number(), user: v.number() }),
-      wordsByRole: v.object({ assistant: v.number(), user: v.number() }),
-    }),
+      role: v.union(v.literal("assistant"), v.literal("user")),
+      resumableStreamId: v.optional(v.nullable(v.string())),
 
-    modelCounts: v.record(v.string(), v.number()),
-    threadCounts: v.record(v.id("threads"), v.number()),
-    activityCounts: v.record(v.string(), v.number()),
-    aiProfileCounts: v.record(v.string(), v.number()),
+      metadata: v.optional(AISDKMetadata),
+      attachments: v.array(v.id("attachments")),
 
-    lastUpdatedAt: v.number(),
-  }).index("by_userId", ["userId"]),
-});
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_userId_threadId", ["userId", "threadId"])
+      .index("by_threadId", ["threadId"])
+      .index("by_messageId", ["messageId"]),
+
+    profiles: defineTable({
+      userId: v.string(),
+      name: v.string(),
+      systemPrompt: v.string(),
+      imageKey: v.optional(v.string()),
+
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_userId", ["userId"])
+      .index("by_userId_updatedAt", ["userId", "updatedAt"])
+      .index("by_userId_createdAt", ["userId", "createdAt"])
+      .searchIndex("search_name", { searchField: "name", filterFields: ["userId"] }),
+
+    users: defineTable({
+      userId: v.string(),
+
+      username: v.nullable(v.string()),
+      emailAddress: v.nullable(v.string()),
+      imageUrl: v.nullable(v.string()),
+
+      isBanned: v.optional(v.boolean()),
+
+      createdAt: v.optional(v.number()),
+      updatedAt: v.optional(v.number()),
+
+      customization: v.object({
+        name: v.string(),
+        occupation: v.string(),
+        traits: v.array(v.string()),
+        systemInstruction: v.string(),
+        backgroundId: v.nullable(v.string()),
+        disableBlur: v.boolean(),
+        hiddenModels: v.array(v.string()),
+        showFullCode: v.boolean(),
+      }),
+    }).index("by_userId", ["userId"]),
+
+    usages: defineTable({
+      userId: v.string(),
+      used: v.number(),
+      base: v.number(),
+      resetType: v.optional(v.union(v.literal("monthly"), v.literal("daily"))),
+
+      // @deprecate, no point of using this anymore
+      resetAt: v.optional(v.number()),
+    }).index("by_userId", ["userId"]),
+
+    session: defineTable({
+      userId: v.string(),
+      sessionId: v.string(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_userId", ["userId"])
+      .index("by_sessionId", ["sessionId"]),
+
+    user_stats: defineTable({
+      userId: v.string(),
+
+      stats: v.object({
+        threads: v.number(),
+        words: v.number(),
+        messages: v.object({ assistant: v.number(), user: v.number() }),
+        wordsByRole: v.object({ assistant: v.number(), user: v.number() }),
+      }),
+
+      modelCounts: v.record(v.string(), v.number()),
+      threadCounts: v.record(v.id("threads"), v.number()),
+      activityCounts: v.record(v.string(), v.number()),
+      aiProfileCounts: v.record(v.string(), v.number()),
+
+      lastUpdatedAt: v.number(),
+    }).index("by_userId", ["userId"]),
+  },
+  { schemaValidation: false },
+);

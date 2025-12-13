@@ -17,27 +17,25 @@ import { format } from "@/lib/utils";
 
 type MessageMetadataProps = {
   metadata: ChatMessage["metadata"];
-  params: ChatMessage["modelParams"];
-  model: string;
 };
 
-export function MessageMetadata({ metadata, params, model }: MessageMetadataProps) {
-  if (!model) return null;
+export function MessageMetadata({ metadata }: MessageMetadataProps) {
+  if (!metadata) return null;
 
-  const modelData = getModelData(model);
+  const modelData = getModelData(metadata.model.request);
 
   const showEffort =
     typeof modelData.capabilities.reasoning === "boolean" &&
     modelData.capabilities.reasoning === true &&
-    params?.effort &&
-    params.effort !== "medium";
+    metadata.modelParams.effort &&
+    metadata.modelParams.effort !== "medium";
 
   return (
     <div className="flex h-full w-full items-center justify-between">
       <div className="flex h-10.5 items-center justify-center gap-2 rounded-md border bg-background/80 p-2 backdrop-blur-md backdrop-saturate-150">
         <Icons.provider provider={modelData?.provider} className="size-4 rounded-md" />
         {modelData?.display.name}{" "}
-        {showEffort && <span className="text-sm capitalize">({params?.effort})</span>}
+        {showEffort && <span className="text-sm capitalize">({metadata.modelParams.effort})</span>}
       </div>
 
       <PopoverInfo metadata={metadata} />
