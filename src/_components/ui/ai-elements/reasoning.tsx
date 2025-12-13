@@ -107,7 +107,9 @@ export const Reasoning = memo(
   },
 );
 
-export type ReasoningTriggerProps = ComponentProps<typeof Collapsible.Trigger>;
+export type ReasoningTriggerProps = ComponentProps<typeof Collapsible.Trigger> & {
+  showArrow?: boolean;
+};
 
 const getThinkingMessage = (isStreaming: boolean, duration?: number) => {
   if (isStreaming || duration === 0) {
@@ -121,29 +123,34 @@ const getThinkingMessage = (isStreaming: boolean, duration?: number) => {
   return <p>Thought for {format.time(duration / 1000)} seconds</p>;
 };
 
-export const ReasoningTrigger = memo(({ className, children, ...props }: ReasoningTriggerProps) => {
-  const { isStreaming, isOpen, duration } = useReasoning();
+export const ReasoningTrigger = memo(
+  ({ className, children, showArrow, ...props }: ReasoningTriggerProps) => {
+    const { isStreaming, isOpen, duration } = useReasoning();
 
-  return (
-    <Collapsible.Trigger
-      className={cn(
-        "flex w-full items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground",
-        className,
-      )}
-      {...props}
-    >
-      {children ?? (
-        <>
-          <BrainIcon className="size-4" />
-          {getThinkingMessage(isStreaming, duration)}
-          <ChevronDownIcon
-            className={cn("size-4 transition-transform", isOpen ? "rotate-180" : "rotate-0")}
-          />
-        </>
-      )}
-    </Collapsible.Trigger>
-  );
-});
+    return (
+      <Collapsible.Trigger
+        className={cn(
+          "flex w-full items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground",
+          className,
+        )}
+        {...props}
+      >
+        {children ?? (
+          <>
+            <BrainIcon className="size-4" />
+            {getThinkingMessage(isStreaming, duration)}
+
+            {showArrow && (
+              <ChevronDownIcon
+                className={cn("size-4 transition-transform", isOpen ? "rotate-180" : "rotate-0")}
+              />
+            )}
+          </>
+        )}
+      </Collapsible.Trigger>
+    );
+  },
+);
 
 export type ReasoningContentProps = ComponentProps<typeof Collapsible.Panel> & {
   children: string;
