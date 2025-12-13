@@ -23,7 +23,7 @@ export function MessageFooter({ index, isLast, message }: MessageFooterProps) {
         },
       )}
     >
-      {isFinished && <MessageActionButtons index={index} message={message} />}
+      <MessageActionButtons index={index} message={message} isFinished={isFinished} />
       {message.role === "assistant" && <MessageMetadata metadata={message.metadata} />}
     </div>
   );

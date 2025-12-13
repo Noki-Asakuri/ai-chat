@@ -175,11 +175,7 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
       )}
       {...props}
     >
-      <MemoizedMarkdownBlock
-        content={children}
-        isStreaming={isStreaming}
-        parseIncompleteMarkdown={false}
-      />
+      <MemoizedMarkdownBlock role="assistant" content={children} isAnimating={isStreaming} />
     </Collapsible.Panel>
   );
 });

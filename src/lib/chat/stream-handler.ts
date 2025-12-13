@@ -1,5 +1,5 @@
 // src/create-stream-response-handler.ts
-import { readUIMessageStream, type UIMessage, type UIMessageChunk } from "ai";
+import { readUIMessageStream, type UIMessageChunk } from "ai";
 
 import type { UIChatMessage } from "../types";
 
