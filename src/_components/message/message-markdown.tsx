@@ -147,15 +147,13 @@ function CodeBlock({
 }
 
 type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
-  content: string;
   role: ChatMessage["role"];
 };
 
-export function MemoizedMarkdownBlock({ content, role, isAnimating, ...props }: MarkdownProps) {
+export function StreamDownWrapper({ children, role, ...props }: MarkdownProps) {
   return (
     <Streamdown
       mode={role === "user" ? "static" : "streaming"}
-      isAnimating={isAnimating}
       parseIncompleteMarkdown={false}
       rehypePlugins={[
         rehypeRaw,
@@ -170,13 +168,12 @@ export function MemoizedMarkdownBlock({ content, role, isAnimating, ...props }: 
         ],
       ]}
       remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
-      remarkRehypeOptions={{ allowDangerousHtml: true }}
       components={{ code: CodeBlock }}
       {...props}
     >
-      {escapeInvalidMath(content)}
+      {escapeInvalidMath(children as string)}
     </Streamdown>
   );
 }
 
-MemoizedMarkdownBlock.displayName = "MemoizedMarkdownBlock";
+StreamDownWrapper.displayName = "StreamDownWrapper";

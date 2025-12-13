@@ -1,11 +1,11 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { createStreamResponseHandler } from "./stream-handler";
+import { consumeUIMessageStreamResponse } from "./stream-handler";
 
 import { getConvexReactClient } from "../convex/client";
 import { uploadFileToR2 } from "../convex/uploadFiles";
-import { messageStoreActions } from "../store/messages-store";
+import { messageStoreActions, useMessageStore } from "../store/messages-store";
 import type { ChatMessage, UIChatMessage, UserAttachment } from "../types";
 
 export function convertToUIChatMessages(messages: ChatMessage[]): UIChatMessage[] {
@@ -24,16 +24,21 @@ export async function processStreamResponse(
   messageId: Id<"messages">,
   threadId: Id<"threads">,
 ) {
-  const iterable = createStreamResponseHandler(response);
+  await consumeUIMessageStreamResponse<UIChatMessage>({
+    response,
+    onEvent(event) {
+      const activeThreadId = useMessageStore.getState().currentThreadId;
+      if (activeThreadId !== threadId) return;
 
-  for await (const message of iterable) {
-    const activeThreadId = messageStoreActions.getCurrentThreadId();
-    if (activeThreadId !== threadId) continue;
-
-    messageStoreActions.updateMessageById(messageId, {
-      parts: message.parts as ChatMessage["parts"],
-    });
-  }
+      if (event.type === "message") {
+        messageStoreActions.setMessageParts(
+          messageId,
+          event.message.parts as ChatMessage["parts"],
+          event.message.metadata as ChatMessage["metadata"],
+        );
+      }
+    },
+  });
 }
 
 type UploadedAttachment = {

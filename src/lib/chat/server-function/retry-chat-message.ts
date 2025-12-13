@@ -4,7 +4,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useSessionId } from "convex-helpers/react/sessions";
 import { useConvex } from "convex/react";
 
-import { messageStoreActions } from "@/lib/store/messages-store";
+import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 
 import { convertToUIChatMessages, processStreamResponse } from "../shared";
@@ -29,11 +29,13 @@ export function useRetryChatMessage() {
   async function retryChatMessage({ index, ...options }: RetryChatMessage) {
     const sessionId = id!;
 
-    const threadId = messageStoreActions.getCurrentThreadId();
+    const messageState = useMessageStore.getState();
+
+    const threadId = messageState.currentThreadId;
     if (!threadId) return;
 
-    const messagesHistory = messageStoreActions
-      .getMessages()
+    const messagesHistory = messageState.messageIds
+      .map((id) => messageState.messagesById[id]!)
       .sort((a, b) => a.createdAt - b.createdAt);
 
     const abortController = new AbortController();

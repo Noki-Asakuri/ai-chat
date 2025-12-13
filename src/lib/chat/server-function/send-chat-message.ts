@@ -10,7 +10,7 @@ import { useShallow } from "zustand/shallow";
 import { useConfigStore } from "@/components/provider/config-provider";
 
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
-import { messageStoreActions } from "@/lib/store/messages-store";
+import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { fromUUID, toUUID } from "@/lib/utils";
 
@@ -38,9 +38,12 @@ export function useSendChatMessage() {
     let threadId: Id<"threads"> | null = fromUUID<Id<"threads">>(params?.threadId) ?? null;
     const { input, attachments } = useChatStore.getState();
 
-    const messagesHistory = messageStoreActions
-      .getMessages()
+    const messageState = useMessageStore.getState();
+
+    const messagesHistory = messageState.messageIds
+      .map((id) => messageState.messagesById[id]!)
       .sort((a, b) => a.createdAt - b.createdAt);
+
     const lastMessage = messagesHistory[messagesHistory.length - 1];
 
     if (!input || lastMessage?.status === "pending" || lastMessage?.status === "streaming") return;

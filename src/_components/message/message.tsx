@@ -10,9 +10,9 @@ import { MessageContent } from "./message-content";
 import { MessageFooter } from "./message-footer";
 
 import { getModelData } from "@/lib/chat/models";
-import type { ChatMessage } from "@/lib/types";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
+import type { ChatMessage } from "@/lib/types";
 
 type MessageProps = {
   messageId: Id<"messages">;

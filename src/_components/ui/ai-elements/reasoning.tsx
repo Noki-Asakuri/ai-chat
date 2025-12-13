@@ -6,7 +6,7 @@ import { BrainIcon, ChevronDownIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 
-import { MemoizedMarkdownBlock } from "@/components/message/message-markdown";
+import { StreamDownWrapper } from "@/components/message/message-markdown";
 
 import { Shimmer } from "./shimmer";
 
@@ -164,8 +164,6 @@ export type ReasoningContentProps = ComponentProps<typeof Collapsible.Panel> & {
 };
 
 export const ReasoningContent = memo(({ className, children, ...props }: ReasoningContentProps) => {
-  const { isStreaming } = useReasoning();
-
   return (
     <Collapsible.Panel
       className={cn(
@@ -175,7 +173,7 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
       )}
       {...props}
     >
-      <MemoizedMarkdownBlock role="assistant" content={children} isAnimating={isStreaming} />
+      <StreamDownWrapper role="assistant">{children}</StreamDownWrapper>
     </Collapsible.Panel>
   );
 });
