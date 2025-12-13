@@ -1,6 +1,6 @@
 import type { Doc } from "@/convex/_generated/dataModel";
 
-import { Collapsible } from "@base-ui-components/react/collapsible";
+import { Collapsible } from "@base-ui/react/collapsible";
 import { ChevronLeftIcon } from "lucide-react";
 
 import { useDroppable } from "@dnd-kit/core";

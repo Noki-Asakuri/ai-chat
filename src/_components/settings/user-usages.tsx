@@ -1,7 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "@tanstack/react-query";
 
-import { Meter } from "@base-ui-components/react/meter";
+import { Meter } from "@base-ui/react/meter";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";

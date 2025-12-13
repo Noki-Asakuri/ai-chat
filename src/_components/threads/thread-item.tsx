@@ -19,8 +19,8 @@ import { useRef, useState, useTransition, type ComponentProps } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { Dialog } from "@base-ui-components/react/dialog";
-import { Menu } from "@base-ui-components/react/menu";
+import { Dialog } from "@base-ui/react/dialog";
+import { Menu } from "@base-ui/react/menu";
 import { toast } from "sonner";
 
 import { buttonVariants } from "../ui/button";

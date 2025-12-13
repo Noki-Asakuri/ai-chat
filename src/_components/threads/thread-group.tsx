@@ -7,7 +7,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ChevronLeftIcon } from "lucide-react";
 import { type ComponentPropsWithRef } from "react";
 
-import { Collapsible } from "@base-ui-components/react/collapsible";
+import { Collapsible } from "@base-ui/react/collapsible";
 
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from "../ui/sidebar";
 
