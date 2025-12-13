@@ -14,8 +14,7 @@ import { messageStoreActions } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { fromUUID, toUUID } from "@/lib/utils";
 
-import { convertToUIChatMessages, uploadUserAttachment } from "../shared";
-import { createStreamResponseHandler } from "../stream-handler";
+import { convertToUIChatMessages, processStreamResponse, uploadUserAttachment } from "../shared";
 
 type CreateMessage =
   (typeof api.functions.messages.addMessagesToThread)["_args"]["messages"][number];
@@ -134,21 +133,4 @@ export function useSendChatMessage() {
   }
 
   return { sendChatRequest };
-}
-
-async function processStreamResponse(
-  response: Response,
-  messageId: Id<"messages">,
-  threadId: Id<"threads">,
-) {
-  const iterable = createStreamResponseHandler(response);
-
-  for await (const message of iterable) {
-    const activeThreadId = messageStoreActions.getCurrentThreadId();
-    if (activeThreadId !== threadId) continue;
-
-    messageStoreActions.updateMessageById(messageId, {
-      parts: message.parts as ChatMessage["parts"],
-    });
-  }
 }

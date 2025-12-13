@@ -7,8 +7,7 @@ import { useConvex } from "convex/react";
 import { messageStoreActions } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 
-import { convertToUIChatMessages } from "../shared";
-import { createStreamResponseHandler } from "../stream-handler";
+import { convertToUIChatMessages, processStreamResponse } from "../shared";
 
 type RetryChatMessage = {
   index: number;
@@ -86,21 +85,4 @@ export function useRetryChatMessage() {
   }
 
   return { retryChatMessage };
-}
-
-async function processStreamResponse(
-  response: Response,
-  messageId: Id<"messages">,
-  threadId: Id<"threads">,
-) {
-  const iterable = createStreamResponseHandler(response);
-
-  for await (const message of iterable) {
-    const activeThreadId = messageStoreActions.getCurrentThreadId();
-    if (activeThreadId !== threadId) continue;
-
-    messageStoreActions.updateMessageById(messageId, {
-      parts: message.parts as ChatMessage["parts"],
-    });
-  }
 }

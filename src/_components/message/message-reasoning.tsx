@@ -25,10 +25,17 @@ export function MessageReasoning({ parts, metadata }: ThinkingToggleProps) {
       duration={metadata?.durations?.reasoning}
       isStreaming={status === "streaming"}
     >
-      <ReasoningTrigger className="w-max rounded-md bg-background/80 p-2 backdrop-blur-md backdrop-contrast-150" />
-      <ReasoningContent className="w-full space-y-3 rounded-md border bg-card/80 p-3 backdrop-blur-md backdrop-contrast-150">
-        {reasoning}
-      </ReasoningContent>
+      <ReasoningTrigger
+        disabled={reasoning.length === 0}
+        showArrow={reasoning.length > 0}
+        className="w-max rounded-md bg-background/80 p-2 backdrop-blur-md backdrop-contrast-150"
+      />
+
+      {reasoning.length > 0 && (
+        <ReasoningContent className="w-full space-y-3 rounded-md border bg-card/80 p-3 backdrop-blur-md backdrop-contrast-150">
+          {reasoning}
+        </ReasoningContent>
+      )}
     </Reasoning>
   );
 }
