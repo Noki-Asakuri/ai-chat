@@ -2,10 +2,14 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import type { RemoveAllExceptFunctions, UserAttachment } from "../types";
+import type { Id } from "@/convex/_generated/dataModel";
 
 export type ChatStore = {
   input: string;
   setInput: (content: string) => void;
+
+  editMessageId: Id<"messages"> | null;
+  setEditMessageId: (id: Id<"messages"> | null) => void;
 
   attachments: UserAttachment[];
   addAttachments: (attachments: UserAttachment[]) => void;
@@ -26,6 +30,9 @@ export const useChatStore = create<ChatStore>()(
     (set) => ({
       input: "",
       setInput: (content) => set({ input: content }),
+
+      editMessageId: null,
+      setEditMessageId: (id) => set({ editMessageId: id }),
 
       attachments: [],
       addAttachments: (attachments) =>
