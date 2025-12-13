@@ -1,13 +1,12 @@
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
-import { FileIcon } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { FileIcon } from "lucide-react";
 
 import { ImagePreviewDialog } from "../image-preview-dialog";
 
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
-import { useChatStore } from "@/lib/store/chat-store";
 
 type MessageAttachmentDisplayProps = {
   attachments: ChatMessage["attachments"];
@@ -24,9 +23,6 @@ export function MessageAttachmentDisplay({
   attachments,
   messageId,
 }: MessageAttachmentDisplayProps) {
-  const previewImagesMap = useChatStore(
-    (state) => ({}) as Record<Id<"messages">, Array<{ src: string; size?: number; name?: string }>>,
-  );
   const previewImages = previewImagesMap[messageId!] ?? [];
 
   // Split persisted attachments into images vs. others.
