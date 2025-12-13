@@ -26,7 +26,7 @@ export const createThread = authenticatedMutation({
 });
 
 export const branchThread = authenticatedMutation({
-  args: { threadId: v.id("threads"), lastMessageCreatedAt: v.number() },
+  args: { threadId: v.id("threads"), assistantMessageId: v.id("messages") },
   handler: async (ctx, args) => {
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
@@ -35,10 +35,13 @@ export const branchThread = authenticatedMutation({
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
+    const lastMessage = await ctx.db.get("messages", args.assistantMessageId);
+    if (!lastMessage) throw new Error("Message not found");
+
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_threadId", (q) =>
-        q.eq("threadId", args.threadId).lte("_creationTime", args.lastMessageCreatedAt),
+        q.eq("threadId", args.threadId).lte("_creationTime", lastMessage._creationTime),
       )
       .order("asc")
       .collect();
@@ -58,11 +61,13 @@ export const branchThread = authenticatedMutation({
     for (const { _id, _creationTime, ...message } of messages) {
       await ctx.db.insert("messages", {
         ...message,
-        createdAt: Date.now(),
-        updatedAt: Date.now() + 1,
+
         userId: user.userId,
         threadId: newThreadId,
         messageId: crypto.randomUUID(),
+
+        createdAt: Date.now() + 1,
+        updatedAt: Date.now() + 2,
       });
     }
 

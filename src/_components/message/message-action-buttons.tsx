@@ -1,13 +1,11 @@
-import { PencilIcon, SaveIcon, SplitIcon, XIcon } from "lucide-react";
+import { SplitIcon } from "lucide-react";
 
 import { CopyButton } from "../copy-button";
 import { ButtonWithTip } from "../ui/button";
 import { MessageRetryMenu } from "./message-retry-menu";
 
-// import { useChatRequest } from "@/lib/chat/send-chat-request";
+import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
 import type { ChatMessage } from "@/lib/types";
-import { cn } from "@/lib/utils";
-import { useChatStore } from "@/lib/store/chat-store";
 
 type MessageActionButtonsProps = {
   index: number;
@@ -15,6 +13,8 @@ type MessageActionButtonsProps = {
 };
 
 export function MessageActionButtons({ index, message }: MessageActionButtonsProps) {
+  const { branchThread } = useBranchThread();
+
   async function handleEditMessage() {
     // if (message.role === "assistant") return;
     // if (editMessage?._id === message._id) {
@@ -49,47 +49,12 @@ export function MessageActionButtons({ index, message }: MessageActionButtonsPro
           variant="ghost"
           side="bottom"
           className="size-8"
-          // onMouseDown={() => branchOffThreadMessage(message)}
+          onMouseDown={() => branchThread(message._id)}
           title="Branch off at this message"
           disabled={message.status === "pending" || message.status === "streaming"}
         >
           <SplitIcon className="size-4 rotate-180" />
         </ButtonWithTip>
-      )}
-
-      {message.role === "user" && (
-        <>
-          <ButtonWithTip
-            variant="ghost"
-            side="bottom"
-            disabled={message.status === "pending"}
-            // onMouseDown={() => useChatStore.getState().setEditMessage(null)}
-            // className={cn("hidden size-8", { flex: editMessage?._id === message._id })}
-            title="Cancel Edit"
-          >
-            <XIcon className="size-4" />
-            <span className="sr-only">Cancel Edit</span>
-          </ButtonWithTip>
-
-          <ButtonWithTip
-            variant="ghost"
-            side="bottom"
-            className="size-8"
-            onMouseDown={handleEditMessage}
-            disabled={message.status === "pending"}
-            // title={editMessage?._id === message._id ? "Save Message" : "Edit Message"}
-          >
-            {/* {editMessage?._id === message._id ? (
-              <SaveIcon className="size-4" />
-            ) : (
-              <PencilIcon className="size-4" />
-            )} */}
-
-            {/* <span className="sr-only">
-              {editMessage?._id === message._id ? "Save Message" : "Edit Message"}
-            </span> */}
-          </ButtonWithTip>
-        </>
       )}
 
       <MessageRetryMenu index={index} message={message} className="size-8" />
