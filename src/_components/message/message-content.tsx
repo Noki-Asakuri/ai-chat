@@ -1,10 +1,11 @@
+import { cn } from "@/lib/utils";
 import {
   Message,
   MessageAvatar,
   MessageContent as MessageContentElement,
 } from "../ui/ai-elements/message";
 
-import { MessageAttachmentDisplay } from "./message-attachment-display";
+import { MessageAttachmentsDisplay } from "./message-attachments-display";
 import { MemoizedMarkdownBlock } from "./message-markdown";
 import { MessageReasoning } from "./message-reasoning";
 
@@ -28,31 +29,41 @@ export function MessageContent({ message }: MessageContentProps) {
 
   if (!message.parts || message.parts.length === 0) return null;
 
-  const reasoningParts = message.parts.filter((p) => p.type === "reasoning");
   const textParts = message.parts.filter((p) => p.type === "text");
+  const fileParts = message.parts.filter((p) => p.type === "file");
+  const reasoningParts = message.parts.filter((p) => p.type === "reasoning");
 
   return (
     <>
       <MessageReasoning parts={reasoningParts} metadata={message.metadata} />
 
-      <Message from={message.role} className="relative items-start">
-        {textParts.map((part, i) => (
-          <MessageContentElement
-            key={`${message._id}-${i}`}
-            className="backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
-          >
-            <MemoizedMarkdownBlock
-              content={part.text}
-              isStreaming={message.status === "streaming"}
-            />
+      <Message
+        from={message.role}
+        className="relative flex-col items-end [.is-assistant]:flex-col-reverse [.is-assistant]:items-start"
+      >
+        <MessageAttachmentsDisplay
+          messageId={message._id}
+          parts={fileParts}
+          className={cn({ "mr-13": isMobile })}
+        />
 
-            {/* <MessageAttachmentDisplay attachments={message.attachments} messageId={message._id} /> */}
-          </MessageContentElement>
-        ))}
+        <div className="relative flex gap-2">
+          {textParts.map((part, i) => (
+            <MessageContentElement
+              key={`${message._id}-${i}`}
+              className="backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
+            >
+              <MemoizedMarkdownBlock
+                content={part.text}
+                isStreaming={message.status === "streaming"}
+              />
+            </MessageContentElement>
+          ))}
 
-        {message.role === "user" && (
-          <MessageAvatar className={!isMobile ? "absolute top-0 -right-13" : ""} />
-        )}
+          {message.role === "user" && (
+            <MessageAvatar className={cn({ "absolute top-0 -right-13": !isMobile })} />
+          )}
+        </div>
       </Message>
     </>
   );

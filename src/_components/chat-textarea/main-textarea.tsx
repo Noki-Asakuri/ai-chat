@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Textarea } from "../ui/textarea";
 
 import { ChatActionButtons } from "./action-buttons";
-import { ChatAttachmentDisplay } from "./attachment-display";
+import { ChatAttachmentsDisplay } from "./attachments-display";
 import { ChatSendButton } from "./send-button";
 
 import { useGetSendDescription, useShouldSend } from "@/lib/chat/send-preference";
@@ -47,7 +47,7 @@ export function ChatTextarea() {
       <form className="mx-auto space-y-2">
         <div className="pointer-events-auto mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150">
           <UsageBanner />
-          <ChatAttachmentDisplay />
+          <ChatAttachmentsDisplay />
 
           <div>
             <InputTextArea />
