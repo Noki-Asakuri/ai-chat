@@ -314,15 +314,17 @@ app.post("/api/ai/chat", async (ctx) => {
 
     const metadata: ChatMessage["metadata"] = {
       model: { request: model.uniqueId, response: null },
-      finishReason: "",
+      finishReason: null,
       timeToFirstTokenMs: 0,
       usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
       durations: { request: 0, reasoning: 0, text: 0 },
 
       modelParams,
-    };
 
-    // if (config.profile) metadata.profile = { id: config.profile.id, name: config.profile.name };
+      profile: modelParams.profile
+        ? { id: modelParams.profile.id, name: modelParams.profile.name }
+        : null,
+    };
 
     void updateTitle({
       messages: modelMessages,
@@ -338,8 +340,6 @@ app.post("/api/ai/chat", async (ctx) => {
       originalMessages: messages,
       generateMessageId: () => requestId,
       sendReasoning: true,
-      sendFinish: true,
-      sendStart: true,
       status: 200,
       headers: {
         ...UI_MESSAGE_STREAM_HEADERS,

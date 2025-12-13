@@ -57,7 +57,11 @@ export const getAllMessagesWithoutAttachments = authenticatedQuery({
 });
 
 export const addAttachmentsToMessage = authenticatedMutation({
-  args: { messageId: v.string(), attachmentId: v.id("attachments") },
+  args: {
+    messageId: v.string(),
+    parts: AISDKParts,
+    attachmentIds: v.array(v.id("attachments")),
+  },
   handler: async (ctx, args) => {
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
@@ -70,7 +74,10 @@ export const addAttachmentsToMessage = authenticatedMutation({
     if (!message) throw new Error("Message not found");
     if (message.userId !== user.userId) throw new Error("Not authorized");
 
-    await ctx.db.patch("messages", message._id, { attachments: [args.attachmentId] });
+    await ctx.db.patch("messages", message._id, {
+      parts: args.parts,
+      attachments: args.attachmentIds,
+    });
   },
 });
 
@@ -274,7 +281,7 @@ export const retryChatMessage = authenticatedMutation({
           durations: { request: 0, reasoning: 0, text: 0 },
           usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
           timeToFirstTokenMs: 0,
-          finishReason: "",
+          finishReason: null,
 
           modelParams: args.modelParams,
           model: { request: args.model, response: null },

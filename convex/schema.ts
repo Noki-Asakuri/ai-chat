@@ -136,7 +136,7 @@ export const AISDKModelParams = v.object({
 
 export const AISDKMetadata = v.object({
   model: v.object({ request: v.string(), response: v.nullable(v.string()) }),
-  finishReason: v.string(),
+  finishReason: v.nullable(v.string()),
 
   usages: v.object({
     inputTokens: v.number(),
@@ -145,7 +145,7 @@ export const AISDKMetadata = v.object({
   }),
 
   timeToFirstTokenMs: v.number(),
-  profile: v.optional(v.object({ id: v.id("profiles"), name: v.string() })),
+  profile: v.optional(v.nullable(v.object({ id: v.id("profiles"), name: v.string() }))),
   durations: v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
 
   modelParams: AISDKModelParams,

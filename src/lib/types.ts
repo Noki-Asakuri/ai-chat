@@ -26,7 +26,7 @@ type RemoveAllExceptFunctions<T> = {
 export const metadataSchema = z
   .object({
     model: z.object({ request: z.string(), response: z.nullable(z.string()) }),
-    finishReason: z.string(),
+    finishReason: z.nullable(z.string()),
     timeToFirstTokenMs: z.number(),
 
     durations: z.object({ request: z.number(), reasoning: z.number(), text: z.number() }),
@@ -40,7 +40,7 @@ export const metadataSchema = z
       webSearch: z.boolean(),
       effort: z.string(),
 
-      profile: z.object({ id: z.string(), name: z.string() }).nullable(),
+      profile: z.object({ id: z.string(), name: z.string() }).nullish(),
     }),
   })
   .optional();

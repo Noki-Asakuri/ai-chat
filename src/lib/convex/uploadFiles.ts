@@ -3,56 +3,57 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { getConvexReactClient } from "./client";
 
+import { tryCatch } from "../utils";
+
 const convexClient = getConvexReactClient();
 
-export async function uploadFile(file: File, threadId: Id<"threads">, fileId: string) {
-  const { url, key } = await convexClient.mutation(
+export async function uploadFileToR2(
+  file: File,
+  data: { threadId: Id<"threads">; fileId: string; sessionId: string },
+) {
+  const { url, key: filePath } = await convexClient.mutation(
     api.functions.files.generateAttachmentUploadUrl,
-    { threadId, fileId, mimeType: file.type },
+    { mimeType: file.type, ...data },
   );
 
-  try {
+  const [, error] = await tryCatch(async () => {
     const result = await fetch(url, {
       method: "PUT",
       headers: { "Content-Type": file.type },
       body: file,
     });
 
-    if (!result.ok) {
-      throw new Error(`Failed to upload image: ${result.statusText}`);
-    }
-  } catch (error) {
-    throw new Error(`Failed to upload image: ${error}`);
-  }
+    if (!result.ok) throw new Error(`Failed to upload image: ${result.statusText}`);
+  });
 
-  await convexClient.mutation(api.functions.files.syncMetadata, { key });
-  return key;
+  if (error) throw error;
+
+  await convexClient.mutation(api.functions.files.syncMetadata, { key: filePath });
+  return filePath;
 }
 
 /**
  * Upload an AI Profile image to R2 via a pre-signed URL.
  * Returns the R2 key that should be saved on the profile (imageKey).
  */
-export async function uploadAiProfileImage(file: File) {
+export async function uploadAiProfileImage(file: File, sessionId: string) {
   const { url, key } = await convexClient.mutation(
     api.functions.profiles.generateAiProfileUploadUrl,
-    {},
+    { sessionId },
   );
 
-  try {
+  const [, error] = await tryCatch(async () => {
     const result = await fetch(url, {
       method: "PUT",
       headers: { "Content-Type": file.type },
       body: file,
     });
-    if (!result.ok) {
-      throw new Error(`Failed to upload AI Profile image: ${result.statusText}`);
-    }
-  } catch (error) {
-    throw new Error(`Failed to upload AI Profile image: ${error}`);
-  }
 
-  // We don't currently use syncMetadata for profile images.
-  // The key is sufficient to construct a CDN URL.
+    if (!result.ok) throw new Error(`Failed to upload AI Profile image: ${result.statusText}`);
+  });
+
+  if (error) throw error;
+
+  await convexClient.mutation(api.functions.files.syncMetadata, { key });
   return key;
 }
