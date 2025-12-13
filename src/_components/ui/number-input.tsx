@@ -1,5 +1,5 @@
 import * as React from "react";
-import { NumberField } from "@base-ui-components/react/number-field";
+import { NumberField } from "@base-ui/react/number-field";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,13 +13,13 @@ function NumberInput({ className, ...props }: React.ComponentProps<typeof Number
       </NumberField.ScrubArea>
 
       <NumberField.Group className="flex">
-        <NumberField.Decrement className="bg-popover text-foreground flex size-7 items-center justify-center rounded-tl rounded-bl border bg-clip-padding select-none">
+        <NumberField.Decrement className="flex size-7 items-center justify-center rounded-tl rounded-bl border bg-popover bg-clip-padding text-foreground select-none">
           <MinusIcon />
         </NumberField.Decrement>
 
-        <NumberField.Input className="text-foreground h-7 w-18 border-t border-b text-center text-sm tabular-nums outline-none focus:z-1" />
+        <NumberField.Input className="h-7 w-18 border-t border-b text-center text-sm text-foreground tabular-nums outline-none focus:z-1" />
 
-        <NumberField.Increment className="bg-popover text-foreground flex size-7 items-center justify-center rounded-tr rounded-br border bg-clip-padding select-none">
+        <NumberField.Increment className="flex size-7 items-center justify-center rounded-tr rounded-br border bg-popover bg-clip-padding text-foreground select-none">
           <PlusIcon />
         </NumberField.Increment>
       </NumberField.Group>

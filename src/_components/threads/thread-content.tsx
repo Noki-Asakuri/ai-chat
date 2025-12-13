@@ -6,7 +6,7 @@ import { ClientOnly, Link } from "@tanstack/react-router";
 
 import { useSessionMutation } from "convex-helpers/react/sessions";
 
-import { Dialog } from "@base-ui-components/react/dialog";
+import { Dialog } from "@base-ui/react/dialog";
 import { Suspense, useEffect, useRef, useState } from "react";
 
 import {

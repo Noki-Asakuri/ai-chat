@@ -1,6 +1,6 @@
 import type { Doc } from "@/convex/_generated/dataModel";
 
-import { Avatar } from "@base-ui-components/react/avatar";
+import { Avatar } from "@base-ui/react/avatar";
 
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 import { ButtonWithTip } from "@/components/ui/button";

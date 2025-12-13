@@ -1,4 +1,4 @@
-import { Menu } from "@base-ui-components/react/menu";
+import { Menu } from "@base-ui/react/menu";
 import { Icons } from "./icons";
 
 function MenuArrow({ className, ...props }: React.ComponentProps<typeof Menu.Arrow>) {
