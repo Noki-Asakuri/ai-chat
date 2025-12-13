@@ -9,7 +9,7 @@ import { getModelData } from "@/lib/chat/models";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { format } from "@/lib/utils";
 
-export function ChatAttachmentButton() {
+export function ChatAttachmentsButton() {
   const model = useConfigStore((state) => state.model);
   const hasImageVision = getModelData(model).capabilities.vision;
 

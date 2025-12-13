@@ -430,8 +430,12 @@ app.post("/api/ai/chat", async (ctx) => {
 
           if (!data) return;
 
+          const url = file.mediaType.includes("image")
+            ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.filePathname}`
+            : `https://files.chat.asakuri.me/${data.filePathname}`;
+
           attachmentIds.push(data.attachmentDocId);
-          fileParts[index]!.url = data.filePathname;
+          fileParts[index]!.url = url;
         });
 
         await Promise.all(generatedFiles);

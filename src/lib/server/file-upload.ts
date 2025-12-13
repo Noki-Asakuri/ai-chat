@@ -90,6 +90,7 @@ export async function serverUploadFileR2(data: UploadFileR2): Promise<UploadFile
             status: result.status,
             error: message,
           });
+
           // Throw to trigger the catch for retry handling
           throw new Error(message);
         }
@@ -103,6 +104,7 @@ export async function serverUploadFileR2(data: UploadFileR2): Promise<UploadFile
           docId,
           threadId: data.threadId,
         });
+
         return { attachmentDocId: docId, filePathname: key };
       } catch (err) {
         logger.error("[Chat Error]: Upload attempt exception", {
