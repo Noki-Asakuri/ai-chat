@@ -12,6 +12,9 @@ import {
   XIcon,
 } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
+
+import { cn, format } from "@/lib/utils";
 
 export function extractNameFromUrl(url: string) {
   const parts = url.split("/");
@@ -186,7 +189,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
   const resolvedHeight = active.height ?? naturalSize?.height;
 
   const metaParts: string[] = [];
-  if (typeof active.bytes === "number") metaParts.push(formatBytes(active.bytes));
+  if (typeof active.bytes === "number") metaParts.push(format.size(active.bytes));
   if (resolvedWidth && resolvedHeight) metaParts.push(`${resolvedWidth}×${resolvedHeight}`);
   const meta = metaParts.join(" · ");
 
@@ -490,8 +493,12 @@ const ZoomableImage = React.forwardRef<ZoomableImageHandle, ZoomableImageProps>(
   },
 );
 
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
+function isClipboardImageWriteSupported(): boolean {
+  const hasSecure = typeof window !== "undefined" && window.isSecureContext;
+  const hasWrite = typeof navigator !== "undefined" && !!navigator.clipboard?.write;
+  const hasItem = typeof window.ClipboardItem !== "undefined";
+
+  return hasSecure && hasWrite && hasItem;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -504,22 +511,6 @@ function wrapIndex(index: number, length: number) {
   return mod < 0 ? mod + length : mod;
 }
 
-function formatBytes(bytes: number) {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let unitIndex = 0;
-  let n = bytes;
-
-  while (n >= 1024 && unitIndex < units.length - 1) {
-    n /= 1024;
-    unitIndex += 1;
-  }
-
-  const digits = unitIndex === 0 ? 0 : n < 10 ? 2 : n < 100 ? 1 : 0;
-  return `${n.toFixed(digits)} ${units[unitIndex]}`;
-}
-
 async function copyText(text: string) {
   if (!navigator.clipboard?.writeText) return;
   await navigator.clipboard.writeText(text);
@@ -530,17 +521,67 @@ function openInNewTab(url: string) {
 }
 
 async function copyImage(url: string) {
-  if (!navigator.clipboard?.write || typeof window === "undefined") return;
-  if (!("ClipboardItem" in window)) return;
+  if (!isClipboardImageWriteSupported()) {
+    return toast.error("Copying image is not supported in this browser.", {
+      position: "top-center",
+      duration: 3000,
+    });
+  }
 
-  const res = await fetch(url);
-  const blob = await res.blob();
+  const fileUrl = url.replace(
+    "https://ik.imagekit.io/gmethsnvl/ai-chat/",
+    "https://files.chat.asakuri.me/",
+  );
 
-  await navigator.clipboard.write([
-    new ClipboardItem({
-      [blob.type || "image/png"]: blob,
-    }),
-  ]);
+  const htmlImage = new Image();
+  htmlImage.crossOrigin = "anonymous"; // requires proper CORS headers from the server
+  htmlImage.decoding = "async";
+  htmlImage.src = fileUrl;
+
+  try {
+    // Prefer decode(); fallback to onload for older browsers
+    if (typeof htmlImage.decode === "function") {
+      await htmlImage.decode();
+    } else {
+      await new Promise<void>((resolve, reject) => {
+        htmlImage.onload = () => resolve();
+        htmlImage.onerror = () => reject(new Error("Failed to load image"));
+      });
+    }
+  } catch {
+    toast.error("Failed to load image.", { position: "top-center", duration: 3000 });
+    return;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = htmlImage.naturalWidth || htmlImage.width;
+  canvas.height = htmlImage.naturalHeight || htmlImage.height;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    toast.error("Unable to create drawing context.", { position: "top-center", duration: 3000 });
+    return;
+  }
+
+  ctx.drawImage(htmlImage, 0, 0);
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob((b) => resolve(b), "image/png"),
+  );
+
+  if (!blob) {
+    toast.error(
+      "Could not create image blob. If this is a cross-origin image, ensure the server allows CORS.",
+      { position: "top-center" },
+    );
+    return;
+  }
+
+  const clipboardItem = new ClipboardItem({ [blob.type]: blob });
+
+  await navigator.clipboard.write([clipboardItem]);
+  toast.success("Image copied to clipboard", { position: "top-center", duration: 3000 });
+  canvas.remove();
 }
 
 async function downloadImage(img: LightboxImage) {
@@ -555,6 +596,7 @@ async function downloadImage(img: LightboxImage) {
 
     // Revoke on next tick so the download can start.
     setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+    toast.success("Image downloaded", { position: "top-center", duration: 3000 });
   } catch {
     triggerDownload(img.src, name);
   }
@@ -562,8 +604,11 @@ async function downloadImage(img: LightboxImage) {
 
 function triggerDownload(url: string, filename: string) {
   const a = document.createElement("a");
+
   a.href = url;
   a.download = filename;
   a.rel = "noopener";
   a.click();
+
+  setTimeout(() => a.remove(), 100);
 }
