@@ -76,13 +76,21 @@ function DebugButton({ messageId }: { messageId: Id<"messages"> }) {
 
   if (import.meta.env.PROD) return null;
 
+  function handleDebug() {
+    console.log(message);
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(JSON.stringify(message, null, 2));
+    }
+  }
+
   return (
     <ButtonWithTip
       variant="ghost"
       side="bottom"
       className="size-8"
       title="Debug"
-      onClick={() => console.log(message)}
+      onClick={handleDebug}
     >
       <BugPlayIcon className="size-4" />
       <span className="sr-only">Debug</span>
