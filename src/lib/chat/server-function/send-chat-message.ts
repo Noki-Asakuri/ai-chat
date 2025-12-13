@@ -14,7 +14,7 @@ import { messageStoreActions } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { fromUUID, toUUID } from "@/lib/utils";
 
-import { convertToUIChatMessages } from "../shared";
+import { convertToUIChatMessages, uploadUserAttachment } from "../shared";
 import { createStreamResponseHandler } from "../stream-handler";
 
 type CreateMessage =
@@ -37,7 +37,7 @@ export function useSendChatMessage() {
   async function sendChatRequest() {
     const sessionId = id!;
     let threadId: Id<"threads"> | null = fromUUID<Id<"threads">>(params?.threadId) ?? null;
-    const { input } = useChatStore.getState();
+    const { input, attachments } = useChatStore.getState();
 
     const messagesHistory = messageStoreActions
       .getMessages()
@@ -57,21 +57,21 @@ export function useSendChatMessage() {
 
     const userMessage: CreateMessage = {
       messageId: crypto.randomUUID(),
-      role: "user" as const,
-      status: "complete" as const,
+      role: "user",
+      status: "complete",
       parts: [{ type: "text", text: input, state: "done" }],
       attachments: [],
     };
 
     const assistantMessage: CreateMessage = {
       messageId: crypto.randomUUID(),
-      role: "assistant" as const,
-      status: "pending" as const,
+      role: "assistant",
+      status: "pending",
       parts: [],
       attachments: [],
       metadata: {
         model: { request: model, response: null },
-        finishReason: "",
+        finishReason: null,
         timeToFirstTokenMs: 0,
         usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
         durations: { request: 0, reasoning: 0, text: 0 },
@@ -85,12 +85,33 @@ export function useSendChatMessage() {
     );
 
     const messages = convertToUIChatMessages(messagesHistory);
+    const uploadedAttachments = await uploadUserAttachment(attachments, threadId, sessionId);
 
     messages.push({
-      role: "user" as const,
+      role: "user",
       id: userMessage.messageId,
       parts: [{ type: "text", text: input }],
     });
+
+    if (uploadedAttachments.length > 0) {
+      const userMessageParts = messages[messages.length - 1]!.parts;
+      const attachmentIds = uploadedAttachments.map((a) => a.attachmentId);
+
+      for (const { path, mediaType } of uploadedAttachments) {
+        const url = mediaType.includes("image")
+          ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${path}`
+          : `https://files.chat.asakuri.me/${path}`;
+
+        userMessageParts.push({ type: "file", url, mediaType });
+      }
+
+      await convexClient.mutation(api.functions.messages.addAttachmentsToMessage, {
+        messageId: userMessage.messageId,
+        parts: userMessageParts as ChatMessage["parts"],
+        attachmentIds,
+        sessionId,
+      });
+    }
 
     const body: ChatRequestBody = {
       model,
