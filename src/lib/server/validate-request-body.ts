@@ -51,13 +51,49 @@ const reasoningToBudget = {
   xhigh: 30_000,
 };
 
-export async function validateRequestBody(body: Record<string, unknown>) {
-  console.log(body);
+function moveAssistantFilePartsToNextUserMessageValidated(
+  messages: Array<UIChatMessage>,
+): Array<UIChatMessage> {
+  // Only run after validateUIMessages, so we can treat messages/parts as trusted UIMessage objects.
+  // Expected order: user -> assistant -> user (repeat).
+  const out: Array<UIChatMessage> = messages.slice();
 
+  type Part = UIChatMessage["parts"][number];
+
+  for (let i = 0; i < out.length; i++) {
+    const message = out[i];
+    if (!message) continue;
+    if (message.role !== "assistant") continue;
+
+    const fileParts: Array<Part> = [];
+    const nonFileParts: Array<Part> = [];
+
+    for (const part of message.parts) {
+      if (part.type === "file") fileParts.push(part);
+      else nonFileParts.push(part);
+    }
+
+    if (fileParts.length === 0) continue;
+
+    // Strip file parts from assistant message
+    out[i] = { ...message, parts: nonFileParts };
+
+    // Move them onto the next user message (new user turn)
+    const next = out[i + 1];
+    if (!next) continue;
+    if (next.role === "user") {
+      out[i + 1] = { ...next, parts: [...next.parts, ...fileParts] };
+    }
+  }
+
+  return out;
+}
+
+export async function validateRequestBody(body: Record<string, unknown>) {
   const { success, data, error } = inputSchema.safeParse(body);
   if (!success) throw new Error(z.prettifyError(error));
 
-  const [messages, messagesError] = await tryCatch(
+  const [validatedMessages, messagesError] = await tryCatch(
     validateUIMessages<UIChatMessage>({ messages: data.messages, metadataSchema }),
   );
 
@@ -66,6 +102,8 @@ export async function validateRequestBody(body: Record<string, unknown>) {
       cause: messagesError,
     });
   }
+
+  const normalizedMessages = moveAssistantFilePartsToNextUserMessageValidated(validatedMessages);
 
   const [modelData, modelError] = tryCatchSync(() => {
     if (!data.model || data.model.length === 0) throw new Error("No model provided");
@@ -76,7 +114,7 @@ export async function validateRequestBody(body: Record<string, unknown>) {
 
   const tools: ToolSet = {};
   const { data: modelInfo, model } = modelData;
-  const modelMessages = convertToModelMessages(messages);
+  const modelMessages = convertToModelMessages(normalizedMessages);
 
   const providerOptions = {
     openai: { store: false } as OpenAIResponsesProviderOptions,
@@ -149,7 +187,7 @@ export async function validateRequestBody(body: Record<string, unknown>) {
   }
 
   return {
-    messages,
+    messages: normalizedMessages,
     modelMessages,
     assistantMessageId: data.assistantMessageId,
     threadId: data.threadId,
