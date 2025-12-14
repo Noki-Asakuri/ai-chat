@@ -5,7 +5,6 @@ import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query
 import { ConvexQueryClient } from "@convex-dev/react-query";
 import { ConvexProvider } from "convex/react";
 import { StrictMode } from "react";
-import { SessionProvider } from "convex-helpers/react/sessions";
 
 import { getConvexReactClient } from "./lib/convex/client";
 

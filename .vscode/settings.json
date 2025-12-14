@@ -21,8 +21,7 @@
   "typescript.experimental.useTsgo": false,
   "typescript.preferences.autoImportSpecifierExcludeRegexes": [
     "@radix-ui",
-    "next/router",
-    "next/dist",
+    "radix-ui",
     "^lucide-react/dist/lucide-react.suffixed$"
   ],
   "typescript.tsdk": "node_modules\\typescript\\lib"
