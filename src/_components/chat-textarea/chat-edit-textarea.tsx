@@ -5,11 +5,13 @@ import { ChatEditActionButtons } from "./action-buttons";
 import { ChatEditAttachmentsDisplay } from "./chat-edit-attachments-display";
 import { BaseInputTextArea } from "./main-textarea";
 import { ChatEditSendButton } from "./send-button";
+import { useChatEditSave } from "./use-chat-edit-save";
 
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
 export function ChatEditTextarea() {
   const editMessage = useChatStore((state) => state.editMessage);
+  const { isSaving, saveEdits } = useChatEditSave();
 
   if (!editMessage) return null;
 
@@ -47,11 +49,13 @@ export function ChatEditTextarea() {
               input={editMessage.input}
               setInput={(input) => chatStoreActions.updateEditMessage({ input })}
               handleAddAttachments={handleAddAttachments}
+              onConfirm={saveEdits}
+              disabled={isSaving}
             />
 
             <div className="flex items-end justify-between border-t px-2.5 py-2">
               <ChatEditActionButtons />
-              <ChatEditSendButton />
+              <ChatEditSendButton isSaving={isSaving} onSave={saveEdits} />
             </div>
           </div>
         </div>
