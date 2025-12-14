@@ -1,15 +1,28 @@
+import type { Doc, Id } from "@/convex/_generated/dataModel";
+
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-import type { RemoveAllExceptFunctions, UserAttachment } from "../types";
-import type { Id } from "@/convex/_generated/dataModel";
+import type { ReasoningEffort, RemoveAllExceptFunctions, UserAttachment } from "../types";
+
+type EditMessage = {
+  _id: Id<"messages">;
+  index: number;
+  input: string;
+
+  model: string;
+  currentAttachments: Doc<"attachments">[];
+  attachments: UserAttachment[];
+  modelParams: { effort?: ReasoningEffort; webSearch?: boolean };
+};
 
 export type ChatStore = {
   input: string;
   setInput: (content: string) => void;
 
-  editMessageId: Id<"messages"> | null;
-  setEditMessageId: (id: Id<"messages"> | null) => void;
+  editMessage: EditMessage | null;
+  setEditMessage: (message: EditMessage | null) => void;
+  updateEditMessage: (message: Partial<EditMessage>) => void;
 
   attachments: UserAttachment[];
   addAttachments: (attachments: UserAttachment[]) => void;
@@ -23,16 +36,25 @@ export type ChatStore = {
 
   lastUserMessageHeight?: number | null;
   setMessageHeight: (height?: number | null) => void;
+
+  isDragOver: boolean;
+  setIsDragOver: (isDragOver: boolean) => void;
 };
 
 export const useChatStore = create<ChatStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       input: "",
       setInput: (content) => set({ input: content }),
 
-      editMessageId: null,
-      setEditMessageId: (id) => set({ editMessageId: id }),
+      editMessage: null,
+      setEditMessage: (message) => set({ editMessage: message }),
+      updateEditMessage: (message) => {
+        const { editMessage } = get();
+        if (!editMessage) return;
+
+        set({ editMessage: { ...editMessage, ...message } });
+      },
 
       attachments: [],
       addAttachments: (attachments) =>
@@ -49,6 +71,9 @@ export const useChatStore = create<ChatStore>()(
 
       lastUserMessageHeight: null,
       setMessageHeight: (height) => set({ lastUserMessageHeight: height }),
+
+      isDragOver: false,
+      setIsDragOver: (isDragOver) => set({ isDragOver }),
     }),
     {
       name: "local-chat-store",

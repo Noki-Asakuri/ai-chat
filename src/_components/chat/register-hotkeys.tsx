@@ -16,7 +16,7 @@ const MODEL_SELECTOR_KEYBOARD_SHORTCUT = "m";
 export function RegisterHotkeys() {
   const navigate = useNavigate();
 
-  const isEditMessage = useChatStore((state) => state.editMessageId !== null);
+  const isEditMessage = useChatStore((state) => state.editMessage !== null);
   const status = useMessageStore(
     (state) => state.messagesById[state.messageIds.at(-1)!]?.status ?? "complete",
   );
@@ -103,7 +103,7 @@ export function RegisterHotkeys() {
       //
       else if (isEditMessage) {
         event.preventDefault();
-        chatStoreActions.setEditMessageId(null);
+        chatStoreActions.setEditMessage(null);
       }
 
       //

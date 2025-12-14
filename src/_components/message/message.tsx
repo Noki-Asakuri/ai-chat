@@ -5,8 +5,8 @@ import { useShallow } from "zustand/shallow";
 
 import { Icons } from "../ui/icons";
 
+import { ChatEditTextarea } from "../chat-textarea/chat-edit-textarea";
 import { MessageContent } from "./message-content";
-// import { MessageEditComposer } from "./message-edit-composer";
 import { MessageFooter } from "./message-footer";
 
 import { getModelData } from "@/lib/chat/models";
@@ -79,9 +79,8 @@ export function Message({ messageId, index, total }: MessageProps) {
       data-height={lastUserMessageHeight}
       data-effort={message.metadata?.modelParams.effort}
       data-web-search={message.metadata?.modelParams.webSearch ?? false}
-      // data-open={popupRetryMessageId === message.id || editMessage?._id === message.id}
     >
-      {message.status === "pending" ? (
+      {message.status === "pending" || !message.parts.length ? (
         <MessageLoading metadata={message.metadata} />
       ) : (
         <MessageInner message={message} index={index} isLast={isLast} />
@@ -95,13 +94,11 @@ type MessageLoadingProps = {
 };
 
 function MessageLoading({ metadata }: MessageLoadingProps) {
-  const modelData = getModelData(metadata?.model.request || "google/gemini-2.5-flash");
+  const modelData = getModelData(metadata?.model.request!);
+  const effort = metadata?.modelParams?.effort;
 
   const showEffort =
-    typeof modelData.capabilities.reasoning === "boolean" &&
-    modelData.capabilities.reasoning === true &&
-    metadata?.modelParams?.effort &&
-    metadata.modelParams.effort !== "medium";
+    modelData.capabilities.reasoning === true && effort !== undefined && effort !== "medium";
 
   return (
     <div className="flex h-11 w-full shrink-0 items-center gap-2 rounded-md border bg-background/80 px-4 py-2 backdrop-blur-md backdrop-saturate-150">
@@ -131,10 +128,10 @@ type MessageInnerProps = {
 };
 
 function MessageInner({ message, index, isLast }: MessageInnerProps) {
-  // const editMessage = useChatStore((state) => state.editMessage);
+  const editMessageId = useChatStore((state) => state.editMessage?._id);
+  const isEditingMessage = message._id === editMessageId;
 
-  // const shouldShowFooter = editMessage?._id !== message.id;
-  // const isUserMessageEdit = message.role === "user" && editMessage?._id === message.id;
+  if (isEditingMessage) return <ChatEditTextarea />;
 
   return (
     <>

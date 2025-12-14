@@ -8,6 +8,7 @@ import { getCookie } from "@tanstack/react-start/server";
 import { PlusIcon } from "lucide-react";
 import { Suspense, useEffect } from "react";
 
+import { GlobalDropzone } from "@/components/chat/global-dropzone";
 import { RegisterHotkeys } from "@/components/chat/register-hotkeys";
 import { ThreadTitle } from "@/components/chat/top-thread-title";
 import { ConfigStoreProvider } from "@/components/provider/config-provider";
@@ -64,7 +65,10 @@ function RouteComponent() {
     >
       <ThreadSidebar />
 
-      <main data-slot="chat" className="relative inset-0 h-dvh w-screen overflow-hidden border-x">
+      <GlobalDropzone
+        data-slot="chat"
+        className="relative inset-0 h-dvh w-screen overflow-hidden border-x"
+      >
         <div className="absolute top-0 z-10 flex h-10 w-full items-center justify-between gap-2 border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar">
           <div className="flex items-center gap-2">
             <SidebarTrigger />
@@ -86,7 +90,7 @@ function RouteComponent() {
         <Suspense>
           <ChatComponentPage />
         </Suspense>
-      </main>
+      </GlobalDropzone>
 
       <RegisterHotkeys />
     </SidebarProvider>

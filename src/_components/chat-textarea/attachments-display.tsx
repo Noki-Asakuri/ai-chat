@@ -8,12 +8,20 @@ import { ButtonWithTip } from "@/components/ui/button";
 
 import { getModelData } from "@/lib/chat/models";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
+import type { UserAttachment } from "@/lib/types";
 import { format } from "@/lib/utils";
 
-export function ChatAttachmentsButton() {
-  const model = useConfigStore((state) => state.model);
-  const hasImageVision = getModelData(model).capabilities.vision;
+type BaseChatAttachmentsButtonProps = React.ComponentPropsWithoutRef<typeof ButtonWithTip> & {
+  model: string;
+  handleAddAttachments: (files: UserAttachment[]) => void;
+};
 
+export function BaseChatAttachmentsButton({
+  model,
+  handleAddAttachments,
+  ...props
+}: BaseChatAttachmentsButtonProps) {
+  const hasImageVision = getModelData(model).capabilities.vision;
   if (!hasImageVision) return null;
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -23,12 +31,13 @@ export function ChatAttachmentsButton() {
     let type: "image" | "pdf" = "image";
     if (file.type.includes("pdf")) type = "pdf";
 
-    chatStoreActions.addAttachments([{ id: uuidv4(), type, file }]);
+    handleAddAttachments([{ id: uuidv4(), type, file }]);
   }
 
   return (
     <>
       <ButtonWithTip
+        {...props}
         variant="ghost"
         title="Upload Image"
         className="size-9 border p-0! px-2 py-1.5 text-xs"
@@ -51,6 +60,17 @@ export function ChatAttachmentsButton() {
         className="hidden"
       />
     </>
+  );
+}
+
+export function ChatAttachmentsButton() {
+  const model = useConfigStore((state) => state.model);
+
+  return (
+    <BaseChatAttachmentsButton
+      model={model}
+      handleAddAttachments={chatStoreActions.addAttachments}
+    />
   );
 }
 
@@ -89,40 +109,53 @@ export function ChatAttachmentsDisplay() {
       <ImageLightboxProvider
         images={imageList.map((p) => ({ src: p.url, name: p.file.name, bytes: p.file.size }))}
       >
-        {preview.map((attachment) => (
-          <AttachmentPreview key={attachment.id} attachment={attachment} images={imageList} />
-        ))}
+        {preview.map((attachment) => {
+          const index = imageList.findIndex((p) => p.id === attachment.id);
+
+          return (
+            <AttachmentPreview
+              index={index}
+              key={attachment.id}
+              removeAttachment={chatStoreActions.removeAttachment}
+              attachment={{ ...attachment, name: attachment.file.name, size: attachment.file.size }}
+            />
+          );
+        })}
       </ImageLightboxProvider>
     </div>
   );
 }
 
-function AttachmentPreview({ attachment, images }: { attachment: Preview; images: Preview[] }) {
-  const index = images.findIndex((p) => p.id === attachment.id);
+type AttachmentPreviewProps = {
+  index: number;
+  removeAttachment: (id: string) => void;
+  attachment: { id: string; name: string; size: number; url: string };
+};
 
+function AttachmentPreview({ attachment, index, removeAttachment }: AttachmentPreviewProps) {
   return (
     <div className="group relative flex justify-center gap-2 rounded-md border border-border bg-background/50 p-2 transition-colors hover:bg-foreground/10">
       <ImageLightboxTrigger index={index} type="button" className="overflow-hidden rounded-md">
         <img
           src={attachment.url}
-          alt={attachment.file.name}
+          alt={attachment.name}
           className="aspect-square size-15 object-cover object-center"
         />
       </ImageLightboxTrigger>
 
       <button
         type="button"
-        title={`Remove ${attachment.file.name}`}
+        title={`Remove ${attachment.name}`}
         className="absolute -top-2 -right-2 isolate rounded-md border bg-background p-1 text-destructive transition-colors hover:bg-foreground/20"
-        onClick={() => chatStoreActions.removeAttachment(attachment.id)}
+        onClick={() => removeAttachment(attachment.id)}
       >
         <TrashIcon size={16} />
-        <span className="sr-only">Remove {attachment.file.name}</span>
+        <span className="sr-only">Remove {attachment.name}</span>
       </button>
 
       <div className="self-center">
-        <p className="max-w-[15ch] truncate text-sm">{attachment.file.name}</p>
-        <p className="text-xs text-muted-foreground">{format.size(attachment.file.size)}</p>
+        <p className="max-w-[15ch] truncate text-sm">{attachment.name}</p>
+        <p className="text-xs text-muted-foreground">{format.size(attachment.size)}</p>
       </div>
     </div>
   );

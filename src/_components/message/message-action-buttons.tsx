@@ -1,6 +1,6 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { BugPlayIcon, SplitIcon } from "lucide-react";
+import { BugPlayIcon, PencilIcon, SplitIcon } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 
 import { CopyButton } from "../copy-button";
@@ -8,6 +8,7 @@ import { ButtonWithTip } from "../ui/button";
 import { MessageRetryMenu } from "./message-retry-menu";
 
 import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
+import { chatStoreActions } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
 
@@ -24,20 +25,6 @@ export function MessageActionButtons({ index, isFinished, message }: MessageActi
     .filter((p) => p.type === "text")
     .map((p) => p.text)
     .join("\n\n");
-
-  // async function handleEditMessage() {
-  // if (message.role === "assistant") return;
-  // if (editMessage?._id === message._id) {
-  //   useChatStore.getState().setEditMessage(null);
-  //   if (editMessage.content !== message.content) {
-  //     // await retryMessage(index, {
-  //     //   editedUserMessage: { _id: editMessage._id, content: editMessage.content },
-  //     // });
-  //   }
-  //   return;
-  // }
-  // useChatStore.getState().setEditMessage({ _id: message._id, content: message.content });
-  // }
 
   return (
     <div className="flex items-center gap-0.5 rounded-md border bg-background/80 p-1 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
@@ -66,6 +53,7 @@ export function MessageActionButtons({ index, isFinished, message }: MessageActi
         </>
       )}
 
+      <EditButton message={message} />
       <DebugButton messageId={message._id} />
     </div>
   );
@@ -94,6 +82,51 @@ function DebugButton({ messageId }: { messageId: Id<"messages"> }) {
     >
       <BugPlayIcon className="size-4" />
       <span className="sr-only">Debug</span>
+    </ButtonWithTip>
+  );
+}
+
+function EditButton({ message }: { message: ChatMessage }) {
+  const status = useMessageStore(
+    (state) => state.messagesById[state.messageIds.at(-1)!]?.status ?? "complete",
+  );
+
+  const isPending = status === "pending" || status === "streaming";
+
+  if (message.role === "assistant") return null;
+  function handleEditMessage() {
+    if (message.role === "assistant") return;
+    const state = useMessageStore.getState();
+
+    const assistantMessageIndex = state.messageIds.indexOf(message._id) + 1;
+    const assistantMessage = state.messagesById[state.messageIds[assistantMessageIndex]!]!;
+
+    chatStoreActions.setEditMessage({
+      _id: message._id,
+      index: assistantMessageIndex - 1,
+      input: message.parts
+        .filter((p) => p.type === "text")
+        .map((p) => p.text)
+        .join("\n\n"),
+
+      attachments: [],
+      currentAttachments: message.attachments,
+      model: assistantMessage.metadata!.model.request,
+      modelParams: assistantMessage.metadata!.modelParams,
+    });
+  }
+
+  return (
+    <ButtonWithTip
+      variant="ghost"
+      side="bottom"
+      className="size-8"
+      onMouseDown={handleEditMessage}
+      disabled={isPending}
+      title="Edit Message"
+    >
+      <PencilIcon className="size-4" />
+      <span className="sr-only">Edit Message</span>
     </ButtonWithTip>
   );
 }

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 type EffortSelectorProps = {
   value: string;
-  modelId: string;
+  model: string;
   onChange?: (effort: ReasoningEffort) => void;
   className?: string;
 };
@@ -21,7 +21,7 @@ export function ChatEffortSelector() {
   const config = useConfigStore(
     useShallow((state) => ({ effort: state.effort, model: state.model })),
   );
-  return <EffortSelectorBase value={config.effort} modelId={config.model} />;
+  return <EffortSelectorBase value={config.effort} model={config.model} />;
 }
 
 export function EffortSelector(props: EffortSelectorProps) {
@@ -41,7 +41,7 @@ export const EFFORT_OPTIONS: Record<
 };
 
 export function EffortSelectorBase(props: EffortSelectorProps) {
-  const modelData = getModelData(props.modelId);
+  const modelData = getModelData(props.model);
   const configStore = useConfigStoreState();
 
   const shouldHideSelector =

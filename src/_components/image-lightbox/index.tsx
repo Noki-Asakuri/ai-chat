@@ -22,6 +22,7 @@ export function extractNameFromUrl(url: string) {
 }
 
 export type LightboxImage = {
+  id?: string;
   src: string;
   thumbnailSrc?: string;
   alt?: string;
