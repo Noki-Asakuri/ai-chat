@@ -22,9 +22,9 @@ export function BaseChatAttachmentsButton({
   ...props
 }: BaseChatAttachmentsButtonProps) {
   const hasImageVision = getModelData(model).capabilities.vision;
-  if (!hasImageVision) return null;
-
   const inputId = useId();
+
+  if (!hasImageVision) return null;
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -144,7 +144,7 @@ function AttachmentPreview({ attachment, index, removeAttachment }: AttachmentPr
         <img
           src={attachment.url}
           alt={attachment.name}
-          className="aspect-square size-15 object-cover object-center"
+          className="aspect-square size-15 shrink-0 object-cover object-center"
         />
       </ImageLightboxTrigger>
 

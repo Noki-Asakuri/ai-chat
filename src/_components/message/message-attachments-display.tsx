@@ -26,7 +26,7 @@ export function MessageAttachmentsDisplay({
     .map((p) => ({ src: p.url, alt: p.url, name: extractNameFromUrl(p.url), size: 0 }));
 
   return (
-    <div className={cn("flex flex-col gap-2", className)} {...props}>
+    <div className={cn("flex w-full flex-col gap-2", className)} {...props}>
       {role === "assistant" && (
         <div className="flex w-max items-center gap-2 rounded-md bg-card px-2 py-1 text-sm text-foreground">
           <BotIcon />
@@ -34,7 +34,7 @@ export function MessageAttachmentsDisplay({
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex w-full gap-2 overflow-x-auto">
         <ImageLightboxProvider images={images}>
           {parts.map((part, index) => {
             const isImage = part.mediaType.includes("image");
