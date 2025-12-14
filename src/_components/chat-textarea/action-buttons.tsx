@@ -58,7 +58,7 @@ export function ChatEditActionButtons() {
       <BaseChatAttachmentsButton
         model={editMessage.model}
         handleAddAttachments={(attachments) => {
-          chatStoreActions.updateEditMessage({ attachments });
+          chatStoreActions.addEditAttachments(attachments);
         }}
       />
     </div>

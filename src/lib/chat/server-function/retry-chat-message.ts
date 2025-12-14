@@ -28,7 +28,6 @@ export function useRetryChatMessage() {
 
   async function retryChatMessage({ index, ...options }: RetryChatMessage) {
     const sessionId = id!;
-
     const messageState = useMessageStore.getState();
 
     const threadId = messageState.currentThreadId;
@@ -47,12 +46,24 @@ export function useRetryChatMessage() {
 
     const assistantMessageId = assistantMessage._id;
 
-    const allMessages = convertToUIChatMessages(messagesHistory.slice(0, userMessageIndex + 1));
+    const historySlice = messagesHistory.slice(0, userMessageIndex + 1);
+
+    if (options.userMessage) {
+      const userMessage = historySlice[userMessageIndex]!;
+      historySlice[userMessageIndex] = { ...userMessage, parts: options.userMessage.parts };
+    }
+
+    const allMessages = convertToUIChatMessages(historySlice);
 
     const model = options.modelId ?? assistantMessage.metadata!.model.request;
-    const modelParams = {
+    const mergedModelParams = {
       ...assistantMessage.metadata!.modelParams,
       ...options.modelParams,
+    };
+
+    const mutationModelParams = {
+      ...mergedModelParams,
+      profile: mergedModelParams.profile ?? null,
     };
 
     await convexClient.mutation(api.functions.messages.retryChatMessage, {
@@ -61,17 +72,23 @@ export function useRetryChatMessage() {
       assistantMessageId,
 
       model,
-      modelParams,
+      modelParams: mutationModelParams,
 
       userMessage: options.userMessage,
     });
+
+    const bodyModelParams: ChatRequestBody["modelParams"] = {
+      effort: mutationModelParams.effort,
+      webSearch: mutationModelParams.webSearch,
+      profile: null,
+    };
 
     const body: ChatRequestBody = {
       model,
       threadId,
       messages: allMessages,
       assistantMessageId,
-      modelParams,
+      modelParams: bodyModelParams,
     };
 
     const response = await fetch(new URL("/api/ai/chat", import.meta.env.VITE_API_ENDPOINT), {

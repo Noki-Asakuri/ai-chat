@@ -111,6 +111,7 @@ function EditButton({ message }: { message: ChatMessage }) {
 
       attachments: [],
       currentAttachments: message.attachments,
+      keptAttachmentIds: message.attachments.map((a) => a._id),
       model: assistantMessage.metadata!.model.request,
       modelParams: assistantMessage.metadata!.modelParams,
     });

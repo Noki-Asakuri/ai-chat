@@ -164,7 +164,6 @@ const HighlightPane = React.memo(function HighlightPane(props: {
     (): HighlighterOptions => ({
       delay: 50,
       tabindex: -1,
-      // @ts-expect-error: shikijs types are wrong
       transformers: transformersOnce,
       outputFormat: "html",
     }),

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 
 import { useDebounce } from "@uidotdev/usehooks";
+import { useSessionId } from "convex-helpers/react/sessions";
 import { CommandLoading } from "cmdk";
 import { LoaderIcon, PinIcon, PinOffIcon, SearchIcon } from "lucide-react";
 import { useState } from "react";
@@ -58,17 +59,20 @@ export function ThreadCommand({ isSkeleton }: { isSkeleton?: boolean }) {
 function PinThread() {
   const defaultThreads = useThreadStore((state) => state.groupedThreads.threads);
   const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
+  const [sessionId] = useSessionId();
 
   const thread = defaultThreads.find((thread) => thread._id === fromUUID(params?.threadId));
   if (!params?.threadId) return null;
 
   function toggleThreadPin() {
     if (!thread) return;
+    if (!sessionId) return;
 
     console.debug("[Thread] Pin thread", thread);
     void convexClient.mutation(api.functions.threads.pinThread, {
       threadId: thread._id,
       pinned: !thread.pinned,
+      sessionId,
     });
   }
 
