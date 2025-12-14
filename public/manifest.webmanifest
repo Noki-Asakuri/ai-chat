@@ -1,33 +1,47 @@
 {
   "name": "AI Chat",
   "short_name": "AI Chat",
-  "theme_color": "#1a1a1a",
-  "background_color": "#1a1a1a",
+  "description": "An advanced AI chat application, featuring a modern UI and a rich feature set.",
+  "id": "ai-chat-app",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "screenshots": [
-    {
-      "src": "/screenshots/mobile-screenshot-1.png",
-      "sizes": "408x905",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "App view on mobile"
-    },
-    {
-      "src": "/screenshots/desktop-screenshot-1.png",
-      "sizes": "1858x993",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "App view on desktop"
-    }
-  ],
+  "theme_color": "#1a1a1a",
+  "background_color": "#1a1a1a",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
-      "src": "favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-256.png",
+      "type": "image/png",
+      "sizes": "256x256",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-1024.png",
+      "type": "image/png",
+      "sizes": "1024x1024",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop.png",
+      "sizes": "1872x984",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop Dashboard"
     }
   ]
 }
