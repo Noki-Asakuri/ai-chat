@@ -118,13 +118,6 @@ function RouteComponent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Customization</h2>
-        <p className="text-muted-foreground">
-          Personalize how the assistant talks to you and how the UI behaves.
-        </p>
-      </div>
-
       <form className="space-y-6" onSubmit={handleUpdateUserCustomization}>
         <Card className="rounded-md">
           <CardHeader>

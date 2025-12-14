@@ -57,14 +57,14 @@ export function ThreadUserProfile() {
               Account
             </UserMenuSettingItem>
 
-            <UserMenuSettingItem href="/settings/statistics">
-              <ChartNoAxesColumnIcon className="size-5" />
-              Statistics
-            </UserMenuSettingItem>
-
             <UserMenuSettingItem href="/settings/customization">
               <Columns3CogIcon className="size-5" />
               Customize
+            </UserMenuSettingItem>
+
+            <UserMenuSettingItem href="/settings/statistics">
+              <ChartNoAxesColumnIcon className="size-5" />
+              Statistics
             </UserMenuSettingItem>
 
             <UserMenuSettingItem href="/settings/attachments">

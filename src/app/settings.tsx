@@ -1,8 +1,8 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { z } from "zod/v4";
 
+import { SettingsRouteHeader } from "@/components/settings/settings-route-header";
 import { SettingsSidebar } from "@/components/settings/settings-sidebar";
-import { TopSettingHeaders } from "@/components/settings/top-setting-headers";
 import { UserNavbar } from "@/components/user/navbar";
 
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
@@ -34,22 +34,24 @@ export const Route = createFileRoute("/settings")({
 
 function AuthLayout() {
   return (
-    <div className="flex h-svh w-full flex-col">
-      <TopSettingHeaders />
+    <main className="custom-scroll mx-auto h-svh w-full flex-1 overflow-y-auto px-6 py-4 lg:overflow-hidden">
+      <div className="grid h-full min-h-0 w-full gap-4 lg:grid-cols-[300px_1fr]">
+        <SettingsSidebar />
 
-      <main className="mx-auto w-full flex-1 px-6 py-4 lg:overflow-hidden">
-        <div className="grid h-full w-full grid-rows-[auto_1fr] gap-4 lg:grid-cols-[300px_1fr] lg:grid-rows-1">
-          <SettingsSidebar />
+        <div className="flex min-h-0 flex-col">
+          <UserNavbar />
 
-          <div className="flex h-full flex-col overflow-hidden">
-            <UserNavbar />
+          <div className="custom-scroll isolate z-10 min-h-0 w-full flex-1 overflow-visible px-2 pr-3 lg:overflow-y-auto">
+            <div className="sticky top-0 z-20 bg-background/80 py-2 backdrop-blur supports-backdrop-filter:bg-background/60">
+              <SettingsRouteHeader />
+            </div>
 
-            <div className="custom-scroll mt-6 w-full flex-1 px-2 pr-3 lg:overflow-y-auto">
+            <div className="pt-6">
               <Outlet />
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }

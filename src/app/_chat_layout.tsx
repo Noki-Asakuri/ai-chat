@@ -52,9 +52,12 @@ function RouteComponent() {
   const { backgroundImage, defaultOpenSidebar } = Route.useLoaderData();
   const { data } = useQuery(convexSessionQuery(api.functions.users.currentUser));
 
-  const backgroundImageUrl = data?.customization.backgroundId
-    ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization.backgroundId}`
-    : backgroundImage;
+  const backgroundImageUrl =
+    data?.customization.backgroundId === null
+      ? undefined
+      : data?.customization.backgroundId
+        ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization.backgroundId}`
+        : backgroundImage;
 
   return (
     <SidebarProvider

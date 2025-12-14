@@ -23,12 +23,12 @@ function TabsList({
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
-      className={cn("relative z-0 flex gap-1 rounded-md border px-1", className)}
+      className={cn("relative z-0 flex gap-1 rounded-md px-1", className)}
       {...props}
     >
       {children}
 
-      <TabsPrimitive.Indicator className="absolute top-1 left-0 z-[-1] h-[calc(var(--active-tab-height)-4px*2)] w-[var(--active-tab-width)] translate-x-[var(--active-tab-left)] border-b border-muted-foreground transition-all duration-200 ease-in-out" />
+      <TabsPrimitive.Indicator className="absolute top-1 left-0 z-[-1] h-[calc(var(--active-tab-height)-4px*2)] w-(--active-tab-width) translate-x-(--active-tab-left) rounded-md bg-muted-foreground/20 transition-all duration-200 ease-in-out" />
     </TabsPrimitive.List>
   );
 }

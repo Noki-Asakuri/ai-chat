@@ -1,4 +1,5 @@
-import { useLoaderData } from "@tanstack/react-router";
+import { Link, useLoaderData, useSearch } from "@tanstack/react-router";
+import { ArrowLeftIcon, LogOutIcon } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,9 @@ export function SettingsSidebar() {
   const { user } = useLoaderData({ from: "/settings" });
 
   return (
-    <aside className="space-y-4">
+    <aside className="z-10 flex h-full flex-col gap-4">
+      <ReturnToChatButton />
+
       <UserInfo />
       <UserUsages />
       <KeyboardShortcuts />
@@ -18,7 +21,36 @@ export function SettingsSidebar() {
       <span className="block w-full text-center text-xs blur-xs transition-[filter] hover:blur-none">
         {user.id}
       </span>
+
+      <SignOutButton />
     </aside>
+  );
+}
+
+function ReturnToChatButton() {
+  const searchParams = useSearch({ from: "/settings" });
+
+  return (
+    <Button variant="secondary" asChild className="mt-1 h-9 w-full">
+      <Link
+        to={searchParams.rt ? "/threads/$threadId" : "/"}
+        params={{ threadId: searchParams.rt }}
+      >
+        <ArrowLeftIcon />
+        Back to Chat
+      </Link>
+    </Button>
+  );
+}
+
+function SignOutButton() {
+  return (
+    <Button variant="destructive" asChild className="mt-auto w-full">
+      <Link to="/auth/logout">
+        <LogOutIcon />
+        Sign out
+      </Link>
+    </Button>
   );
 }
 

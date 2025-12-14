@@ -75,13 +75,6 @@ function StatisticsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Statistics</h2>
-        <p className="text-muted-foreground">
-          View your chat statistics and activity. Counts are tracked in tokens (not words).
-        </p>
-      </div>
-
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="rounded-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -129,7 +122,7 @@ function StatisticsPage() {
         </CardHeader>
 
         <CardContent className="space-y-3">
-          <div className="h-60">
+          <div className="h-60 px-10">
             <ResponsiveCalendar
               data={activity}
               from={new Date(thisYear.getFullYear(), 0, 1).toISOString()}

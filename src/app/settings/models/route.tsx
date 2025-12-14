@@ -35,11 +35,6 @@ function RouteComponent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Models</h2>
-        <p className="text-muted-foreground">Choose which models are visible in the model picker.</p>
-      </div>
-
       <ModelsEditor
         disabled={disabled}
         initialHiddenModels={data?.customization?.hiddenModels ?? []}
