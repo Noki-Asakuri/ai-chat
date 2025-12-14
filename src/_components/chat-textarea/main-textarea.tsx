@@ -61,6 +61,7 @@ export function ChatTextarea() {
 
 function InputChatTextArea() {
   const input = useChatStore((state) => state.input);
+  const { sendChatRequest } = useSendChatMessage();
 
   function handleAddAttachments({ files }: { files: File[] }) {
     const acceptFiles = files.filter(
@@ -90,6 +91,7 @@ function InputChatTextArea() {
       input={input}
       setInput={chatStoreActions.setInput}
       handleAddAttachments={handleAddAttachments}
+      onConfirm={sendChatRequest}
     />
   );
 }
@@ -109,16 +111,19 @@ type BaseInputTextAreaProps = React.ComponentPropsWithoutRef<typeof Textarea> & 
   setInput: (content: string) => void;
 
   handleAddAttachments: (data: { files: File[] }) => void;
+
+  onConfirm?: () => void;
 };
 
 export function BaseInputTextArea({
   input,
   setInput,
   handleAddAttachments,
+  onConfirm,
+  onKeyDown,
   ...props
 }: BaseInputTextAreaProps) {
   const shouldSend = useShouldSend();
-  const { sendChatRequest } = useSendChatMessage();
 
   return (
     <div className="flex grow flex-row items-start p-2.5">
@@ -151,6 +156,10 @@ export function BaseInputTextArea({
           handleAddAttachments({ files });
         }}
         onKeyDown={(event) => {
+          onKeyDown?.(event);
+          if (event.defaultPrevented) return;
+          if (event.nativeEvent.isComposing) return;
+
           const send = shouldSend({
             key: event.key,
             shiftKey: event.shiftKey,
@@ -161,7 +170,7 @@ export function BaseInputTextArea({
           if (!send) return;
 
           event.preventDefault();
-          sendChatRequest();
+          onConfirm?.();
         }}
       />
 
