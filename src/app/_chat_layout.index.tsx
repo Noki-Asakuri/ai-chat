@@ -43,7 +43,7 @@ export function WelcomeScreen() {
       style={{ height: `calc(100% - ${textareaHeight}px)` }}
       className="pointer-events-none absolute flex w-full items-center justify-center opacity-100 transition-opacity data-[invisible=true]:opacity-0"
     >
-      <h1 className="text-4xl font-light text-foreground">
+      <h1 className="text-center text-4xl font-light text-foreground">
         What can I help you with today,{" "}
         <span className="capitalize">{user?.firstName ?? "user"}</span>?
       </h1>

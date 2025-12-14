@@ -2,117 +2,168 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-An advanced AI chat application built with the T3 stack, featuring a modern UI and a rich feature set.
+An advanced AI chat application with streaming responses, thread organization, attachments, AI profiles, and a settings-driven experience.
 
-![Desktop Screenshot](public/screenshots/desktop-screenshot-1.png)
-![Mobile Screenshot](public.screenshots/mobile-screenshot-1.png)
+![Desktop Screenshot](public/screenshots/desktop.png)
 
-## Features
+## Highlights / Features
 
-- **Real-time Chat:** Instantaneous message streaming and updates.
-- **Thread Management:** Organize conversations with threads.
-- **Message History:** View, edit, and delete messages.
-- **Model Switching:** Change the AI model on the fly.
-- **File Attachments:** Send and receive images, PDFs, and other files.
-- **Conversation Branching:** Create different branches of a conversation.
-- **Customizable UI:** Light and dark modes, and customizable system prompts.
-- **And much more...**
+### Chat experience
+
+- **Streaming assistant responses (SSE)** with **Abort** support and **resumable streams** (server resumes by `streamId`) via Redis-backed [`resumable-stream`](https://www.npmjs.com/package/resumable-stream).
+- **Threaded conversations** with:
+  - Create new threads
+  - Rename threads (including AI-assisted title regeneration)
+  - Pin threads
+  - Search threads by title
+- **Conversation branching**: branch a thread at an earlier assistant message to explore alternate paths.
+
+### Attachments
+
+- **Drag & drop** support for attachments (currently **images + PDFs**).
+- Attachments are stored in **Cloudflare R2 (via Convex R2 integration)** and surfaced via:
+  - Images: `https://ik.imagekit.io/gmethsnvl/ai-chat/...`
+  - Files (e.g. PDFs): `https://files.chat.asakuri.me/...`
+- **Attachments management page**: filter/search/sort and bulk delete.
+
+### AI Profiles + Customization
+
+- **AI Profiles**: save reusable personas / system prompts (with optional profile image).
+- **Customization settings**:
+  - “About you” (name/occupation) + traits
+  - Global system instruction
+  - Background image (uploaded to R2, displayed via ImageKit)
+  - UI behavior toggles (e.g. disable blur, show full code blocks)
+  - Hide models from the model picker
+
+### Safety + Ops
+
+- **Per-user usage limits** (daily/monthly semantics) with automatic enforcement.
+- **Statistics dashboard**: activity calendar, model usage ranking, thread ranking, profile usage ranking.
+- **Observability**:
+  - Axiom logging
+  - Vercel Analytics + Speed Insights (enabled in production)
+
+## Architecture (high level)
+
+- **Web app**: Vite + TanStack Start (SSR) running on port `3000` in dev.
+- **Backend**:
+  - **Convex** for persistence and application data (threads, messages, attachments metadata, profiles, users, usage limits, stats).
+  - **Standalone Hono server** for the AI streaming endpoint:
+    - `POST /api/ai/chat` → streams responses (SSE)
+    - `GET /api/ai/chat?streamId=...` → resumes an existing stream
 
 ## Tech Stack
 
-- **Framework:** [Next.js](https://nextjs.org/)
-- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
-- **UI Components:** [shadcn/ui](https://ui.shadcn.com/)
-- **State Management:** [Zustand](https://github.com/pmndrs/zustand)
-- **Database:** [Convex](https://www.convex.dev/)
-- **Authentication:** [Clerk](https://clerk.com/)
-- **AI SDK:** [Vercel AI SDK](https://sdk.vercel.ai/docs)
+### Frontend
 
-## Getting Started
+- **React** + **TypeScript**
+- **TanStack Start** (SSR) + **TanStack Router** + **TanStack Query**
+- **Tailwind CSS v4**
+- **shadcn/ui** component system
+- **sonner** for toast notifications
+- **@dnd-kit** for drag & drop thread grouping
+- **streamdown + shiki** for streaming-friendly markdown + code rendering
+- **KaTeX** for math rendering
+- **@nivo/calendar** for statistics visualization
 
-To get a local copy up and running, follow these simple steps.
+### Backend / Infrastructure
+
+- **Convex** (database + serverless functions)
+- **WorkOS AuthKit** for authentication
+- **Hono** server for AI API + streaming
+- **Vercel AI SDK** (`ai`) with provider integrations:
+  - OpenAI (`@ai-sdk/openai`)
+  - Google Gemini (`@ai-sdk/google`)
+  - DeepSeek (`@ai-sdk/deepseek`)
+- **Redis** (via `ioredis`) for resumable streaming
+- **Cloudflare R2** (via `@convex-dev/r2`) for file storage
+- **ImageKit** CDN for image delivery
+- **Docker** (Bun base image)
+
+## Local Development
 
 ### Prerequisites
 
-- Node.js (v18 or later)
-- npm, yarn, or bun
+- **Bun** (recommended)
+- A **Convex** project (deployment) and required keys
+- A **Redis** instance (for resumable streams)
+- WorkOS AuthKit configuration (client + API keys)
+- Proxy endpoint + key for model providers (see env vars below)
 
-### Installation
+### Install
 
-1.  Clone the repo
-    ```sh
-    git clone https://github.com/noki-asakuri/ai-chat.git
-    ```
-2.  Install NPM packages
-    ```sh
-    npm install
-    ```
-3.  Set up your environment variables. Create a `.env.local` file in the root of your project and add the following:
+```bash
+bun install
+```
 
-    ```
-    NEXT_PUBLIC_CONVEX_URL=
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-    CLERK_SECRET_KEY=
-    ```
+### Environment variables
 
-4.  Run the development server
-    ```sh
-    npm run dev
-    ```
+This project validates env vars in `src/env.js`. You’ll need both server and client variables.
 
-## Roadmap
+Server-side:
 
-- [x] Add support for streaming
-- [x] Add support for resuming streaming
-- [x] Add thread support
-- [x] Better markdown support
-- [x] Support edit and delete messages
-- [x] Add support to change model
-- [x] Add authentication
-- [x] Support send Image/PDF/etc
-- [x] Support branching
-- [x] Use shadcn/ui side-bar for threads
-- [x] Custom system prompts
-- [x] Add support to change model params
-- [x] Drag and drop files
-- [ ] Better UI
-- [x] Add Settings page
-  - [x] Account
-  - [x] Statistics
-  - [x] Customize
-  - [x] Attachments
-  - [x] Models
-  - [x] AI Profiles
-- [x] Profile selection
-- [x] Remove attachments on messages.
-- [x] Ratelimit per user
-- [ ] Allow annonymous access (with lower ratelimit)
-- [ ] Switch to use Better-Auth for auth
-- [ ] Add pricing and subscription tier
-- [ ] Image generation support
-  - [x] Google Gemini Image Gen
-  - [ ] OpenAI GPT Image 1
-- [x] Sub-model params (for model using reasoning effort 'high', 'medium', 'low')
-- [x] Switch to using same format from budget to effort for Gemini models (low: 10%, medium: 25%, high: 50%)
-- [x] Custom grouping of threads
-  - [x] Drag and drop threads to group them
-  - [x] Create new group
-  - [x] Rename group
-  - [x] Delete group
-  - [x] Reorder groups
-  - [x] Reorder threads within group
-  - [x] Reorder threads between groups
-- [ ] Properly handle cancel streaming and lost connection (Right now if user connection is lost, it treat same as user cancel the message.)
-- [ ] Add share thread feature
+- `NODE_ENV` (`development` or `production`)
+- `CONVEX_DEPLOYMENT`
+- `PROXY_URL`
+- `PROXY_KEY`
+- `REDIS_URL`
+- `WORKOS_API_KEY`
+- `WORKOS_CLIENT_ID`
+- `WORKOS_REDIRECT_URI`
+- `WORKOS_COOKIE_PASSWORD`
+
+Client-side (must be prefixed with `VITE_`):
+
+- `VITE_CONVEX_URL`
+- `VITE_AXIOM_TOKEN`
+- `VITE_AXIOM_DATASET`
+- `VITE_API_ENDPOINT` (base URL for the Hono server; see below)
+
+### Run (dev)
+
+1. Start the web app (port `3000`):
+
+```bash
+bun dev
+```
+
+2. Start the AI API server (port `3001`):
+
+```bash
+bun dev:server
+```
+
+In development, set:
+
+- `VITE_API_ENDPOINT=http://localhost:3001`
+
+### Production notes (as implemented)
+
+The current implementation assumes:
+
+- Web app origin: `https://chat.asakuri.me`
+- Files origin: `https://files.chat.asakuri.me`
+- Image CDN: `https://ik.imagekit.io/gmethsnvl/ai-chat`
+- Hono server listens on `PORT` (defaults to `3001`) and exposes `/api/ai/chat`.
+
+CORS for `/api/*` is configured to allow:
+
+- `http://localhost:3000` in development
+- `https://chat.asakuri.me` in production
+
+## Scripts
+
+From `package.json`:
+
+- `bun dev` — start Vite dev server
+- `bun build` — build
+- `bun preview` — build and preview
+- `bun dev:server` — run the Hono API server in watch mode
+- `bun check` — run lint + typecheck
+- `bun lint` / `bun lint:fix`
+- `bun typecheck`
 
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
-
-## Acknowledgments
-
-- [T3 Stack](https://create.t3.gg/)
-- [shadcn/ui](https://ui.shadcn.com/)
-- [Vercel](https://vercel.com/)
-- [Convex](https://www.convex.dev/)
-- [Clerk](https://clerk.com/)
