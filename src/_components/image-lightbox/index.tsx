@@ -61,15 +61,12 @@ export function ImageLightboxProvider(props: ImageLightboxProviderProps) {
   );
 }
 
-export type ImageLightboxTriggerProps = {
+export type ImageLightboxTriggerProps = React.ComponentProps<typeof Dialog.Trigger> & {
   index: number;
-  children: React.ReactNode;
-  className?: string;
-  ariaLabel?: string;
 };
 
 export function ImageLightboxTrigger(props: ImageLightboxTriggerProps) {
-  const { index, children, className, ariaLabel } = props;
+  const { index, children, className } = props;
 
   const handle = React.useContext(LightboxHandleContext);
   if (!handle) {
@@ -80,7 +77,6 @@ export function ImageLightboxTrigger(props: ImageLightboxTriggerProps) {
     <Dialog.Trigger
       handle={handle}
       payload={{ index }}
-      aria-label={ariaLabel}
       className={cn(
         "inline-flex cursor-zoom-in bg-transparent p-0 outline-none select-none focus-visible:ring-2 focus-visible:ring-white/50",
         className,

@@ -2,6 +2,7 @@ import { PaperclipIcon, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
+import { ImageLightboxProvider, ImageLightboxTrigger } from "@/components/image-lightbox";
 import { useConfigStore } from "@/components/provider/config-provider";
 import { ButtonWithTip } from "@/components/ui/button";
 
@@ -66,8 +67,7 @@ export function ChatAttachmentsDisplay() {
     }
 
     const preview = attachments.map(({ id, type, file }): Preview => {
-      const url = URL.createObjectURL(file);
-      return { id, type, file, url };
+      return { id, type, file, url: URL.createObjectURL(file) };
     });
 
     setPreview(preview);
@@ -82,27 +82,33 @@ export function ChatAttachmentsDisplay() {
 
   return (
     <div
-      data-slot="attachment-display"
       data-visible={!!preview}
+      data-slot="attachment-display"
       className="custom-scroll flex items-center justify-start gap-2 overflow-x-auto border-b p-2.5 data-[visible=false]:hidden"
     >
-      {preview.map((attachment) => (
-        <AttachmentPreview key={attachment.id} attachment={attachment} images={imageList} />
-      ))}
+      <ImageLightboxProvider
+        images={imageList.map((p) => ({ src: p.url, name: p.file.name, bytes: p.file.size }))}
+      >
+        {preview.map((attachment) => (
+          <AttachmentPreview key={attachment.id} attachment={attachment} images={imageList} />
+        ))}
+      </ImageLightboxProvider>
     </div>
   );
 }
 
-function AttachmentPreview({ attachment }: { attachment: Preview; images: Preview[] }) {
+function AttachmentPreview({ attachment, images }: { attachment: Preview; images: Preview[] }) {
+  const index = images.findIndex((p) => p.id === attachment.id);
+
   return (
     <div className="group relative flex justify-center gap-2 rounded-md border border-border bg-background/50 p-2 transition-colors hover:bg-foreground/10">
-      <button type="button" className="overflow-hidden rounded-md">
+      <ImageLightboxTrigger index={index} type="button" className="overflow-hidden rounded-md">
         <img
           src={attachment.url}
           alt={attachment.file.name}
           className="aspect-square size-15 object-cover object-center"
         />
-      </button>
+      </ImageLightboxTrigger>
 
       <button
         type="button"
@@ -115,7 +121,7 @@ function AttachmentPreview({ attachment }: { attachment: Preview; images: Previe
       </button>
 
       <div className="self-center">
-        <p className="max-w-[20ch] truncate text-sm">{attachment.file.name}</p>
+        <p className="max-w-[15ch] truncate text-sm">{attachment.file.name}</p>
         <p className="text-xs text-muted-foreground">{format.size(attachment.file.size)}</p>
       </div>
     </div>
