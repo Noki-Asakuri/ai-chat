@@ -20,6 +20,7 @@ type MessageActionButtonsProps = {
 
 export function MessageActionButtons({ index, isFinished, message }: MessageActionButtonsProps) {
   const { branchThread } = useBranchThread();
+  if (import.meta.env.PROD && !isFinished) return null;
 
   const content = message.parts
     .filter((p) => p.type === "text")
@@ -61,7 +62,6 @@ export function MessageActionButtons({ index, isFinished, message }: MessageActi
 
 function DebugButton({ messageId }: { messageId: Id<"messages"> }) {
   const message = useMessageStore(useShallow((state) => state.messagesById[messageId]!));
-
   if (import.meta.env.PROD) return null;
 
   function handleDebug() {
