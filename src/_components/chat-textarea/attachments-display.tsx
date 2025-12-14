@@ -1,5 +1,5 @@
 import { PaperclipIcon, TrashIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { ImageLightboxProvider, ImageLightboxTrigger } from "@/components/image-lightbox";
@@ -24,14 +24,19 @@ export function BaseChatAttachmentsButton({
   const hasImageVision = getModelData(model).capabilities.vision;
   if (!hasImageVision) return null;
 
+  const inputId = useId();
+
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files![0];
+    const file = event.target.files?.[0];
     if (!file) return;
 
     let type: "image" | "pdf" = "image";
     if (file.type.includes("pdf")) type = "pdf";
 
     handleAddAttachments([{ id: uuidv4(), type, file }]);
+
+    // allow re-uploading the same file
+    event.target.value = "";
   }
 
   return (
@@ -39,22 +44,22 @@ export function BaseChatAttachmentsButton({
       <ButtonWithTip
         {...props}
         variant="ghost"
-        title="Upload Image"
+        title="Upload attachment"
         className="size-9 border p-0! px-2 py-1.5 text-xs"
         type="button"
       >
         <label
-          htmlFor="image-upload"
+          htmlFor={inputId}
           className="flex size-full cursor-pointer items-center justify-center"
         >
           <PaperclipIcon />
-          <span className="sr-only">Upload Image</span>
+          <span className="sr-only">Upload attachment</span>
         </label>
       </ButtonWithTip>
 
       <input
         type="file"
-        id="image-upload"
+        id={inputId}
         accept="image/*,application/pdf"
         onChange={handleChange}
         className="hidden"

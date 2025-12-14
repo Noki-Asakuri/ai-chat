@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 
+import { useSessionId } from "convex-helpers/react/sessions";
 import { DeleteIcon, EllipsisIcon, Loader2Icon, PencilIcon } from "lucide-react";
 import { type ComponentPropsWithRef, useRef, useState, useTransition } from "react";
 
@@ -30,6 +31,7 @@ type ThreadGroupActionProps = ComponentPropsWithRef<"button"> & {
 const convexClient = getConvexReactClient();
 
 export function ThreadGroupActions({ group, ...props }: ThreadGroupActionProps) {
+  const [sessionId] = useSessionId();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(group.title);
@@ -48,9 +50,11 @@ export function ThreadGroupActions({ group, ...props }: ThreadGroupActionProps) 
     }
 
     startSaving(async () => {
+      if (!sessionId) return;
       await convexClient.mutation(api.functions.groups.updateGroupTitle, {
         groupId: group._id,
         title,
+        sessionId,
       });
       setEditOpen(false);
     });
@@ -58,8 +62,10 @@ export function ThreadGroupActions({ group, ...props }: ThreadGroupActionProps) 
 
   function deleteGroup(): void {
     startDeleting(async () => {
+      if (!sessionId) return;
       await convexClient.mutation(api.functions.groups.deleteGroup, {
         groupId: group._id,
+        sessionId,
       });
       setDeleteOpen(false);
     });

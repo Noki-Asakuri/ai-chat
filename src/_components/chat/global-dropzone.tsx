@@ -9,6 +9,8 @@ export function GlobalDropzone({ children, ...props }: React.ComponentPropsWitho
   const dragCounterRef = useRef<number>(0);
 
   function handleAddAttachments(files: Array<File>) {
+    const editMessage = useChatStore.getState().editMessage;
+
     const acceptFiles = files.filter(
       (file) => file.type.includes("image") || file.type.includes("pdf"),
     );
@@ -17,6 +19,11 @@ export function GlobalDropzone({ children, ...props }: React.ComponentPropsWitho
       const attachments = acceptFiles.map((file): UserAttachment => {
         return { id: uuidv4(), file, type: file.type.includes("image") ? "image" : "pdf" };
       });
+
+      if (editMessage) {
+        chatStoreActions.addEditAttachments(attachments);
+        return;
+      }
 
       chatStoreActions.addAttachments(attachments);
     }

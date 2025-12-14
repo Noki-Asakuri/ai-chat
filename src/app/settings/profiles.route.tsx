@@ -15,7 +15,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { convexQuery } from "@convex-dev/react-query";
-import { useSessionMutation } from "convex-helpers/react/sessions";
+import { useSessionId, useSessionMutation } from "convex-helpers/react/sessions";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -76,6 +76,7 @@ function LoadingSkeleton() {
 type SortOption = "az" | "za" | "newest" | "oldest" | "recently-updated";
 
 function AiProfilesPage() {
+  const [sessionId] = useSessionId();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("recently-updated");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -124,7 +125,10 @@ function AiProfilesPage() {
 
     try {
       let imageKey: string | undefined | null = undefined;
-      if (file) imageKey = await uploadAiProfileImage(file);
+      if (file) {
+        if (!sessionId) throw new Error("Not authenticated");
+        imageKey = await uploadAiProfileImage(file, sessionId);
+      }
 
       if (editingId) {
         await updateProfile({ profileId: editingId, name, systemPrompt, imageKey: imageKey });

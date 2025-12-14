@@ -5,7 +5,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useSessionId } from "convex-helpers/react/sessions";
 import { useConvex } from "convex/react";
 
-import { messageStoreActions } from "@/lib/store/messages-store";
+import { useMessageStore } from "@/lib/store/messages-store";
 import { toUUID } from "@/lib/utils";
 
 export function useBranchThread() {
@@ -17,7 +17,7 @@ export function useBranchThread() {
   async function branchThread(assistantMessageId: Id<"messages">) {
     const sessionId = id!;
 
-    const threadId = messageStoreActions.getCurrentThreadId();
+    const threadId = useMessageStore.getState().currentThreadId;
     if (!threadId) return;
 
     const newThreadId = await convexClient.mutation(api.functions.threads.branchThread, {

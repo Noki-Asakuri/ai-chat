@@ -12,6 +12,7 @@ type EditMessage = {
 
   model: string;
   currentAttachments: Doc<"attachments">[];
+  keptAttachmentIds: Array<Id<"attachments">>;
   attachments: UserAttachment[];
   modelParams: { effort?: ReasoningEffort; webSearch?: boolean };
 };
@@ -23,6 +24,9 @@ export type ChatStore = {
   editMessage: EditMessage | null;
   setEditMessage: (message: EditMessage | null) => void;
   updateEditMessage: (message: Partial<EditMessage>) => void;
+  addEditAttachments: (attachments: UserAttachment[]) => void;
+  removeEditAttachment: (id: string) => void;
+  removeEditExistingAttachment: (id: Id<"attachments">) => void;
 
   attachments: UserAttachment[];
   addAttachments: (attachments: UserAttachment[]) => void;
@@ -54,6 +58,41 @@ export const useChatStore = create<ChatStore>()(
         if (!editMessage) return;
 
         set({ editMessage: { ...editMessage, ...message } });
+      },
+      addEditAttachments: (attachments) => {
+        const { editMessage } = get();
+        if (!editMessage) return;
+
+        const next: Array<UserAttachment> = [...editMessage.attachments];
+        for (const attachment of attachments) {
+          const exists = next.some((a) => a.id === attachment.id);
+          if (exists) continue;
+          next.push(attachment);
+        }
+
+        set({ editMessage: { ...editMessage, attachments: next } });
+      },
+      removeEditAttachment: (id) => {
+        const { editMessage } = get();
+        if (!editMessage) return;
+
+        set({
+          editMessage: {
+            ...editMessage,
+            attachments: editMessage.attachments.filter((a) => a.id !== id),
+          },
+        });
+      },
+      removeEditExistingAttachment: (id) => {
+        const { editMessage } = get();
+        if (!editMessage) return;
+
+        set({
+          editMessage: {
+            ...editMessage,
+            keptAttachmentIds: editMessage.keptAttachmentIds.filter((a) => a !== id),
+          },
+        });
       },
 
       attachments: [],

@@ -1,20 +1,27 @@
 import {
   CheckIcon,
   ChevronDownIcon,
+  Loader2Icon,
   SaveIcon,
   SendHorizontalIcon,
   SquareIcon,
   XIcon,
 } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 import { useShallow } from "zustand/shallow";
+
+import { useSessionId } from "convex-helpers/react/sessions";
 
 import { useConfigStore, useConfigStoreState } from "../provider/config-provider";
 import { ButtonWithTip } from "../ui/button";
 import { Menu, MenuArrow } from "../ui/menu";
 
+import type { Doc, Id } from "@/convex/_generated/dataModel";
+import { uploadUserAttachment } from "@/lib/chat/shared";
 import { useRetryChatMessage } from "@/lib/chat/server-function/retry-chat-message";
 import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message";
+import type { ChatMessage } from "@/lib/types";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 
@@ -105,25 +112,84 @@ export function ChatEditSendButton() {
   const configStore = useConfigStoreState();
 
   const [open, setOpen] = React.useState(false);
+  const [isSaving, startSaving] = React.useTransition();
 
   const { retryChatMessage } = useRetryChatMessage();
+  const [sessionId] = useSessionId();
 
-  function handleSave() {
+  async function handleSave() {
+    if (isSaving) return;
     const editMessage = useChatStore.getState().editMessage;
-    if (!editMessage) return;
+    const threadId = useMessageStore.getState().currentThreadId;
 
-    chatStoreActions.setEditMessage(null);
+    if (!editMessage || !sessionId || !threadId) return;
 
-    retryChatMessage({
-      index: editMessage.index,
-      modelId: editMessage.model,
-      modelParams: editMessage.modelParams,
+    startSaving(async () => {
+      const uploaded = await uploadUserAttachment(editMessage.attachments, threadId, sessionId);
 
-      userMessage: {
-        messageId: editMessage._id,
-        parts: [{ type: "text", text: editMessage.input }],
-        attachments: editMessage.currentAttachments.map((a) => a._id),
-      },
+      const attachmentById = new Map<Id<"attachments">, Doc<"attachments">>();
+      for (const attachment of editMessage.currentAttachments) {
+        attachmentById.set(attachment._id, attachment);
+      }
+
+      const finalAttachmentIds: Array<Id<"attachments">> = [];
+      const seenIds = new Set<Id<"attachments">>();
+
+      for (const attachmentId of editMessage.keptAttachmentIds) {
+        if (seenIds.has(attachmentId)) continue;
+        seenIds.add(attachmentId);
+        finalAttachmentIds.push(attachmentId);
+      }
+
+      for (const item of uploaded) {
+        if (seenIds.has(item.attachmentId)) continue;
+        seenIds.add(item.attachmentId);
+        finalAttachmentIds.push(item.attachmentId);
+      }
+
+      const fileParts: Array<ChatMessage["parts"][number]> = [];
+
+      for (const attachmentId of editMessage.keptAttachmentIds) {
+        const attachment = attachmentById.get(attachmentId);
+        if (!attachment) continue;
+
+        const url = attachment.mimeType.includes("image")
+          ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.path}`
+          : `https://files.chat.asakuri.me/${attachment.path}`;
+
+        fileParts.push({ type: "file", url, mediaType: attachment.mimeType });
+      }
+
+      for (const item of uploaded) {
+        const url = item.mediaType.includes("image")
+          ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${item.path}`
+          : `https://files.chat.asakuri.me/${item.path}`;
+
+        fileParts.push({ type: "file", url, mediaType: item.mediaType });
+      }
+
+      const parts: ChatMessage["parts"] = [
+        { type: "text", text: editMessage.input, state: "done" },
+      ];
+
+      for (const part of fileParts) {
+        parts.push(part);
+      }
+
+      // Close edit UI only after we have successfully prepared the updated message payload.
+      chatStoreActions.setEditMessage(null);
+
+      retryChatMessage({
+        index: editMessage.index,
+        modelId: editMessage.model,
+        modelParams: editMessage.modelParams,
+
+        userMessage: {
+          messageId: editMessage._id,
+          parts,
+          attachments: finalAttachmentIds,
+        },
+      });
     });
   }
 
@@ -136,29 +202,37 @@ export function ChatEditSendButton() {
         title="Cancel Editing"
         className="h-9 cursor-pointer gap-2 rounded-md border bg-card px-3"
         onClick={() => chatStoreActions.setEditMessage(null)}
+        disabled={isSaving}
       >
         <XIcon className="size-4" />
         <span>Cancel</span>
       </ButtonWithTip>
 
-      <Menu.Root open={open} onOpenChange={setOpen}>
+      <Menu.Root open={open} onOpenChange={(next) => (!isSaving ? setOpen(next) : undefined)}>
         <div className="group flex h-9 items-center gap-2 overflow-hidden rounded-md border bg-card pl-3">
           <ButtonWithTip
             type="button"
             size="none"
             variant="none"
-            title="Save Changes"
+            title={isSaving ? "Saving..." : "Save Changes"}
             className="flex h-full flex-1 cursor-pointer items-center gap-2 p-0"
             onClick={handleSave}
+            disabled={isSaving}
           >
-            <SaveIcon className="size-4" />
-            <span>Save</span>
+            {isSaving ? (
+              <Loader2Icon className="size-4 animate-spin" />
+            ) : (
+              <SaveIcon className="size-4" />
+            )}
+
+            <span>{isSaving ? "Saving" : "Save"}</span>
           </ButtonWithTip>
 
           <Menu.Trigger
             type="button"
             className="h-9 rounded-none border-l group-data-[streaming=true]:hidden"
             title="Send Preferences"
+            disabled={isSaving}
             render={<ButtonWithTip delay={1000} side="top" variant="none" className="size-8" />}
           >
             <ChevronDownIcon className="size-4" />
