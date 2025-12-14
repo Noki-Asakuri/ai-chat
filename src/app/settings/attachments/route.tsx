@@ -237,19 +237,12 @@ function AttachmentsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Attachments</h2>
-          <p className="text-muted-foreground">View and manage your attachments.</p>
-        </div>
-
-        <div className="text-sm text-muted-foreground">
-          <span className="font-medium">{totals.count}</span> attachments •{" "}
-          <span className="font-medium">{format.size(totals.bytes)} total</span>
-        </div>
+      <div className="flex items-end justify-end text-sm text-muted-foreground">
+        <span className="font-medium">{totals.count}</span> attachments •{" "}
+        <span className="font-medium">{format.size(totals.bytes)} total</span>
       </div>
 
-      <div className="sticky top-0 z-10 bg-background/80 py-2 backdrop-blur supports-backdrop-filter:bg-background/60">
+      <div className="sticky top-24 z-10 bg-background/80 py-2 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="flex flex-col gap-2">
           <div className="relative w-full">
             <SearchIcon

@@ -63,11 +63,6 @@ export const Route = createFileRoute("/settings/profiles")({
 function LoadingSkeleton() {
   return (
     <main className="space-y-4">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-bold">AI Profiles</h2>
-        <p className="text-muted-foreground">Create reusable AI personas for your chats.</p>
-      </div>
-
       <p className="text-sm text-muted-foreground">Loading profiles…</p>
     </main>
   );
@@ -194,11 +189,6 @@ function AiProfilesPage() {
 
   return (
     <main className="space-y-4">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-bold">AI Profiles</h2>
-        <p className="text-muted-foreground">Create reusable AI personas for your chats.</p>
-      </div>
-
       <div className="flex items-center justify-between gap-2">
         <div className="relative w-full max-w-md">
           <SearchIcon className="absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
