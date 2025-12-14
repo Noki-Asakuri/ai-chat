@@ -8,6 +8,7 @@ import { Suspense, useEffect, useEffectEvent } from "react";
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { MessageHistory } from "@/components/message/message-history";
 
+import { useAutoResumeStream } from "@/lib/chat/server-function/auto-resume-stream";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { messageStoreActions } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
@@ -44,6 +45,7 @@ function ChatComponentPage() {
 function ChatHistory() {
   const params = useParams({ from: "/_chat_layout/threads/$threadId" });
   const threadId = fromUUID<Id<"threads">>(params.threadId);
+  const { autoResumeStream } = useAutoResumeStream();
 
   const { data } = useSuspenseQuery({
     ...convexSessionQuery(api.functions.messages.getAllMessagesFromThread, { threadId }),
@@ -55,6 +57,11 @@ function ChatHistory() {
 
   const syncMessage = useEffectEvent((data: ChatMessage[]) => {
     messageStoreActions.syncMessages(data);
+
+    const lastMessage = data[data.length - 1]!;
+    if (lastMessage.status === "streaming" && lastMessage.resumableStreamId) {
+      return autoResumeStream(lastMessage.resumableStreamId, lastMessage._id);
+    }
   });
 
   useEffect(() => {
