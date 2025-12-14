@@ -277,11 +277,41 @@ export default defineSchema(
 
       stats: v.object({
         threads: v.number(),
-        words: v.number(),
+
         messages: v.object({ assistant: v.number(), user: v.number() }),
-        wordsByRole: v.object({ assistant: v.number(), user: v.number() }),
+
+        /**
+         * Token aggregates derived from assistant message metadata.
+         *
+         * IMPORTANT:
+         * - input tokens are stored as *deduplicated deltas* (see internal stats mutation).
+         * - output/reasoning tokens are stored as reported by the model for that completion.
+         */
+        tokens: v.optional(
+          v.object({
+            input: v.number(),
+            output: v.number(),
+            reasoning: v.number(),
+            total: v.number(),
+          }),
+        ),
+
+        /**
+         * Convenience totals for quick UI display.
+         * - user = input token deltas
+         * - assistant = output + reasoning tokens
+         */
+        tokensByRole: v.optional(v.object({ assistant: v.number(), user: v.number() })),
+
+        // Legacy word-based stats (deprecated; kept optional for backward-compatibility with old docs)
+        words: v.optional(v.number()),
+        wordsByRole: v.optional(v.object({ assistant: v.number(), user: v.number() })),
       }),
 
+      /**
+       * Ranking aggregates. Values represent total tokens for the bucket.
+       * (Previously message counts.)
+       */
       modelCounts: v.record(v.string(), v.number()),
       threadCounts: v.record(v.id("threads"), v.number()),
       activityCounts: v.record(v.string(), v.number()),
