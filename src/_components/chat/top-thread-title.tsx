@@ -20,9 +20,7 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
   });
 
   if (isFetching || isSkeleton) return <Skeleton className="h-4 w-80" />;
-  if (!params?.threadId || !data?.title) {
-    return <p className="text-sm text-muted-foreground">New Thread</p>;
-  }
+  if (!params?.threadId || !data?.title) return null;
 
   return (
     <>

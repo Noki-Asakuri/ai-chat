@@ -4,8 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 
 import { useDebounce } from "@uidotdev/usehooks";
-import { useSessionId } from "convex-helpers/react/sessions";
 import { CommandLoading } from "cmdk";
+import { useSessionId } from "convex-helpers/react/sessions";
 import { LoaderIcon, PinIcon, PinOffIcon, SearchIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -46,7 +46,7 @@ export function ThreadCommand({ isSkeleton }: { isSkeleton?: boolean }) {
         <SearchIcon />
         <span>Search Threads...</span>
 
-        <kbd className="pointer-events-none ml-8 inline-flex h-4 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 select-none">
+        <kbd className="pointer-events-none ml-8 hidden h-4 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 select-none md:inline-flex">
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
