@@ -66,6 +66,7 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-shiki": "^0.9.1",
+    "recharts": "2.15.4",
     "rehype-harden": "^1.1.7",
     "rehype-katex": "^7.0.1",
     "rehype-raw": "^7.0.0",

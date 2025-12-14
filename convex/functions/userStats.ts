@@ -10,11 +10,31 @@ function dayKey(ts: number): string {
   return iso.split("T")[0] ?? "";
 }
 
-function wordCount(text: string): number {
-  const t = text.trim();
-  if (t.length === 0) return 0;
-  const parts = t.split(/\s+/);
-  return parts.length;
+function clampNonNegative(n: number): number {
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+type TokenTotals = {
+  input: number;
+  output: number;
+  reasoning: number;
+  total: number;
+};
+
+function addTokenTotals(a: TokenTotals, b: TokenTotals): TokenTotals {
+  return {
+    input: a.input + b.input,
+    output: a.output + b.output,
+    reasoning: a.reasoning + b.reasoning,
+    total: a.total + b.total,
+  };
+}
+
+function makeTokenTotals(input: number, output: number, reasoning: number): TokenTotals {
+  const i = clampNonNegative(input);
+  const o = clampNonNegative(output);
+  const r = clampNonNegative(reasoning);
+  return { input: i, output: o, reasoning: r, total: i + o + r };
 }
 
 async function getOrCreate(ctx: MutationCtx, userId: string): Promise<Doc<"user_stats">> {
@@ -30,8 +50,12 @@ async function getOrCreate(ctx: MutationCtx, userId: string): Promise<Doc<"user_
     userId,
     stats: {
       threads: 0,
-      words: 0,
       messages: { assistant: 0, user: 0 },
+      tokens: { input: 0, output: 0, reasoning: 0, total: 0 },
+      tokensByRole: { assistant: 0, user: 0 },
+
+      // legacy fields (deprecated)
+      words: 0,
       wordsByRole: { assistant: 0, user: 0 },
     },
     modelCounts: {},
@@ -71,38 +95,27 @@ export const incrementOnUserMessage = internalMutation({
   args: {
     userId: v.string(),
     threadId: v.id("threads"),
-    content: v.string(),
     createdAt: v.number(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const doc = await getOrCreate(ctx, args.userId);
 
-    const words = wordCount(args.content);
     const day = dayKey(args.createdAt);
 
     const stats = {
       ...doc.stats,
-      words: doc.stats.words + words,
       messages: {
         ...doc.stats.messages,
         user: doc.stats.messages.user + 1,
       },
-      wordsByRole: {
-        assistant: doc.stats.wordsByRole?.assistant ?? 0,
-        user: (doc.stats.wordsByRole?.user ?? 0) + words,
-      },
     };
-
-    const threadCounts: Record<Id<"threads">, number> = { ...doc.threadCounts };
-    threadCounts[args.threadId] = (threadCounts[args.threadId] ?? 0) + 1;
 
     const activityCounts: Record<string, number> = { ...doc.activityCounts };
     activityCounts[day] = (activityCounts[day] ?? 0) + 1;
 
     await ctx.db.patch(doc._id, {
       stats,
-      threadCounts,
       activityCounts,
       lastUpdatedAt: Date.now(),
     });
@@ -115,49 +128,74 @@ export const incrementOnAssistantComplete = internalMutation({
   args: {
     userId: v.string(),
     threadId: v.id("threads"),
-    content: v.string(),
-    modelUniqueId: v.string(),
     createdAt: v.number(),
+
+    modelUniqueId: v.string(),
     profileId: v.optional(v.id("profiles")),
+
+    /**
+     * Full prompt tokens reported by the model (cumulative for the whole prompt).
+     * We store a deduplicated delta in user stats to avoid double counting.
+     */
+    inputTokens: v.number(),
+    outputTokens: v.number(),
+    reasoningTokens: v.number(),
+
+    /**
+     * Previous assistant completion's cumulative input token count in this thread.
+     * If unknown, pass 0 so delta == inputTokens.
+     */
+    previousInputTokens: v.number(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const doc = await getOrCreate(ctx, args.userId);
 
-    const words = wordCount(args.content);
-    const day = dayKey(args.createdAt);
+    // `args.inputTokens` is cumulative prompt tokens reported by the model for this completion.
+    // We store *deduplicated* input tokens so user totals reflect incremental usage per reply.
+    const inputDelta = clampNonNegative(args.inputTokens - args.previousInputTokens);
+    const added = makeTokenTotals(inputDelta, args.outputTokens, args.reasoningTokens);
+
+    const prevTotals = doc.stats.tokens
+      ? makeTokenTotals(
+          doc.stats.tokens.input,
+          doc.stats.tokens.output,
+          doc.stats.tokens.reasoning,
+        )
+      : makeTokenTotals(0, 0, 0);
+
+    const nextTotals = addTokenTotals(prevTotals, added);
+
+    const prevTokensByRole = doc.stats.tokensByRole ?? { assistant: 0, user: 0 };
+    const nextTokensByRole = {
+      assistant: prevTokensByRole.assistant + added.output + added.reasoning,
+      user: prevTokensByRole.user + added.input,
+    };
 
     const stats = {
       ...doc.stats,
-      words: doc.stats.words + words,
       messages: {
         ...doc.stats.messages,
         assistant: doc.stats.messages.assistant + 1,
       },
-      wordsByRole: {
-        assistant: (doc.stats.wordsByRole?.assistant ?? 0) + words,
-        user: doc.stats.wordsByRole?.user ?? 0,
-      },
+      tokens: nextTotals,
+      tokensByRole: nextTokensByRole,
     };
 
     const threadCounts: Record<Id<"threads">, number> = { ...doc.threadCounts };
-    threadCounts[args.threadId] = (threadCounts[args.threadId] ?? 0) + 1;
-
-    const activityCounts: Record<string, number> = { ...doc.activityCounts };
-    activityCounts[day] = (activityCounts[day] ?? 0) + 1;
+    threadCounts[args.threadId] = (threadCounts[args.threadId] ?? 0) + added.total;
 
     const modelCounts: Record<string, number> = { ...doc.modelCounts };
     const normalizedModelId = getModelData(args.modelUniqueId).id;
-    modelCounts[normalizedModelId] = (modelCounts[normalizedModelId] ?? 0) + 1;
+    modelCounts[normalizedModelId] = (modelCounts[normalizedModelId] ?? 0) + added.total;
 
     const aiProfileCounts: Record<string, number> = { ...doc.aiProfileCounts };
     const aiKey = args.profileId ?? "null";
-    aiProfileCounts[aiKey] = (aiProfileCounts[aiKey] ?? 0) + 1;
+    aiProfileCounts[aiKey] = (aiProfileCounts[aiKey] ?? 0) + added.total;
 
     await ctx.db.patch(doc._id, {
       stats,
       threadCounts,
-      activityCounts,
       modelCounts,
       aiProfileCounts,
       lastUpdatedAt: Date.now(),

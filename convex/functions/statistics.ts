@@ -8,11 +8,27 @@ export const getStatistics = authenticatedQuery({
   returns: v.object({
     stats: v.object({
       threads: v.number(),
-      words: v.number(),
       messages: v.object({
         assistant: v.number(),
         user: v.number(),
       }),
+      tokens: v.optional(
+        v.object({
+          input: v.number(),
+          output: v.number(),
+          reasoning: v.number(),
+          total: v.number(),
+        }),
+      ),
+      tokensByRole: v.optional(
+        v.object({
+          assistant: v.number(),
+          user: v.number(),
+        }),
+      ),
+
+      // Legacy word-based stats (deprecated)
+      words: v.optional(v.number()),
       wordsByRole: v.optional(
         v.object({
           assistant: v.number(),
@@ -35,115 +51,123 @@ export const getStatistics = authenticatedQuery({
         .withIndex("by_userId", (q) => q.eq("userId", user.userId))
         .unique()) ?? null;
 
-    // Defaults when no stats exist yet
-    const defaults = {
+    function isRecord(value: unknown): value is Record<string, unknown> {
+      return typeof value === "object" && value !== null;
+    }
+
+    function readNumber(value: unknown): number {
+      return typeof value === "number" && Number.isFinite(value) ? value : 0;
+    }
+
+    function readTokenTotals(value: unknown): {
+      input: number;
+      output: number;
+      reasoning: number;
+      total: number;
+    } {
+      if (!isRecord(value)) return { input: 0, output: 0, reasoning: 0, total: 0 };
+      const input = readNumber(value["input"]);
+      const output = readNumber(value["output"]);
+      const reasoning = readNumber(value["reasoning"]);
+      const total = readNumber(value["total"]);
+      return { input, output, reasoning, total };
+    }
+
+    function readRoleTotals(value: unknown): { assistant: number; user: number } {
+      if (!isRecord(value)) return { assistant: 0, user: 0 };
+      return { assistant: readNumber(value["assistant"]), user: readNumber(value["user"]) };
+    }
+
+    type StatsResponse = {
       stats: {
-        threads: 0,
-        words: 0,
-        messages: { assistant: 0, user: 0 },
-        wordsByRole: { assistant: 0, user: 0 },
-      },
-      modelCounts: {} as Record<string, number>,
-      threadCounts: {} as Record<string, number>,
-      activityCounts: {} as Record<string, number>,
-      aiProfileCounts: {} as Record<string, number>,
+        threads: number;
+        messages: { assistant: number; user: number };
+        tokens: { input: number; output: number; reasoning: number; total: number };
+        tokensByRole: { assistant: number; user: number };
+
+        // legacy (deprecated)
+        words: number;
+        wordsByRole: { assistant: number; user: number };
+      };
+      modelCounts: Record<string, number>;
+      threadCounts: Record<Id<"threads">, number>;
+      activityCounts: Record<string, number>;
+      aiProfileCounts: Record<string, number>;
     };
 
-    // Safely parse optional wordsByRole for backward-compatible docs
-    const wr = (() => {
-      const maybe = statsDoc?.stats?.wordsByRole;
-      if (
-        typeof maybe === "object" &&
-        maybe !== null &&
-        typeof maybe.assistant === "number" &&
-        typeof maybe.user === "number"
-      ) {
-        return { assistant: maybe.assistant, user: maybe.user };
-      }
-      return { assistant: 0, user: 0 };
-    })();
+    // Defaults when no stats exist yet
+    const defaults: StatsResponse = {
+      stats: {
+        threads: 0,
+        messages: { assistant: 0, user: 0 },
+        tokens: { input: 0, output: 0, reasoning: 0, total: 0 },
+        tokensByRole: { assistant: 0, user: 0 },
 
-    const s = statsDoc
-      ? {
-          stats: {
-            threads: statsDoc.stats.threads,
-            words: statsDoc.stats.words,
-            messages: {
-              assistant: statsDoc.stats.messages.assistant,
-              user: statsDoc.stats.messages.user,
-            },
-            wordsByRole: wr,
+        // legacy (deprecated)
+        words: 0,
+        wordsByRole: { assistant: 0, user: 0 },
+      },
+      modelCounts: {},
+      threadCounts: {},
+      activityCounts: {},
+      aiProfileCounts: {},
+    };
+
+    const s: StatsResponse = (() => {
+      if (!statsDoc) return defaults;
+
+      const statsRecord: Record<string, unknown> = isRecord(statsDoc.stats) ? statsDoc.stats : {};
+
+      return {
+        stats: {
+          threads: statsDoc.stats.threads,
+          messages: {
+            assistant: statsDoc.stats.messages.assistant,
+            user: statsDoc.stats.messages.user,
           },
-          modelCounts: statsDoc.modelCounts,
-          threadCounts: statsDoc.threadCounts,
-          activityCounts: statsDoc.activityCounts,
-          aiProfileCounts: statsDoc.aiProfileCounts,
-        }
-      : defaults;
+
+          tokens: readTokenTotals(statsRecord["tokens"]),
+          tokensByRole: readRoleTotals(statsRecord["tokensByRole"]),
+
+          // legacy (deprecated)
+          words: readNumber(statsRecord["words"]),
+          wordsByRole: readRoleTotals(statsRecord["wordsByRole"]),
+        },
+        modelCounts: statsDoc.modelCounts,
+        threadCounts: statsDoc.threadCounts,
+        activityCounts: statsDoc.activityCounts,
+        aiProfileCounts: statsDoc.aiProfileCounts,
+      };
+    })();
 
     // modelRank from pre-aggregated counts
     const modelRank = Object.entries(s.modelCounts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
-    // threadRank: resolve names
-    const threadEntries = Object.entries(s.threadCounts);
-    const threadIds: Array<Id<"threads">> = threadEntries.map(
-      ([threadId]) => threadId as Id<"threads">,
-    );
+    // threadRank: resolve titles (avoid `Id` casts by using real thread docs as the source of truth)
+    const threadEntries = Object.entries(s.threadCounts).sort((a, b) => b[1] - a[1]);
 
-    const threadDocs: Array<Doc<"threads"> | null> = await Promise.all(
-      threadIds.map(async (id) => ctx.db.get(id)),
-    );
-
-    const threadRank = threadEntries
-      .map(([, value], idx) => {
-        const id = threadIds[idx];
-        const t = threadDocs[idx];
-        if (!id) return null;
-        return { id, name: t?.title ?? "Unknown", value };
-      })
-      .filter((x): x is { id: Id<"threads">; name: string; value: number } => x !== null)
-      .sort((a, b) => b.value - a.value);
-
-    // Build activity chart from user messages only (current year)
-    function dayKey(ts: number): string {
-      const d = new Date(ts);
-      const iso = new Date(
-        Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
-      ).toISOString();
-      const day = iso.split("T")[0];
-      return day ?? "";
-    }
-
-    const now = Date.now();
-    const nowDate = new Date(now);
-    const yearStartMs = Date.UTC(nowDate.getUTCFullYear(), 0, 1);
-
-    const activityCounts: Record<string, number> = {};
-
-    // Collect all threads for this user
-    const userThreads = await ctx.db
+    const threads = await ctx.db
       .query("threads")
       .withIndex("by_userId", (q) => q.eq("userId", user.userId))
       .collect();
 
-    // For each thread, count only 'user' role messages in current year
-    for (const t of userThreads) {
-      const messages = await ctx.db
-        .query("messages")
-        .withIndex("by_threadId", (q) => q.eq("threadId", t._id))
-        .collect();
-
-      for (const m of messages) {
-        if (m.role === "user" && m.createdAt >= yearStartMs && m.createdAt <= now) {
-          const day = dayKey(m.createdAt);
-          activityCounts[day] = (activityCounts[day] ?? 0) + 1;
-        }
-      }
+    const threadById: Record<string, Doc<"threads">> = {};
+    for (const t of threads) {
+      threadById[t._id] = t;
     }
 
-    const activity = Object.entries(activityCounts).map(([day, value]) => ({ day, value }));
+    const threadRank = threadEntries
+      .map(([threadId, value]) => {
+        const t = threadById[threadId];
+        if (!t) return null;
+        return { id: t._id, name: t.title ?? "Unknown", value };
+      })
+      .filter((x): x is { id: Id<"threads">; name: string; value: number } => x !== null);
+
+    // Activity: stored user message counts by day (already deduped and cheap to fetch).
+    const activity = Object.entries(s.activityCounts).map(([day, value]) => ({ day, value }));
 
     // aiProfileRank: map ids to names for current user
     const profiles = await ctx.db

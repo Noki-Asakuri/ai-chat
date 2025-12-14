@@ -2,6 +2,7 @@ import { asyncMap } from "convex-helpers";
 import { getAll } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
 
+import { internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
 import { authenticatedMutation, authenticatedQuery } from "../components";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
@@ -126,11 +127,11 @@ export const addMessagesToThread = authenticatedMutation({
       ctx.db.insert("messages", { ...shared, ...assistantMessage, createdAt: now + 1 }),
     ]);
 
-    // await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
-    //   userId: user.userId,
-    //   threadId: args.threadId,
-    //   createdAt: userMessage.createdAt,
-    // });
+    await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
+      userId: user.userId,
+      threadId: args.threadId,
+      createdAt: now,
+    });
 
     return assistantMessageId;
   },
@@ -206,17 +207,52 @@ export const updateMessageById = authenticatedMutation({
     const becameComplete = message.status !== "complete" && args.updates.status === "complete";
 
     if (message.role === "assistant" && becameComplete) {
-      // const modelUniqueId =
-      //   args.updates.metadata?.model.request ?? message.metadata?.model.request ?? "";
-      // const profileId = args.updates.metadata?.profile?.id ?? message.metadata?.profile?.id;
-      // await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
-      //   userId: user.userId,
-      //   threadId: message.threadId,
-      //   content,
-      //   modelUniqueId,
-      //   createdAt: message.createdAt,
-      //   ...(profileId ? { profileId } : {}),
-      // });
+      const threadId = message.threadId;
+      if (!threadId) return;
+
+      const metadata = args.updates.metadata ?? message.metadata;
+      if (!metadata) return;
+
+      const modelUniqueId = metadata.model.request ?? "";
+      const profileId = metadata.profile?.id;
+
+      const currentInputTokens = metadata.usages.inputTokens ?? 0;
+      const outputTokens = metadata.usages.outputTokens ?? 0;
+      const reasoningTokens = metadata.usages.reasoningTokens ?? 0;
+
+      // Find the previous *complete assistant* message in this thread to dedupe cumulative prompt tokens.
+      // `metadata.usages.inputTokens` is cumulative for the full prompt, so:
+      // inputDelta = max(0, currentInputTokens - previousCompletionInputTokens)
+      // This prevents double counting as the conversation grows.
+      let prevInputTokens = 0;
+
+      const prevMessages = ctx.db
+        .query("messages")
+        .withIndex("by_threadId", (q) => q.eq("threadId", threadId).lte("_creationTime", message._creationTime))
+        .order("desc");
+
+      for await (const m of prevMessages) {
+        if (m._id === message._id) continue;
+        if (m.role !== "assistant") continue;
+        if (m.status !== "complete") continue;
+
+        prevInputTokens = m.metadata?.usages?.inputTokens ?? 0;
+        break;
+      }
+
+      await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
+        userId: user.userId,
+        threadId,
+        createdAt: message.createdAt,
+
+        modelUniqueId,
+        ...(profileId ? { profileId } : {}),
+
+        inputTokens: currentInputTokens,
+        outputTokens,
+        reasoningTokens,
+        previousInputTokens: prevInputTokens,
+      });
     }
   },
 });
