@@ -46,7 +46,7 @@ export function ChatTextarea() {
           <ChatAttachmentsDisplay />
 
           <div>
-            <InputTextArea />
+            <InputChatTextArea />
 
             <div className="flex items-end justify-between border-t px-2.5 py-2">
               <ChatActionButtons />
@@ -59,11 +59,8 @@ export function ChatTextarea() {
   );
 }
 
-function InputTextArea() {
-  const shouldSend = useShouldSend();
+function InputChatTextArea() {
   const input = useChatStore((state) => state.input);
-
-  const { sendChatRequest } = useSendChatMessage();
 
   function handleAddAttachments({ files }: { files: File[] }) {
     const acceptFiles = files.filter(
@@ -88,20 +85,56 @@ function InputTextArea() {
   }
 
   return (
+    <BaseInputTextArea
+      id="textarea-chat-input"
+      input={input}
+      setInput={chatStoreActions.setInput}
+      handleAddAttachments={handleAddAttachments}
+    />
+  );
+}
+
+function TextareaDescription() {
+  const sendDescription = useGetSendDescription();
+
+  return (
+    <span id="textarea-description" className="sr-only">
+      {sendDescription}
+    </span>
+  );
+}
+
+type BaseInputTextAreaProps = React.ComponentPropsWithoutRef<typeof Textarea> & {
+  input: string;
+  setInput: (content: string) => void;
+
+  handleAddAttachments: (data: { files: File[] }) => void;
+};
+
+export function BaseInputTextArea({
+  input,
+  setInput,
+  handleAddAttachments,
+  ...props
+}: BaseInputTextAreaProps) {
+  const shouldSend = useShouldSend();
+  const { sendChatRequest } = useSendChatMessage();
+
+  return (
     <div className="flex grow flex-row items-start p-2.5">
       <Textarea
+        {...props}
         rows={3}
         name="user-input"
-        id="textarea-chat-input"
         autoComplete="off"
         aria-multiline="true"
         aria-autocomplete="none"
         aria-describedby="textarea-description"
         aria-label="Type your message here..."
         placeholder="Type your message here..."
+        data-slot={props.id}
         value={input}
-        onChange={(event) => chatStoreActions.setInput(event.target.value)}
-        data-slot="textarea-chat-input"
+        onChange={(event) => setInput(event.target.value)}
         className="max-h-62.5 w-full resize-none rounded-none border-0 bg-transparent! p-0 ring-0!"
         onPaste={(event) => {
           const { items } = event.clipboardData;
@@ -134,15 +167,5 @@ function InputTextArea() {
 
       <TextareaDescription />
     </div>
-  );
-}
-
-function TextareaDescription() {
-  const sendDescription = useGetSendDescription();
-
-  return (
-    <span id="textarea-description" className="sr-only">
-      {sendDescription}
-    </span>
   );
 }

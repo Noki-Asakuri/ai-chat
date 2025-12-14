@@ -229,7 +229,13 @@ export const retryChatMessage = authenticatedMutation({
     model: v.string(),
     modelParams: AISDKModelParams,
 
-    userMessage: v.optional(v.object({ messageId: v.id("messages"), parts: AISDKParts })),
+    userMessage: v.optional(
+      v.object({
+        parts: v.any(),
+        messageId: v.id("messages"),
+        attachments: v.array(v.id("attachments")),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
@@ -256,6 +262,7 @@ export const retryChatMessage = authenticatedMutation({
       await ctx.db.patch(args.userMessage.messageId, {
         updatedAt: Date.now(),
         parts: args.userMessage.parts,
+        attachments: args.userMessage.attachments,
       });
     }
 
