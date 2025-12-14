@@ -44,7 +44,7 @@ function AuthLayout() {
           <div className="flex h-full flex-col overflow-hidden">
             <UserNavbar />
 
-            <div className="custom-scroll mt-6 w-full flex-1 px-2 lg:overflow-y-auto">
+            <div className="custom-scroll mt-6 w-full flex-1 px-2 pr-3 lg:overflow-y-auto">
               <Outlet />
             </div>
           </div>
