@@ -19,10 +19,12 @@ export function MessageReasoning({ parts, metadata }: ThinkingToggleProps) {
   const reasoning = parts.map((p) => p.text).join("\n\n");
   const status = parts.some((p) => p.state === "streaming") ? "streaming" : "complete";
 
+  if (metadata.durations.reasoning === 0 && status === "complete") return null;
+
   return (
     <Reasoning
       defaultOpen={false}
-      duration={metadata?.durations?.reasoning}
+      duration={metadata.durations.reasoning}
       isStreaming={status === "streaming"}
     >
       <ReasoningTrigger
