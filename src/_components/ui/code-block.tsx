@@ -12,6 +12,7 @@ import { useConfigStore, useConfigStoreState } from "@/components/provider/confi
 
 import { getHighlightFromCache, setHighlightInCache } from "@/lib/code-highlight-cache";
 import { useThrottledDebouncedValue } from "@/lib/hooks/use-throttled-debounced-value";
+import { useChatStore } from "@/lib/store/chat-store";
 import { cn } from "@/lib/utils";
 
 function trimOneEdgeNewline(input: string): string {
@@ -230,7 +231,50 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
     })),
   );
 
+  const textareaHeight = useChatStore((state) => state.textareaHeight);
+
   const [expanded, setExpanded] = React.useState<boolean>(defaultShowFullCode);
+  const [viewportHeightPx, setViewportHeightPx] = React.useState<number>(0);
+  const [rootHeightPx, setRootHeightPx] = React.useState<number>(0);
+
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    function handleResize() {
+      setViewportHeightPx(window.innerHeight);
+    }
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  React.useEffect(() => {
+    if (!expanded) {
+      setRootHeightPx(0);
+      return;
+    }
+
+    if (typeof ResizeObserver === "undefined") return;
+
+    const el = rootRef.current;
+    if (!el) return;
+
+    function updateHeight(element: HTMLDivElement) {
+      setRootHeightPx(element.getBoundingClientRect().height);
+    }
+
+    updateHeight(el);
+
+    const ro = new ResizeObserver(() => {
+      updateHeight(el);
+    });
+
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [expanded]);
 
   const onToggleExpanded = React.useCallback(() => setExpanded((v) => !v), []);
   const onExpandAll = React.useCallback(() => setExpanded(true), []);
@@ -260,9 +304,26 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
     return `${LINE_CLAMP * lineHeightPx + verticalPadding}px`;
   }, [expanded, totalLines]);
 
+  const shouldStickyHeader = React.useMemo(() => {
+    if (!expanded) return false;
+    if (viewportHeightPx <= 0) return false;
+
+    const availableViewportPx = viewportHeightPx - textareaHeight - 40;
+    if (availableViewportPx <= 0) return false;
+
+    return rootHeightPx > availableViewportPx;
+  }, [expanded, rootHeightPx, textareaHeight, viewportHeightPx]);
+
   return (
-    <div className="codeblock relative overflow-hidden rounded-md border bg-background/80 text-foreground">
-      <div className="pointer-events-none relative flex items-center justify-between border-b px-2 py-1">
+    <div ref={rootRef} className="codeblock rounded-md border bg-background/80 text-foreground">
+      <div
+        data-should-sticky={shouldStickyHeader}
+        className={cn(
+          "pointer-events-none relative flex items-center justify-between rounded-t-md border-b px-2 py-1",
+          shouldStickyHeader &&
+            "sticky top-10 z-30 bg-background/80 backdrop-blur-md backdrop-saturate-150",
+        )}
+      >
         <CodeBlockHeader langKey={langKey} totalLines={totalLines} firstLine={firstLine} />
 
         <div className="pointer-events-auto flex items-center gap-1">
@@ -294,24 +355,26 @@ export function ShikiCodeBlock({ language, code }: CodeBlockProps) {
         </div>
       </div>
 
-      <HighlightPane
-        code={throttledCode}
-        langKey={langKey}
-        height={containerMaxHeight}
-        wrapline={wrapline}
-      />
+      <div className="relative overflow-hidden">
+        <HighlightPane
+          code={throttledCode}
+          langKey={langKey}
+          height={containerMaxHeight}
+          wrapline={wrapline}
+        />
 
-      {!expanded && moreCount > 0 && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center">
-          <button
-            type="button"
-            className="pointer-events-auto inline-flex cursor-pointer items-center gap-1 rounded-md border bg-card px-2 py-1 text-xs transition-colors hover:bg-card/70"
-            onMouseDown={onExpandAll}
-          >
-            <EllipsisIcon className="size-4" /> {moreCount} more lines
-          </button>
-        </div>
-      )}
+        {!expanded && moreCount > 0 && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center">
+            <button
+              type="button"
+              className="pointer-events-auto inline-flex cursor-pointer items-center gap-1 rounded-md border bg-card px-2 py-1 text-xs transition-colors hover:bg-card/70"
+              onMouseDown={onExpandAll}
+            >
+              <EllipsisIcon className="size-4" /> {moreCount} more lines
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
