@@ -190,6 +190,7 @@ export default defineSchema(
       threadId: v.id("threads"),
     })
       .index("by_userId", ["userId"])
+      .index("by_userId_threadId", ["userId", "threadId"])
       .index("by_UUID", ["id"]),
 
     messages: defineTable({

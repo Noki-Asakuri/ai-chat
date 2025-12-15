@@ -1,7 +1,9 @@
 import { v } from "convex/values";
 
+import type { Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import { authenticatedMutation, authenticatedQuery } from "../components";
+import { status } from "../schema";
 
 export const createThread = authenticatedMutation({
   args: { title: v.optional(v.string()) },
@@ -126,6 +128,134 @@ export const getAllThreads = authenticatedQuery({
       .take(limit);
 
     return [...pinnedMatches, ...nonPinnedMatches];
+  },
+});
+
+export const listAccountThreads = authenticatedQuery({
+  args: {
+    query: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("threads"),
+      _creationTime: v.number(),
+
+      title: v.string(),
+      updatedAt: v.number(),
+      pinned: v.boolean(),
+      status: status,
+
+      messageCount: v.number(),
+      attachmentCount: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+    const userId = user.userId;
+
+    type ThreadStatus = "pending" | "streaming" | "complete" | "error";
+
+    type AccountThreadRow = {
+      _id: Id<"threads">;
+      _creationTime: number;
+
+      title: string;
+      updatedAt: number;
+      pinned: boolean;
+      status: ThreadStatus;
+
+      messageCount: number;
+      attachmentCount: number;
+    };
+
+    const limit = Math.min(args.limit ?? 10, 10);
+    const search = (args.query ?? "").trim();
+
+    async function getDefaultThreads() {
+      const pinned = await ctx.db
+        .query("threads")
+        .withIndex("by_userId_pinned_updatedAt", (q) =>
+          q.eq("userId", userId).eq("pinned", true),
+        )
+        .order("desc")
+        .take(limit);
+
+      const remaining = limit - pinned.length;
+
+      const nonPinned =
+        remaining > 0
+          ? await ctx.db
+              .query("threads")
+              .withIndex("by_userId_pinned_updatedAt", (q) =>
+                q.eq("userId", userId).eq("pinned", false),
+              )
+              .order("desc")
+              .take(remaining)
+          : [];
+
+      return [...pinned, ...nonPinned];
+    }
+
+    async function getSearchedThreads(term: string) {
+      const pinnedMatches = await ctx.db
+        .query("threads")
+        .withSearchIndex("search_title", (q) =>
+          q.search("title", term).eq("userId", userId).eq("pinned", true),
+        )
+        .take(limit);
+
+      const remaining = limit - pinnedMatches.length;
+
+      const nonPinnedMatches =
+        remaining > 0
+          ? await ctx.db
+              .query("threads")
+              .withSearchIndex("search_title", (q) =>
+                q.search("title", term).eq("userId", userId).eq("pinned", false),
+              )
+              .take(remaining)
+          : [];
+
+      return [...pinnedMatches, ...nonPinnedMatches];
+    }
+
+    const selectedThreads =
+      search.length === 0 ? await getDefaultThreads() : await getSearchedThreads(search);
+
+    const rows: Array<AccountThreadRow> = [];
+
+    for (const thread of selectedThreads) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_userId_threadId", (q) =>
+          q.eq("userId", userId).eq("threadId", thread._id),
+        )
+        .collect();
+
+      const attachments = await ctx.db
+        .query("attachments")
+        .withIndex("by_userId_threadId", (q) =>
+          q.eq("userId", userId).eq("threadId", thread._id),
+        )
+        .collect();
+
+      rows.push({
+        _id: thread._id,
+        _creationTime: thread._creationTime,
+
+        title: thread.title,
+        updatedAt: thread.updatedAt,
+        pinned: thread.pinned,
+        status: thread.status,
+
+        messageCount: messages.length,
+        attachmentCount: attachments.length,
+      });
+    }
+
+    return rows;
   },
 });
 
