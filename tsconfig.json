@@ -33,5 +33,5 @@
     }
   },
   "exclude": ["node_modules", "public", "convex"],
-  "include": ["src", "lucide-react.d.ts", "scripts"]
+  "include": ["src", "scripts", "src/vite-env.d.ts"]
 }
