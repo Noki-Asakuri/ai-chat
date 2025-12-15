@@ -1,14 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { AccountThreadsTable } from "./-components/account/account-threads-table";
+
 export const Route = createFileRoute("/settings/account")({
   component: RouteComponent,
   head: () => ({ meta: [{ title: "Account - AI Chat" }] }),
 });
 
 function RouteComponent() {
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Account settings coming soon.</p>
-    </div>
-  );
+  return <AccountThreadsTable />;
 }

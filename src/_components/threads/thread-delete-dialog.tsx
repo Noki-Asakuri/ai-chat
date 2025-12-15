@@ -24,6 +24,7 @@ type ThreadDeleteDialogProps = {
   title: Thread["title"];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  redirectTo?: string;
 };
 
 export function ThreadDeleteDialog({
@@ -31,6 +32,7 @@ export function ThreadDeleteDialog({
   title,
   open,
   onOpenChange,
+  redirectTo = "/",
 }: ThreadDeleteDialogProps) {
   const navigate = useNavigate();
   const [pending, startTransition] = useTransition();
@@ -44,7 +46,11 @@ export function ThreadDeleteDialog({
 
     startTransition(async () => {
       await deleteThread({ threadId, deleteAttachments: checked });
-      await navigate({ to: "/" });
+      onOpenChange(false);
+
+      if (redirectTo.length > 0) {
+        await navigate({ to: redirectTo });
+      }
     });
   }
 

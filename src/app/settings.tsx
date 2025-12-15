@@ -51,14 +51,12 @@ function AuthLayout() {
         <div className="flex min-h-0 flex-col">
           <UserNavbar />
 
-          <div className="custom-scroll isolate z-10 min-h-0 w-full flex-1 overflow-visible px-2 pr-3 lg:overflow-y-auto">
+          <div className="custom-scroll isolate z-10 flex min-h-0 w-full flex-1 flex-col overflow-visible px-2 pr-3 lg:overflow-y-auto">
             <div className="sticky top-0 z-20 bg-background/80 py-2 backdrop-blur supports-backdrop-filter:bg-background/60">
               <SettingsRouteHeader />
             </div>
 
-            <div className="pt-6">
-              <Outlet />
-            </div>
+            <Outlet />
           </div>
         </div>
       </div>
