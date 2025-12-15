@@ -1,4 +1,4 @@
-import { Link, useSearch, useLocation } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import {
   BrainIcon,
   ChartNoAxesColumnIcon,

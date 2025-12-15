@@ -12,7 +12,6 @@ import { getSignInUrl } from "@/lib/authkit/serverFunctions";
 
 const getCookiesServerFunction = createServerFn({ method: "GET" }).handler(async () => {
   const backgroundImage = getCookie("background-image");
-
   return { backgroundImage };
 });
 

@@ -19,6 +19,7 @@
   },
   "oxc.enable": true,
   "typescript.experimental.useTsgo": false,
+  "typescript.preferences.autoImportFileExcludePatterns": ["lucide-react"],
   "typescript.preferences.autoImportSpecifierExcludeRegexes": [
     "@radix-ui",
     "radix-ui",
