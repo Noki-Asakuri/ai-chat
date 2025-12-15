@@ -21,6 +21,7 @@ import { Route as SettingsModelsRouteRouteImport } from './app/settings/models/r
 import { Route as SettingsCustomizationRouteRouteImport } from './app/settings/customization.route'
 import { Route as SettingsAttachmentsRouteRouteImport } from './app/settings/attachments/route'
 import { Route as Chat_layoutThreadsRouteRouteImport } from './app/_chat_layout.threads.route'
+import { Route as ApiVercelSplatRouteImport } from './app/api/vercel/$'
 import { Route as ApiAuthCallbackRouteImport } from './app/api/auth/callback'
 import { Route as Chat_layoutThreadsThreadIdRouteImport } from './app/_chat_layout.threads.$threadId'
 
@@ -85,6 +86,11 @@ const Chat_layoutThreadsRouteRoute = Chat_layoutThreadsRouteRouteImport.update({
   path: '/threads',
   getParentRoute: () => Chat_layoutRoute,
 } as any)
+const ApiVercelSplatRoute = ApiVercelSplatRouteImport.update({
+  id: '/api/vercel/$',
+  path: '/api/vercel/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthCallbackRoute = ApiAuthCallbackRouteImport.update({
   id: '/api/auth/callback',
   path: '/api/auth/callback',
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/': typeof Chat_layoutIndexRoute
   '/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/api/vercel/$': typeof ApiVercelSplatRoute
 }
 export interface FileRoutesByTo {
   '/settings': typeof SettingsRouteWithChildren
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/': typeof Chat_layoutIndexRoute
   '/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/api/vercel/$': typeof ApiVercelSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/_chat_layout/': typeof Chat_layoutIndexRoute
   '/_chat_layout/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/api/vercel/$': typeof ApiVercelSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/'
     | '/threads/$threadId'
     | '/api/auth/callback'
+    | '/api/vercel/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/settings'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/'
     | '/threads/$threadId'
     | '/api/auth/callback'
+    | '/api/vercel/$'
   id:
     | '__root__'
     | '/_chat_layout'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/_chat_layout/'
     | '/_chat_layout/threads/$threadId'
     | '/api/auth/callback'
+    | '/api/vercel/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -199,6 +211,7 @@ export interface RootRouteChildren {
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLogoutRoute: typeof AuthLogoutRoute
   ApiAuthCallbackRoute: typeof ApiAuthCallbackRoute
+  ApiVercelSplatRoute: typeof ApiVercelSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -287,6 +300,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Chat_layoutThreadsRouteRouteImport
       parentRoute: typeof Chat_layoutRoute
     }
+    '/api/vercel/$': {
+      id: '/api/vercel/$'
+      path: '/api/vercel/$'
+      fullPath: '/api/vercel/$'
+      preLoaderRoute: typeof ApiVercelSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/callback': {
       id: '/api/auth/callback'
       path: '/api/auth/callback'
@@ -360,6 +380,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthLoginRoute: AuthLoginRoute,
   AuthLogoutRoute: AuthLogoutRoute,
   ApiAuthCallbackRoute: ApiAuthCallbackRoute,
+  ApiVercelSplatRoute: ApiVercelSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
