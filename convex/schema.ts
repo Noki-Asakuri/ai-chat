@@ -278,7 +278,6 @@ export default defineSchema(
 
       stats: v.object({
         threads: v.number(),
-
         messages: v.object({ assistant: v.number(), user: v.number() }),
 
         /**
