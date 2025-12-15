@@ -195,9 +195,9 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
 
   return (
     <Dialog.Portal>
-      <Dialog.Backdrop className="fixed inset-0 bg-black/80" />
+      <Dialog.Backdrop className="fixed inset-0 z-9998 bg-black/80" />
 
-      <Dialog.Popup className="pointer-events-none fixed inset-0 outline-none">
+      <Dialog.Popup className="pointer-events-none fixed inset-0 z-9999 outline-none">
         <div className="pointer-events-none absolute inset-0 flex flex-col">
           <div className="pointer-events-none flex justify-end p-4">
             <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-lg bg-black/60 p-2 backdrop-blur">
