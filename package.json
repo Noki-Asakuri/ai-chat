@@ -14,7 +14,7 @@
     "lint:fix": "oxlint --type-aware --fix",
     "preview": "vite build && vite preview",
     "start": "node --env-file=.env .output/server/index.mjs",
-    "start:server": "bun run src/app/api/_server/chat.ts",
+    "start:server": "bun run scripts/server.ts",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {

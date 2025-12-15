@@ -191,6 +191,7 @@ export const migrateUserData = internalMutation({
 export const migrateUserMessages = internalMutation({
   args: { oldUserId: v.string(), newUserId: v.string() },
   handler: async (ctx, args) => {
+    console.log("Starting migration");
     let cursor: string | null = null;
 
     while (true) {
@@ -202,9 +203,12 @@ export const migrateUserMessages = internalMutation({
       if (messages.page.length === 0) break;
       cursor = messages.continueCursor;
 
+      console.log("Migrating", messages.page.length, "messages");
       for (const message of messages.page) {
         await ctx.db.patch(message._id, { userId: args.newUserId });
       }
     }
+
+    console.log("Migration complete");
   },
 });
