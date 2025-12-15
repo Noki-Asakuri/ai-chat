@@ -17,12 +17,29 @@ export const migrations = new Migrations<DataModel>(components.migrations);
 export const run = migrations.runner();
 
 export const backfillMessages = migrations.define({
-  table: "usages",
+  table: "messages",
   migrateOne: async (ctx, data) => {
-    if (data.resetType) return;
-    await ctx.db.patch(data._id, { resetType: "monthly", resetAt: undefined });
+    // const updates = data;
+    // const modelParams = data.modelParams;
+    // // Remove deprecated fields from old messages schema.
+    // if (typeof updates.content !== "undefined") updates.content = undefined;
+    // if (typeof updates.reasoning !== "undefined") updates.reasoning = undefined;
+    // if (typeof updates.model !== "undefined") updates.model = undefined;
+    // if (typeof updates.modelParams !== "undefined") updates.modelParams = undefined;
+    // // Update current metadata to newer schema.
+    // if (updates.metadata && typeof updates.metadata.model === "string") {
+    //   updates.metadata.model = { request: updates.metadata.model, response: null };
+    // }
+    // if (updates.metadata) {
+    //   // @ts-expect-error
+    //   updates.metadata.modelParams = {
+    //     effort: modelParams?.effort ?? "medium",
+    //     webSearch: modelParams?.webSearchEnabled ?? false,
+    //     profile: null,
+    //   };
+    // }
+    // await ctx.db.patch(data._id, updates);
   },
 });
 
-// export const runBackfillMessages = migrations.runner([internal.migrations.backfillMessages]);
-// export const runAll = migrations.runner([internal.migrations.backfillMessages]);
+export const runBackfillMessages = migrations.runner([internal.migrations.backfillMessages]);
