@@ -41,7 +41,7 @@ export function ChatSendButton() {
     <Menu.Root open={open} onOpenChange={setOpen}>
       <div
         data-streaming={status === "streaming"}
-        className="group flex h-9 items-center gap-2 overflow-hidden rounded-md border bg-card px-2 data-[streaming=true]:border-destructive data-[streaming=true]:bg-destructive/60 data-[streaming=true]:pr-3 md:pl-3"
+        className="group flex h-9 items-center gap-2 overflow-hidden rounded-md border bg-card px-2 data-[streaming=true]:border-destructive data-[streaming=true]:bg-destructive/60 data-[streaming=true]:pr-3 md:pr-0 md:pl-3"
       >
         <ButtonWithTip
           type="button"
