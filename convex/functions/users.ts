@@ -124,7 +124,13 @@ export const migrateUserData = internalMutation({
     const oldUser = await getUserById(ctx, args.oldUserId);
     if (!oldUser) return;
 
-    await ctx.db.patch(oldUser._id, { userId: args.newUserId });
+    const newUser = await getUserById(ctx, args.newUserId);
+
+    if (!newUser) await ctx.db.patch(oldUser._id, { userId: args.newUserId });
+    else {
+      await ctx.db.delete(oldUser._id);
+      await ctx.db.patch("users", newUser._id, { customization: oldUser.customization });
+    }
 
     const threads = await ctx.db
       .query("threads")
@@ -133,15 +139,6 @@ export const migrateUserData = internalMutation({
 
     for (const thread of threads) {
       await ctx.db.patch(thread._id, { userId: args.newUserId });
-    }
-
-    const messages = await ctx.db
-      .query("messages")
-      .withIndex("by_userId_threadId", (q) => q.eq("userId", args.oldUserId))
-      .collect();
-
-    for (const message of messages) {
-      await ctx.db.patch(message._id, { userId: args.newUserId });
     }
 
     const attachments = await ctx.db
@@ -188,5 +185,30 @@ export const migrateUserData = internalMutation({
     for (const group of groups) {
       await ctx.db.patch(group._id, { userId: args.newUserId });
     }
+  },
+});
+
+export const migrateUserMessages = internalMutation({
+  args: { oldUserId: v.string(), newUserId: v.string() },
+  handler: async (ctx, args) => {
+    console.log("Starting migration");
+    let cursor: string | null = null;
+
+    while (true) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_userId_threadId", (q) => q.eq("userId", args.oldUserId))
+        .paginate({ cursor, numItems: 500 });
+
+      if (messages.page.length === 0) break;
+      cursor = messages.continueCursor;
+
+      console.log("Migrating", messages.page.length, "messages");
+      for (const message of messages.page) {
+        await ctx.db.patch(message._id, { userId: args.newUserId });
+      }
+    }
+
+    console.log("Migration complete");
   },
 });
