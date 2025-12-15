@@ -170,7 +170,7 @@ function StatisticsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4">
         <RankBarChart
           title="Model token usage"
           valueLabel="Tokens"
@@ -236,7 +236,7 @@ function RankBarChart(props: {
         {props.data.length === 0 ? (
           <div className="text-sm text-muted-foreground">{props.emptyText}</div>
         ) : (
-          <ChartContainer config={chartConfig} className="aspect-auto h-[220px] w-full">
+          <ChartContainer config={chartConfig} className="aspect-auto h-55 w-full">
             <BarChart accessibilityLayer data={props.data} layout="vertical" margin={{ left: 8 }}>
               <CartesianGrid vertical={false} />
               <YAxis
@@ -245,7 +245,7 @@ function RankBarChart(props: {
                 tickLine={false}
                 tickMargin={10}
                 axisLine={false}
-                width={110}
+                width={200}
               />
               <XAxis type="number" tickLine={false} axisLine={false} />
               <ChartTooltip content={<ChartTooltipContent />} />

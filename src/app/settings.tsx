@@ -1,4 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { getCookie } from "@tanstack/react-start/server";
+
 import { z } from "zod/v4";
 
 import { SettingsRouteHeader } from "@/components/settings/settings-route-header";
@@ -6,6 +9,12 @@ import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import { UserNavbar } from "@/components/user/navbar";
 
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
+
+const getCookiesServerFunction = createServerFn({ method: "GET" }).handler(async () => {
+  const backgroundImage = getCookie("background-image");
+
+  return { backgroundImage };
+});
 
 export const Route = createFileRoute("/settings")({
   validateSearch: z.object({
@@ -27,7 +36,8 @@ export const Route = createFileRoute("/settings")({
   },
 
   loader: async ({ context }) => {
-    return { user: context.user };
+    const { backgroundImage } = await getCookiesServerFunction();
+    return { user: context.user, backgroundImage };
   },
   component: AuthLayout,
 });
