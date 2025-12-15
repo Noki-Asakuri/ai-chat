@@ -124,7 +124,13 @@ export const migrateUserData = internalMutation({
     const oldUser = await getUserById(ctx, args.oldUserId);
     if (!oldUser) return;
 
-    await ctx.db.patch(oldUser._id, { userId: args.newUserId });
+    const newUser = await getUserById(ctx, args.newUserId);
+
+    if (!newUser) await ctx.db.patch(oldUser._id, { userId: args.newUserId });
+    else {
+      await ctx.db.delete(oldUser._id);
+      await ctx.db.patch("users", newUser._id, { customization: oldUser.customization });
+    }
 
     const threads = await ctx.db
       .query("threads")
