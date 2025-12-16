@@ -1,11 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { Suspense } from "react";
-
-import {
-  AccountThreadsTable,
-  AccountThreadsTableSkeleton,
-} from "./-components/account/account-threads-table";
+import { AccountThreadsTable } from "./-components/account/account-threads-table";
 
 export const Route = createFileRoute("/settings/account")({
   component: RouteComponent,
@@ -13,9 +8,5 @@ export const Route = createFileRoute("/settings/account")({
 });
 
 function RouteComponent() {
-  return (
-    <Suspense fallback={<AccountThreadsTableSkeleton />}>
-      <AccountThreadsTable />
-    </Suspense>
-  );
+  return <AccountThreadsTable />;
 }

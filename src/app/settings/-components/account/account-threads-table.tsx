@@ -23,7 +23,15 @@ import {
   PinOffIcon,
   TrashIcon,
 } from "lucide-react";
-import { useCallback, useMemo, useState, useTransition, type ReactElement } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+  type ReactElement,
+} from "react";
 import { toast } from "sonner";
 
 import {
@@ -239,6 +247,127 @@ export function AccountThreadsTableSkeleton() {
   );
 }
 
+type AccountThreadsTablePageInfo = {
+  rowsCount: number;
+  isDone: boolean;
+  continueCursor: string | null;
+  visibleIds: Array<Id<"threads">>;
+};
+
+type AccountThreadsTableBodyProps = {
+  searchText: string;
+  cursor: string | null;
+  sorting: SortingState;
+  columns: Array<ColumnDef<AccountThread>>;
+  onResolved: (info: AccountThreadsTablePageInfo) => void;
+};
+
+function AccountThreadsTableBodySkeleton({ columnCount }: { columnCount: number }) {
+  const rows: Array<ReactElement> = [];
+  for (let i = 0; i < 6; i += 1) {
+    rows.push(
+      <tr key={`row-${i}`} className="m-0 p-0">
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="size-5" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-[32ch] max-w-full" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-8" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-8" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-24" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-24" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-5 w-20" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <div className="flex justify-end">
+            <Skeleton className="size-8 rounded-md" />
+          </div>
+        </td>
+      </tr>,
+    );
+  }
+
+  return (
+    <tbody>
+      {rows}
+      {columnCount <= 8 ? null : (
+        <tr className="m-0 p-0">
+          <td colSpan={columnCount} className="px-3 py-1.5 text-left text-sm">
+            <Skeleton className="h-4 w-full" />
+          </td>
+        </tr>
+      )}
+    </tbody>
+  );
+}
+
+function AccountThreadsTableBody({ searchText, cursor, sorting, columns, onResolved }: AccountThreadsTableBodyProps) {
+  const { data } = useSuspenseQuery(
+    convexSessionQuery(api.functions.threads.listAccountThreads, {
+      query: searchText,
+      paginationOpts: {
+        numItems: 10,
+        cursor,
+      },
+    }),
+  );
+
+  const rows = data.page;
+  const visibleIds = useMemo<Array<Id<"threads">>>(() => rows.map((r) => r._id), [rows]);
+
+  useEffect(() => {
+    onResolved({
+      rowsCount: rows.length,
+      isDone: data.isDone,
+      continueCursor: data.continueCursor ?? null,
+      visibleIds,
+    });
+  }, [data.continueCursor, data.isDone, onResolved, rows.length, visibleIds]);
+
+  const table = useReactTable({
+    data: rows,
+    columns,
+    state: { sorting },
+    onSortingChange: () => {},
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
+  const rowModel = table.getRowModel();
+
+  return (
+    <tbody>
+      {rowModel.rows.length === 0 ? (
+        <tr>
+          <td colSpan={columns.length} className="px-3 py-4 text-center text-sm text-muted-foreground">
+            No threads found
+          </td>
+        </tr>
+      ) : (
+        rowModel.rows.map((row) => (
+          <tr key={row.id} className="m-0 p-0 transition-colors hover:bg-muted/40">
+            {row.getVisibleCells().map((cell) => (
+              <td key={cell.id} className="px-3 py-1.5 text-left text-sm">
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </td>
+            ))}
+          </tr>
+        ))
+      )}
+    </tbody>
+  );
+}
+
 export function AccountThreadsTable() {
   const [searchText, setSearchText] = useState<string>("");
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -250,34 +379,40 @@ export function AccountThreadsTable() {
   const [pageIndex, setPageIndex] = useState<number>(0);
   const [pageCursors, setPageCursors] = useState<Array<string | null>>([null]);
 
+  const [isLoadingPage, setIsLoadingPage] = useState(true);
+  const [pageInfo, setPageInfo] = useState<AccountThreadsTablePageInfo>(() => ({
+    rowsCount: 0,
+    isDone: false,
+    continueCursor: null,
+    visibleIds: [],
+  }));
+
   const cursor = pageCursors[pageIndex] ?? null;
 
-  const { data } = useSuspenseQuery(
-    convexSessionQuery(api.functions.threads.listAccountThreads, {
-      query: searchText,
-      paginationOpts: {
-        numItems: 10,
-        cursor,
-      },
-    }),
-  );
+  const onResolved = useCallback(function (info: AccountThreadsTablePageInfo) {
+    setPageInfo(info);
+    setIsLoadingPage(false);
+  }, []);
 
   const pinThread = useSessionMutation(api.functions.threads.pinThread);
-
   const [, startTransition] = useTransition();
-
-  const rows = data.page;
-
-  const visibleIds = useMemo(() => rows.map((r) => r._id), [rows]);
 
   const selectedCount = selected.size;
 
-  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r._id));
-  const someSelected = rows.some((r) => selected.has(r._id));
+  const allSelected =
+    pageInfo.visibleIds.length > 0 && pageInfo.visibleIds.every((id) => selected.has(id));
+  const someSelected = pageInfo.visibleIds.some((id) => selected.has(id));
 
   function resetPaging() {
     setPageIndex(0);
     setPageCursors([null]);
+    setPageInfo({
+      rowsCount: 0,
+      isDone: false,
+      continueCursor: null,
+      visibleIds: [],
+    });
+    setIsLoadingPage(true);
   }
 
   function onSearchTextChange(next: string) {
@@ -288,25 +423,34 @@ export function AccountThreadsTable() {
 
   function goPreviousPage() {
     if (pageIndex === 0) return;
+    if (isLoadingPage) return;
+
+    setMenuThreadId(null);
     setSelected(new Set());
+    setIsLoadingPage(true);
     setPageIndex((prev) => prev - 1);
   }
 
   function goNextPage() {
-    if (data.isDone) return;
+    if (pageInfo.isDone) return;
+    if (isLoadingPage) return;
 
     const nextIndex = pageIndex + 1;
     const existing = pageCursors[nextIndex];
     if (typeof existing === "string") {
+      setMenuThreadId(null);
       setSelected(new Set());
+      setIsLoadingPage(true);
       setPageIndex(nextIndex);
       return;
     }
 
-    const nextCursor = data.continueCursor;
+    const nextCursor = pageInfo.continueCursor;
     if (!nextCursor) return;
 
+    setMenuThreadId(null);
     setSelected(new Set());
+    setIsLoadingPage(true);
     setPageCursors((prev) => [...prev, nextCursor]);
     setPageIndex(nextIndex);
   }
@@ -326,15 +470,15 @@ export function AccountThreadsTable() {
         const next = new Set(prev);
 
         if (nextChecked) {
-          for (const id of visibleIds) next.add(id);
+          for (const id of pageInfo.visibleIds) next.add(id);
         } else {
-          for (const id of visibleIds) next.delete(id);
+          for (const id of pageInfo.visibleIds) next.delete(id);
         }
 
         return next;
       });
     },
-    [visibleIds],
+    [pageInfo.visibleIds],
   );
 
   const selectedIds = useMemo(() => Array.from(selected), [selected]);
@@ -350,6 +494,7 @@ export function AccountThreadsTable() {
               aria-label="Select all"
               checked={allSelected ? true : someSelected ? "indeterminate" : false}
               onCheckedChange={(value) => setAllVisibleSelection(value === true)}
+              disabled={isLoadingPage}
               className="size-5"
             />
           </div>
@@ -495,11 +640,20 @@ export function AccountThreadsTable() {
         },
       },
     ],
-    [allSelected, someSelected, menuThreadId, pinThread, selected, setAllVisibleSelection],
+    [
+      allSelected,
+      isLoadingPage,
+      menuThreadId,
+      pinThread,
+      selected,
+      setAllVisibleSelection,
+      someSelected,
+      startTransition,
+    ],
   );
 
-  const table = useReactTable({
-    data: rows,
+  const headerTable = useReactTable({
+    data: [],
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -576,7 +730,7 @@ export function AccountThreadsTable() {
         </div>
 
         <div className="text-xs text-muted-foreground">
-          <span className="font-medium">{rows.length}</span> shown •{" "}
+          <span className="font-medium">{pageInfo.rowsCount}</span> shown •{" "}
           <span className={cn(selectedCount > 0 ? "text-foreground" : undefined)}>
             {selectedCount} selected
           </span>
@@ -586,7 +740,7 @@ export function AccountThreadsTable() {
       <div className="w-full overflow-x-auto rounded-md border">
         <table className="w-full">
           <thead className="bg-muted">
-            {table.getHeaderGroups().map((headerGroup) => (
+            {headerTable.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="m-0 p-0">
                 {headerGroup.headers.map((header) => {
                   const canSort = header.column.getCanSort();
@@ -615,28 +769,15 @@ export function AccountThreadsTable() {
             ))}
           </thead>
 
-          <tbody>
-            {table.getRowModel().rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-3 py-4 text-center text-sm text-muted-foreground"
-                >
-                  No threads found
-                </td>
-              </tr>
-            ) : (
-              table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="m-0 p-0 transition-colors hover:bg-muted/40">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-3 py-1.5 text-left text-sm">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
+          <Suspense fallback={<AccountThreadsTableBodySkeleton columnCount={columns.length} />}>
+            <AccountThreadsTableBody
+              searchText={searchText}
+              cursor={cursor}
+              sorting={sorting}
+              columns={columns}
+              onResolved={onResolved}
+            />
+          </Suspense>
         </table>
       </div>
 
@@ -648,7 +789,7 @@ export function AccountThreadsTable() {
             type="button"
             variant="outline"
             size="sm"
-            disabled={pageIndex === 0}
+            disabled={isLoadingPage || pageIndex === 0}
             onClick={goPreviousPage}
           >
             <ChevronLeftIcon className="size-4" />
@@ -659,7 +800,7 @@ export function AccountThreadsTable() {
             type="button"
             variant="outline"
             size="sm"
-            disabled={data.isDone}
+            disabled={isLoadingPage || pageInfo.isDone}
             onClick={goNextPage}
           >
             Next
