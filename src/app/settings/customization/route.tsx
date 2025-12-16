@@ -1,6 +1,5 @@
 import { api } from "@/convex/_generated/api";
 
-import { convexQuery } from "@convex-dev/react-query";
 import { useSessionMutation } from "convex-helpers/react/sessions";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -19,11 +18,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { useStorage } from "@/lib/hooks/use-storage";
 
-import { BackgroundCard } from "./-components/customization/background-card";
-import { BehaviorOptionsCard } from "./-components/customization/behavior-options-card";
+import { BackgroundCard } from "../-components/customization/background-card";
+import { BehaviorOptionsCard } from "../-components/customization/behavior-options-card";
+
+import { LoadingCustomizationSkeleton } from "./-pending";
 
 export const Route = createFileRoute("/settings/customization")({
   component: RouteComponent,
+  pendingComponent: LoadingCustomizationSkeleton,
   head: () => ({ meta: [{ title: "Customization - AI Chat" }] }),
 });
 

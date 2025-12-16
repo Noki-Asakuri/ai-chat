@@ -15,16 +15,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function LoadingSkeleton() {
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Models</h2>
-        <p className="text-muted-foreground">Choose which models are visible in the model picker.</p>
-      </div>
-
       <Card className="rounded-md">
         <CardHeader className="border-b">
           <div>
             <CardTitle>Model picker</CardTitle>
-            <CardDescription>Control which models show up in the chat model selector.</CardDescription>
+            <CardDescription>
+              Control which models show up in the chat model selector.
+            </CardDescription>
           </div>
 
           <CardAction>
@@ -45,7 +42,9 @@ export function LoadingSkeleton() {
             <div className="flex items-end justify-between gap-3">
               <div className="min-w-0 space-y-1">
                 <Label className="text-sm leading-none font-medium">Visible only</Label>
-                <p className="text-muted-foreground text-sm">Hide already-hidden models from the list.</p>
+                <p className="text-sm text-muted-foreground">
+                  Hide already-hidden models from the list.
+                </p>
               </div>
 
               <Skeleton className="h-[1.15rem] w-8 rounded-full" />

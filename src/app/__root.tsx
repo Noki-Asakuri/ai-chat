@@ -119,7 +119,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
 
-      <body className="dark isolate font-sans">
+      <body className="dark isolate max-h-svh overflow-hidden font-sans">
         <SessionProvider idGenerator={() => loaderData?.sessionId ?? ""}>
           {children}
         </SessionProvider>

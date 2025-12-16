@@ -43,14 +43,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { LoadingSkeleton } from "./-pending";
+import { LoadingAttachmentsSkeleton } from "./-pending";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { format, toUUID, tryCatch } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings/attachments")({
   component: AttachmentsPage,
-  pendingComponent: LoadingSkeleton,
+  pendingComponent: LoadingAttachmentsSkeleton,
   head: () => ({ meta: [{ title: "Attachments - AI Chat" }] }),
 });
 
