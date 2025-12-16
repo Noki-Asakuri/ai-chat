@@ -11,7 +11,6 @@ import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
 import { chatStoreActions } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
-import type { TextUIPart } from "ai";
 
 type MessageActionButtonsProps = {
   index: number;
@@ -24,7 +23,7 @@ export function MessageActionButtons({ index, isFinished, message }: MessageActi
   if (import.meta.env.PROD && !isFinished) return null;
 
   const content = message.parts
-    .filter((p): p is TextUIPart => p.type === "text")
+    .filter((p) => p.type === "text")
     .map((p) => p.text)
     .join("\n\n");
 
@@ -106,7 +105,7 @@ function EditButton({ message }: { message: ChatMessage }) {
       _id: message._id,
       index: assistantMessageIndex - 1,
       input: message.parts
-        .filter((p): p is TextUIPart => p.type === "text")
+        .filter((p) => p.type === "text")
         .map((p) => p.text)
         .join("\n\n"),
 

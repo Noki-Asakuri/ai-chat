@@ -435,7 +435,6 @@ app.post("/api/ai/chat", async (ctx) => {
             : `https://files.chat.asakuri.me/${data.filePathname}`;
 
           attachmentIds.push(data.attachmentDocId);
-          // @ts-expect-error Ignore this
           fileParts[index]!.url = url;
         });
 
