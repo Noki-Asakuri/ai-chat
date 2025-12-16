@@ -11,6 +11,7 @@ import { MessageReasoning } from "./message-reasoning";
 
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
+import type { FileUIPart, ReasoningUIPart, TextUIPart } from "ai";
 
 type MessageContentProps = {
   message: ChatMessage;
@@ -29,9 +30,9 @@ export function MessageContent({ message }: MessageContentProps) {
 
   if (!message.parts || message.parts.length === 0) return null;
 
-  const textParts = message.parts.filter((p) => p.type === "text");
-  const fileParts = message.parts.filter((p) => p.type === "file");
-  const reasoningParts = message.parts.filter((p) => p.type === "reasoning");
+  const textParts = message.parts.filter((p): p is TextUIPart => p.type === "text");
+  const fileParts = message.parts.filter((p): p is FileUIPart => p.type === "file");
+  const reasoningParts = message.parts.filter((p): p is ReasoningUIPart => p.type === "reasoning");
 
   return (
     <>

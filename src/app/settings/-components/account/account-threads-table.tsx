@@ -14,8 +14,16 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 
-import { EllipsisIcon, ExternalLinkIcon, PinIcon, PinOffIcon, TrashIcon } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  EllipsisIcon,
+  ExternalLinkIcon,
+  PinIcon,
+  PinOffIcon,
+  TrashIcon,
+} from "lucide-react";
+import { useCallback, useMemo, useState, useTransition, type ReactElement } from "react";
 import { toast } from "sonner";
 
 import {
@@ -34,6 +42,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Menu } from "@/components/ui/menu";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { cn, format, toUUID, tryCatch } from "@/lib/utils";
@@ -124,6 +133,112 @@ function BulkDeleteDialog({ open, onOpenChange, threadIds, threadCount }: BulkDe
   );
 }
 
+export function AccountThreadsTableSkeleton() {
+  const rows: Array<ReactElement> = [];
+  for (let i = 0; i < 6; i += 1) {
+    rows.push(
+      <tr key={`row-${i}`} className="m-0 p-0">
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="size-5" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-[32ch] max-w-full" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-8" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-8" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-24" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-24" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-5 w-20" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <div className="flex justify-end">
+            <Skeleton className="size-8 rounded-md" />
+          </div>
+        </td>
+      </tr>,
+    );
+  }
+
+  return (
+    <div className="mt-4 flex flex-1 flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Skeleton className="h-8 w-full" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-8 w-20" />
+          </div>
+        </div>
+
+        <div className="text-xs text-muted-foreground">
+          <Skeleton className="h-3 w-48" />
+        </div>
+      </div>
+
+      <div className="w-full overflow-x-auto rounded-md border">
+        <table className="w-full">
+          <thead className="bg-muted">
+            <tr className="m-0 p-0">
+              <th className="px-3 py-1.5 text-left text-sm font-bold">
+                <Skeleton className="size-5" />
+              </th>
+              <th className="px-3 py-1.5 text-left text-sm font-bold">
+                <Skeleton className="h-4 w-16" />
+              </th>
+              <th className="px-3 py-1.5 text-left text-sm font-bold">
+                <Skeleton className="h-4 w-10" />
+              </th>
+              <th className="px-3 py-1.5 text-left text-sm font-bold">
+                <Skeleton className="h-4 w-10" />
+              </th>
+              <th className="px-3 py-1.5 text-left text-sm font-bold">
+                <Skeleton className="h-4 w-16" />
+              </th>
+              <th className="px-3 py-1.5 text-left text-sm font-bold">
+                <Skeleton className="h-4 w-16" />
+              </th>
+              <th className="px-3 py-1.5 text-left text-sm font-bold">
+                <Skeleton className="h-4 w-16" />
+              </th>
+              <th className="px-3 py-1.5 text-left text-sm font-bold">
+                <Skeleton className="h-4 w-16" />
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>{rows}</tbody>
+        </table>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-4 w-16" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-8 w-16" />
+        </div>
+      </div>
+
+      <div className="mt-auto border-t pt-4">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-[72ch] max-w-full" />
+          <Skeleton className="h-9 w-56" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AccountThreadsTable() {
   const [searchText, setSearchText] = useState<string>("");
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -132,10 +247,18 @@ export function AccountThreadsTable() {
   const [selected, setSelected] = useState<Set<Id<"threads">>>(() => new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
+  const [pageIndex, setPageIndex] = useState<number>(0);
+  const [pageCursors, setPageCursors] = useState<Array<string | null>>([null]);
+
+  const cursor = pageCursors[pageIndex] ?? null;
+
   const { data } = useSuspenseQuery(
     convexSessionQuery(api.functions.threads.listAccountThreads, {
       query: searchText,
-      limit: 10,
+      paginationOpts: {
+        numItems: 10,
+        cursor,
+      },
     }),
   );
 
@@ -143,13 +266,50 @@ export function AccountThreadsTable() {
 
   const [, startTransition] = useTransition();
 
-  const rows = data ?? [];
+  const rows = data.page;
+
   const visibleIds = useMemo(() => rows.map((r) => r._id), [rows]);
 
   const selectedCount = selected.size;
 
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r._id));
   const someSelected = rows.some((r) => selected.has(r._id));
+
+  function resetPaging() {
+    setPageIndex(0);
+    setPageCursors([null]);
+  }
+
+  function onSearchTextChange(next: string) {
+    setSearchText(next);
+    setSelected(new Set());
+    resetPaging();
+  }
+
+  function goPreviousPage() {
+    if (pageIndex === 0) return;
+    setSelected(new Set());
+    setPageIndex((prev) => prev - 1);
+  }
+
+  function goNextPage() {
+    if (data.isDone) return;
+
+    const nextIndex = pageIndex + 1;
+    const existing = pageCursors[nextIndex];
+    if (typeof existing === "string") {
+      setSelected(new Set());
+      setPageIndex(nextIndex);
+      return;
+    }
+
+    const nextCursor = data.continueCursor;
+    if (!nextCursor) return;
+
+    setSelected(new Set());
+    setPageCursors((prev) => [...prev, nextCursor]);
+    setPageIndex(nextIndex);
+  }
 
   function toggleRowSelection(id: Id<"threads">) {
     setSelected((prev) => {
@@ -160,19 +320,22 @@ export function AccountThreadsTable() {
     });
   }
 
-  function setAllVisibleSelection(nextChecked: boolean) {
-    setSelected((prev) => {
-      const next = new Set(prev);
+  const setAllVisibleSelection = useCallback(
+    function (nextChecked: boolean) {
+      setSelected((prev) => {
+        const next = new Set(prev);
 
-      if (nextChecked) {
-        for (const id of visibleIds) next.add(id);
-      } else {
-        for (const id of visibleIds) next.delete(id);
-      }
+        if (nextChecked) {
+          for (const id of visibleIds) next.add(id);
+        } else {
+          for (const id of visibleIds) next.delete(id);
+        }
 
-      return next;
-    });
-  }
+        return next;
+      });
+    },
+    [visibleIds],
+  );
 
   const selectedIds = useMemo(() => Array.from(selected), [selected]);
 
@@ -332,7 +495,7 @@ export function AccountThreadsTable() {
         },
       },
     ],
-    [allSelected, someSelected, menuThreadId, pinThread, selected, visibleIds],
+    [allSelected, someSelected, menuThreadId, pinThread, selected, setAllVisibleSelection],
   );
 
   const table = useReactTable({
@@ -362,9 +525,7 @@ export function AccountThreadsTable() {
 
   function onBulkDeleteDialogChange(open: boolean) {
     setBulkDeleteOpen(open);
-    if (!open) {
-      setSelected(new Set());
-    }
+    if (!open) setSelected(new Set());
   }
 
   return (
@@ -374,7 +535,7 @@ export function AccountThreadsTable() {
           <Input
             placeholder="Search threads..."
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(e) => onSearchTextChange(e.target.value)}
             className="h-8 w-full"
           />
 
@@ -477,6 +638,34 @@ export function AccountThreadsTable() {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-muted-foreground">Page {pageIndex + 1}</div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pageIndex === 0}
+            onClick={goPreviousPage}
+          >
+            <ChevronLeftIcon className="size-4" />
+            Prev
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={data.isDone}
+            onClick={goNextPage}
+          >
+            Next
+            <ChevronRightIcon className="size-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="mt-auto border-t pt-4">

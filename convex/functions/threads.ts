@@ -1,3 +1,4 @@
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
 import type { Id } from "../_generated/dataModel";
@@ -134,22 +135,26 @@ export const getAllThreads = authenticatedQuery({
 export const listAccountThreads = authenticatedQuery({
   args: {
     query: v.optional(v.string()),
-    limit: v.optional(v.number()),
+    paginationOpts: paginationOptsValidator,
   },
-  returns: v.array(
-    v.object({
-      _id: v.id("threads"),
-      _creationTime: v.number(),
+  returns: v.object({
+    page: v.array(
+      v.object({
+        _id: v.id("threads"),
+        _creationTime: v.number(),
 
-      title: v.string(),
-      updatedAt: v.number(),
-      pinned: v.boolean(),
-      status: status,
+        title: v.string(),
+        updatedAt: v.number(),
+        pinned: v.boolean(),
+        status: status,
 
-      messageCount: v.number(),
-      attachmentCount: v.number(),
-    }),
-  ),
+        messageCount: v.number(),
+        attachmentCount: v.number(),
+      }),
+    ),
+    isDone: v.boolean(),
+    continueCursor: v.union(v.string(), v.null()),
+  }),
   handler: async (ctx, args) => {
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
@@ -170,63 +175,27 @@ export const listAccountThreads = authenticatedQuery({
       attachmentCount: number;
     };
 
-    const limit = Math.min(args.limit ?? 10, 10);
     const search = (args.query ?? "").trim();
+    const paginationOpts = {
+      numItems: Math.min(args.paginationOpts.numItems, 10),
+      cursor: args.paginationOpts.cursor,
+    };
 
-    async function getDefaultThreads() {
-      const pinned = await ctx.db
-        .query("threads")
-        .withIndex("by_userId_pinned_updatedAt", (q) =>
-          q.eq("userId", userId).eq("pinned", true),
-        )
-        .order("desc")
-        .take(limit);
-
-      const remaining = limit - pinned.length;
-
-      const nonPinned =
-        remaining > 0
-          ? await ctx.db
-              .query("threads")
-              .withIndex("by_userId_pinned_updatedAt", (q) =>
-                q.eq("userId", userId).eq("pinned", false),
-              )
-              .order("desc")
-              .take(remaining)
-          : [];
-
-      return [...pinned, ...nonPinned];
-    }
-
-    async function getSearchedThreads(term: string) {
-      const pinnedMatches = await ctx.db
-        .query("threads")
-        .withSearchIndex("search_title", (q) =>
-          q.search("title", term).eq("userId", userId).eq("pinned", true),
-        )
-        .take(limit);
-
-      const remaining = limit - pinnedMatches.length;
-
-      const nonPinnedMatches =
-        remaining > 0
-          ? await ctx.db
-              .query("threads")
-              .withSearchIndex("search_title", (q) =>
-                q.search("title", term).eq("userId", userId).eq("pinned", false),
-              )
-              .take(remaining)
-          : [];
-
-      return [...pinnedMatches, ...nonPinnedMatches];
-    }
-
-    const selectedThreads =
-      search.length === 0 ? await getDefaultThreads() : await getSearchedThreads(search);
+    const pageResult =
+      search.length === 0
+        ? await ctx.db
+            .query("threads")
+            .withIndex("by_userId_pinned_updatedAt", (q) => q.eq("userId", userId))
+            .order("desc")
+            .paginate(paginationOpts)
+        : await ctx.db
+            .query("threads")
+            .withSearchIndex("search_title", (q) => q.search("title", search).eq("userId", userId))
+            .paginate(paginationOpts);
 
     const rows: Array<AccountThreadRow> = [];
 
-    for (const thread of selectedThreads) {
+    for (const thread of pageResult.page) {
       const messages = await ctx.db
         .query("messages")
         .withIndex("by_userId_threadId", (q) =>
@@ -255,7 +224,11 @@ export const listAccountThreads = authenticatedQuery({
       });
     }
 
-    return rows;
+    return {
+      page: rows,
+      isDone: pageResult.isDone,
+      continueCursor: pageResult.continueCursor,
+    };
   },
 });
 
