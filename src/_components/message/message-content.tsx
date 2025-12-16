@@ -49,7 +49,7 @@ export function MessageContent({ message }: MessageContentProps) {
           className={cn({ "mr-13": isMobile })}
         />
 
-        <div className="relative flex gap-2 group-[.is-assistant]:w-full">
+        <div className="relative flex gap-2 group-[.is-assistant]:w-full group-[.is-user]:max-w-full">
           {textParts.map((part, i) => (
             <MessageContentElement
               key={`${message._id}-${i}`}
