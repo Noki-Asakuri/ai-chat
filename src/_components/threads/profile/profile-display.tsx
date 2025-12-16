@@ -11,24 +11,19 @@ export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
   const configStore = useConfigStoreState();
   const state = useConfigStore((state) => state);
 
-  const isActive = state.profile?.id === profile._id;
+  const isActive = state.profile === profile._id;
 
   return (
     <ButtonWithTip
       side="right"
       variant="none"
+      data-active={isActive}
       title={profile.name}
       className={cn(
         "size-9 overflow-hidden rounded-md p-0",
         isActive ? "bg-primary/40 ring-2 ring-primary ring-offset-4 ring-offset-sidebar/80" : "",
       )}
-      onClick={() =>
-        configStore.setConfig({
-          profile: isActive
-            ? null
-            : { id: profile._id, name: profile.name, systemPrompt: profile.systemPrompt },
-        })
-      }
+      onClick={() => configStore.setConfig({ profile: isActive ? null : profile._id })}
     >
       <Avatar.Root className="size-full">
         <Avatar.Image

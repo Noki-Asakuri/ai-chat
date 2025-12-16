@@ -39,8 +39,7 @@ export const metadataSchema = z
     modelParams: z.object({
       webSearch: z.boolean(),
       effort: z.string(),
-
-      profile: z.object({ id: z.string(), name: z.string() }).nullish(),
+      profile: z.string().nullish(),
     }),
   })
   .optional();

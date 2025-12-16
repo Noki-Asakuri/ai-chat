@@ -240,21 +240,29 @@ app.post("/api/ai/chat", async (ctx) => {
 		</global>
 		`;
 
-    const profilePrompt = modelParams.profile?.systemPrompt?.trim();
-    if (profilePrompt && profilePrompt.length > 0) {
-      systemInstruction += dedent`\n
-		<profile>
-		## AI Profile Instruction:
-		User defined instruction. This is the most important instruction. It should take precedence over the global system instruction.
+    if (modelParams.profile) {
+      const profile = await convexClient.query(api.functions.profiles.getProfile, {
+        sessionId,
+        profileId: modelParams.profile,
+      });
 
-		${profilePrompt}
+      const prompt = profile?.systemPrompt ?? "";
 
-		<traits>
-		## Traits (Optional):
-		You should have these traits: ${userCustomization?.customization?.traits?.join(", ") ?? "None"}.
-		</traits>
-		</profile>
-		`;
+      if (prompt && prompt.length > 0) {
+        systemInstruction += dedent`\n
+			<profile>
+			## AI Profile Instruction:
+			User defined instruction. This is the most important instruction. It should take precedence over the global system instruction.
+
+			${prompt}
+
+			<traits>
+			## Traits (Optional):
+			You should have these traits: ${userCustomization?.customization?.traits?.join(", ") ?? "None"}.
+			</traits>
+			</profile>
+			`;
+      }
     }
 
     const startTime = Date.now();
@@ -320,10 +328,6 @@ app.post("/api/ai/chat", async (ctx) => {
       durations: { request: 0, reasoning: 0, text: 0 },
 
       modelParams,
-
-      profile: modelParams.profile
-        ? { id: modelParams.profile.id, name: modelParams.profile.name }
-        : null,
     };
 
     void updateTitle({
@@ -461,7 +465,7 @@ app.post("/api/ai/chat", async (ctx) => {
           threadId,
           assistantMessageId,
           model: model.uniqueId,
-          profileId: modelParams.profile?.id,
+          profileId: modelParams.profile,
           metadata,
           requestId,
         });

@@ -4,6 +4,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useSessionId } from "convex-helpers/react/sessions";
 import { useConvex } from "convex/react";
 
+import { useConfigStore } from "@/components/provider/config-provider";
+
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 
@@ -25,6 +27,7 @@ type RetryChatMessage = {
 export function useRetryChatMessage() {
   const [id] = useSessionId();
   const convexClient = useConvex();
+  const configProfile = useConfigStore((state) => state.profile);
 
   async function retryChatMessage({ index, ...options }: RetryChatMessage) {
     const sessionId = id!;
@@ -63,7 +66,7 @@ export function useRetryChatMessage() {
 
     const mutationModelParams = {
       ...mergedModelParams,
-      profile: mergedModelParams.profile ?? null,
+      profile: configProfile === null ? null : (configProfile ?? mergedModelParams.profile ?? null),
     };
 
     await convexClient.mutation(api.functions.messages.retryChatMessage, {
@@ -73,22 +76,15 @@ export function useRetryChatMessage() {
 
       model,
       modelParams: mutationModelParams,
-
       userMessage: options.userMessage,
     });
-
-    const bodyModelParams: ChatRequestBody["modelParams"] = {
-      effort: mutationModelParams.effort,
-      webSearch: mutationModelParams.webSearch,
-      profile: null,
-    };
 
     const body: ChatRequestBody = {
       model,
       threadId,
       messages: allMessages,
       assistantMessageId,
-      modelParams: bodyModelParams,
+      modelParams: mutationModelParams,
     };
 
     const response = await fetch(new URL("/api/ai/chat", import.meta.env.VITE_API_ENDPOINT), {

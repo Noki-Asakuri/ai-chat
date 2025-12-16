@@ -18,6 +18,7 @@ import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/componen
 
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
 import { convexSessionQuery } from "@/lib/convex/helpers";
+import { ThreadProfileSidebar } from "@/components/threads/profile/profile-sidebar";
 
 const getCookiesServerFunction = createServerFn({ method: "GET" }).handler(async () => {
   const backgroundImage = getCookie("background-image");
@@ -120,6 +121,7 @@ function ChatComponentPage() {
       }}
     >
       <Outlet />
+      <ThreadProfileSidebar />
     </ConfigStoreProvider>
   );
 }

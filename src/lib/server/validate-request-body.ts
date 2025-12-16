@@ -18,17 +18,13 @@ export const profileIdSchema = z.custom<Id<"profiles">>((data) => z.string().par
 export const inputSchema = z.object({
   assistantMessageId: messageIdSchema,
   threadId: threadIdSchema,
-
   messages: z.unknown().array(),
 
   model: z.string(),
   modelParams: z.object({
     webSearch: z.boolean().default(false),
     effort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]).default("medium"),
-    profile: z
-      .object({ id: profileIdSchema, name: z.string(), systemPrompt: z.string() })
-      .nullish()
-      .default(null),
+    profile: profileIdSchema.nullish().default(null),
   }),
 });
 

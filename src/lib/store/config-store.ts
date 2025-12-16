@@ -9,7 +9,7 @@ type ChatConfig = {
   model: string;
   effort: ReasoningEffort;
   webSearch: boolean;
-  profile?: { id: Id<"profiles">; name: string; systemPrompt: string } | null;
+  profile?: Id<"profiles"> | null;
 
   pref: "enter" | "ctrlEnter";
 };

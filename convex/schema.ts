@@ -131,7 +131,7 @@ export const AISDKParts = v.array(
 export const AISDKModelParams = v.object({
   effort: effort,
   webSearch: v.boolean(),
-  profile: v.optional(v.nullable(v.object({ id: v.id("profiles"), name: v.string() }))),
+  profile: v.optional(v.nullable(v.id("profiles"))),
 });
 
 export const AISDKMetadata = v.object({
@@ -145,7 +145,6 @@ export const AISDKMetadata = v.object({
   }),
 
   timeToFirstTokenMs: v.number(),
-  profile: v.optional(v.nullable(v.object({ id: v.id("profiles"), name: v.string() }))),
   durations: v.object({ request: v.number(), reasoning: v.number(), text: v.number() }),
 
   modelParams: AISDKModelParams,

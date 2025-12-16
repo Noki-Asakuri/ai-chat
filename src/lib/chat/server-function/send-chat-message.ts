@@ -25,11 +25,12 @@ export function useSendChatMessage() {
   const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
 
   const convexClient = useConvex();
-  const { effort, webSearch, model } = useConfigStore(
+  const { effort, webSearch, model, profile } = useConfigStore(
     useShallow((state) => ({
       model: state.model,
       effort: state.effort,
       webSearch: state.webSearch,
+      profile: state.profile,
     })),
   );
 
@@ -120,7 +121,7 @@ export function useSendChatMessage() {
       threadId,
       messages,
       assistantMessageId,
-      modelParams: { effort, webSearch, profile: null },
+      modelParams: { effort, webSearch, profile: profile ?? null },
     };
 
     const response = await fetch(new URL("/api/ai/chat", import.meta.env.VITE_API_ENDPOINT), {
