@@ -58,8 +58,8 @@ function ChatHistory() {
   const syncMessage = useEffectEvent((data: ChatMessage[]) => {
     messageStoreActions.syncMessages(data);
 
-    const lastMessage = data[data.length - 1]!;
-    if (lastMessage.status === "streaming" && lastMessage.resumableStreamId) {
+    const lastMessage = data[data.length - 1];
+    if (lastMessage && lastMessage.status === "streaming" && lastMessage.resumableStreamId) {
       return autoResumeStream(lastMessage.resumableStreamId, lastMessage._id);
     }
   });
