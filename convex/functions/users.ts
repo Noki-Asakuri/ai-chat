@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
-import { internalMutation, type QueryCtx } from "../_generated/server";
+import { internal } from "../_generated/api";
+import { internalAction, internalMutation, type QueryCtx } from "../_generated/server";
 import { authenticatedMutation, authenticatedQuery, r2 } from "../components";
 
 export const deleteUserData = internalMutation({
@@ -122,14 +123,14 @@ export const migrateUserData = internalMutation({
   args: { oldUserId: v.string(), newUserId: v.string() },
   handler: async (ctx, args) => {
     const oldUser = await getUserById(ctx, args.oldUserId);
-    if (!oldUser) return;
-
     const newUser = await getUserById(ctx, args.newUserId);
 
-    if (!newUser) await ctx.db.patch(oldUser._id, { userId: args.newUserId });
-    else {
-      await ctx.db.delete(oldUser._id);
-      await ctx.db.patch("users", newUser._id, { customization: oldUser.customization });
+    if (oldUser) {
+      if (!newUser) await ctx.db.patch("users", oldUser._id, { userId: args.newUserId });
+      else {
+        await ctx.db.delete("users", oldUser._id);
+        await ctx.db.patch("users", newUser._id, { customization: oldUser.customization });
+      }
     }
 
     const threads = await ctx.db
@@ -188,27 +189,41 @@ export const migrateUserData = internalMutation({
   },
 });
 
-export const migrateUserMessages = internalMutation({
+export const migrateUserMessages = internalAction({
   args: { oldUserId: v.string(), newUserId: v.string() },
   handler: async (ctx, args) => {
     console.log("Starting migration");
     let cursor: string | null = null;
 
     while (true) {
-      const messages = await ctx.db
-        .query("messages")
-        .withIndex("by_userId_threadId", (q) => q.eq("userId", args.oldUserId))
-        .paginate({ cursor, numItems: 500 });
+      const result: string | null = await ctx.runMutation(
+        internal.functions.users.migrateUserMessageWithCursor,
+        { ...args, cursor },
+      );
 
-      if (messages.page.length === 0) break;
-      cursor = messages.continueCursor;
-
-      console.log("Migrating", messages.page.length, "messages");
-      for (const message of messages.page) {
-        await ctx.db.patch(message._id, { userId: args.newUserId });
-      }
+      if (!result) break;
+      cursor = result;
     }
 
     console.log("Migration complete");
+  },
+});
+
+export const migrateUserMessageWithCursor = internalMutation({
+  args: { oldUserId: v.string(), newUserId: v.string(), cursor: v.nullable(v.string()) },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_userId_threadId", (q) => q.eq("userId", args.oldUserId))
+      .paginate({ cursor: args.cursor, numItems: 500 });
+
+    if (messages.page.length === 0) return null;
+    const cursor = messages.continueCursor;
+
+    for (const message of messages.page) {
+      await ctx.db.patch(message._id, { userId: args.newUserId });
+    }
+
+    return cursor;
   },
 });
