@@ -4,7 +4,7 @@ import { internalMutation } from "../_generated/server";
 import { authenticatedMutation, authenticatedQuery } from "../components";
 
 // Default daily limit for new users
-const DEFAULT_BASE = 25;
+export const DEFAULT_BASE = 25;
 
 /**
  * Public query to retrieve current usage inf for user.

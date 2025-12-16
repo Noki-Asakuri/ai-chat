@@ -1,4 +1,5 @@
 import { authKit } from "../components";
+import { DEFAULT_BASE } from "./usages";
 
 export const { authKitEvent } = authKit.events({
   "user.created": async (ctx, event) => {
@@ -19,6 +20,31 @@ export const { authKitEvent } = authKit.events({
         systemInstruction: "You are a helpful assistant.",
         traits: [],
       },
+    });
+
+    await ctx.db.insert("user_stats", {
+      userId: event.data.id,
+      stats: {
+        threads: 0,
+        messages: { assistant: 0, user: 0 },
+        tokens: { input: 0, output: 0, reasoning: 0, total: 0 },
+        tokensByRole: { assistant: 0, user: 0 },
+
+        words: 0,
+        wordsByRole: { assistant: 0, user: 0 },
+      },
+      modelCounts: {},
+      threadCounts: {},
+      activityCounts: {},
+      aiProfileCounts: {},
+      lastUpdatedAt: Date.now(),
+    });
+
+    await ctx.db.insert("usages", {
+      userId: event.data.id,
+      used: 0,
+      base: DEFAULT_BASE,
+      resetType: "daily",
     });
   },
   "user.updated": async (ctx, event) => {
