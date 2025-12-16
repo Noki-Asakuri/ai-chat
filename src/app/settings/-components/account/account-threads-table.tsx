@@ -264,14 +264,14 @@ type AccountThreadsTableBodyProps = {
 
 function AccountThreadsTableBodySkeleton({ columnCount }: { columnCount: number }) {
   const rows: Array<ReactElement> = [];
-  for (let i = 0; i < 6; i += 1) {
+  for (let i = 0; i < 10; i += 1) {
     rows.push(
       <tr key={`row-${i}`} className="m-0 p-0">
         <td className="px-3 py-1.5 text-left text-sm">
           <Skeleton className="size-5" />
         </td>
         <td className="px-3 py-1.5 text-left text-sm">
-          <Skeleton className="h-4 w-[32ch] max-w-full" />
+          <Skeleton className="h-4 w-[60ch] max-w-full" />
         </td>
         <td className="px-3 py-1.5 text-left text-sm">
           <Skeleton className="h-4 w-8" />
@@ -300,6 +300,7 @@ function AccountThreadsTableBodySkeleton({ columnCount }: { columnCount: number 
   return (
     <tbody>
       {rows}
+
       {columnCount <= 8 ? null : (
         <tr className="m-0 p-0">
           <td colSpan={columnCount} className="px-3 py-1.5 text-left text-sm">
@@ -311,7 +312,13 @@ function AccountThreadsTableBodySkeleton({ columnCount }: { columnCount: number 
   );
 }
 
-function AccountThreadsTableBody({ searchText, cursor, sorting, columns, onResolved }: AccountThreadsTableBodyProps) {
+function AccountThreadsTableBody({
+  searchText,
+  cursor,
+  sorting,
+  columns,
+  onResolved,
+}: AccountThreadsTableBodyProps) {
   const { data } = useSuspenseQuery(
     convexSessionQuery(api.functions.threads.listAccountThreads, {
       query: searchText,
@@ -349,7 +356,10 @@ function AccountThreadsTableBody({ searchText, cursor, sorting, columns, onResol
     <tbody>
       {rowModel.rows.length === 0 ? (
         <tr>
-          <td colSpan={columns.length} className="px-3 py-4 text-center text-sm text-muted-foreground">
+          <td
+            colSpan={columns.length}
+            className="px-3 py-4 text-center text-sm text-muted-foreground"
+          >
             No threads found
           </td>
         </tr>
@@ -526,7 +536,7 @@ export function AccountThreadsTable() {
                 to="/threads/$threadId"
                 params={{ threadId: toUUID(thread._id) }}
                 title={thread.title}
-                className="min-w-0 truncate underline-offset-4 hover:underline"
+                className="w-[60ch] min-w-0 truncate underline-offset-4 hover:underline"
               >
                 {thread.title}
               </Link>
