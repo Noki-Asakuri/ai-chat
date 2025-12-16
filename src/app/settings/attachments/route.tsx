@@ -52,12 +52,6 @@ export const Route = createFileRoute("/settings/attachments")({
   component: AttachmentsPage,
   pendingComponent: LoadingSkeleton,
   head: () => ({ meta: [{ title: "Attachments - AI Chat" }] }),
-
-  loader: async ({ context }) => {
-    context.queryClient.ensureQueryData(
-      convexQuery(api.functions.attachments.getAllAttachments, { sessionId: context.sessionId }),
-    );
-  },
 });
 
 type SourceFilter = "all" | "user" | "assistant";

@@ -25,12 +25,6 @@ import { BehaviorOptionsCard } from "./-components/customization/behavior-option
 export const Route = createFileRoute("/settings/customization")({
   component: RouteComponent,
   head: () => ({ meta: [{ title: "Customization - AI Chat" }] }),
-
-  loader: async ({ context }) => {
-    context.queryClient.ensureQueryData(
-      convexQuery(api.functions.users.currentUser, { sessionId: context.sessionId }),
-    );
-  },
 });
 
 function getFormString(key: string, formData: FormData): string {
@@ -42,7 +36,6 @@ function getFormFile(key: string, formData: FormData): File | null {
   const value = formData.get(key);
   return value instanceof File ? value : null;
 }
-
 
 function RouteComponent() {
   const { data, isPending } = useSuspenseQuery(convexSessionQuery(api.functions.users.currentUser));
@@ -188,7 +181,9 @@ function RouteComponent() {
               name="system-instruction"
               className="min-h-[150px]"
               disabled={disabled}
-              defaultValue={data?.customization?.systemInstruction ?? "You are a helpful assistant."}
+              defaultValue={
+                data?.customization?.systemInstruction ?? "You are a helpful assistant."
+              }
             />
           </CardContent>
         </Card>
@@ -240,4 +235,3 @@ function ControlledTextarea({
 
   return <Textarea value={value} onChange={(event) => setValue(event.target.value)} {...props} />;
 }
-

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { LoadingSkeleton } from "./-pending";
+import { LoadingStatisticsSkeleton } from "./-pending";
 
 import { getModelData } from "@/lib/chat/models";
 import { convexSessionQuery } from "@/lib/convex/helpers";
@@ -23,14 +23,8 @@ import { format } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings/statistics")({
   component: StatisticsPage,
-  pendingComponent: LoadingSkeleton,
+  pendingComponent: LoadingStatisticsSkeleton,
   head: () => ({ meta: [{ title: "Statistics - AI Chat" }] }),
-
-  loader: async ({ context }) => {
-    context.queryClient.ensureQueryData(
-      convexQuery(api.functions.statistics.getStatistics, { sessionId: context.sessionId }),
-    );
-  },
 });
 
 type RankItem = {

@@ -1,6 +1,5 @@
 import { api } from "@/convex/_generated/api";
 
-import { convexQuery } from "@convex-dev/react-query";
 import { useSessionMutation } from "convex-helpers/react/sessions";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -18,11 +17,6 @@ export const Route = createFileRoute("/settings/models")({
   pendingComponent: LoadingSkeleton,
 
   head: () => ({ meta: [{ title: "Models - AI Chat" }] }),
-  loader: async ({ context }) => {
-    context.queryClient.ensureQueryData(
-      convexQuery(api.functions.users.currentUser, { sessionId: context.sessionId }),
-    );
-  },
 });
 
 function RouteComponent() {
