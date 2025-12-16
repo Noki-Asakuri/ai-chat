@@ -5,6 +5,7 @@ import type { ComponentProps, HTMLAttributes } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "../avatar";
 
+import { getUserAvatarUrl } from "@/lib/authkit/user";
 import { cn } from "@/lib/utils";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
@@ -55,10 +56,11 @@ export const MessageContent = ({ children, className, variant, ...props }: Messa
 
 export const MessageAvatar = ({ className, ...props }: ComponentProps<typeof Avatar>) => {
   const { user } = useLoaderData({ from: "/_chat_layout" });
+  const avatarUrl = getUserAvatarUrl(user);
 
   return (
     <Avatar className={cn("size-11 rounded-md ring-1 ring-border", className)} {...props}>
-      <AvatarImage alt="" className="mt-0 mb-0" src={user.profilePictureUrl as string} />
+      <AvatarImage alt="" className="mt-0 mb-0" src={avatarUrl} />
       <AvatarFallback>{user?.firstName?.slice(0, 2) || "You"}</AvatarFallback>
     </Avatar>
   );

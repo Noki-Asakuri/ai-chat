@@ -5,6 +5,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+import { getUserAvatarUrl, getUserDisplayName, getUserInitials } from "@/lib/authkit/user";
+
 import { UserUsages } from "./user-usages";
 
 export function SettingsSidebar() {
@@ -57,18 +59,15 @@ function SignOutButton() {
 function UserInfo() {
   const { user } = useLoaderData({ from: "/settings" });
 
-  const fallback = [user.lastName, user.firstName]
-    .filter(Boolean)
-    .map((name) => name![0])
-    .join("");
-
-  const username = user.firstName || user.lastName || "Unknown";
+  const avatarUrl = getUserAvatarUrl(user);
+  const initials = getUserInitials(user);
+  const username = getUserDisplayName(user);
 
   return (
     <div className="space-y-2">
       <Avatar className="mx-auto size-40">
-        <AvatarImage src={user.profilePictureUrl as string} alt={`${username} avatar`} />
-        <AvatarFallback>{fallback}</AvatarFallback>
+        <AvatarImage src={avatarUrl} alt={`${username} avatar`} />
+        <AvatarFallback>{initials}</AvatarFallback>
       </Avatar>
 
       <div className="text-center">

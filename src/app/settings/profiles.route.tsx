@@ -46,7 +46,6 @@ import { uploadAiProfileImage } from "@/lib/convex/uploadFiles";
 export const Route = createFileRoute("/settings/profiles")({
   component: AiProfilesPage,
   pendingComponent: LoadingSkeleton,
-
   head: () => ({ meta: [{ title: "AI Profiles - AI Chat" }] }),
 });
 
@@ -111,8 +110,7 @@ function AiProfilesPage() {
     try {
       let imageKey: string | undefined | null = undefined;
       if (file) {
-        if (!sessionId) throw new Error("Not authenticated");
-        imageKey = await uploadAiProfileImage(file, sessionId);
+        imageKey = await uploadAiProfileImage(file, sessionId!);
       }
 
       if (editingId) {

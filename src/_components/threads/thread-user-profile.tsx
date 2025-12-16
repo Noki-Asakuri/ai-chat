@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Menu } from "../ui/menu";
 import { Skeleton } from "../ui/skeleton";
 
+import { getUserAvatarUrl, getUserDisplayName, getUserInitials } from "@/lib/authkit/user";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { cn } from "@/lib/utils";
 
@@ -25,20 +26,17 @@ export function ThreadUserProfile() {
   const { user } = useLoaderData({ from: "/_chat_layout" });
   if (!user) return null;
 
-  const fallback = [user.firstName, user.lastName]
-    .filter(Boolean)
-    .map((name) => name![0])
-    .join("");
-
-  const username = [user.firstName, user.lastName].filter(Boolean).join(" ");
+  const initials = getUserInitials(user);
+  const username = getUserDisplayName(user);
+  const avatarUrl = getUserAvatarUrl(user);
 
   return (
     <Menu.Root>
       <Menu.Trigger className="flex gap-2 rounded-md border border-transparent p-2 transition-colors hover:border-primary/30 hover:bg-primary/20 data-popup-open:border-primary/30 data-popup-open:bg-primary/20">
         <Avatar className="size-11 rounded-md">
-          <AvatarImage src={user.profilePictureUrl as string} alt={`${username} avatar`} />
+          <AvatarImage src={avatarUrl} alt={`${username} avatar`} />
           <AvatarFallback className="bg-primary text-sm text-primary-foreground">
-            {fallback}
+            {initials}
           </AvatarFallback>
         </Avatar>
 

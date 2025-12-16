@@ -53,6 +53,24 @@ export const generateUserUploadUrl = authenticatedMutation({
   },
 });
 
+export const generateUserAvatarUploadUrl = authenticatedMutation({
+  args: { mimeType: v.string() },
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const allowedMimeTypes: Array<string> = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowedMimeTypes.includes(args.mimeType)) {
+      throw new Error("Invalid file type");
+    }
+
+    const ext = args.mimeType.split("/")[1];
+    const key = `${user.userId}/avatar/${crypto.randomUUID()}.${ext}`;
+
+    return r2.generateUploadUrl(key);
+  },
+});
+
 export const deleteFile = authenticatedMutation({
   args: { key: v.string() },
   handler: async (ctx, args) => {
