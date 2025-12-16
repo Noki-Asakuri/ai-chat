@@ -6,6 +6,7 @@ import { createFileRoute, Navigate, useParams } from "@tanstack/react-router";
 import { Suspense, useEffect, useEffectEvent } from "react";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
+import { LoadingSkeleton } from "@/components/chat/loading-skeleton";
 import { MessageHistory } from "@/components/message/message-history";
 import { useConfigStoreState } from "@/components/provider/config-provider";
 
@@ -33,13 +34,12 @@ function ChatComponentPage() {
   }, [params.threadId]);
 
   return (
-    <>
-      <Suspense>
+    <Suspense fallback={<LoadingSkeleton />}>
+      <>
         <ChatHistory />
-      </Suspense>
-
-      <ChatTextarea key="main-chat-textarea" />
-    </>
+        <ChatTextarea key="main-chat-textarea" />
+      </>
+    </Suspense>
   );
 }
 

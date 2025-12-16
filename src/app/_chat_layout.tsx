@@ -9,16 +9,17 @@ import { PlusIcon } from "lucide-react";
 import { Suspense, useEffect } from "react";
 
 import { GlobalDropzone } from "@/components/chat/global-dropzone";
+import { LoadingSkeleton } from "@/components/chat/loading-skeleton";
 import { RegisterHotkeys } from "@/components/chat/register-hotkeys";
 import { ThreadTitle } from "@/components/chat/top-thread-title";
 import { ConfigStoreProvider } from "@/components/provider/config-provider";
+import { ThreadProfileSidebar } from "@/components/threads/profile/profile-sidebar";
 import { ThreadCommand } from "@/components/threads/thread-command";
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
 import { convexSessionQuery } from "@/lib/convex/helpers";
-import { ThreadProfileSidebar } from "@/components/threads/profile/profile-sidebar";
 
 const getCookiesServerFunction = createServerFn({ method: "GET" }).handler(async () => {
   const backgroundImage = getCookie("background-image");
@@ -91,7 +92,7 @@ function RouteComponent() {
           <ThreadCommand />
         </div>
 
-        <Suspense>
+        <Suspense fallback={<LoadingSkeleton />}>
           <ChatComponentPage />
         </Suspense>
       </GlobalDropzone>
