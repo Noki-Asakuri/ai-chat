@@ -12,7 +12,7 @@ import { authenticatedMutation, authenticatedQuery, r2 } from "../components";
  * - "oldest": by createdAt (oldest first)
  * - "recently-updated": by updatedAt (newest first)
  */
-export const listProfiles = authenticatedQuery({
+export const listProfilesWithQuery = authenticatedQuery({
   args: {
     search: v.optional(v.string()),
     sort: v.optional(
@@ -106,6 +106,21 @@ export const listProfiles = authenticatedQuery({
       default:
         return searched;
     }
+  },
+});
+
+export const listProfiles = authenticatedQuery({
+  args: {},
+  handler: async (ctx) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const docs = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", user.userId))
+      .collect();
+
+    return docs;
   },
 });
 

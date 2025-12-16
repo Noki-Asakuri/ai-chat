@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { convexQuery } from "@convex-dev/react-query";
 import { useSessionId, useSessionMutation } from "convex-helpers/react/sessions";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -41,23 +40,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { uploadAiProfileImage } from "@/lib/convex/uploadFiles";
 import { convexSessionQuery } from "@/lib/convex/helpers";
+import { uploadAiProfileImage } from "@/lib/convex/uploadFiles";
 
 export const Route = createFileRoute("/settings/profiles")({
   component: AiProfilesPage,
   pendingComponent: LoadingSkeleton,
 
   head: () => ({ meta: [{ title: "AI Profiles - AI Chat" }] }),
-  loader: async ({ context }) => {
-    context.queryClient.ensureQueryData(
-      convexQuery(api.functions.profiles.listProfiles, {
-        search: "",
-        sort: "recently-updated",
-        sessionId: context.sessionId,
-      }),
-    );
-  },
 });
 
 function LoadingSkeleton() {
@@ -84,7 +74,7 @@ function AiProfilesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data, refetch } = useSuspenseQuery(
-    convexSessionQuery(api.functions.profiles.listProfiles, { search, sort }),
+    convexSessionQuery(api.functions.profiles.listProfilesWithQuery, { search, sort }),
   );
 
   const profiles = data ?? [];

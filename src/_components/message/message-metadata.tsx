@@ -1,3 +1,6 @@
+import { api } from "@/convex/_generated/api";
+
+import { useQueryClient } from "@tanstack/react-query";
 import {
   BoltIcon,
   BrainIcon,
@@ -12,8 +15,10 @@ import { Icons } from "@/components/ui/icons";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { getModelData } from "@/lib/chat/models";
+import { convexSessionQuery } from "@/lib/convex/helpers";
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
+import type { Doc } from "@/convex/_generated/dataModel";
 
 type MessageMetadataProps = {
   metadata: ChatMessage["metadata"];
@@ -43,12 +48,22 @@ export function MessageMetadata({ metadata }: MessageMetadataProps) {
   );
 }
 
-type PopoverInfoProps = {
-  metadata: ChatMessage["metadata"];
-};
+type PopoverInfoProps = { metadata: ChatMessage["metadata"] };
 
 function PopoverInfo({ metadata }: PopoverInfoProps) {
+  const queryClient = useQueryClient();
+
   if (!metadata) return null;
+
+  function getProfile() {
+    if (!metadata || !metadata.modelParams.profile) return null;
+
+    const data = queryClient.getQueryData<Doc<"profiles">[]>(
+      convexSessionQuery(api.functions.profiles.getProfile).queryKey,
+    );
+
+    return data?.find((p) => p._id === metadata.modelParams.profile) ?? null;
+  }
 
   const tokPerSec = (
     (metadata.usages.outputTokens + metadata.usages.reasoningTokens) /
@@ -117,10 +132,10 @@ function PopoverInfo({ metadata }: PopoverInfoProps) {
           <div
             data-slot="metadata-ai-profile"
             className="flex items-center gap-2"
-            hidden={!metadata.profile}
+            hidden={!metadata.modelParams.profile}
           >
             <Icons.provider provider="openai" className="size-4" />
-            <span>Profile: {metadata.profile?.name}</span>
+            <span>Profile: {getProfile()?.name ?? "Unknown"}</span>
           </div>
         </div>
       </PopoverContent>

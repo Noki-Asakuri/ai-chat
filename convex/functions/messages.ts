@@ -144,23 +144,28 @@ export const updateErrorMessage = authenticatedMutation({
     metadata: AISDKMetadata.partial(),
   },
   handler: async (ctx, args) => {
-    // const user = ctx.user;
-    // if (!user) throw new Error("Not authenticated");
-    // const message = await ctx.db.get(args.messageId);
-    // if (!message) throw new Error("Message not found");
-    // if (message.userId !== user.userId) throw new Error("User not authorized");
-    // await ctx.db.patch(args.messageId, {
-    //   status: "error",
-    //   error: args.error,
-    //   model: args.model,
-    //   modelParams: args.modelParams,
-    //   resumableStreamId: null,
-    //   updatedAt: Date.now(),
-    // });
-    // await ctx.db.patch(message.threadId, {
-    //   updatedAt: Date.now(),
-    //   status: "complete",
-    // });
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+    if (message.userId !== user.userId) throw new Error("User not authorized");
+
+    const metadata = { ...message.metadata, ...args.metadata } as (typeof AISDKMetadata)["type"];
+
+    await ctx.db.patch(args.messageId, {
+      status: "error",
+      error: args.error,
+      resumableStreamId: null,
+      updatedAt: Date.now(),
+
+      metadata,
+    });
+
+    await ctx.db.patch(message.threadId, {
+      updatedAt: Date.now(),
+      status: "complete",
+    });
   },
 });
 
@@ -214,7 +219,7 @@ export const updateMessageById = authenticatedMutation({
       if (!metadata) return;
 
       const modelUniqueId = metadata.model.request ?? "";
-      const profileId = metadata.profile?.id;
+      const profileId = metadata.modelParams.profile ?? null;
 
       const currentInputTokens = metadata.usages.inputTokens ?? 0;
       const outputTokens = metadata.usages.outputTokens ?? 0;
@@ -228,7 +233,9 @@ export const updateMessageById = authenticatedMutation({
 
       const prevMessages = ctx.db
         .query("messages")
-        .withIndex("by_threadId", (q) => q.eq("threadId", threadId).lte("_creationTime", message._creationTime))
+        .withIndex("by_threadId", (q) =>
+          q.eq("threadId", threadId).lte("_creationTime", message._creationTime),
+        )
         .order("desc");
 
       for await (const m of prevMessages) {
