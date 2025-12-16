@@ -9,7 +9,14 @@ export const Route = createFileRoute("/api/vercel/$")({
 
         return new Response(response.body, {
           status: response.status,
-          headers: response.headers,
+          headers: {
+            "access-control-allow-origin": "*",
+            "cache-control": "public, max-age=2678400",
+            "cross-origin-resource-policy": "cross-origin",
+
+            "content-type": response.headers.get("content-type")!,
+            "content-disposition": response.headers.get("content-disposition")!,
+          },
         });
       },
     },
