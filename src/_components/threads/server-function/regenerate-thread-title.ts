@@ -47,7 +47,7 @@ export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
       const firstUser = result.messages.find((m) => m.role === "user");
       if (!firstUser || !firstUser.parts.length) return { error: "No user message found" };
 
-      const messages = convertToModelMessages([
+      const messages = await convertToModelMessages([
         { role: "user", parts: firstUser.parts as UIChatMessage["parts"] },
       ]);
 

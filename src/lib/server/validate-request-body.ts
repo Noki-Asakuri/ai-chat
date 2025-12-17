@@ -110,7 +110,7 @@ export async function validateRequestBody(body: Record<string, unknown>) {
 
   const tools: ToolSet = {};
   const { data: modelInfo, model } = modelData;
-  const modelMessages = convertToModelMessages(normalizedMessages);
+  const modelMessages = await convertToModelMessages(normalizedMessages);
 
   const providerOptions = {
     openai: { store: false } as OpenAIResponsesProviderOptions,
