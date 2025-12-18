@@ -59,6 +59,9 @@ const google = customProvider({
 
     "gemini-2.5-pro": baseGoogle.languageModel("gemini-2.5-pro"),
 
+    "gemini-3-flash": baseGoogle.languageModel("gemini-3-flash-preview"),
+    "gemini-3-flash-thinking": baseGoogle.languageModel("gemini-3-flash-preview"),
+
     "gemini-3-pro": baseGoogle.languageModel("gemini-3-pro-preview"),
     "gemini-3-pro-image": baseGoogle.languageModel("gemini-3-pro-image-preview"),
   },
