@@ -140,7 +140,7 @@ export async function validateRequestBody(body: Record<string, unknown>) {
           : providerOptions.google.thinkingConfig.thinkingBudget;
     }
 
-    if (modelInfo.id === "google/gemini-3-flash") {
+    if (modelInfo.id === "google/gemini-3-flash" && !modelInfo.capabilities.reasoning) {
       // We disable thinking on normal gemini-3-flash. For thinking, we should use gemini-3-flash-thinking instead.
       providerOptions.google.thinkingConfig = {
         includeThoughts: true,
