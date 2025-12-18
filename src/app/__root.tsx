@@ -24,6 +24,7 @@ import { DefaultCatchBoundary } from "@/components/default-catch-oundary";
 import { Toaster } from "@/components/ui/sonner";
 
 import { getAuth } from "@/lib/authkit/serverFunctions";
+import { useCookie } from "@/lib/hooks/use-cookie";
 
 type RootContext = {
   queryClient: QueryClient;
@@ -120,9 +121,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
 
       <body className="dark isolate max-h-svh overflow-hidden font-sans">
-        <SessionProvider idGenerator={() => loaderData?.sessionId ?? ""}>
-          {children}
-        </SessionProvider>
+        {loaderData.sessionId && (
+          <SessionProvider useStorage={useCookie} idGenerator={() => loaderData.sessionId!}>
+            {children}
+          </SessionProvider>
+        )}
 
         <Scripts />
         <Toaster />

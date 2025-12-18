@@ -1,11 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { deleteCookie } from "@tanstack/react-start/server";
 
+import { DEFAULT_STORAGE_KEY } from "convex-helpers/react/sessions";
 import { cache } from "react";
 
 import { getConfig } from "./ssr/config";
 import type { GetAuthURLOptions, NoUserInfo, UserInfo } from "./ssr/interfaces";
-import { getSessionFromCookie, refreshSession, terminateSession, withAuth } from "./ssr/session";
+import { terminateSession, withAuth } from "./ssr/session";
 import { getWorkOS } from "./ssr/workos";
 
 export const getAuthorizationUrl = createServerFn({ method: "GET" })
@@ -39,6 +40,8 @@ export const signOut = createServerFn({ method: "POST" })
   .handler(async ({ data: returnTo }) => {
     const cookieName = getConfig("cookieName") || "wos_session";
     deleteCookie(cookieName);
+    deleteCookie("background-image");
+    deleteCookie(DEFAULT_STORAGE_KEY);
 
     await terminateSession({ returnTo });
   });
