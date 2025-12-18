@@ -14,7 +14,7 @@ export const google: Record<ModelIdKey, ModelData> = {
   "google/gemini-2.5-flash-lite-thinking": {
     display: { name: "Gemini 2.5 Flash Lite", unique: "Gemini 2.5 Flash Lite (Thinking)" },
     id: "google/gemini-2.5-flash-lite",
-    altModelIds: ["google/gemini-2.5-flash-lite"],
+    altModelIds: ["google/gemini-2.5-flash-lite-preview-06-17"],
     provider: "google",
     capabilities: {
       vision: true,
@@ -25,7 +25,7 @@ export const google: Record<ModelIdKey, ModelData> = {
   "google/gemini-2.5-flash": {
     display: { name: "Gemini 2.5 Flash" },
     id: "google/gemini-2.5-flash",
-    altModelIds: ["google/gemini-2.5-flash-preview-05-20", "google/gemini-2.5-flash"],
+    altModelIds: ["google/gemini-2.5-flash-preview-05-20"],
     provider: "google",
     capabilities: {
       vision: true,
@@ -35,7 +35,7 @@ export const google: Record<ModelIdKey, ModelData> = {
   "google/gemini-2.5-flash-thinking": {
     display: { name: "Gemini 2.5 Flash", unique: "Gemini 2.5 Flash (Thinking)" },
     id: "google/gemini-2.5-flash",
-    altModelIds: ["google/gemini-2.5-flash-preview-05-20", "google/gemini-2.5-flash"],
+    altModelIds: ["google/gemini-2.5-flash-preview-05-20"],
     provider: "google",
     capabilities: {
       vision: true,
@@ -61,6 +61,27 @@ export const google: Record<ModelIdKey, ModelData> = {
       "google/gemini-2.5-pro-preview-06-05",
       "google/gemini-2.5-pro",
     ],
+    provider: "google",
+    capabilities: {
+      vision: true,
+      webSearch: true,
+      reasoning: true,
+    },
+  },
+  "google/gemini-3-flash": {
+    display: { name: "Gemini 3 Flash" },
+    id: "google/gemini-3-flash",
+    altModelIds: ["google/gemini-3-flash-preview"],
+    provider: "google",
+    capabilities: {
+      vision: true,
+      webSearch: true,
+    },
+  },
+  "google/gemini-3-flash-thinking": {
+    display: { name: "Gemini 3 Flash", unique: "Gemini 3 Flash (Thinking)" },
+    id: "google/gemini-3-flash",
+    altModelIds: ["google/gemini-3-flash-preview"],
     provider: "google",
     capabilities: {
       vision: true,

@@ -140,6 +140,15 @@ export async function validateRequestBody(body: Record<string, unknown>) {
           : providerOptions.google.thinkingConfig.thinkingBudget;
     }
 
+    if (modelInfo.id === "google/gemini-3-flash") {
+      // We disable thinking on normal gemini-3-flash. For thinking, we should use gemini-3-flash-thinking instead.
+      providerOptions.google.thinkingConfig = {
+        includeThoughts: true,
+        // @ts-expect-error AI SDK aren't updated to latest docs for gemini-3-flash.
+        thinkingLevel: "minimal",
+      };
+    }
+
     if (modelInfo.id === "google/gemini-3-pro") {
       // Right now it doesn't support thinking budget.
       providerOptions.google.thinkingConfig = {
