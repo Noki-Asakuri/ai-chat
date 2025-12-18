@@ -49,13 +49,12 @@ const openai = customProvider({
 
 const google = customProvider({
   languageModels: {
-    "gemini-2.5-flash": baseGoogle.languageModel("gemini-2.5-flash"),
-    "gemini-2.5-flash-thinking": baseGoogle.languageModel("gemini-2.5-flash"),
-
     "gemini-2.5-flash-lite": baseGoogle.languageModel("gemini-2.5-flash-lite"),
     "gemini-2.5-flash-lite-thinking": baseGoogle.languageModel("gemini-2.5-flash-lite"),
 
-    "gemini-2.5-flash-image": baseGoogle.languageModel("gemini-2.5-flash-image-preview"),
+    "gemini-2.5-flash": baseGoogle.languageModel("gemini-2.5-flash"),
+    "gemini-2.5-flash-thinking": baseGoogle.languageModel("gemini-2.5-flash"),
+    "gemini-2.5-flash-image": baseGoogle.languageModel("gemini-2.5-flash-image"),
 
     "gemini-2.5-pro": baseGoogle.languageModel("gemini-2.5-pro"),
 
