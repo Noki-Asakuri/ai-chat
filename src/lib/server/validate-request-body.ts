@@ -7,7 +7,7 @@ import { openai, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import { convertToModelMessages, validateUIMessages, type ToolSet } from "ai";
 
 import { getModelData } from "../chat/models";
-import { metadataSchema, type UIChatMessage } from "../types";
+import { metadataSchema, type ReasoningEffort, type UIChatMessage } from "../types";
 import { tryCatch, tryCatchSync } from "../utils";
 
 export const threadIdSchema = z.custom<Id<"threads">>((data) => z.string().parse(data));
@@ -38,13 +38,22 @@ export const safetySettings = [
   { threshold: "BLOCK_NONE", category: "HARM_CATEGORY_SEXUALLY_EXPLICIT" },
 ];
 
-const reasoningToBudget = {
+const reasoningToBudget: Record<ReasoningEffort, number> = {
   none: 0,
   minimal: 128,
   low: 1_024,
   medium: 10_000,
   high: 20_000,
   xhigh: 30_000,
+};
+
+const openaiReasoningToGoogle: Record<ReasoningEffort, "minimal" | "low" | "medium" | "high"> = {
+  none: "minimal",
+  minimal: "minimal",
+  low: "low",
+  medium: "medium",
+  high: "high",
+  xhigh: "high",
 };
 
 function moveAssistantFilePartsToNextUserMessageValidated(
@@ -142,19 +151,14 @@ export async function validateRequestBody(body: Record<string, unknown>) {
 
     if (modelInfo.id === "google/gemini-3-flash" && !modelInfo.capabilities.reasoning) {
       // We disable thinking on normal gemini-3-flash. For thinking, we should use gemini-3-flash-thinking instead.
-      providerOptions.google.thinkingConfig = {
-        includeThoughts: true,
-        // @ts-expect-error AI SDK aren't updated to latest docs for gemini-3-flash.
-        thinkingLevel: "minimal",
-      };
+      providerOptions.google.thinkingConfig = { includeThoughts: true, thinkingLevel: "minimal" };
     }
 
     if (modelInfo.id === "google/gemini-3-pro") {
       // Right now it doesn't support thinking budget.
       providerOptions.google.thinkingConfig = {
         includeThoughts: true,
-        // Currently gemini-3-pro only supports high and low thinking level.
-        thinkingLevel: data.modelParams.effort === "high" ? "high" : "low",
+        thinkingLevel: openaiReasoningToGoogle[effort],
       };
     }
   }
