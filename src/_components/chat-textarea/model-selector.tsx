@@ -1,8 +1,10 @@
+import { useParams } from "@tanstack/react-router";
 import { Popover } from "@base-ui/react/popover";
 import { useMemo } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
+
 import { buttonVariants } from "@/components/ui/button";
 import {
   Command,
@@ -30,7 +32,12 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   const configStore = useConfigStoreState();
 
   const storeModel = configStore.model;
-  const selectedModel = value ?? storeModel;
+  const storeDefaultModel = configStore.defaultModel;
+
+  const selectedModel =
+    (value && value.length > 0 ? value : null) ??
+    (storeModel && storeModel.length > 0 ? storeModel : null) ??
+    storeDefaultModel;
 
   const hiddenModel = useConfigStore(useShallow((state) => state.hiddenModels));
 
@@ -66,7 +73,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
           className,
         )}
       >
-        {renderTriggerValue(value)}
+        {renderTriggerValue(selectedModel)}
       </Popover.Trigger>
 
       <Popover.Portal>
@@ -106,8 +113,28 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
 }
 
 export function ChatModelSelector() {
+  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
+  const isWelcomeRoute = !params?.threadId;
+
   const storeModel = useConfigStore((state) => state.model);
-  return <ModelSelectorBase value={storeModel} triggerId="button-chat-model-selector-trigger" />;
+  const setConfig = useConfigStore((state) => state.setConfig);
+
+  function handleChange(model: string) {
+    if (isWelcomeRoute) {
+      setConfig({ model, defaultModel: model });
+      return;
+    }
+
+    setConfig({ model });
+  }
+
+  return (
+    <ModelSelectorBase
+      value={storeModel}
+      onChange={handleChange}
+      triggerId="button-chat-model-selector-trigger"
+    />
+  );
 }
 
 export function ModelSelector(props: ModelSelectorProps) {

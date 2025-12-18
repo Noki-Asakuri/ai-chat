@@ -7,6 +7,7 @@ import type { ReasoningEffort } from "../types";
 
 type ChatConfig = {
   model: string;
+  defaultModel: string;
   effort: ReasoningEffort;
   webSearch: boolean;
   profile?: Id<"profiles"> | null;
@@ -34,7 +35,8 @@ export function createConfigStore(initialState: Partial<ConfigStoreData>) {
       (set) => ({
         effort: "medium",
         webSearch: false,
-        model: "google/gemini-2.5-flash",
+        defaultModel: "google/gemini-3-flash",
+        model: "google/gemini-3-flash",
         profile: null,
         pref: "enter",
 
@@ -57,10 +59,27 @@ export function createConfigStore(initialState: Partial<ConfigStoreData>) {
           effort: state.effort,
           webSearch: state.webSearch,
           model: state.model,
+          defaultModel: state.defaultModel,
           profile: state.profile,
           wrapline: state.wrapline,
           pref: state.pref,
         }),
+        onRehydrateStorage: () => (state) => {
+          if (!state) return;
+
+          const fallbackDefaultModel =
+            state.defaultModel.trim().length > 0
+              ? state.defaultModel
+              : state.model.trim().length > 0
+                ? state.model
+                : "google/gemini-3-flash";
+
+          const nextModel = state.model.trim().length > 0 ? state.model : fallbackDefaultModel;
+
+          if (state.defaultModel !== fallbackDefaultModel || state.model !== nextModel) {
+            state.setConfig({ defaultModel: fallbackDefaultModel, model: nextModel });
+          }
+        },
       },
     ),
   );
