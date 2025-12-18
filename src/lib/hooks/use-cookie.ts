@@ -41,10 +41,10 @@ export function useCookie<T>(key: string, initialValue: T): ReturnType<UseStorag
 function readCookieValue<T>(key: string, initialValue: T): T {
   if (!canUseDOM()) return initialValue;
 
-  var raw = getCookieRaw(key);
+  const raw = getCookieRaw(key);
   if (raw === null) return initialValue;
 
-  var decoded: string;
+  let decoded: string;
   try {
     decoded = decodeURIComponent(raw);
   } catch {
@@ -57,7 +57,7 @@ function readCookieValue<T>(key: string, initialValue: T): T {
 function writeCookieValue<T>(key: string, value: T, initialValue: T): void {
   if (!canUseDOM()) return;
 
-  var serialized = serialize(value, initialValue);
+  const serialized = serialize(value, initialValue);
 
   if (serialized === null) {
     deleteCookie(key);
@@ -81,7 +81,7 @@ function serialize<T>(value: T, initialValue: T): string | null {
   }
 
   try {
-    var json = JSON.stringify(value);
+    const json = JSON.stringify(value);
     return typeof json === "string" ? json : null;
   } catch {
     return null;
@@ -100,7 +100,7 @@ function deserialize<T>(raw: string, initialValue: T): T {
   }
 
   if (initialValue instanceof Date) {
-    var d = new Date(raw);
+    const d = new Date(raw);
     if (Number.isNaN(d.getTime())) return initialValue;
     return d as unknown as T;
   }
@@ -109,7 +109,7 @@ function deserialize<T>(raw: string, initialValue: T): T {
     return JSON.parse(raw) as T;
   } catch {
     if (typeof initialValue === "number") {
-      var n = Number(raw);
+      const n = Number(raw);
       return Number.isFinite(n) ? (n as unknown as T) : initialValue;
     }
 
@@ -127,20 +127,20 @@ function canUseDOM(): boolean {
 }
 
 function getCookieRaw(name: string): string | null {
-  var encodedName = encodeURIComponent(name);
+  const encodedName = encodeURIComponent(name);
 
-  var all = document.cookie;
+  const all = document.cookie;
   if (!all) return null;
 
-  var parts = all.split(";");
-  for (var i = 0; i < parts.length; i++) {
-    var part = parts[i]!.trim();
+  const parts = all.split(";");
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]!.trim();
     if (!part) continue;
 
-    var eqIndex = part.indexOf("=");
+    const eqIndex = part.indexOf("=");
     if (eqIndex === -1) continue;
 
-    var k = part.slice(0, eqIndex);
+    const k = part.slice(0, eqIndex);
     if (k !== encodedName) continue;
 
     return part.slice(eqIndex + 1);
@@ -150,10 +150,10 @@ function getCookieRaw(name: string): string | null {
 }
 
 function setCookieRaw(name: string, value: string): void {
-  var encodedName = encodeURIComponent(name);
-  var encodedValue = encodeURIComponent(value);
+  const encodedName = encodeURIComponent(name);
+  const encodedValue = encodeURIComponent(value);
 
-  var parts: string[] = [];
+  const parts: string[] = [];
   parts.push(encodedName + "=" + encodedValue);
   parts.push("Path=/");
   parts.push("SameSite=Lax");
@@ -165,7 +165,7 @@ function setCookieRaw(name: string, value: string): void {
 function deleteCookie(name: string): void {
   if (!canUseDOM()) return;
 
-  var parts: string[] = [];
+  const parts: string[] = [];
   parts.push(encodeURIComponent(name) + "=");
   parts.push("Path=/");
   parts.push("SameSite=Lax");
