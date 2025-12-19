@@ -22,6 +22,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { DefaultCatchBoundary } from "@/components/default-catch-oundary";
 import { Toaster } from "@/components/ui/sonner";
+import { VersionUpdateNotifier } from "@/components/version-update-notifier";
 
 import { getAuth } from "@/lib/authkit/serverFunctions";
 import { useCookie } from "@/lib/hooks/use-cookie";
@@ -129,6 +130,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
         <Scripts />
         <Toaster />
+        <VersionUpdateNotifier />
 
         {import.meta.env.PROD && (
           <>

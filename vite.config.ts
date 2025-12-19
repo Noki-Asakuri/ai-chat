@@ -8,6 +8,11 @@ import { nitro } from "nitro/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(
+      process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.VERCEL_DEPLOYMENT_ID ?? "dev",
+    ),
+  },
   server: { port: 3000 },
   plugins: [
     devtools(),

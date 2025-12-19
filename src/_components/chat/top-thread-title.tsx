@@ -25,7 +25,7 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
   return (
     <>
       <title>{data.title}</title>
-      <p className="truncate text-sm text-muted-foreground">{data.title}</p>
+      <p className="invisible truncate text-sm text-muted-foreground md:visible">{data.title}</p>
     </>
   );
 }

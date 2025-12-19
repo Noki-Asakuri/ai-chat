@@ -1,19 +1,29 @@
-// src/hooks/useVersionWatcher.ts
+import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 
 const INTERVAL_IN_MS = 5 * 60 * 1000;
 
+type VersionResponse = {
+  version: string | null;
+};
+
+export const getLatestAppVersion = createServerFn({ method: "GET" }).handler(async () => {
+  return {
+    version: process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.VERCEL_DEPLOYMENT_ID ?? null,
+  };
+});
+
 // The hook's job is simple: return true if a new version is available.
 export function useVersionWatcher() {
   const [isNewVersionAvailable, setIsNewVersionAvailable] = useState(false);
-  const currentVersion = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA;
+  const currentVersion = __APP_VERSION__;
 
   const running = useRef(false);
-  const intervalId = useRef<NodeJS.Timeout | null>(null);
+  const intervalId = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     // Don't run this on the server or in local dev.
-    if (typeof window === "undefined" || process.env.NODE_ENV !== "production") {
+    if (typeof window === "undefined" || !import.meta.env.PROD) {
       return;
     }
 
@@ -21,32 +31,44 @@ export function useVersionWatcher() {
       if (running.current) return;
       running.current = true;
 
-      try {
-        const response = await fetch("/api/version");
-        const data = (await response.json()) as { version: string | undefined };
-        const latestVersion = data.version;
+      const data: VersionResponse = await getLatestAppVersion();
+      const latestVersion = data.version;
 
-        if (latestVersion && latestVersion !== currentVersion) {
-          setIsNewVersionAvailable(true);
-          if (intervalId.current) {
-            clearInterval(intervalId.current);
-            intervalId.current = null;
-          }
+      if (latestVersion && latestVersion !== currentVersion) {
+        setIsNewVersionAvailable(true);
+        if (intervalId.current) {
+          clearInterval(intervalId.current);
+          intervalId.current = null;
         }
-      } catch (error) {
-        // If the fetch fails, we'll just silently try again later.
-        console.error("Failed to check for new version:", error);
       }
 
       running.current = false;
     }
 
+    function onFocus() {
+      void checkVersion();
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void checkVersion();
+      }
+    }
+
     void checkVersion();
-    intervalId.current = setInterval(() => void checkVersion(), INTERVAL_IN_MS);
+    intervalId.current = setInterval(() => {
+      void checkVersion();
+    }, INTERVAL_IN_MS);
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       if (intervalId.current) clearInterval(intervalId.current);
       intervalId.current = null;
+
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [currentVersion]);
 
