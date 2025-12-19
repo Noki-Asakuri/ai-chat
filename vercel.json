@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/vercel/:path*",
+      "destination": "https://chat.asakuri.me/_vercel/:path*"
+    }
+  ]
+}

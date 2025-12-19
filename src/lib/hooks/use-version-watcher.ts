@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 
+import { env } from "@/env";
+
 const INTERVAL_IN_MS = 5 * 60 * 1000;
 
 type VersionResponse = {
@@ -9,7 +11,7 @@ type VersionResponse = {
 
 export const getLatestAppVersion = createServerFn({ method: "GET" }).handler(async () => {
   return {
-    version: process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.VERCEL_DEPLOYMENT_ID ?? null,
+    version: env.VERCEL_GIT_COMMIT_SHA ?? env.VERCEL_DEPLOYMENT_ID ?? null,
   };
 });
 
