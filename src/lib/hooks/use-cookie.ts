@@ -1,9 +1,5 @@
+import type { UseStorage } from "convex-helpers/react/sessions";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-export type UseStorage<T> = (
-  key: string,
-  initialValue: T,
-) => readonly [T, (value: T) => void] | readonly [T, (value: T) => void, () => void];
 
 export function useCookie<T>(key: string, initialValue: T): ReturnType<UseStorage<T>> {
   const initialRef = useRef(initialValue);

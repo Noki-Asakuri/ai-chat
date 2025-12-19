@@ -22,7 +22,7 @@ export function ThreadSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="flex flex-1 flex-col">
+      <SidebarContent className="flex flex-1 flex-col px-2 md:px-0">
         <ThreadContents />
       </SidebarContent>
 

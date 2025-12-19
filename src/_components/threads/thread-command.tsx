@@ -44,7 +44,8 @@ export function ThreadCommand({ isSkeleton }: { isSkeleton?: boolean }) {
         className="h-7 rounded-md border px-2 py-1 opacity-100 transition-opacity"
       >
         <SearchIcon />
-        <span>Search Threads...</span>
+        <span className="inline md:hidden">Search </span>
+        <span className="hidden md:inline">Search Threads...</span>
 
         <kbd className="pointer-events-none ml-8 hidden h-4 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 select-none md:inline-flex">
           <span className="text-xs">⌘</span>K

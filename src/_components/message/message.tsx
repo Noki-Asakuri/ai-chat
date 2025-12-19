@@ -26,8 +26,8 @@ export function Message({ messageId, index, total }: MessageProps) {
 
   const { lastUserMessageHeight, textareaHeight } = useChatStore(
     useShallow((state) => ({
-      textareaHeight: state.textareaHeight,
       lastUserMessageHeight: state.lastUserMessageHeight ?? 114,
+      textareaHeight: state.textareaHeight,
     })),
   );
 
@@ -38,8 +38,8 @@ export function Message({ messageId, index, total }: MessageProps) {
 
   const minHeight =
     isLast && message.role === "assistant"
-      ? // 100vh - (padding top + padding bottom + textarea height + last known user message height)
-        `calc(100vh - (40px + ${Math.max(textareaHeight, 165 + 50)}px + 16px + ${userMessageHeight}px))`
+      ? // 100vh - 48px (padding top) - textarea height - user message height - (16px) separator between messages
+        `${window.innerHeight - 48 - textareaHeight - userMessageHeight - 16}px`
       : "auto";
 
   // Keep assistant min-height in sync with live changes to the most recent user message
@@ -74,7 +74,7 @@ export function Message({ messageId, index, total }: MessageProps) {
       data-index={index}
       data-islast={isLast}
       data-role={message.role}
-      data-model={message.metadata?.model}
+      data-model={message.metadata?.model.request}
       data-id={message._id}
       data-height={lastUserMessageHeight}
       data-effort={message.metadata?.modelParams.effort}
