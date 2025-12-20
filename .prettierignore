@@ -1,4 +1,14 @@
 convex/_generated
+convex/README.md
+
+src/routeTree.gen.ts
+
 node_modules
 public
 dist
+
+.kilocode
+.vercel
+.output
+
+tsconfig.tsbuildinfo
