@@ -2,7 +2,7 @@ import { api } from "@/convex/_generated/api";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
+import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 
 import { PlusIcon } from "lucide-react";
@@ -21,12 +21,21 @@ import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/componen
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 
-const getCookiesServerFunction = createServerFn({ method: "GET" }).handler(async () => {
-  const backgroundImage = getCookie("background-image");
-  const defaultOpenSidebar = getCookie(SIDEBAR_COOKIE_NAME) === "true";
+const getCookiesServerFunction = createIsomorphicFn()
+  .server(async () => {
+    const backgroundImage = getCookie("background-image");
+    const defaultOpenSidebar = getCookie(SIDEBAR_COOKIE_NAME) === "true";
 
-  return { backgroundImage, defaultOpenSidebar };
-});
+    console.log("Server cookies", backgroundImage, defaultOpenSidebar);
+    return { backgroundImage, defaultOpenSidebar };
+  })
+  .client(async () => {
+    const backgroundImage = (await cookieStore.get("background-image"))?.value;
+    const defaultOpenSidebar = (await cookieStore.get(SIDEBAR_COOKIE_NAME))?.value === "true";
+
+    console.log("Client cookies", backgroundImage, defaultOpenSidebar);
+    return { backgroundImage, defaultOpenSidebar };
+  });
 
 export const Route = createFileRoute("/_chat_layout")({
   component: RouteComponent,

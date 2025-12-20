@@ -20,7 +20,7 @@ import { fromUUID } from "@/lib/utils";
 export const Route = createFileRoute("/_chat_layout/threads/$threadId")({
   component: ChatComponentPage,
   loader: async ({ context, params }) => {
-    context.queryClient.ensureQueryData(
+    context.queryClient.prefetchQuery(
       convexQuery(api.functions.messages.getAllMessagesFromThread, {
         threadId: fromUUID<Id<"threads">>(params.threadId),
         sessionId: context.sessionId,
