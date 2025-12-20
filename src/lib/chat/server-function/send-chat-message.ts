@@ -50,6 +50,10 @@ export function useSendChatMessage() {
     if (!input || lastMessage?.status === "pending" || lastMessage?.status === "streaming") return;
     chatStoreActions.resetInput();
 
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("chat:force-scroll-bottom"));
+    }
+
     if (!threadId) {
       threadId = await convexClient.mutation(api.functions.threads.createThread, { sessionId });
       await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(threadId) } });

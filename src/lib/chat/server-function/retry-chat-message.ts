@@ -43,6 +43,10 @@ export function useRetryChatMessage() {
     const abortController = new AbortController();
     messageStoreActions.setController(threadId, abortController);
 
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("chat:force-scroll-bottom"));
+    }
+
     // Find the user message and assistant response pair
     const userMessageIndex = index % 2 === 0 ? index : index - 1;
     const assistantMessage = messagesHistory[userMessageIndex + 1]!;

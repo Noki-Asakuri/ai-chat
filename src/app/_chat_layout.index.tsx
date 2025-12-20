@@ -9,7 +9,6 @@ import { useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions } from "@/lib/store/messages-store";
 
 export const Route = createFileRoute("/_chat_layout/")({
-  preload: false,
   component: RouteComponent,
   loader: async ({ context }) => {
     return { user: context.user! };

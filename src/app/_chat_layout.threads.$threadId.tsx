@@ -1,8 +1,9 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
+import { convexQuery } from "@convex-dev/react-query";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Navigate, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { Suspense, useEffect, useEffectEvent } from "react";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
@@ -17,12 +18,14 @@ import type { ChatMessage } from "@/lib/types";
 import { fromUUID } from "@/lib/utils";
 
 export const Route = createFileRoute("/_chat_layout/threads/$threadId")({
-  preload: false,
   component: ChatComponentPage,
-
-  errorComponent: (err) => {
-    console.error("ChatComponentPage Error:", err);
-    return <Navigate to="/" />;
+  loader: async ({ context, params }) => {
+    context.queryClient.ensureQueryData(
+      convexQuery(api.functions.messages.getAllMessagesFromThread, {
+        threadId: fromUUID<Id<"threads">>(params.threadId),
+        sessionId: context.sessionId,
+      }),
+    );
   },
 });
 
@@ -35,10 +38,8 @@ function ChatComponentPage() {
 
   return (
     <Suspense fallback={<LoadingSkeleton />}>
-      <>
-        <ChatHistory />
-        <ChatTextarea key="main-chat-textarea" />
-      </>
+      <ChatHistory />
+      <ChatTextarea key="main-chat-textarea" />
     </Suspense>
   );
 }

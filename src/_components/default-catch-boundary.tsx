@@ -42,7 +42,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
 
   return (
     <main className="custom-scroll mx-auto flex min-h-svh w-full flex-1 items-center justify-center overflow-y-auto px-6 py-4">
-      <div className="w-full max-w-3xl space-y-6">
+      <div className="w-full max-w-3xl space-y-4">
         <div className="flex flex-col items-center gap-1 text-center">
           <h2 className="text-2xl font-bold">Something went wrong</h2>
           <p className="text-muted-foreground">
@@ -82,7 +82,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
           </CardFooter>
         </Card>
 
-        <details className="group rounded-lg border bg-muted/20 px-4 py-3">
+        <details className="group rounded-lg border bg-card px-4 py-3">
           <summary className="cursor-pointer list-none text-sm font-medium text-muted-foreground transition-colors group-open:text-foreground">
             Technical details
           </summary>
