@@ -1,7 +1,6 @@
-"use client";
-
 import { useEffect, useRef } from "react";
-import { toast } from "sonner";
+
+import { showVersionUpdateToast } from "@/components/toasts/version-update-toast";
 
 import { useVersionWatcher } from "@/lib/hooks/use-version-watcher";
 import { tryCatchSync } from "@/lib/utils";
@@ -32,11 +31,9 @@ export function VersionUpdateNotifier() {
     }
 
     function writeSnoozedUntilMs(untilMs: number) {
-      try {
+      tryCatchSync(() => {
         window.localStorage.setItem(SNOOZE_UNTIL_STORAGE_KEY, String(untilMs));
-      } catch {
-        // Ignore storage failures (private mode / blocked).
-      }
+      });
     }
 
     function clearSnoozeTimer() {
@@ -67,24 +64,14 @@ export function VersionUpdateNotifier() {
         return;
       }
 
-      const toastId = toast("A new version is available.", {
-        description: "Refresh the page to get the latest updates.",
-        duration: Infinity,
-        action: {
-          label: "Refresh",
-          onClick: () => {
-            window.location.reload();
-          },
+      const toastId = showVersionUpdateToast({
+        onRefresh: () => {
+          window.location.reload();
         },
-        cancel: {
-          label: "Remind later",
-          onClick: () => {
-            const untilMs = Date.now() + SNOOZE_DURATION_MS;
-            writeSnoozedUntilMs(untilMs);
-            scheduleAfterSnooze(untilMs);
-
-            toast.dismiss(toastId);
-          },
+        onRemindLater: () => {
+          const untilMs = Date.now() + SNOOZE_DURATION_MS;
+          writeSnoozedUntilMs(untilMs);
+          scheduleAfterSnooze(untilMs);
         },
         onDismiss: () => {
           toastIdRef.current = null;

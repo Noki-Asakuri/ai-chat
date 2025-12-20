@@ -9,9 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './app/__root'
-import { Route as ThrowErrorRouteImport } from './app/throw-error'
 import { Route as SettingsRouteImport } from './app/settings'
-import { Route as NotFoundRouteImport } from './app/not-found'
 import { Route as Chat_layoutRouteImport } from './app/_chat_layout'
 import { Route as Chat_layoutIndexRouteImport } from './app/_chat_layout.index'
 import { Route as SettingsAccountRouteImport } from './app/settings/account'
@@ -26,19 +24,9 @@ import { Route as Chat_layoutThreadsRouteRouteImport } from './app/_chat_layout.
 import { Route as ApiAuthCallbackRouteImport } from './app/api/auth/callback'
 import { Route as Chat_layoutThreadsThreadIdRouteImport } from './app/_chat_layout.threads.$threadId'
 
-const ThrowErrorRoute = ThrowErrorRouteImport.update({
-  id: '/throw-error',
-  path: '/throw-error',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotFoundRoute = NotFoundRouteImport.update({
-  id: '/not-found',
-  path: '/not-found',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Chat_layoutRoute = Chat_layoutRouteImport.update({
@@ -110,9 +98,7 @@ const Chat_layoutThreadsThreadIdRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/not-found': typeof NotFoundRoute
   '/settings': typeof SettingsRouteWithChildren
-  '/throw-error': typeof ThrowErrorRoute
   '/threads': typeof Chat_layoutThreadsRouteRouteWithChildren
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
   '/settings/customization': typeof SettingsCustomizationRouteRoute
@@ -127,9 +113,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/callback': typeof ApiAuthCallbackRoute
 }
 export interface FileRoutesByTo {
-  '/not-found': typeof NotFoundRoute
   '/settings': typeof SettingsRouteWithChildren
-  '/throw-error': typeof ThrowErrorRoute
   '/threads': typeof Chat_layoutThreadsRouteRouteWithChildren
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
   '/settings/customization': typeof SettingsCustomizationRouteRoute
@@ -146,9 +130,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_chat_layout': typeof Chat_layoutRouteWithChildren
-  '/not-found': typeof NotFoundRoute
   '/settings': typeof SettingsRouteWithChildren
-  '/throw-error': typeof ThrowErrorRoute
   '/_chat_layout/threads': typeof Chat_layoutThreadsRouteRouteWithChildren
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
   '/settings/customization': typeof SettingsCustomizationRouteRoute
@@ -165,9 +147,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/not-found'
     | '/settings'
-    | '/throw-error'
     | '/threads'
     | '/settings/attachments'
     | '/settings/customization'
@@ -182,9 +162,7 @@ export interface FileRouteTypes {
     | '/api/auth/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/not-found'
     | '/settings'
-    | '/throw-error'
     | '/threads'
     | '/settings/attachments'
     | '/settings/customization'
@@ -200,9 +178,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_chat_layout'
-    | '/not-found'
     | '/settings'
-    | '/throw-error'
     | '/_chat_layout/threads'
     | '/settings/attachments'
     | '/settings/customization'
@@ -219,9 +195,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   Chat_layoutRoute: typeof Chat_layoutRouteWithChildren
-  NotFoundRoute: typeof NotFoundRoute
   SettingsRoute: typeof SettingsRouteWithChildren
-  ThrowErrorRoute: typeof ThrowErrorRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLogoutRoute: typeof AuthLogoutRoute
   ApiAuthCallbackRoute: typeof ApiAuthCallbackRoute
@@ -229,25 +203,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/throw-error': {
-      id: '/throw-error'
-      path: '/throw-error'
-      fullPath: '/throw-error'
-      preLoaderRoute: typeof ThrowErrorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/not-found': {
-      id: '/not-found'
-      path: '/not-found'
-      fullPath: '/not-found'
-      preLoaderRoute: typeof NotFoundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_chat_layout': {
@@ -396,9 +356,7 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   Chat_layoutRoute: Chat_layoutRouteWithChildren,
-  NotFoundRoute: NotFoundRoute,
   SettingsRoute: SettingsRouteWithChildren,
-  ThrowErrorRoute: ThrowErrorRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthLogoutRoute: AuthLogoutRoute,
   ApiAuthCallbackRoute: ApiAuthCallbackRoute,
