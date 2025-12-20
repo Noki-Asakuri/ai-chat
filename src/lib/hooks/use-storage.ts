@@ -32,10 +32,13 @@ export function useStorage() {
   }
 
   async function uploadAvatarFile({ file }: { file: File }) {
-    const { url, key } = await convexClient.mutation(api.functions.files.generateUserAvatarUploadUrl, {
-      sessionId,
-      mimeType: file.type,
-    });
+    const { url, key } = await convexClient.mutation(
+      api.functions.files.generateUserAvatarUploadUrl,
+      {
+        sessionId,
+        mimeType: file.type,
+      },
+    );
 
     const [, error] = await tryCatch(async () => {
       const result = await fetch(url, {

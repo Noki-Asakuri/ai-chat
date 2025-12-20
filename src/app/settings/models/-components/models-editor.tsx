@@ -1,17 +1,15 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Icons } from "@/components/ui/icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 
-import { Icons } from "@/components/ui/icons";
-
-import { AllModelIds, getModelData, prettifyProviderName } from "@/lib/chat/models";
 import type { AllModelIds as ModelId, Provider } from "@/lib/chat/models";
+import { AllModelIds, getModelData, prettifyProviderName } from "@/lib/chat/models";
 
 type ModelEntry = {
   modelId: ModelId;

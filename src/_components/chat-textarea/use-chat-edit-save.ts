@@ -1,13 +1,13 @@
-import * as React from "react";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 
 import { useSessionId } from "convex-helpers/react/sessions";
+import * as React from "react";
 
-import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { uploadUserAttachment } from "@/lib/chat/shared";
 import { useRetryChatMessage } from "@/lib/chat/server-function/retry-chat-message";
-import type { ChatMessage } from "@/lib/types";
+import { uploadUserAttachment } from "@/lib/chat/shared";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
+import type { ChatMessage } from "@/lib/types";
 
 export function useChatEditSave() {
   const { retryChatMessage } = useRetryChatMessage();
@@ -66,7 +66,9 @@ export function useChatEditSave() {
         fileParts.push({ type: "file", url, mediaType: item.mediaType });
       }
 
-      const parts: ChatMessage["parts"] = [{ type: "text", text: editMessage.input, state: "done" }];
+      const parts: ChatMessage["parts"] = [
+        { type: "text", text: editMessage.input, state: "done" },
+      ];
 
       for (const part of fileParts) {
         parts.push(part);
@@ -75,7 +77,7 @@ export function useChatEditSave() {
       // Close edit UI only after we have successfully prepared the updated message payload.
       chatStoreActions.setEditMessage(null);
 
-      retryChatMessage({
+      await retryChatMessage({
         index: editMessage.index,
         modelId: editMessage.model,
         modelParams: editMessage.modelParams,

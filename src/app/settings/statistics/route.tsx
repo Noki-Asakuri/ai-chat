@@ -1,19 +1,17 @@
 import { api } from "@/convex/_generated/api";
 
-import { convexQuery } from "@convex-dev/react-query";
-
 import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { LoadingStatisticsSkeleton } from "./-pending";
 

@@ -64,11 +64,11 @@ function DebugButton({ messageId }: { messageId: Id<"messages"> }) {
   const message = useMessageStore(useShallow((state) => state.messagesById[messageId]!));
   if (import.meta.env.PROD) return null;
 
-  function handleDebug() {
+  async function handleDebug() {
     console.log(message);
 
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(JSON.stringify(message, null, 2));
+      await navigator.clipboard.writeText(JSON.stringify(message, null, 2));
     }
   }
 

@@ -34,7 +34,7 @@ export function ChatSendButton() {
 
   async function handleSend() {
     if (status === "streaming") return;
-    sendChatRequest();
+    await sendChatRequest();
   }
 
   return (

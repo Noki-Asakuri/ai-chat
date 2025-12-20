@@ -18,7 +18,7 @@ export function ScrollButton() {
       <div className="pointer-events-none flex w-full items-center justify-center">
         <div
           className={cn(
-            "bg-muted/40 pointer-events-auto flex rounded-md border",
+            "pointer-events-auto flex rounded-md border bg-muted/40",
             "group-data-[disable-blur=true]/sidebar-provider:bg-muted",
             "w-full max-w-4xl backdrop-blur-md backdrop-saturate-150",
           )}
@@ -29,7 +29,7 @@ export function ScrollButton() {
             variant="ghost"
             className={cn(
               "h-7 justify-center rounded-none px-3 sm:px-4",
-              "text-muted-foreground hover:text-foreground hover:bg-muted/40",
+              "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
               "flex grow gap-2",
             )}
           >
@@ -37,7 +37,7 @@ export function ScrollButton() {
             <span className="hidden text-xs md:inline">Scroll to Top</span>
           </Button>
 
-          <div className="bg-border w-px grow-0" />
+          <div className="w-px grow-0 bg-border" />
 
           <Button
             type="button"
@@ -45,7 +45,7 @@ export function ScrollButton() {
             variant="ghost"
             className={cn(
               "h-7 justify-center rounded-none px-3 sm:px-4",
-              "text-muted-foreground hover:text-foreground hover:bg-muted/40",
+              "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
               "flex grow gap-2",
             )}
           >

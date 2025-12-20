@@ -1,5 +1,4 @@
 import { readUIMessageStream, type UIMessage, type UIMessageChunk } from "ai";
-import type { ChatMessage } from "../types";
 
 export type UIMessageStreamEvent<UI_MESSAGE extends UIMessage = UIMessage> =
   | {

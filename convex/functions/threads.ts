@@ -198,16 +198,12 @@ export const listAccountThreads = authenticatedQuery({
     for (const thread of pageResult.page) {
       const messages = await ctx.db
         .query("messages")
-        .withIndex("by_userId_threadId", (q) =>
-          q.eq("userId", userId).eq("threadId", thread._id),
-        )
+        .withIndex("by_userId_threadId", (q) => q.eq("userId", userId).eq("threadId", thread._id))
         .collect();
 
       const attachments = await ctx.db
         .query("attachments")
-        .withIndex("by_userId_threadId", (q) =>
-          q.eq("userId", userId).eq("threadId", thread._id),
-        )
+        .withIndex("by_userId_threadId", (q) => q.eq("userId", userId).eq("threadId", thread._id))
         .collect();
 
       rows.push({

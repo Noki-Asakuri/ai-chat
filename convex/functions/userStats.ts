@@ -157,11 +157,7 @@ export const incrementOnAssistantComplete = internalMutation({
     const added = makeTokenTotals(inputDelta, args.outputTokens, args.reasoningTokens);
 
     const prevTotals = doc.stats.tokens
-      ? makeTokenTotals(
-          doc.stats.tokens.input,
-          doc.stats.tokens.output,
-          doc.stats.tokens.reasoning,
-        )
+      ? makeTokenTotals(doc.stats.tokens.input, doc.stats.tokens.output, doc.stats.tokens.reasoning)
       : makeTokenTotals(0, 0, 0);
 
     const nextTotals = addTokenTotals(prevTotals, added);

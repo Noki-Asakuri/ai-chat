@@ -110,7 +110,7 @@ export function BackgroundCard(props: BackgroundCardProps) {
             />
           </div>
         ) : (
-          <div className="text-muted-foreground flex aspect-video items-center justify-center rounded-md border bg-muted text-sm">
+          <div className="flex aspect-video items-center justify-center rounded-md border bg-muted text-sm text-muted-foreground">
             No background selected.
           </div>
         )}

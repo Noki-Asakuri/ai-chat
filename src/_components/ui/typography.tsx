@@ -50,7 +50,7 @@ export function TypographyH3({ className, children, ...props }: React.ComponentP
 export function TypographyH4({ className, children, ...props }: React.ComponentProps<"h4">) {
   return (
     <h4
-      className={cn("text-foreground scroll-m-20 text-xl font-semibold tracking-tight", className)}
+      className={cn("scroll-m-20 text-xl font-semibold tracking-tight text-foreground", className)}
       {...props}
     >
       {children}
@@ -66,7 +66,7 @@ export function TypographyBlockquote({
   return (
     <blockquote
       {...props}
-      className={cn("bg-card border-card-foreground mt-4 border-l-4 py-2.5 pl-4", className)}
+      className={cn("mt-4 border-l-4 border-card-foreground bg-card py-2.5 pl-4", className)}
     >
       {children}
     </blockquote>
@@ -75,7 +75,7 @@ export function TypographyBlockquote({
 
 export function TypographyInlineCode({ children }: React.ComponentProps<"code">) {
   return (
-    <code className="bg-muted/40 relative rounded border px-[0.3rem] py-[0.2rem] text-[0.80em] before:content-[''] after:content-['']">
+    <code className="relative rounded border bg-muted/40 px-[0.3rem] py-[0.2rem] text-[0.80em] before:content-[''] after:content-['']">
       {children}
     </code>
   );
@@ -98,7 +98,7 @@ export function TypographyTableTHead({ children, ...props }: React.ComponentProp
 }
 
 export function TypographyTableTR({ children }: React.ComponentProps<"tr">) {
-  return <tr className="hover:bg-muted/40 m-0 p-0 transition-colors">{children}</tr>;
+  return <tr className="m-0 p-0 transition-colors hover:bg-muted/40">{children}</tr>;
 }
 
 export function TypographyTableTH({ children, ...props }: React.ComponentProps<"th">) {

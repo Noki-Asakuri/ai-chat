@@ -63,8 +63,8 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
 
           <CardFooter className="justify-center gap-2">
             <Button
-              onClick={() => {
-                router.invalidate();
+              onClick={async () => {
+                await router.invalidate();
               }}
             >
               Try again

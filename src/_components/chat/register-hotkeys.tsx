@@ -73,7 +73,7 @@ export function RegisterHotkeys() {
     chatInput.value += text;
   });
 
-  useWindowEvent("keydown", function handleKeyboardShortcut(event) {
+  useWindowEvent("keydown", async function handleKeyboardShortcut(event) {
     const target = event.target as HTMLElement;
 
     const eventKey = event.key.toLowerCase();
@@ -149,7 +149,7 @@ export function RegisterHotkeys() {
 
     if (eventKey === NEW_THREAD_KEYBOARD_SHORTCUT && event.shiftKey && metaKey) {
       event.preventDefault();
-      navigate({ to: "/" });
+      await navigate({ to: "/" });
 
       return;
     }

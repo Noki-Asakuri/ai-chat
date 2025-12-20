@@ -3,6 +3,8 @@ import { api } from "@/convex/_generated/api";
 import { Link, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
+import { Dialog } from "@base-ui/react/dialog";
+import { Menu } from "@base-ui/react/menu";
 import {
   DeleteIcon,
   EllipsisIcon,
@@ -15,13 +17,10 @@ import {
   RefreshCwIcon,
 } from "lucide-react";
 import { useRef, useState, useTransition, type ComponentProps } from "react";
+import { toast } from "sonner";
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-
-import { Dialog } from "@base-ui/react/dialog";
-import { Menu } from "@base-ui/react/menu";
-import { toast } from "sonner";
 
 import { buttonVariants } from "../ui/button";
 import { Input } from "../ui/input";
@@ -30,9 +29,9 @@ import { regenerateThreadTitleServerFn } from "./server-function/regenerate-thre
 import { ThreadDeleteDialog } from "./thread-delete-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
+import { useSessionId } from "@/lib/hooks/use-session";
 import type { Thread } from "@/lib/types";
 import { cn, toUUID } from "@/lib/utils";
-import { useSessionId } from "@/lib/hooks/use-session";
 
 const convexClient = getConvexReactClient();
 
@@ -44,12 +43,11 @@ type ThreadItemProps = {
 
 export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
   const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isSorting } =
-    useSortable({
-      id: thread._id,
-      disabled,
-      data: { type: "thread", threadId: thread._id, belongsTo: thread.groupId ?? null },
-    });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: thread._id,
+    disabled,
+    data: { type: "thread", threadId: thread._id, belongsTo: thread.groupId ?? null },
+  });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),

@@ -71,7 +71,7 @@ function ChatHistory() {
     }
 
     if (lastMessage.status === "streaming" && lastMessage.resumableStreamId) {
-      return autoResumeStream(lastMessage.resumableStreamId, lastMessage._id);
+      void autoResumeStream(lastMessage.resumableStreamId, lastMessage._id);
     }
   });
 

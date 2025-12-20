@@ -1,7 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import { convexQuery } from "@convex-dev/react-query";
 import { useSessionMutation } from "convex-helpers/react/sessions";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -172,27 +171,27 @@ function AttachmentsPage() {
     return sortedData.slice(start, end);
   }, [sortedData, currentPage]);
 
-  const imageAttachments = useMemo(
-    () => sortedData.filter((a) => a.type === "image"),
-    [sortedData],
-  );
+  // const imageAttachments = useMemo(
+  //   () => sortedData.filter((a) => a.type === "image"),
+  //   [sortedData],
+  // );
 
-  const galleryImages = useMemo(
-    () =>
-      imageAttachments.map((a) => ({
-        src: `https://ik.imagekit.io/gmethsnvl/ai-chat/${a.path}`,
-        alt: a.name,
-        name: a.name,
-        size: a.size,
-      })),
-    [imageAttachments],
-  );
+  // const galleryImages = useMemo(
+  //   () =>
+  //     imageAttachments.map((a) => ({
+  //       src: `https://ik.imagekit.io/gmethsnvl/ai-chat/${a.path}`,
+  //       alt: a.name,
+  //       name: a.name,
+  //       size: a.size,
+  //     })),
+  //   [imageAttachments],
+  // );
 
-  const imageIndexById = useMemo(() => {
-    const m = new Map<Id<"attachments">, number>();
-    imageAttachments.forEach((a, i) => m.set(a._id, i));
-    return m;
-  }, [imageAttachments]);
+  // const imageIndexById = useMemo(() => {
+  //   const m = new Map<Id<"attachments">, number>();
+  //   imageAttachments.forEach((a, i) => m.set(a._id, i));
+  //   return m;
+  // }, [imageAttachments]);
 
   const totals = useMemo(() => {
     const list = data ?? [];

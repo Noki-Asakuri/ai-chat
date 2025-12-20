@@ -39,7 +39,7 @@ export function getRouter() {
 
         if (error.message.includes("Not authenticated")) {
           // Hacky way to force a reset of the session on client because of desync.
-          cookieStore.delete(DEFAULT_STORAGE_KEY);
+          void cookieStore.delete(DEFAULT_STORAGE_KEY);
           window.location.reload();
         }
       },
