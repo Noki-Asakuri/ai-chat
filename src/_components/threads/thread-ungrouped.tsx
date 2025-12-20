@@ -9,6 +9,11 @@ import { SidebarGroup, SidebarGroupLabel } from "../ui/sidebar";
 
 import { ThreadItem } from "./thread-item";
 
+import {
+  getUngroupedBucketKey,
+  threadGroupUIStoreActions,
+  useThreadGroupUIStore,
+} from "@/lib/store/thread-group-ui-store";
 import { groupByDate } from "@/lib/threads/group-by-date";
 
 type UngroupedThreadGroupProps = {
@@ -53,11 +58,19 @@ type GroupByDateItemProps = {
 };
 
 function GroupByDateItem({ groupKey, title, threads }: GroupByDateItemProps) {
+  const persistedKey = getUngroupedBucketKey(groupKey);
+  const isOpen = useThreadGroupUIStore((state) => state.isOpenByKey[persistedKey] ?? true);
+
   if (threads.length === 0) return null;
   const beautifyTitle = keyToTitle[title as keyof typeof keyToTitle];
 
   return (
-    <Collapsible.Root defaultOpen data-slot={groupKey} data-threads-count={threads.length}>
+    <Collapsible.Root
+      open={isOpen}
+      onOpenChange={(nextOpen) => threadGroupUIStoreActions.setGroupOpen(persistedKey, nextOpen)}
+      data-slot={groupKey}
+      data-threads-count={threads.length}
+    >
       <SidebarGroup>
         <SidebarGroupLabel asChild className="py-1 text-sm text-muted-foreground">
           <Collapsible.Trigger className="group/trigger flex w-full items-center justify-between gap-2">

@@ -15,6 +15,11 @@ import type { ActiveGroupData, ActiveThreadData } from "./thread-content";
 import { ThreadGroupActions } from "./thread-group-actions";
 import { ThreadItem } from "./thread-item";
 
+import {
+  getUserGroupKey,
+  threadGroupUIStoreActions,
+  useThreadGroupUIStore,
+} from "@/lib/store/thread-group-ui-store";
 import { cn } from "@/lib/utils";
 
 type ThreadGroupProps = {
@@ -39,6 +44,9 @@ export function ThreadGroup({ group, threads, disabled, isOverlay }: ThreadGroup
     data: { type: "group", groupId: group?._id ?? null, title: group?.title ?? "Ungrouped" },
   });
 
+  const groupKey = getUserGroupKey(group._id);
+  const isOpen = useThreadGroupUIStore((state) => state.isOpenByKey[groupKey] ?? true);
+
   const activeData = active?.data.current as ActiveGroupData | ActiveThreadData;
   const isGroupSorting = activeData?.type === "group" && isSorting;
 
@@ -52,7 +60,11 @@ export function ThreadGroup({ group, threads, disabled, isOverlay }: ThreadGroup
     <Collapsible.Root
       key={group?._id}
       disabled={disabled}
-      defaultOpen={!disabled}
+      open={disabled ? true : isOpen}
+      onOpenChange={(nextOpen) => {
+        if (disabled) return;
+        threadGroupUIStoreActions.setGroupOpen(groupKey, nextOpen);
+      }}
       data-slot="thread-group-collapsible"
       data-group={group?._id}
       data-thread-count={threads.length}
