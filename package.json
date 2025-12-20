@@ -118,13 +118,7 @@
   "ct3aMetadata": {
     "initVersion": "7.39.3"
   },
-  "trustedDependencies": [
-    "@tailwindcss/oxide",
-    "@vercel/speed-insights",
-    "core-js",
-    "esbuild",
-    "sharp"
-  ],
+  "trustedDependencies": [],
   "overrides": {
     "vite": "8.0.0-beta.3"
   }

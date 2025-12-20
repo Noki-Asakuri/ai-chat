@@ -20,7 +20,8 @@ import { SessionProvider } from "convex-helpers/react/sessions";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
-import { DefaultCatchBoundary } from "@/components/default-catch-oundary";
+import { DefaultCatchBoundary } from "@/components/default-catch-boundary";
+import { DefaultNotFoundBoundary } from "@/components/default-not-found-boundary";
 import { Toaster } from "@/components/ui/sonner";
 import { VersionUpdateNotifier } from "@/components/version-update-notifier";
 
@@ -101,7 +102,8 @@ export const Route = createRootRouteWithContext<RootContext>()({
   },
 
   shellComponent: RootLayout,
-  errorComponent: () => DefaultCatchBoundary,
+  errorComponent: DefaultCatchBoundary,
+  notFoundComponent: DefaultNotFoundBoundary,
 });
 
 export function RootLayout() {

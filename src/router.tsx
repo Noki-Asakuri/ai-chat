@@ -8,6 +8,9 @@ import { ConvexProvider } from "convex/react";
 
 import { StrictMode } from "react";
 
+import { DefaultCatchBoundary } from "./_components/default-catch-boundary";
+import { DefaultNotFoundBoundary } from "./_components/default-not-found-boundary";
+
 import { getConvexReactClient } from "./lib/convex/client";
 
 import { routeTree } from "./routeTree.gen";
@@ -49,6 +52,8 @@ export function getRouter() {
     context: { queryClient, convexClient: convexQueryClient },
     defaultPreload: "intent",
     scrollRestoration: true,
+    defaultErrorComponent: DefaultCatchBoundary,
+    defaultNotFoundComponent: DefaultNotFoundBoundary,
 
     Wrap: ({ children }) => (
       <StrictMode>
