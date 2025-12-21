@@ -164,7 +164,7 @@ const HighlightPane = React.memo(function HighlightPane(props: {
   const shikiOptions = React.useMemo(
     (): HighlighterOptions => ({
       delay: 50,
-      tabindex: -1,
+      tabindex: false,
       transformers: transformersOnce,
       outputFormat: "html",
     }),
@@ -173,7 +173,7 @@ const HighlightPane = React.memo(function HighlightPane(props: {
 
   const className = React.useMemo(() => {
     return cn(
-      "custom-scroll codeblock *:!bg-transparent w-full overflow-auto px-2 py-2 font-mono text-sm transition-[height]",
+      "custom-scroll codeblock *:!bg-transparent w-full outline-none overflow-auto px-2 py-2 font-mono text-sm transition-[height]",
       { "*:wrap-anywhere *:text-wrap": props.wrapline },
     );
   }, [props.wrapline]);
