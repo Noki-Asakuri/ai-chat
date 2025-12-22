@@ -27,11 +27,9 @@ export async function processStreamResponse(
   await consumeUIMessageStreamResponse<UIChatMessage>({
     response,
     onEvent(event) {
-      const activeThreadId = useMessageStore.getState().currentThreadId;
-      if (activeThreadId !== threadId) return;
-
       if (event.type === "message") {
         messageStoreActions.setMessageParts(
+          threadId,
           messageId,
           event.message.parts as ChatMessage["parts"],
           event.message.metadata as ChatMessage["metadata"],

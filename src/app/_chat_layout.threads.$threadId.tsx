@@ -50,7 +50,7 @@ function ChatHistory() {
   const { autoResumeStream } = useAutoResumeStream();
   const configStore = useConfigStoreState();
 
-  const { data } = useSuspenseQuery({
+  const { data, dataUpdatedAt } = useSuspenseQuery({
     ...convexSessionQuery(api.functions.messages.getAllMessagesFromThread, { threadId }),
     retry(failureCount, error) {
       const ignoreErrors = ["Thread not found", "Not authorized", "Not authenticated"];
@@ -58,10 +58,10 @@ function ChatHistory() {
     },
   });
 
-  const syncMessage = useEffectEvent((data: ChatMessage[]) => {
-    messageStoreActions.syncMessages(data);
+  const syncMessage = useEffectEvent((messages: ChatMessage[], syncToken: number) => {
+    messageStoreActions.syncMessages(threadId, messages, syncToken);
 
-    const lastMessage = data[data.length - 1];
+    const lastMessage = messages[messages.length - 1];
     if (!lastMessage) return;
 
     if (lastMessage.metadata) {
@@ -77,8 +77,8 @@ function ChatHistory() {
   });
 
   useEffect(() => {
-    if (data) syncMessage(data.messages);
-  }, [data]);
+    if (data) syncMessage(data.messages, dataUpdatedAt);
+  }, [data, dataUpdatedAt]);
 
   return <MessageHistory />;
 }
