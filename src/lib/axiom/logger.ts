@@ -3,24 +3,26 @@ import { AxiomJSTransport, Logger } from "@axiomhq/logging";
 
 import { env } from "@/env";
 
-const axiomClient = new Axiom({ token: env.VITE_AXIOM_TOKEN });
+const axiom = new Axiom({ token: env.VITE_AXIOM_TOKEN });
 
 const axiomLogger = new Logger({
-  transports: [new AxiomJSTransport({ axiom: axiomClient, dataset: env.VITE_AXIOM_DATASET })],
+  transports: [new AxiomJSTransport({ axiom, dataset: env.VITE_AXIOM_DATASET })],
 });
 
-type LogParams = Parameters<typeof axiomLogger.info>;
-
 export const logger = {
-  info: function (...args: LogParams) {
+  debug: function (...args: Parameters<typeof axiomLogger.debug>) {
+    console.debug(...args);
+    axiomLogger.debug(...args);
+  },
+  info: function (...args: Parameters<typeof axiomLogger.info>) {
     console.log(...args);
     axiomLogger.info(...args);
   },
-  error: function (...args: LogParams) {
+  error: function (...args: Parameters<typeof axiomLogger.error>) {
     console.error(...args);
     axiomLogger.error(...args);
   },
-  warn: function (...args: LogParams) {
+  warn: function (...args: Parameters<typeof axiomLogger.warn>) {
     console.warn(...args);
     axiomLogger.warn(...args);
   },

@@ -58,8 +58,8 @@ export type MessagesStore = {
   ) => void;
 
   controllers: Record<Id<"threads">, AbortController>;
-  setController: (assistantMessageId: Id<"threads">, controller: AbortController) => void;
-  removeController: (assistantMessageId: Id<"threads">) => void;
+  setController: (threadId: Id<"threads">, controller: AbortController) => void;
+  removeController: (threadId: Id<"threads">) => void;
 };
 
 export const useMessageStore = create<MessagesStore>()(

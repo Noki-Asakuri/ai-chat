@@ -139,9 +139,9 @@ export const addMessagesToThread = authenticatedMutation({
 
 export const updateErrorMessage = authenticatedMutation({
   args: {
-    messageId: v.id("messages"),
     error: v.string(),
-    metadata: AISDKMetadata.partial(),
+    messageId: v.id("messages"),
+    metadata: v.optional(AISDKMetadata.partial()),
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
@@ -158,6 +158,8 @@ export const updateErrorMessage = authenticatedMutation({
       error: args.error,
       resumableStreamId: null,
       updatedAt: Date.now(),
+
+      parts: [{ type: "text", text: args.error, state: "done" }],
 
       metadata,
     });
