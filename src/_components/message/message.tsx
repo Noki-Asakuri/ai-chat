@@ -3,13 +3,11 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useEffect, useRef } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { Icons } from "../ui/icons";
-
 import { ChatEditTextarea } from "../chat-textarea/chat-edit-textarea";
 import { MessageContent } from "./message-content";
 import { MessageFooter } from "./message-footer";
+import { MessagePending } from "./message-pending";
 
-import { getModelData } from "@/lib/chat/models";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
@@ -81,42 +79,10 @@ export function Message({ messageId, index, total }: MessageProps) {
       data-web-search={message.metadata?.modelParams.webSearch ?? false}
     >
       {message.status === "pending" || !message.parts.length ? (
-        <MessageLoading metadata={message.metadata} />
+        <MessagePending metadata={message.metadata} />
       ) : (
         <MessageInner message={message} index={index} isLast={isLast} />
       )}
-    </div>
-  );
-}
-
-type MessageLoadingProps = {
-  metadata: ChatMessage["metadata"];
-};
-
-function MessageLoading({ metadata }: MessageLoadingProps) {
-  const modelData = getModelData(metadata?.model.request!);
-  const effort = metadata?.modelParams?.effort;
-
-  const showEffort =
-    modelData.capabilities.reasoning === true && effort !== undefined && effort !== "medium";
-
-  return (
-    <div className="flex h-11 w-full shrink-0 items-center gap-2 rounded-md border bg-background/80 px-4 py-2 backdrop-blur-md backdrop-saturate-150">
-      <div className="flex gap-2">
-        <div className="flex items-center justify-center gap-2">
-          <Icons.provider provider={modelData?.provider} className="size-5 rounded-md" />
-
-          <span>
-            {modelData?.display.name}{" "}
-            {showEffort && (
-              <span className="text-sm capitalize">({metadata?.modelParams?.effort})</span>
-            )}
-            :
-          </span>
-        </div>
-
-        <span>Waiting for server response...</span>
-      </div>
     </div>
   );
 }
