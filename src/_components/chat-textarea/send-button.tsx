@@ -14,6 +14,7 @@ import { useConfigStore, useConfigStoreState } from "../provider/config-provider
 import { ButtonWithTip } from "../ui/button";
 import { Menu, MenuArrow } from "../ui/menu";
 
+import { useAbortChatStream } from "@/lib/chat/server-function/abort-chat-stream";
 import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { chatStoreActions } from "@/lib/store/chat-store";
@@ -25,15 +26,30 @@ export function ChatSendButton() {
   const pref = useConfigStore((state) => state.pref);
   const configStore = useConfigStoreState();
 
-  const status = useMessageStore(
-    useShallow((state) => state.messagesById[state.messageIds.at(-1)!]?.status ?? "complete"),
+  const { status, threadId } = useMessageStore(
+    useShallow((state) => {
+      const lastId = state.messageIds.at(-1);
+      const lastMessage = lastId ? state.messagesById[lastId] : undefined;
+
+      return {
+        status: lastMessage?.status ?? "complete",
+        threadId: lastMessage?.threadId ?? state.currentThreadId,
+      };
+    }),
   );
 
+  const { abortChatStream } = useAbortChatStream();
   const { sendChatRequest } = useSendChatMessage();
   const [open, setOpen] = React.useState(false);
 
   async function handleSend() {
-    if (status === "streaming") return;
+    if (status === "streaming" || status === "pending") {
+      if (threadId) {
+        await abortChatStream(threadId);
+      }
+      return;
+    }
+
     await sendChatRequest();
   }
 

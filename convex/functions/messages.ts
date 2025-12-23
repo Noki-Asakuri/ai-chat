@@ -55,6 +55,23 @@ export const getAllMessagesWithoutAttachments = authenticatedQuery({
   },
 });
 
+export const canResumeStream = authenticatedQuery({
+  args: { streamId: v.string() },
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const message = await ctx.db
+      .query("messages")
+      .withIndex("by_userId_resumableStreamId", (q) =>
+        q.eq("userId", user.userId).eq("resumableStreamId", args.streamId),
+      )
+      .first();
+
+    return message?.status === "streaming";
+  },
+});
+
 export const addAttachmentsToMessage = authenticatedMutation({
   args: {
     messageId: v.string(),

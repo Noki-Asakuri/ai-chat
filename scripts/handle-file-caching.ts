@@ -1,6 +1,6 @@
 import type { Experimental_DownloadFunction } from "ai";
 
-import { cacheRedis } from "./server";
+import { cacheRedis } from "./server/redis";
 
 import { logger } from "@/lib/axiom/logger";
 import { tryCatch } from "@/lib/utils";

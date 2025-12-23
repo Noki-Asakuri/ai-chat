@@ -60,7 +60,6 @@ export function useSendChatMessage() {
     }
 
     const abortController = new AbortController();
-    messageStoreActions.setController(threadId, abortController);
 
     const userMessage: CreateMessage = {
       messageId: crypto.randomUUID(),
@@ -90,6 +89,11 @@ export function useSendChatMessage() {
       api.functions.messages.addMessagesToThread,
       { sessionId, threadId, messages: [userMessage, assistantMessage] },
     );
+
+    messageStoreActions.setController(threadId, {
+      controller: abortController,
+      assistantMessageId,
+    });
 
     const messages = convertToUIChatMessages(messagesHistory);
     const uploadedAttachments = await uploadUserAttachment(attachments, threadId, sessionId);
@@ -136,8 +140,24 @@ export function useSendChatMessage() {
       signal: abortController.signal,
     });
 
-    await processStreamResponse(response, assistantMessageId, threadId);
-    messageStoreActions.removeController(threadId);
+    const streamId = response.headers.get("X-Stream-Id") ?? undefined;
+    if (streamId) {
+      messageStoreActions.setController(threadId, {
+        controller: abortController,
+        assistantMessageId,
+        streamId,
+      });
+    }
+
+    try {
+      await processStreamResponse(response, assistantMessageId, threadId);
+    } catch (error) {
+      // Abort is an expected control-flow (user pressed stop).
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      throw error;
+    } finally {
+      messageStoreActions.removeController(threadId);
+    }
   }
 
   return { sendChatRequest };

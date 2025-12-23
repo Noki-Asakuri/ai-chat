@@ -212,7 +212,8 @@ export default defineSchema({
   })
     .index("by_userId_threadId", ["userId", "threadId"])
     .index("by_threadId", ["threadId"])
-    .index("by_messageId", ["messageId"]),
+    .index("by_messageId", ["messageId"])
+    .index("by_userId_resumableStreamId", ["userId", "resumableStreamId"]),
 
   profiles: defineTable({
     userId: v.string(),

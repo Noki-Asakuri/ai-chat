@@ -22,6 +22,12 @@ type ThreadMessagesState = {
   latestAppliedSyncToken: number;
 };
 
+export type StreamControllerEntry = {
+  controller: AbortController;
+  streamId?: string;
+  assistantMessageId?: Id<"messages">;
+};
+
 export type MessagesStore = {
   currentThreadId: Id<"threads"> | null;
   setCurrentThreadId: (threadId: Id<"threads"> | null) => void;
@@ -57,8 +63,14 @@ export type MessagesStore = {
     metadata?: ChatMessage["metadata"],
   ) => void;
 
-  controllers: Record<Id<"threads">, AbortController>;
-  setController: (threadId: Id<"threads">, controller: AbortController) => void;
+  /**
+   * Mark a message as aborted locally (used for immediate UI feedback).
+   * Also normalizes any streaming parts to `state: "done"` so the UI won't think it's still streaming.
+   */
+  markMessageAborted: (threadId: Id<"threads">, id: Id<"messages">) => void;
+
+  controllers: Record<Id<"threads">, StreamControllerEntry>;
+  setController: (threadId: Id<"threads">, entry: StreamControllerEntry) => void;
   removeController: (threadId: Id<"threads">) => void;
 };
 
@@ -112,15 +124,22 @@ export const useMessageStore = create<MessagesStore>()(
       const localHasStreamProgress = (localMeta?.localRevision ?? 0) > 0;
 
       if (localHasStreamProgress && incoming.updatedAt < localComparableTime) {
+        const isAbortUpdate =
+          incoming.metadata?.finishReason === "aborted" ||
+          (incoming.status === "complete" && incoming.resumableStreamId === null);
+
         // Server snapshot is behind what the client has already accumulated from streaming.
         // Keep local streaming-sensitive fields while still allowing server to fill in other fields.
+        // Exception: abort completion is a terminal update, so we must accept it even if timestamps race.
         return {
           ...incoming,
           parts: existing.parts,
-          status: existing.status,
-          metadata: existing.metadata,
+          status: isAbortUpdate ? incoming.status : existing.status,
+          metadata: isAbortUpdate ? incoming.metadata : existing.metadata,
           error: incoming.error ?? existing.error,
-          resumableStreamId: incoming.resumableStreamId ?? existing.resumableStreamId,
+          resumableStreamId: isAbortUpdate
+            ? incoming.resumableStreamId
+            : incoming.resumableStreamId ?? existing.resumableStreamId,
           attachments: incoming.attachments.length ? incoming.attachments : existing.attachments,
         };
       }
@@ -214,15 +233,49 @@ export const useMessageStore = create<MessagesStore>()(
         });
       },
 
-      controllers: {},
-      setController: function setController(assistantMessageId, controller) {
-        set(function set(state) {
-          state.controllers[assistantMessageId] = controller;
+      markMessageAborted: function markMessageAborted(threadId, id) {
+        set(function update(state) {
+          const thread = ensureThreadStateInDraft(state, threadId);
+          const msg = thread.messagesById[id];
+          if (!msg) return;
+
+          for (const part of msg.parts) {
+            if (part.type !== "text" && part.type !== "reasoning") continue;
+            if (part.state === "streaming") {
+              part.state = "done";
+            }
+          }
+
+          msg.status = "complete";
+          msg.resumableStreamId = null;
+
+          if (msg.metadata) {
+            msg.metadata = { ...msg.metadata, finishReason: "aborted" };
+          }
+
+          const prev = thread.localMetaById[id];
+          const nextRevision = (prev?.localRevision ?? 0) + 1;
+
+          thread.localMetaById[id] = {
+            localRevision: nextRevision,
+            localUpdatedAt: Date.now(),
+          };
+
+          if (state.currentThreadId === threadId) {
+            updateCurrentViewFromThread(state, threadId);
+          }
         });
       },
-      removeController: function removeController(assistantMessageId) {
+
+      controllers: {},
+      setController: function setController(threadId, entry) {
+        set(function set(state) {
+          state.controllers[threadId] = entry;
+        });
+      },
+      removeController: function removeController(threadId) {
         set(function remove(state) {
-          delete state.controllers[assistantMessageId];
+          delete state.controllers[threadId];
         });
       },
     };

@@ -40,14 +40,17 @@ export function useRetryChatMessage() {
       .map((id) => messageState.messagesById[id]!)
       .sort((a, b) => a.createdAt - b.createdAt);
 
-    const abortController = new AbortController();
-    messageStoreActions.setController(threadId, abortController);
-
     // Find the user message and assistant response pair
     const userMessageIndex = index % 2 === 0 ? index : index - 1;
     const assistantMessage = messagesHistory[userMessageIndex + 1]!;
 
     const assistantMessageId = assistantMessage._id;
+
+    const abortController = new AbortController();
+    messageStoreActions.setController(threadId, {
+      controller: abortController,
+      assistantMessageId,
+    });
 
     const historySlice = messagesHistory.slice(0, userMessageIndex + 1);
 
@@ -100,8 +103,23 @@ export function useRetryChatMessage() {
       signal: abortController.signal,
     });
 
-    await processStreamResponse(response, assistantMessageId, threadId);
-    messageStoreActions.removeController(threadId);
+    const streamId = response.headers.get("X-Stream-Id") ?? undefined;
+    if (streamId) {
+      messageStoreActions.setController(threadId, {
+        controller: abortController,
+        assistantMessageId,
+        streamId,
+      });
+    }
+
+    try {
+      await processStreamResponse(response, assistantMessageId, threadId);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      throw error;
+    } finally {
+      messageStoreActions.removeController(threadId);
+    }
   }
 
   return { retryChatMessage };
