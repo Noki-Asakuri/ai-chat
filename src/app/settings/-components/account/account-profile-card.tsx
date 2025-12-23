@@ -1,9 +1,9 @@
 import { useLoaderData, useRouter } from "@tanstack/react-router";
-import { useEffect, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { updateAccountProfile } from "@/lib/authkit/accountServerFunctions";
 import { getUserAvatarUrl, getUserInitials } from "@/lib/authkit/user";
 import { useStorage } from "@/lib/hooks/use-storage";
-import { cn } from "@/lib/utils";
 import { TrashIcon, UploadCloudIcon } from "lucide-react";
 
 function getFormFile(key: string, formData: FormData): File | null {
@@ -31,6 +30,8 @@ export function AccountProfileCard() {
   const { uploadAvatarFile, deleteFile } = useStorage();
 
   const [pending, startTransition] = useTransition();
+
+  const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
 
@@ -128,27 +129,47 @@ export function AccountProfileCard() {
         <CardContent className="space-y-3">
           <div className="grid gap-4 md:grid-cols-[auto_1fr] md:items-start">
             <div className="flex w-full flex-col items-center gap-3 md:w-64 md:items-start">
-              <Avatar className="size-full rounded-md">
-                <AvatarImage src={avatarUrl} alt="Profile image" />
-                <AvatarFallback className="rounded-md">{initials}</AvatarFallback>
-              </Avatar>
+              <div className="group relative w-full">
+                <Avatar className="aspect-square size-full overflow-hidden rounded-md">
+                  <AvatarImage src={avatarUrl} alt="Profile image" className="object-cover" />
+                  <AvatarFallback className="rounded-md">{initials}</AvatarFallback>
+                </Avatar>
 
-              <div className="flex w-full gap-2">
-                <Label
-                  htmlFor="avatar-file"
-                  className={cn(buttonVariants({ variant: "secondary" }), "flex-1")}
-                >
-                  <UploadCloudIcon className="size-4" />
-                  Upload
-                </Label>
+                <div className="pointer-events-none absolute inset-0 z-10 rounded-md bg-black/0 transition-colors group-focus-within:bg-black/25 group-hover:bg-black/25" />
+
+                <div className="pointer-events-none absolute top-2 right-2 z-20 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="pointer-events-auto size-8"
+                    aria-label="Upload profile image"
+                    disabled={pending}
+                    onClick={() => avatarFileInputRef.current?.click()}
+                  >
+                    <UploadCloudIcon className="size-4" />
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="pointer-events-auto size-8"
+                    aria-label="Remove profile image"
+                    disabled={pending || !existingAvatarKey}
+                    onClick={removeUploadedAvatar}
+                  >
+                    <TrashIcon className="size-4" />
+                  </Button>
+                </div>
 
                 <Input
-                  hidden
+                  ref={avatarFileInputRef}
                   id="avatar-file"
                   name="avatar-file"
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
-                  className="bg-input/30"
+                  className="sr-only"
                   disabled={pending}
                   onChange={(event) => {
                     const file = event.currentTarget.files?.[0];
@@ -161,18 +182,11 @@ export function AccountProfileCard() {
                     setAvatarPreviewUrl(URL.createObjectURL(file));
                   }}
                 />
-
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="flex-1"
-                  disabled={pending || !existingAvatarKey}
-                  onClick={removeUploadedAvatar}
-                >
-                  <TrashIcon className="size-4" />
-                  Remove
-                </Button>
               </div>
+
+              <p className="text-sm text-muted-foreground">
+                Hover your photo to upload a new one or remove it (PNG, JPG, WebP).
+              </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
