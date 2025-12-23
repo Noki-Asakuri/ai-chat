@@ -5,16 +5,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import type { ModelData } from "@/lib/chat/models";
 import { cn } from "@/lib/utils";
 
-export function ModelCapability(props: { model: ModelData }) {
+export function ModelCapability({ model }: { model: ModelData }) {
   return (
     <div className="flex items-center gap-1">
       <CapabilityIcon
         variant="reasoning"
-        enabled={
-          (typeof props.model.capabilities.reasoning === "boolean" &&
-            props.model.capabilities.reasoning === true) ||
-          props.model.capabilities.reasoning === "always"
-        }
+        enabled={model.capabilities.reasoning === true || model.capabilities.reasoning === "always"}
         title="This model supports reasoning."
       >
         <BrainIcon size={16} />
@@ -22,7 +18,7 @@ export function ModelCapability(props: { model: ModelData }) {
 
       <CapabilityIcon
         variant="imageGeneration"
-        enabled={props.model.capabilities.generateImage}
+        enabled={model.capabilities.generateImage}
         title="This model supports image generation."
       >
         <ImagePlusIcon size={16} />
@@ -30,7 +26,7 @@ export function ModelCapability(props: { model: ModelData }) {
 
       <CapabilityIcon
         variant="webSearch"
-        enabled={props.model.capabilities.webSearch}
+        enabled={model.capabilities.webSearch}
         title="This model supports web search."
       >
         <GlobeIcon size={16} />
@@ -38,7 +34,7 @@ export function ModelCapability(props: { model: ModelData }) {
 
       <CapabilityIcon
         variant="vision"
-        enabled={props.model.capabilities.vision}
+        enabled={model.capabilities.vision}
         title="This model supports vision."
       >
         <EyeIcon size={16} />
