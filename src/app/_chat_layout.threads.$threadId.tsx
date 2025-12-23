@@ -74,6 +74,11 @@ function ChatHistory() {
     if (lastMessage.status === "streaming" && lastMessage.resumableStreamId) {
       void autoResumeStream(lastMessage.resumableStreamId, lastMessage._id);
     }
+
+    // Clear any active controller if the stream has completed or errored
+    if (lastMessage.status === "complete" || lastMessage.status === "error") {
+      messageStoreActions.removeController(lastMessage.threadId);
+    }
   });
 
   useEffect(() => {

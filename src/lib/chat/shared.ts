@@ -5,7 +5,7 @@ import { consumeUIMessageStreamResponse } from "./stream-handler";
 
 import { getConvexReactClient } from "../convex/client";
 import { uploadFileToR2 } from "../convex/uploadFiles";
-import { messageStoreActions, useMessageStore } from "../store/messages-store";
+import { messageStoreActions } from "../store/messages-store";
 import type { ChatMessage, UIChatMessage, UserAttachment } from "../types";
 
 export function convertToUIChatMessages(messages: ChatMessage[]): UIChatMessage[] {
