@@ -1,12 +1,14 @@
 import { createServerApp } from "./server/app";
 import { getCommitSha } from "./server/commit-sha";
 
+import { env } from "@/env";
+
 const commitSha = getCommitSha();
 
 const { app } = createServerApp({ commitSha });
 
 const PORT = process.env.PORT || 3001;
-console.log("[Server] Server started!", { commitSha, env: process.env.NODE_ENV, port: PORT });
+console.log("[Server] Server started!", { commitSha, env: env.NODE_ENV, port: PORT });
 
 export default {
   port: PORT,

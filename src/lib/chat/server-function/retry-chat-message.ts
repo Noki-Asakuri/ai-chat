@@ -40,18 +40,13 @@ export function useRetryChatMessage() {
       .map((id) => messageState.messagesById[id]!)
       .sort((a, b) => a.createdAt - b.createdAt);
 
-    const abortController = new AbortController();
-    messageStoreActions.setController(threadId, {
-      controller: abortController,
-      assistantMessageId: undefined,
-    });
-
     // Find the user message and assistant response pair
     const userMessageIndex = index % 2 === 0 ? index : index - 1;
     const assistantMessage = messagesHistory[userMessageIndex + 1]!;
 
     const assistantMessageId = assistantMessage._id;
 
+    const abortController = new AbortController();
     messageStoreActions.setController(threadId, {
       controller: abortController,
       assistantMessageId,

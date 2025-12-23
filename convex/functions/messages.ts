@@ -68,7 +68,7 @@ export const canResumeStream = authenticatedQuery({
       )
       .first();
 
-    return message?.status === "streaming" && message.resumableStreamId === args.streamId;
+    return message?.status === "streaming";
   },
 });
 
