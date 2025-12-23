@@ -32,8 +32,13 @@ export function useAbortChatStream() {
       return;
     }
 
-    const thread = state.threadsById[threadId];
-    const message = thread?.messagesById[assistantMessageId] ?? state.messagesById[assistantMessageId];
+    // Immediately reflect terminal abort state in the UI and normalize part.state=done.
+    messageStoreActions.markMessageAborted(threadId, assistantMessageId);
+
+    const nextState = useMessageStore.getState();
+    const thread = nextState.threadsById[threadId];
+    const message =
+      thread?.messagesById[assistantMessageId] ?? nextState.messagesById[assistantMessageId];
 
     const body: AbortChatStreamRequestBody = {
       streamId,

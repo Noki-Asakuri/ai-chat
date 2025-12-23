@@ -1,3 +1,5 @@
+import { BanIcon } from "lucide-react";
+
 import {
   Message,
   MessageAvatar,
@@ -63,6 +65,15 @@ export function MessageContent({ message }: MessageContentProps) {
           )}
         </div>
       </Message>
+
+      {message.role === "assistant" && message.metadata?.finishReason === "aborted" && (
+        <div className="mt-2 flex w-full justify-center">
+          <div className="inline-flex items-center gap-2 rounded-md border border-destructive/50 bg-background/80 px-3 py-1 text-sm font-medium text-destructive backdrop-blur-md backdrop-saturate-150">
+            <BanIcon className="size-4" />
+            <span>Cancelled</span>
+          </div>
+        </div>
+      )}
     </>
   );
 }

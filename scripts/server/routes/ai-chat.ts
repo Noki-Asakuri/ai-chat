@@ -1,17 +1,11 @@
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+
 import dedent from "dedent";
 import type { Hono } from "hono";
 import { z } from "zod/v4";
 
-import {
-  APICallError,
-  smoothStream,
-  stepCountIs,
-  streamText,
-  UI_MESSAGE_STREAM_HEADERS,
-} from "ai";
-
-import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import { APICallError, smoothStream, stepCountIs, streamText, UI_MESSAGE_STREAM_HEADERS } from "ai";
 
 import { logger } from "@/lib/axiom/logger";
 import { createServerConvexClient } from "@/lib/convex/server";
@@ -20,7 +14,6 @@ import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
 import {
   messageIdSchema as messageIdSchemaZ,
-  profileIdSchema as profileIdSchemaZ,
   threadIdSchema as threadIdSchemaZ,
   validateRequestBody,
 } from "@/lib/server/validate-request-body";
@@ -61,6 +54,33 @@ const abortRequestBodySchema = z.object({
 });
 
 type AbortRequestBody = z.infer<typeof abortRequestBodySchema>;
+
+function finalizeStreamParts(parts: unknown): unknown {
+  if (!Array.isArray(parts)) return parts;
+
+  function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+  }
+
+  const out: Array<unknown> = [];
+  for (const part of parts) {
+    if (!isRecord(part)) {
+      out.push(part);
+      continue;
+    }
+
+    const next: Record<string, unknown> = { ...part };
+    const type = next["type"];
+
+    if ((type === "text" || type === "reasoning") && next["state"] === "streaming") {
+      next["state"] = "done";
+    }
+
+    out.push(next);
+  }
+
+  return out;
+}
 
 function getStreamResponseHeaders(streamId: string): Record<string, string> {
   return {
@@ -153,7 +173,7 @@ export function registerAiChatRoutes(app: Hono): void {
     type Updates = (typeof api.functions.messages.updateMessageById)["_args"]["updates"];
 
     const updates: Updates = {
-      parts: body.parts,
+      parts: finalizeStreamParts(body.parts),
       status: "complete",
       resumableStreamId: null,
     };
@@ -161,6 +181,7 @@ export function registerAiChatRoutes(app: Hono): void {
     if (body.metadata) {
       updates.metadata = {
         ...body.metadata,
+        finishReason: "aborted",
         modelParams: {
           ...body.metadata.modelParams,
           profile: null,
@@ -212,7 +233,10 @@ export function registerAiChatRoutes(app: Hono): void {
 
       const [requestBody, validateError] = await tryCatch(validateRequestBody(body));
       if (validateError) {
-        logger.error("[Chat Error]: Failed to parse request body!", { error: validateError, userId });
+        logger.error("[Chat Error]: Failed to parse request body!", {
+          error: validateError,
+          userId,
+        });
         return Response.json({ error: { message: validateError.message } }, { status: 400 });
       }
 
@@ -257,29 +281,31 @@ export function registerAiChatRoutes(app: Hono): void {
       }
 
       let systemInstruction = "";
-      const userCustomization = await convexClient.query(api.functions.users.currentUser, { sessionId });
+      const userCustomization = await convexClient.query(api.functions.users.currentUser, {
+        sessionId,
+      });
 
       if (userCustomization?.customization?.name) {
         systemInstruction += dedent`
-\t\t\t<user>
-\t\t\t## User Information:
-\t\t\tUser basic information. Avoid mentioning the user's name or occupation during the conversation.
-\t\t\tKeep it in mind and use it when necessary.
+				<user>
+				## User Information:
+				User basic information. Avoid mentioning the user's name or occupation during the conversation.
+				Keep it in mind and use it when necessary.
 
-\t\t\tName: ${userCustomization.customization.name ?? "user"}
-\t\t\tOccupation: ${userCustomization.customization.occupation ?? "unknown"}
-\t\t\t</user>
-\t\t\t\n`;
+				Name: ${userCustomization.customization.name ?? "user"}
+				Occupation: ${userCustomization.customization.occupation ?? "unknown"}
+				</user>
+				\n`;
       }
 
       systemInstruction += dedent`
-\t\t<global>
-\t\t## Global System Instruction:
-\t\tThis is the global system instruction. It should be followed unless there is a conflicting instruction in the AI Profile Instruction.
+			<global>
+			## Global System Instruction:
+			This is the global system instruction. It should be followed unless there is a conflicting instruction in the AI Profile Instruction.
 
-\t\t${userCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}
-\t\t</global>
-\t\t`;
+			${userCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}
+			</global>
+		`;
 
       if (modelParams.profile) {
         const profile = await convexClient.query(api.functions.profiles.getProfile, {
@@ -291,18 +317,18 @@ export function registerAiChatRoutes(app: Hono): void {
 
         if (prompt && prompt.length > 0) {
           systemInstruction += dedent`\n
-\t\t\t<profile>
-\t\t\t## AI Profile Instruction:
-\t\t\tUser defined instruction. This is the most important instruction. It should take precedence over the global system instruction.
+					<profile>
+					## AI Profile Instruction:
+					User defined instruction. This is the most important instruction. It should take precedence over the global system instruction.
 
-\t\t\t${prompt}
+					${prompt}
 
-\t\t\t<traits>
-\t\t\t## Traits (Optional):
-\t\t\tYou should have these traits: ${userCustomization?.customization?.traits?.join(", ") ?? "None"}.
-\t\t\t</traits>
-\t\t\t</profile>
-\t\t\t`;
+					<traits>
+					## Traits (Optional):
+					You should have these traits: ${userCustomization?.customization?.traits?.join(", ") ?? "None"}.
+					</traits>
+					</profile>
+					`;
         }
       }
 
@@ -343,13 +369,13 @@ export function registerAiChatRoutes(app: Hono): void {
             const responseBody = JSON.parse(err.responseBody || "{}");
 
             errorMessage = dedent.withOptions({ trimWhitespace: true, alignValues: true })`
-\t\t\t\t\tAn error have occurred. This is likely a server-side error, Please report to the developer.
+						An error have occurred. This is likely a server-side error, Please report to the developer.
 
-\t\t\t\t\tError:
-\t\t\t\t\t\`\`\`
-\t\t\t\t\t${JSON.stringify(responseBody, null, 2)}
-\t\t\t\t\t\`\`\`
-\t\t\t\t\t`;
+						Error:
+						\`\`\`
+						${JSON.stringify(responseBody, null, 2)}
+						\`\`\`
+						`;
           }
 
           logger.error("[Chat Error]: " + err.message, {
@@ -443,7 +469,8 @@ export function registerAiChatRoutes(app: Hono): void {
             case "finish":
               metadata.usages.inputTokens = part.totalUsage.inputTokens ?? 0;
               metadata.usages.outputTokens = part.totalUsage.outputTokenDetails.textTokens ?? 0;
-              metadata.usages.reasoningTokens = part.totalUsage.outputTokenDetails.reasoningTokens ?? 0;
+              metadata.usages.reasoningTokens =
+                part.totalUsage.outputTokenDetails.reasoningTokens ?? 0;
 
               return metadata;
           }
