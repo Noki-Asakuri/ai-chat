@@ -140,9 +140,9 @@ function AiProfilesPage() {
 
   const SortControl = useMemo(() => {
     return (
-      <Select onValueChange={(v: SortOption) => setSort(v)} value={sort}>
+      <Select onValueChange={(v) => setSort(v!)} value={sort}>
         <SelectTrigger className="h-9 w-48 text-xs">
-          <SelectValue placeholder="Sort by" />
+          <SelectValue />
         </SelectTrigger>
 
         <SelectContent>
@@ -317,16 +317,13 @@ function ProfileCard({
           </Button>
 
           <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="h-8 w-8"
-                title="Delete"
-              >
-                <Trash2Icon className="size-4" />
-              </Button>
+            <AlertDialogTrigger
+              render={<Button variant="destructive" size="icon" />}
+              className="h-8 w-8"
+              title="Delete"
+              type="button"
+            >
+              <Trash2Icon className="size-4" />
             </AlertDialogTrigger>
 
             <AlertDialogContent>

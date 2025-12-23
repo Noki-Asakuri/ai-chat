@@ -71,8 +71,8 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
             </Button>
 
             {isRoot ? (
-              <Button asChild variant="secondary">
-                <Link to="/">Go home</Link>
+              <Button render={<Link to="/" />} variant="secondary">
+                Go Home
               </Button>
             ) : (
               <Button variant="secondary" onClick={() => window.history.back()}>

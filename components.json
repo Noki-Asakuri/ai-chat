@@ -13,7 +13,10 @@
   "iconLibrary": "lucide",
   "menuAccent": "bold",
   "menuColor": "default",
-  "registries": {},
+  "registries": {
+    "@basecn": "https://basecn.dev/r/{name}",
+    "@coss": "https://coss.com/ui/r/{name}.json"
+  },
   "aliases": {
     "components": "@/_components",
     "ui": "@/_components/ui",

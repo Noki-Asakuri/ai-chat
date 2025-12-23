@@ -46,7 +46,6 @@ export function BaseChatAttachmentsButton({
         variant="ghost"
         title="Upload attachment"
         className="size-9 border p-0! px-2 py-1.5 text-xs"
-        type="button"
       >
         <label
           htmlFor={inputId}

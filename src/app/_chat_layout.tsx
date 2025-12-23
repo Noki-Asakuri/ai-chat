@@ -73,6 +73,7 @@ function RouteComponent() {
   return (
     <SidebarProvider
       id="sidebar-provider"
+      data-disable-blur={data?.customization.disableBlur}
       style={{ backgroundImage: backgroundImageUrl ? `url(${backgroundImageUrl})` : undefined }}
       className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat"
       defaultOpen={defaultOpenSidebar}

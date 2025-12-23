@@ -60,7 +60,6 @@ export function ChatSendButton() {
         className="group flex h-9 items-center gap-2 overflow-hidden rounded-md border bg-card px-2 data-[streaming=true]:border-destructive data-[streaming=true]:bg-destructive/60 data-[streaming=true]:pr-3 md:pr-0 md:pl-3"
       >
         <ButtonWithTip
-          type="button"
           size="none"
           variant="none"
           title={status === "streaming" ? "Abort Request" : "Send Message"}

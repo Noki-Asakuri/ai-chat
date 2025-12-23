@@ -502,7 +502,8 @@ export function AccountThreadsTable() {
           <div className="flex items-center">
             <Checkbox
               aria-label="Select all"
-              checked={allSelected ? true : someSelected ? "indeterminate" : false}
+              checked={allSelected ? true : someSelected ? undefined : false}
+              indeterminate={someSelected}
               onCheckedChange={(value) => setAllVisibleSelection(value === true)}
               disabled={isLoadingPage}
               className="size-5"

@@ -23,15 +23,13 @@ export function ThreadGroupButtons() {
       <ThreadCommand />
 
       <Button
-        asChild
+        render={<Link to="/" />}
         size="icon"
         variant="ghost"
         className="size-7 group-data-[state=expanded]:hidden"
       >
-        <Link to="/">
-          <PlusIcon />
-          <span className="sr-only">New Thread</span>
-        </Link>
+        <PlusIcon />
+        <span className="sr-only">New Thread</span>
       </Button>
     </div>
   );
