@@ -72,12 +72,12 @@ function GroupByDateItem({ groupKey, title, threads }: GroupByDateItemProps) {
       data-threads-count={threads.length}
     >
       <SidebarGroup>
-        <SidebarGroupLabel asChild className="py-1 text-sm text-muted-foreground">
-          <Collapsible.Trigger className="group/trigger flex w-full items-center justify-between gap-2">
-            <span>{beautifyTitle}</span>
-
-            <ChevronLeftIcon className="size-4 transition-[rotate] group-data-panel-open/trigger:-rotate-90" />
-          </Collapsible.Trigger>
+        <SidebarGroupLabel
+          render={<Collapsible.Trigger />}
+          className="group/trigger flex w-full items-center justify-between gap-2 py-1 text-sm text-muted-foreground"
+        >
+          <span>{beautifyTitle}</span>
+          <ChevronLeftIcon className="size-4 transition-[rotate] group-data-panel-open/trigger:-rotate-90" />
         </SidebarGroupLabel>
 
         <Collapsible.Panel className="flex flex-col gap-1">

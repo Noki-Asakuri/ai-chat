@@ -42,8 +42,8 @@ export function ThreadContents() {
       <hr className="border-sidebar-border" />
 
       <div className="flex items-center gap-2 *:flex-1">
-        <Button size="sm" variant="secondary" asChild>
-          <Link to="/">New Chat</Link>
+        <Button size="sm" variant="secondary" render={<Link to="/" />}>
+          New Chat
         </Button>
         <CreateGroupButton />
       </div>

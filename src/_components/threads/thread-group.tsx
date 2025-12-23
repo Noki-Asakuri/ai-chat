@@ -75,10 +75,10 @@ export function ThreadGroup({ group, threads, disabled, isOverlay }: ThreadGroup
           <SidebarGroupLabel
             {...attributes}
             {...listeners}
-            asChild
+            render={<span />}
             className="font-semibold select-none"
           >
-            <span>{group?.title}</span>
+            {group?.title}
           </SidebarGroupLabel>
 
           <div className="flex items-center gap-2">

@@ -72,8 +72,8 @@ function SidebarSkeleton() {
 
       <SidebarContent className="flex flex-1 flex-col">
         <div className="mt-2 flex items-center gap-2 *:flex-1">
-          <Button size="sm" variant="secondary" asChild>
-            <Link to="/">New Chat</Link>
+          <Button size="sm" variant="secondary" render={<Link to="/" />}>
+            New Chat
           </Button>
 
           <Button size="sm" variant="secondary" disabled>

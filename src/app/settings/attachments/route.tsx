@@ -98,7 +98,9 @@ function AttachmentsPage() {
     setSelected(all);
   }
 
-  function handleSortChange(value: string) {
+  function handleSortChange(value: string | null) {
+    if (!value) return;
+
     const [field, direction] = value.split("_");
 
     if (
@@ -263,7 +265,7 @@ function AttachmentsPage() {
               }}
             >
               <SelectTrigger>
-                <SelectValue aria-label="Filter by source" placeholder="Source: All" />
+                <SelectValue aria-label="Filter by source" />
               </SelectTrigger>
 
               <SelectContent className="bg-card">
@@ -281,7 +283,7 @@ function AttachmentsPage() {
               }}
             >
               <SelectTrigger>
-                <SelectValue aria-label="Filter by type" placeholder="Type: All" />
+                <SelectValue aria-label="Filter by type" />
               </SelectTrigger>
 
               <SelectContent className="bg-card">
@@ -293,7 +295,7 @@ function AttachmentsPage() {
 
             <Select value={`${sortField}_${sortDirection}`} onValueChange={handleSortChange}>
               <SelectTrigger>
-                <SelectValue aria-label="Sort attachments" placeholder="Sort" />
+                <SelectValue aria-label="Sort attachments" />
               </SelectTrigger>
 
               <SelectContent className="bg-card">
@@ -558,7 +560,7 @@ function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachme
 
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+      <AlertDialogTrigger render={children as React.ReactElement} />
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete file {name}?</AlertDialogTitle>

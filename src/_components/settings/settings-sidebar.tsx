@@ -33,25 +33,27 @@ function ReturnToChatButton() {
   const searchParams = useSearch({ from: "/settings" });
 
   return (
-    <Button variant="secondary" asChild className="mt-1 h-9 w-full">
-      <Link
-        to={searchParams.rt ? "/threads/$threadId" : "/"}
-        params={{ threadId: searchParams.rt }}
-      >
-        <ArrowLeftIcon />
-        Back to Chat
-      </Link>
+    <Button
+      variant="secondary"
+      className="mt-1 h-9 w-full"
+      render={
+        <Link
+          to={searchParams.rt ? "/threads/$threadId" : "/"}
+          params={{ threadId: searchParams.rt }}
+        />
+      }
+    >
+      <ArrowLeftIcon />
+      Back to Chat
     </Button>
   );
 }
 
 function SignOutButton() {
   return (
-    <Button variant="destructive" asChild className="mt-auto w-full">
-      <Link to="/auth/logout">
-        <LogOutIcon />
-        Sign out
-      </Link>
+    <Button variant="destructive" className="mt-auto w-full" render={<Link to="/auth/logout" />}>
+      <LogOutIcon />
+      Sign out
     </Button>
   );
 }

@@ -8,7 +8,7 @@ import {
   UserRoundPenIcon,
 } from "lucide-react";
 
-import { Tab, Tabs, TabsList } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const paths = [
   {
@@ -54,7 +54,7 @@ export function UserNavbar() {
     >
       <TabsList>
         {paths.map(({ path, name, icon: Icon }) => (
-          <Tab key={path} value={"tab-" + name} className="h-10 px-0 py-1">
+          <TabsTrigger key={path} value={"tab-" + name} className="h-10 px-0 py-1">
             <Link
               to={path}
               search={search}
@@ -63,7 +63,7 @@ export function UserNavbar() {
               <Icon className="size-5" />
               <span>{name}</span>
             </Link>
-          </Tab>
+          </TabsTrigger>
         ))}
       </TabsList>
     </Tabs>
