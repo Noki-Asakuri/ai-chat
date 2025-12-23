@@ -19,15 +19,25 @@ export function useAutoResumeStream() {
     console.debug("[Chat] Resuming stream", streamId);
 
     const abortController = new AbortController();
-    messageStoreActions.setController(threadId, abortController);
+    messageStoreActions.setController(threadId, {
+      controller: abortController,
+      assistantMessageId: messageId,
+      streamId,
+    });
 
     const response = await fetch(
       new URL(`/api/ai/chat?streamId=${streamId}`, import.meta.env.VITE_API_ENDPOINT),
       { credentials: "include", signal: abortController.signal },
     );
 
-    await processStreamResponse(response, messageId, threadId);
-    messageStoreActions.removeController(threadId);
+    try {
+      await processStreamResponse(response, messageId, threadId);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      throw error;
+    } finally {
+      messageStoreActions.removeController(threadId);
+    }
   }
 
   return { autoResumeStream };

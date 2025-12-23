@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
+import { useAbortChatStream } from "@/lib/chat/server-function/abort-chat-stream";
 import { useWindowEvent } from "@/lib/hooks/use-window-event";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
@@ -17,9 +18,17 @@ export function RegisterHotkeys() {
   const navigate = useNavigate();
 
   const isEditMessage = useChatStore((state) => state.editMessage !== null);
-  const status = useMessageStore(
-    (state) => state.messagesById[state.messageIds.at(-1)!]?.status ?? "complete",
-  );
+  const { status, threadId } = useMessageStore((state) => {
+    const lastId = state.messageIds.at(-1);
+    const lastMessage = lastId ? state.messagesById[lastId] : undefined;
+
+    return {
+      status: lastMessage?.status ?? "complete",
+      threadId: lastMessage?.threadId ?? state.currentThreadId,
+    };
+  });
+
+  const { abortChatStream } = useAbortChatStream();
 
   useWindowEvent("paste", function handlePaste(event) {
     // Handle pasted files
@@ -97,7 +106,9 @@ export function RegisterHotkeys() {
     if (event.key === "Escape") {
       if (status === "pending" || status === "streaming") {
         event.preventDefault();
-        // void abortChatRequest();
+        if (threadId) {
+          await abortChatStream(threadId);
+        }
       }
 
       //

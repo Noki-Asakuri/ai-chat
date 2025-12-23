@@ -22,6 +22,12 @@ type ThreadMessagesState = {
   latestAppliedSyncToken: number;
 };
 
+export type StreamControllerEntry = {
+  controller: AbortController;
+  streamId?: string;
+  assistantMessageId?: Id<"messages">;
+};
+
 export type MessagesStore = {
   currentThreadId: Id<"threads"> | null;
   setCurrentThreadId: (threadId: Id<"threads"> | null) => void;
@@ -57,8 +63,8 @@ export type MessagesStore = {
     metadata?: ChatMessage["metadata"],
   ) => void;
 
-  controllers: Record<Id<"threads">, AbortController>;
-  setController: (threadId: Id<"threads">, controller: AbortController) => void;
+  controllers: Record<Id<"threads">, StreamControllerEntry>;
+  setController: (threadId: Id<"threads">, entry: StreamControllerEntry) => void;
   removeController: (threadId: Id<"threads">) => void;
 };
 
@@ -215,14 +221,14 @@ export const useMessageStore = create<MessagesStore>()(
       },
 
       controllers: {},
-      setController: function setController(assistantMessageId, controller) {
+      setController: function setController(threadId, entry) {
         set(function set(state) {
-          state.controllers[assistantMessageId] = controller;
+          state.controllers[threadId] = entry;
         });
       },
-      removeController: function removeController(assistantMessageId) {
+      removeController: function removeController(threadId) {
         set(function remove(state) {
-          delete state.controllers[assistantMessageId];
+          delete state.controllers[threadId];
         });
       },
     };
