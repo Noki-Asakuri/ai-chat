@@ -16,7 +16,7 @@ export function ThreadSidebar() {
         <div className="h-1/2 w-full bg-linear-to-t from-sidebar/80 from-5% to-transparent to-80%" />
       </div>
 
-      <SidebarHeader>
+      <SidebarHeader className="px-4 py-0">
         <Link to="/" className="text-center text-xl">
           AI Chat
         </Link>

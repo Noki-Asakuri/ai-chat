@@ -40,9 +40,9 @@ import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 export function ThreadContents() {
   return (
     <>
-      <hr className="border-sidebar-border" />
+      <hr className="my-1 border-sidebar-border" />
 
-      <div className="my-1 grid w-full grid-cols-2">
+      <div className="grid w-full grid-cols-2">
         <Button
           size="sm"
           variant="secondary"
@@ -56,7 +56,7 @@ export function ThreadContents() {
         <CreateGroupButton />
       </div>
 
-      <hr className="border-sidebar-border" />
+      <hr className="my-1 border-sidebar-border" />
 
       <ClientOnly fallback={<Skeleton className="h-full w-full" key="thread-list-skeleton" />}>
         <Suspense fallback={<Skeleton className="h-full w-full" key="thread-list-skeleton" />}>
