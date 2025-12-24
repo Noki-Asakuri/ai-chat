@@ -23,6 +23,7 @@ export function ThreadGroupButtons() {
       <ThreadCommand />
 
       <Button
+        nativeButton={false}
         render={<Link to="/" />}
         size="icon"
         variant="ghost"

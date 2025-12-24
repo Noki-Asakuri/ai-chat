@@ -24,6 +24,7 @@ export function TopSettingHeaders() {
         <div className="flex items-center gap-2">
           <Button
             variant="none"
+            nativeButton={false}
             render={<Link to="/auth/logout" />}
             className="cursor-pointer border border-destructive/50 bg-destructive/30 hover:bg-destructive/40"
           >

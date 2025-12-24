@@ -51,6 +51,8 @@ type CapabilityIconProps = {
 };
 
 export function CapabilityIcon({ children, variant, enabled, title }: CapabilityIconProps) {
+  if (!enabled) return null;
+
   return (
     <Tooltip>
       <TooltipTrigger
@@ -62,7 +64,6 @@ export function CapabilityIcon({ children, variant, enabled, title }: Capability
               "bg-[#252030] *:stroke-[#6a6aa2]": variant === "reasoning",
               "bg-[#252b2b] *:stroke-[#79afa3]": variant === "vision",
               "bg-[#252b2b] *:stroke-[#bb6616]": variant === "imageGeneration",
-              hidden: !enabled,
             })}
           >
             {children}

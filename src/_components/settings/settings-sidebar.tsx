@@ -51,7 +51,12 @@ function ReturnToChatButton() {
 
 function SignOutButton() {
   return (
-    <Button variant="destructive" className="mt-auto w-full" render={<Link to="/auth/logout" />}>
+    <Button
+      variant="destructive"
+      className="mt-auto w-full"
+      nativeButton={false}
+      render={<Link to="/auth/logout" />}
+    >
       <LogOutIcon />
       Sign out
     </Button>

@@ -87,6 +87,7 @@ export function ThreadUserProfile() {
             <Menu.Separator className="my-1 h-px bg-primary/30" />
 
             <Menu.Item
+              nativeButton={false}
               className="flex w-full cursor-pointer items-center justify-start gap-1.5 rounded-md px-1.5 py-1 text-sm text-destructive transition-colors hover:bg-destructive/20"
               render={<Link preload={false} to="/auth/logout" />}
             >
