@@ -26,6 +26,7 @@ import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from "@dnd-
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 import { Button } from "../ui/button";
+import { ButtonGroup, ButtonGroupSeparator } from "../ui/button-group";
 import { Input } from "../ui/input";
 import { Skeleton } from "../ui/skeleton";
 
@@ -41,17 +42,18 @@ export function ThreadContents() {
     <>
       <hr className="border-sidebar-border" />
 
-      <div className="flex items-center gap-2 *:flex-1">
-        <Button size="sm" variant="secondary" render={<Link to="/" />}>
+      <div className="my-1 grid w-full grid-cols-2">
+        <Button size="sm" variant="secondary" className="rounded-l-md" render={<Link to="/" />}>
           New Chat
         </Button>
+
         <CreateGroupButton />
       </div>
 
       <hr className="border-sidebar-border" />
 
-      <ClientOnly fallback={<Skeleton className="h-full w-full" />}>
-        <Suspense fallback={<Skeleton className="h-full w-full" />}>
+      <ClientOnly fallback={<Skeleton className="h-full w-full" key="thread-list-skeleton" />}>
+        <Suspense fallback={<Skeleton className="h-full w-full" key="thread-list-skeleton" />}>
           <ThreadListWrapper />
         </Suspense>
       </ClientOnly>
@@ -77,7 +79,7 @@ function CreateGroupButton() {
 
   return (
     <>
-      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+      <Button size="sm" variant="secondary" className="rounded-r-md" onClick={() => setOpen(true)}>
         New Group
       </Button>
 

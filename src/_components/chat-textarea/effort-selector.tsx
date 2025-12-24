@@ -76,7 +76,7 @@ export function EffortSelectorBase(props: EffortSelectorProps) {
       <PopoverTrigger
         className={cn(
           buttonVariants({ variant: "ghost" }),
-          "flex h-9 cursor-pointer items-center justify-between gap-2 border px-2 py-1.5 capitalize hover:bg-primary/15!",
+          "flex h-9 cursor-pointer items-center justify-between gap-2 border border-border px-2 py-1.5 capitalize hover:bg-primary/15!",
           props.className,
         )}
       >
@@ -84,7 +84,11 @@ export function EffortSelectorBase(props: EffortSelectorProps) {
         {props.value}
       </PopoverTrigger>
 
-      <PopoverContent className="w-max bg-card p-1 text-card-foreground" includeArrow={false}>
+      <PopoverContent
+        className="w-max rounded-md bg-card p-1 text-card-foreground"
+        includeArrow={false}
+        sideOffset={8}
+      >
         <PopoverArrow className="fill-card" />
 
         <div className="flex flex-col gap-1">
@@ -92,10 +96,11 @@ export function EffortSelectorBase(props: EffortSelectorProps) {
             <Button
               key={`effort-selector-${key}`}
               variant="ghost"
-              className="w-full cursor-pointer justify-start p-0"
+              size="default"
+              className="w-full cursor-pointer justify-start"
               onClick={() => handleChange(key as ReasoningEffort)}
             >
-              <Icon className="size-5" />
+              <Icon className="size-4" />
               {label}
             </Button>
           ))}

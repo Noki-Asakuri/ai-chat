@@ -47,9 +47,13 @@ export function ThreadUserProfile() {
       </Menu.Trigger>
 
       <Menu.Portal>
-        <Menu.Backdrop />
-        <Menu.Positioner align="end" side="right" className="outline-none" sideOffset={8}>
-          <Menu.Popup className="flex origin-(--transform-origin) flex-col gap-0.5 rounded-md border border-primary/30 bg-[#342e4a] p-2 text-card-foreground transition-[transform,scale,opacity] data-ending-style:scale-90 data-ending-style:opacity-0 data-starting-style:scale-90 data-starting-style:opacity-0">
+        <Menu.Positioner
+          align="end"
+          side="right"
+          className="isolate z-50 outline-none"
+          sideOffset={8}
+        >
+          <Menu.Popup className="flex max-h-(--available-height) origin-(--transform-origin) flex-col gap-0.5 rounded-md border border-primary/30 bg-[#342e4a] p-2 text-card-foreground transition-[transform,scale,opacity] data-ending-style:scale-90 data-ending-style:opacity-0 data-starting-style:scale-90 data-starting-style:opacity-0">
             <UserMenuSettingItem href="/settings/account">
               <CircleUserRoundIcon className="size-5" />
               Account
