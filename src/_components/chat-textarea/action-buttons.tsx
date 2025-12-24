@@ -33,6 +33,7 @@ export function ChatEditActionButtons() {
       <ModelSelector
         value={editMessage.model}
         onChange={(model) => chatStoreActions.updateEditMessage({ model })}
+        triggerId="button-edit-model-selector-trigger"
       />
 
       <EffortSelector

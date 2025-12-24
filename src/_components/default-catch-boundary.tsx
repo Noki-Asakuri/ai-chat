@@ -71,7 +71,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
             </Button>
 
             {isRoot ? (
-              <Button render={<Link to="/" />} variant="secondary">
+              <Button nativeButton={false} render={<Link to="/" />} variant="secondary">
                 Go Home
               </Button>
             ) : (

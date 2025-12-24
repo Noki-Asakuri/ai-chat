@@ -43,7 +43,13 @@ export function ThreadContents() {
       <hr className="border-sidebar-border" />
 
       <div className="my-1 grid w-full grid-cols-2">
-        <Button size="sm" variant="secondary" className="rounded-l-md" render={<Link to="/" />}>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="rounded-l-md"
+          nativeButton={false}
+          render={<Link to="/" />}
+        >
           New Chat
         </Button>
 

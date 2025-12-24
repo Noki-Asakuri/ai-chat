@@ -37,7 +37,9 @@ export function DefaultNotFoundBoundary() {
               Go back
             </Button>
 
-            <Button render={<Link to="/" />}>Go Home</Button>
+            <Button nativeButton={false} render={<Link to="/" />}>
+              Go Home
+            </Button>
           </CardFooter>
         </Card>
       </div>
