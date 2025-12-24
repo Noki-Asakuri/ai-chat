@@ -41,7 +41,7 @@ export function ThreadCommand({ isSkeleton }: { isSkeleton?: boolean }) {
         title="Search Threads"
         data-expanded={threadCommandOpen}
         onClick={() => threadStoreActions.setThreadCommandOpen(true)}
-        className="h-7 rounded-md border px-2 py-1 opacity-100 transition-opacity"
+        className="h-7 rounded-md border-border px-2 py-1 opacity-100 transition-[opacity,background-color]"
       >
         <SearchIcon />
         <span className="inline md:hidden">Search...</span>
@@ -58,16 +58,16 @@ export function ThreadCommand({ isSkeleton }: { isSkeleton?: boolean }) {
 }
 
 function PinThread() {
+  const [sessionId] = useSessionId();
+
   const defaultThreads = useThreadStore((state) => state.groupedThreads.threads);
   const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
-  const [sessionId] = useSessionId();
 
   const thread = defaultThreads.find((thread) => thread._id === fromUUID(params?.threadId));
   if (!params?.threadId) return null;
 
   function toggleThreadPin() {
-    if (!thread) return;
-    if (!sessionId) return;
+    if (!thread || !sessionId) return;
 
     console.debug("[Thread] Pin thread", thread);
     void convexClient.mutation(api.functions.threads.pinThread, {

@@ -1,10 +1,8 @@
-import { PlusIcon } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { PlusIcon } from "lucide-react";
 
 import { Button } from "../ui/button";
 import { SidebarTrigger, useSidebar } from "../ui/sidebar";
-
-import { ThreadCommand } from "./thread-command";
 
 import { cn } from "@/lib/utils";
 
@@ -20,7 +18,6 @@ export function ThreadGroupButtons() {
       )}
     >
       <SidebarTrigger />
-      <ThreadCommand />
 
       <Button
         nativeButton={false}
