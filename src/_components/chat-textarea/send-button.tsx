@@ -77,7 +77,7 @@ export function ChatSendButton() {
 
         <Menu.Trigger
           type="button"
-          className="hidden h-9 rounded-none border-l group-data-[streaming=true]:hidden md:flex"
+          className="hidden h-9 rounded-none border-l border-border group-data-[streaming=true]:hidden md:flex"
           title="Send Preferences"
           render={<ButtonWithTip delay={1000} side="top" variant="none" className="size-8" />}
         >

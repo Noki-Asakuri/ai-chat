@@ -52,9 +52,9 @@ export function UserNavbar() {
       className="z-20 rounded-md border bg-background/80 backdrop-blur supports-backdrop-filter:bg-background/60"
       value={activeTab ? "tab-" + activeTab.name : null}
     >
-      <TabsList>
+      <TabsList className="w-full p-0!" variant="line">
         {paths.map(({ path, name, icon: Icon }) => (
-          <TabsTrigger key={path} value={"tab-" + name} className="h-10 px-0 py-1">
+          <TabsTrigger key={path} value={"tab-" + name} className="h-8">
             <Link
               to={path}
               search={search}

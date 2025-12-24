@@ -188,10 +188,13 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
           <Menu.Positioner
             side="right"
             align="center"
-            className="p-1"
+            className="isolate z-50 outline-none"
             sideOffset={isStreaming ? 20 : 50}
           >
-            <Menu.Popup className="flex w-max origin-(--transform-origin) flex-col overflow-hidden rounded-md border bg-sidebar/60 backdrop-blur-md backdrop-saturate-150">
+            <Menu.Popup
+              data-slot="dropdown-menu-content"
+              className="z-50 flex max-h-(--available-height) w-max min-w-32 origin-(--transform-origin) flex-col overflow-hidden overflow-x-hidden overflow-y-auto rounded-md border bg-sidebar/60 text-popover-foreground shadow-md backdrop-blur-md backdrop-saturate-150 duration-100 outline-none data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+            >
               {thread.branchedFrom && (
                 <Menu.Item
                   title="Go to parent thread"
