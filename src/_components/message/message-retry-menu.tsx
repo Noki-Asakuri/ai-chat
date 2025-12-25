@@ -45,11 +45,6 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
     return acc;
   }, {});
 
-  function setPopupOpen(open: boolean) {
-    // useChatStore.getState().setPopupRetryMessageId(open ? message._id : "");
-    setOpen(open);
-  }
-
   // Left click: immediately retry with the same model.
   function handleMouseDown(event: React.MouseEvent<HTMLButtonElement>) {
     if (pendingRetry) return;
@@ -71,7 +66,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
 
     event.preventDefault();
     event.stopPropagation();
-    setPopupOpen(true);
+    setOpen(true);
   }
 
   return (
@@ -84,11 +79,12 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
           return;
         }
 
-        setPopupOpen(open);
+        setOpen(open);
       }}
     >
       <Menu.Trigger
         title="Retry Message"
+        data-slot="message-retry-trigger"
         // @ts-expect-error BaseUI bug
         render={<ButtonWithTip side="bottom" variant="ghost" />}
         disabled={pendingRetry}
@@ -107,7 +103,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
             <Menu.Item
               className={cn(buttonVariants({ variant: "ghost" }), "w-full justify-start")}
               onClick={async () => {
-                setPopupOpen(false);
+                setOpen(false);
                 await retryChatMessage({ index });
               }}
             >

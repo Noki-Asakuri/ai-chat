@@ -17,6 +17,7 @@ export function MessageFooter({ index, isLast, message }: MessageFooterProps) {
     <div
       className={cn(
         "flex w-full items-center gap-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100",
+        "group-has-[button[aria-expanded=true]]:opacity-100",
         {
           "justify-end bg-transparent": message.role === "user",
           "opacity-100": isLast,
