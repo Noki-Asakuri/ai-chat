@@ -8,6 +8,7 @@ import { useConfigStore } from "@/components/provider/config-provider";
 
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
+import { tryCatch } from "@/lib/utils";
 
 import { convertToUIChatMessages, processStreamResponse } from "../shared";
 
@@ -112,13 +113,12 @@ export function useRetryChatMessage() {
       });
     }
 
-    try {
-      await processStreamResponse(response, assistantMessageId, threadId);
-    } catch (error) {
+    const [, error] = await tryCatch(processStreamResponse(response, assistantMessageId, threadId));
+    messageStoreActions.removeController(threadId);
+
+    if (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       throw error;
-    } finally {
-      messageStoreActions.removeController(threadId);
     }
   }
 
