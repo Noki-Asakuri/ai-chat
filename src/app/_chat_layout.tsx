@@ -23,17 +23,19 @@ import { convexSessionQuery } from "@/lib/convex/helpers";
 const getCookiesServerFunction = createIsomorphicFn()
   .server(async () => {
     const backgroundImage = getCookie("background-image");
+    const disableBlur = getCookie("disable-blur") === "true";
     const defaultOpenSidebar = getCookie(SIDEBAR_COOKIE_NAME) === "true";
 
     console.log("Server cookies", backgroundImage, defaultOpenSidebar);
-    return { backgroundImage, defaultOpenSidebar };
+    return { backgroundImage, defaultOpenSidebar, disableBlur };
   })
   .client(async () => {
     const backgroundImage = (await cookieStore.get("background-image"))?.value;
+    const disableBlur = (await cookieStore.get("disable-blur"))?.value === "true";
     const defaultOpenSidebar = (await cookieStore.get(SIDEBAR_COOKIE_NAME))?.value === "true";
 
     console.log("Client cookies", backgroundImage, defaultOpenSidebar);
-    return { backgroundImage, defaultOpenSidebar };
+    return { backgroundImage, defaultOpenSidebar, disableBlur };
   });
 
 export const Route = createFileRoute("/_chat_layout")({
@@ -49,8 +51,8 @@ export const Route = createFileRoute("/_chat_layout")({
   },
 
   loader: async ({ context }) => {
-    const { backgroundImage, defaultOpenSidebar } = await getCookiesServerFunction();
-    return { backgroundImage, defaultOpenSidebar, user: context.user! };
+    const cookiesDefaultOptions = await getCookiesServerFunction();
+    return { ...cookiesDefaultOptions, user: context.user! };
   },
 
   head: () => ({
@@ -59,7 +61,7 @@ export const Route = createFileRoute("/_chat_layout")({
 });
 
 function RouteComponent() {
-  const { backgroundImage, defaultOpenSidebar } = Route.useLoaderData();
+  const { backgroundImage, defaultOpenSidebar, disableBlur } = Route.useLoaderData();
   const { data } = useQuery(convexSessionQuery(api.functions.users.currentUser));
 
   const backgroundImageUrl =
@@ -72,7 +74,7 @@ function RouteComponent() {
   return (
     <SidebarProvider
       id="sidebar-provider"
-      data-disable-blur={data?.customization.disableBlur}
+      data-disable-blur={data?.customization.disableBlur ?? disableBlur ?? false}
       style={{ backgroundImage: backgroundImageUrl ? `url(${backgroundImageUrl})` : undefined }}
       className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat"
       defaultOpen={defaultOpenSidebar}
@@ -117,7 +119,13 @@ function ChatComponentPage() {
     } else {
       document.cookie = `background-image=; path=/;`;
     }
-  }, [data?.customization.backgroundId]);
+
+    if (data?.customization.disableBlur) {
+      document.cookie = `disable-blur=true; path=/;`;
+    } else {
+      document.cookie = `disable-blur=false; path=/;`;
+    }
+  }, [data?.customization]);
 
   return (
     <ConfigStoreProvider
