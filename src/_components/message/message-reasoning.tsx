@@ -7,17 +7,18 @@ import type { ChatMessage } from "@/lib/types";
 
 type ThinkingToggleProps = {
   parts: ReasoningUIPart[];
+  status: ChatMessage["status"];
   metadata: ChatMessage["metadata"];
 };
 
-export function MessageReasoning({ parts, metadata }: ThinkingToggleProps) {
+export function MessageReasoning({ parts, status, metadata }: ThinkingToggleProps) {
   if (!metadata) return null;
 
   const isReasoningModel = getModelData(metadata.model.request).capabilities.reasoning;
   if (!isReasoningModel || metadata.modelParams.effort === "none") return null;
 
   const reasoning = parts.map((p) => p.text).join("\n\n");
-  const status = parts.some((p) => p.state === "streaming") ? "streaming" : "complete";
+  const isReasoningStreaming = parts.some((p) => p.state === "streaming");
 
   if (metadata.durations.reasoning === 0 && status === "complete") return null;
 
@@ -25,7 +26,7 @@ export function MessageReasoning({ parts, metadata }: ThinkingToggleProps) {
     <Reasoning
       defaultOpen={false}
       duration={metadata.durations.reasoning}
-      isStreaming={status === "streaming"}
+      isStreaming={isReasoningStreaming}
     >
       <ReasoningTrigger
         disabled={reasoning.length === 0}

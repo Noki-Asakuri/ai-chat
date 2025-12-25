@@ -37,7 +37,11 @@ export function MessageContent({ message }: MessageContentProps) {
 
   return (
     <>
-      <MessageReasoning parts={reasoningParts} metadata={message.metadata} />
+      <MessageReasoning
+        parts={reasoningParts}
+        status={message.status}
+        metadata={message.metadata}
+      />
 
       <Message
         from={message.role}
