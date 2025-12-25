@@ -39,8 +39,8 @@ const languageDisplayName: Record<
 > = {
   ts: { name: "TypeScript", icon: Icons.typescript },
   typescript: { name: "TypeScript", icon: Icons.typescript },
-  tsx: { name: "TSX", icon: Icons.tsx },
-  jsx: { name: "JSX", icon: Icons.jsx },
+  tsx: { name: "Typescript React", icon: Icons.tsx },
+  jsx: { name: "JavaScript React", icon: Icons.jsx },
   js: { name: "JavaScript", icon: Icons.javascript },
   javascript: { name: "JavaScript", icon: Icons.javascript },
   cpp: { name: "C++", icon: Icons.cpp },
