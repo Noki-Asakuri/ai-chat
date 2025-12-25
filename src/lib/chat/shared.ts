@@ -32,8 +32,11 @@ export async function processStreamResponse(
           threadId,
           messageId,
           event.message.parts as ChatMessage["parts"],
-          event.message.metadata as ChatMessage["metadata"],
         );
+      }
+
+      if (event.type === "done") {
+        messageStoreActions.removeController(threadId);
       }
     },
   });
