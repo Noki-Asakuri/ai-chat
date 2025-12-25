@@ -10,11 +10,10 @@ import { Suspense, useEffect } from "react";
 
 import { GlobalDropzone } from "@/components/chat/global-dropzone";
 import { LoadingSkeleton } from "@/components/chat/loading-skeleton";
-import { RegisterHotkeys } from "@/components/chat/register-hotkeys";
+import { RegisterEventHandlers } from "@/components/chat/register-event-handlers";
 import { ThreadTitle } from "@/components/chat/top-thread-title";
 import { ConfigStoreProvider } from "@/components/provider/config-provider";
 import { ThreadProfileSidebar } from "@/components/threads/profile/profile-sidebar";
-import { ThreadCommand } from "@/components/threads/thread-command";
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -103,7 +102,7 @@ function RouteComponent() {
         </Suspense>
       </GlobalDropzone>
 
-      <RegisterHotkeys />
+      <RegisterEventHandlers />
     </SidebarProvider>
   );
 }
