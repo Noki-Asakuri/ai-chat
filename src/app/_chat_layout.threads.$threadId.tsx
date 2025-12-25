@@ -79,6 +79,9 @@ function ChatHistory() {
     if (lastMessage.status === "complete" || lastMessage.status === "error") {
       messageStoreActions.removeController(lastMessage.threadId);
     }
+
+    // Auto scroll to bottom when new messages are added
+    window.dispatchEvent(new Event("chat:force-scroll-bottom"));
   });
 
   useEffect(() => {
