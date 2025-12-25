@@ -12,7 +12,7 @@ import { useConfigStore } from "@/components/provider/config-provider";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
-import { fromUUID, toUUID } from "@/lib/utils";
+import { fromUUID, toUUID, tryCatch } from "@/lib/utils";
 
 import { convertToUIChatMessages, processStreamResponse, uploadUserAttachment } from "../shared";
 
@@ -50,10 +50,6 @@ export function useSendChatMessage() {
     if (!input || lastMessage?.status === "pending" || lastMessage?.status === "streaming") return;
     chatStoreActions.resetInput();
 
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("chat:force-scroll-bottom"));
-    }
-
     if (!threadId) {
       threadId = await convexClient.mutation(api.functions.threads.createThread, { sessionId });
       await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(threadId) } });
@@ -89,6 +85,11 @@ export function useSendChatMessage() {
       api.functions.messages.addMessagesToThread,
       { sessionId, threadId, messages: [userMessage, assistantMessage] },
     );
+
+    // Scroll to the bottom after we have added the messages to the thread
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("chat:force-scroll-bottom"));
+    }
 
     messageStoreActions.setController(threadId, {
       controller: abortController,
@@ -149,14 +150,12 @@ export function useSendChatMessage() {
       });
     }
 
-    try {
-      await processStreamResponse(response, assistantMessageId, threadId);
-    } catch (error) {
-      // Abort is an expected control-flow (user pressed stop).
+    const [, error] = await tryCatch(processStreamResponse(response, assistantMessageId, threadId));
+    messageStoreActions.removeController(threadId);
+
+    if (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       throw error;
-    } finally {
-      messageStoreActions.removeController(threadId);
     }
   }
 
