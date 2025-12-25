@@ -185,20 +185,24 @@ export function RegisterEventHandlers() {
   });
 
   // Handle scroll-to-bottom requests
-  useWindowEvent("chat:force-scroll-bottom", function handleForceScrollBottom() {
-    const element = document.querySelector("#messages-scrollarea");
-    if (!element) return;
+  useWindowEvent(
+    "chat:force-scroll-bottom",
+    function handleForceScrollBottom() {
+      const element = document.querySelector("#messages-scrollarea");
+      if (!element) return;
 
-    console.log("[Chat] Scrolling to bottom", {
-      scrollHeight: element.scrollHeight,
-      scrollTop: element.scrollTop,
-      clientHeight: element.clientHeight,
-    });
+      console.log("[Chat] Scrolling to bottom", {
+        scrollHeight: element.scrollHeight,
+        scrollTop: element.scrollTop,
+        clientHeight: element.clientHeight,
+      });
 
-    requestAnimationFrame(() => {
-      element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
-    });
-  });
+      requestAnimationFrame(() => {
+        element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
+      });
+    },
+    { capture: true },
+  );
 
   return null;
 }
