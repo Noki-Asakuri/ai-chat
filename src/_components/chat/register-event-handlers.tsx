@@ -9,30 +9,42 @@ import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import { threadStoreActions } from "@/lib/store/thread-store";
 import type { UserAttachment } from "@/lib/types";
-import { useShallow } from "zustand/shallow";
 
 const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
 const MODEL_SELECTOR_KEYBOARD_SHORTCUT = "m";
 
-export function RegisterHotkeys() {
+function getIsEditMessage(): boolean {
+  return useChatStore.getState().editMessage !== null;
+}
+
+function getStatusAndThreadId() {
+  const state = useMessageStore.getState();
+
+  const lastId = state.messageIds.at(-1);
+  const lastMessage = lastId ? state.messagesById[lastId] : undefined;
+
+  return {
+    status: lastMessage?.status ?? "complete",
+    threadId: lastMessage?.threadId ?? state.currentThreadId ?? null,
+  };
+}
+
+export function RegisterEventHandlers() {
   const navigate = useNavigate();
-
-  const isEditMessage = useChatStore((state) => state.editMessage !== null);
-  const { status, threadId } = useMessageStore(
-    useShallow((state) => {
-      const lastId = state.messageIds.at(-1);
-      const lastMessage = lastId ? state.messagesById[lastId] : undefined;
-
-      return {
-        status: lastMessage?.status ?? "complete",
-        threadId: lastMessage?.threadId ?? state.currentThreadId,
-      };
-    }),
-  );
-
   const { abortChatStream } = useAbortChatStream();
 
+  // Handle scroll-to-bottom requests
+  useWindowEvent("chat:force-scroll-bottom", function handleForceScrollBottom() {
+    const element = document.querySelector("#messages-scrollarea");
+    if (!element) return;
+
+    requestAnimationFrame(() => {
+      element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
+    });
+  });
+
+  // Handle global paste events
   useWindowEvent("paste", function handlePaste(event) {
     // Handle pasted files
     if (event.clipboardData?.files.length) {
@@ -85,11 +97,26 @@ export function RegisterHotkeys() {
     chatInput.value += text;
   });
 
+  // Handle global copy events, prevent trailing newline
+  useWindowEvent("copy", function handleCopy(event) {
+    const selectedText = window.getSelection()?.toString();
+    if (!selectedText) return;
+
+    if (navigator?.clipboard) {
+      event.preventDefault();
+      void navigator.clipboard.writeText(selectedText.trim());
+    }
+  });
+
+  // Handle global keyboard shortcuts
   useWindowEvent("keydown", async function handleKeyboardShortcut(event) {
     const target = event.target as HTMLElement;
 
     const eventKey = event.key.toLowerCase();
     const metaKey = event.metaKey || event.ctrlKey;
+
+    const isEditMessage = getIsEditMessage();
+    const { status, threadId } = getStatusAndThreadId();
 
     if (
       !event.ctrlKey &&
