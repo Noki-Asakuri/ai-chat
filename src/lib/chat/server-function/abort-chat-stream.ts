@@ -23,7 +23,7 @@ export function useAbortChatStream() {
 
     // Stop client-side consumption immediately.
     if (!abortController.signal.aborted) {
-      abortController.abort();
+      abortController.abort("User aborted");
     }
 
     // Best-effort cleanup if we don't have enough context to notify the server.

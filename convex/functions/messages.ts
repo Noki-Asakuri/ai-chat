@@ -213,6 +213,7 @@ export const updateMessageById = authenticatedMutation({
       messageUserId: message?.userId ?? "Message not found",
       status: args.updates.status,
       messageThreadId: message?.threadId ?? "Message not found",
+      reason: args.updates.metadata?.finishReason,
     });
 
     if (!message) throw new Error("Message not found");

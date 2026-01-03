@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -18,7 +19,6 @@ import { getModelData } from "@/lib/chat/models";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
-import type { Doc } from "@/convex/_generated/dataModel";
 
 type MessageMetadataProps = {
   metadata: ChatMessage["metadata"];
@@ -28,6 +28,7 @@ export function MessageMetadata({ metadata }: MessageMetadataProps) {
   if (!metadata) return null;
 
   const modelData = getModelData(metadata.model.request);
+  const hasFullMetadata = metadata.usages.inputTokens > 0;
 
   const showEffort =
     typeof modelData.capabilities.reasoning === "boolean" &&
@@ -43,7 +44,7 @@ export function MessageMetadata({ metadata }: MessageMetadataProps) {
         {showEffort && <span className="text-sm capitalize">({metadata.modelParams.effort})</span>}
       </div>
 
-      <PopoverInfo metadata={metadata} />
+      {hasFullMetadata && <PopoverInfo metadata={metadata} />}
     </div>
   );
 }
