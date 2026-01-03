@@ -1,5 +1,6 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
+import { BanIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useShallow } from "zustand/shallow";
 
@@ -78,13 +79,17 @@ export function Message({ messageId, index, total }: MessageProps) {
       data-effort={message.metadata?.modelParams.effort}
       data-web-search={message.metadata?.modelParams.webSearch ?? false}
     >
-      {message.status === "pending" || !message.parts.length ? (
-        <MessagePending metadata={message.metadata} />
-      ) : (
-        <MessageInner message={message} index={index} isLast={isLast} />
-      )}
+      <ConditionallyRenderedMessage message={message} index={index} isLast={isLast} />
     </div>
   );
+}
+
+export function ConditionallyRenderedMessage({ message, ...props }: MessageInnerProps) {
+  if (message.status === "pending" && !message.parts.length) {
+    return <MessagePending metadata={message.metadata} />;
+  }
+
+  return <MessageInner message={message} {...props} />;
 }
 
 type MessageInnerProps = {
@@ -99,10 +104,25 @@ function MessageInner({ message, index, isLast }: MessageInnerProps) {
 
   if (isEditingMessage) return <ChatEditTextarea />;
 
+  const isMessageCancelled =
+    message.role === "assistant" && message.metadata?.finishReason === "aborted";
+
   return (
     <>
       <MessageContent message={message} />
+      {isMessageCancelled && <CancelledMessage />}
       <MessageFooter index={index} isLast={isLast} message={message} />
     </>
+  );
+}
+
+function CancelledMessage() {
+  return (
+    <div className="mt-2 flex w-full justify-center">
+      <div className="inline-flex items-center gap-2 rounded-md border border-destructive/50 bg-background/80 px-3 py-1 text-sm font-medium text-destructive backdrop-blur-md backdrop-saturate-150">
+        <BanIcon className="size-4" />
+        <span>Cancelled</span>
+      </div>
+    </div>
   );
 }

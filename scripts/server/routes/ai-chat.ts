@@ -14,6 +14,7 @@ import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
 import {
   messageIdSchema as messageIdSchemaZ,
+  profileIdSchema,
   threadIdSchema as threadIdSchemaZ,
   validateRequestBody,
 } from "@/lib/server/validate-request-body";
@@ -41,7 +42,7 @@ const abortMetadataSchema = z.object({
     // IMPORTANT: Convex expects an Id<"profiles"> here, which is a branded string type.
     // The client can't produce the branded type without unsafe casting, so we accept the string
     // and normalize it to null before persisting.
-    profile: z.string().nullable().optional(),
+    profile: profileIdSchema.nullable().optional(),
   }),
 });
 
@@ -179,14 +180,7 @@ export function registerAiChatRoutes(app: Hono): void {
     };
 
     if (body.metadata) {
-      updates.metadata = {
-        ...body.metadata,
-        finishReason: "aborted",
-        modelParams: {
-          ...body.metadata.modelParams,
-          profile: null,
-        },
-      };
+      updates.metadata = { ...body.metadata, finishReason: "aborted" };
     }
 
     await convexClient.mutation(api.functions.messages.updateMessageById, {

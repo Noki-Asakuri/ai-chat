@@ -35,8 +35,6 @@ export function getRouter() {
     },
     queryCache: new QueryCache({
       onError: (error) => {
-        if (!(error instanceof Error)) return;
-
         if (error.message.includes("Not authenticated")) {
           // Hacky way to force a reset of the session on client because of desync.
           void cookieStore.delete(DEFAULT_STORAGE_KEY);
