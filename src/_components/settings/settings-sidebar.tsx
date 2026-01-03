@@ -35,6 +35,7 @@ function ReturnToChatButton() {
   return (
     <Button
       variant="secondary"
+      nativeButton={false}
       className="mt-1 h-9 w-full"
       render={
         <Link

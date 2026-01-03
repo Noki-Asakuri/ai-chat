@@ -8,7 +8,7 @@ import {
   UserRoundPenIcon,
 } from "lucide-react";
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabTrigger } from "@/components/ui/tabs";
 
 const paths = [
   {
@@ -52,19 +52,23 @@ export function UserNavbar() {
       className="z-20 rounded-md border bg-background/80 backdrop-blur supports-backdrop-filter:bg-background/60"
       value={activeTab ? "tab-" + activeTab.name : null}
     >
-      <TabsList className="w-full p-0!" variant="line">
-        {paths.map(({ path, name, icon: Icon }) => (
-          <TabsTrigger key={path} value={"tab-" + name} className="h-8">
-            <Link
-              to={path}
-              search={search}
-              className="flex size-full items-center justify-center gap-1.5 rounded-md px-2 transition-colors hover:bg-muted-foreground/20 active:hover:bg-transparent"
+      <TabsList className="w-full py-1">
+        {paths.map(({ path, name, icon: Icon }) => {
+          const renderProp = <Link to={path} search={search} />;
+
+          return (
+            <TabTrigger
+              key={path}
+              nativeButton={false}
+              value={"tab-" + name}
+              render={renderProp}
+              className="h-8 gap-1.5 rounded-md transition-colors aria-[selected='false']:hover:bg-muted-foreground/20"
             >
               <Icon className="size-5" />
               <span>{name}</span>
-            </Link>
-          </TabsTrigger>
-        ))}
+            </TabTrigger>
+          );
+        })}
       </TabsList>
     </Tabs>
   );
