@@ -66,7 +66,7 @@ export function SettingsRouteHeader() {
   if (!header) return null;
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="sticky top-0 z-20 flex w-full flex-col gap-1 bg-background px-0.5 py-2">
       <h2 className="text-2xl font-bold">{header.title}</h2>
       <p className="text-muted-foreground">{header.description}</p>
     </div>
