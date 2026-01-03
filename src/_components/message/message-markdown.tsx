@@ -153,7 +153,6 @@ type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
 export function StreamDownWrapper({ children, role, ...props }: MarkdownProps) {
   return (
     <Streamdown
-      mode={role === "user" ? "static" : "streaming"}
       parseIncompleteMarkdown={false}
       rehypePlugins={[
         rehypeRaw,

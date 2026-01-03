@@ -1,4 +1,5 @@
 import { useLoaderData, useRouter } from "@tanstack/react-router";
+import { TrashIcon, UploadCloudIcon } from "lucide-react";
 import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { toast } from "sonner";
 
@@ -11,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { updateAccountProfile } from "@/lib/authkit/accountServerFunctions";
 import { getUserAvatarUrl, getUserInitials } from "@/lib/authkit/user";
 import { useStorage } from "@/lib/hooks/use-storage";
-import { TrashIcon, UploadCloudIcon } from "lucide-react";
 
 function getFormFile(key: string, formData: FormData): File | null {
   const value = formData.get(key);
@@ -154,7 +154,7 @@ export function AccountProfileCard() {
                     type="button"
                     variant="destructive"
                     size="icon"
-                    className="pointer-events-auto size-8"
+                    className="pointer-events-auto size-8 border-destructive/60"
                     aria-label="Remove profile image"
                     disabled={pending || !existingAvatarKey}
                     onClick={removeUploadedAvatar}
