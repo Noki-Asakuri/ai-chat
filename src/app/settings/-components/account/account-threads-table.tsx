@@ -748,8 +748,8 @@ export function AccountThreadsTable() {
         </div>
       </div>
 
-      <div className="w-full overflow-x-auto rounded-md border">
-        <table className="w-full">
+      <div className="w-full min-w-0 max-w-full overflow-x-auto rounded-md border">
+        <table className="min-w-max w-full">
           <thead className="bg-muted">
             {headerTable.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="m-0 p-0">

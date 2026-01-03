@@ -47,10 +47,10 @@ function AuthLayout() {
       <div className="grid h-full min-h-0 w-full gap-2 md:gap-4 lg:grid-cols-[300px_1fr]">
         <SettingsSidebar />
 
-        <div className="flex min-h-0 max-w-full flex-col">
+        <div className="flex min-h-0 min-w-0 max-w-full flex-col">
           <UserNavbar />
 
-          <div className="custom-scroll isolate z-10 flex min-h-0 w-full flex-1 flex-col gap-1 overflow-visible pr-3 lg:overflow-y-auto [&>div:not(:first-child)]:pl-1">
+          <div className="custom-scroll isolate z-10 flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col gap-1 overflow-visible pr-3 lg:overflow-y-auto [&>div:not(:first-child)]:pl-1">
             <SettingsRouteHeader />
             <Outlet />
           </div>
