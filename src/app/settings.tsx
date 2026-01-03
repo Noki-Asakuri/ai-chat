@@ -43,18 +43,15 @@ export const Route = createFileRoute("/settings")({
 
 function AuthLayout() {
   return (
-    <main className="custom-scroll mx-auto h-svh w-full flex-1 overflow-y-auto px-6 py-4 lg:overflow-hidden">
-      <div className="grid h-full min-h-0 w-full gap-4 lg:grid-cols-[300px_1fr]">
+    <main className="custom-scroll mx-auto h-svh w-full flex-1 overflow-y-auto px-4 py-2 md:px-6 md:py-4 lg:overflow-hidden">
+      <div className="grid h-full min-h-0 w-full gap-2 md:gap-4 lg:grid-cols-[300px_1fr]">
         <SettingsSidebar />
 
-        <div className="flex min-h-0 flex-col">
+        <div className="flex min-h-0 max-w-full flex-col">
           <UserNavbar />
 
-          <div className="custom-scroll isolate z-10 flex min-h-0 w-full flex-1 flex-col overflow-visible px-2 pr-3 lg:overflow-y-auto">
-            <div className="sticky top-0 z-20 bg-background/80 py-2 backdrop-blur supports-backdrop-filter:bg-background/60">
-              <SettingsRouteHeader />
-            </div>
-
+          <div className="custom-scroll isolate z-10 flex min-h-0 w-full flex-1 flex-col gap-1 overflow-visible pr-3 lg:overflow-y-auto [&>div:not(:first-child)]:pl-1">
+            <SettingsRouteHeader />
             <Outlet />
           </div>
         </div>
