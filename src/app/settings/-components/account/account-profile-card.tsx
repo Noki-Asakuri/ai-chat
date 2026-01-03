@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { updateAccountProfile } from "@/lib/authkit/accountServerFunctions";
 import { getUserAvatarUrl, getUserInitials } from "@/lib/authkit/user";
 import { useStorage } from "@/lib/hooks/use-storage";
+import { censorEmail } from "@/lib/email";
 
 function getFormFile(key: string, formData: FormData): File | null {
   const value = formData.get(key);
@@ -35,6 +36,10 @@ export function AccountProfileCard() {
 
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
 
+  const userEmail = user.email ?? "";
+  const [isEditingEmail, setIsEditingEmail] = useState<boolean>(false);
+  const [emailDraft, setEmailDraft] = useState<string>("");
+
   const existingAvatarKey = normalizeOptionalMetadataString(user.metadata.avatarKey);
 
   const avatarUrl = avatarPreviewUrl ?? getUserAvatarUrl(user);
@@ -53,13 +58,14 @@ export function AccountProfileCard() {
 
     const firstNameRaw = formData.get("first-name");
     const lastNameRaw = formData.get("last-name");
-    const emailRaw = formData.get("email");
 
     const avatarFile = getFormFile("avatar-file", formData);
 
     const firstName = typeof firstNameRaw === "string" ? firstNameRaw : "";
     const lastName = typeof lastNameRaw === "string" ? lastNameRaw : "";
-    const email = typeof emailRaw === "string" ? emailRaw : "";
+
+    const emailCandidate = emailDraft.trim();
+    const email = emailCandidate.length > 0 ? emailCandidate : userEmail;
 
     startTransition(async () => {
       const promise = (async () => {
@@ -86,6 +92,8 @@ export function AccountProfileCard() {
 
       await promise;
       setAvatarPreviewUrl(null);
+      setIsEditingEmail(false);
+      setEmailDraft("");
       await router.invalidate();
     });
   }
@@ -219,11 +227,24 @@ export function AccountProfileCard() {
                 <Input
                   id="email"
                   name="email"
-                  type="email"
-                  autoComplete="email"
+                  type={isEditingEmail ? "email" : "text"}
+                  autoComplete="off"
                   className="bg-input/30"
                   disabled={pending}
-                  defaultValue={user.email ?? ""}
+                  value={
+                    isEditingEmail ? emailDraft : censorEmail(emailDraft.trim().length > 0 ? emailDraft : userEmail)
+                  }
+                  placeholder={isEditingEmail ? "Enter a new email" : undefined}
+                  onFocus={() => {
+                    if (pending) return;
+                    setIsEditingEmail(true);
+                  }}
+                  onBlur={() => {
+                    setIsEditingEmail(false);
+                  }}
+                  onChange={(event) => {
+                    setEmailDraft(event.currentTarget.value);
+                  }}
                 />
               </div>
 
