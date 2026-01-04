@@ -1,361 +1,250 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import {
-  ArrowDownAZIcon,
-  ArrowUpZAIcon,
-  CalendarArrowUpIcon,
-  ClockArrowDownIcon,
-  ClockArrowUpIcon,
-  EditIcon,
-  PlusIcon,
-  SearchIcon,
-  Trash2Icon,
-} from "lucide-react";
-import { useMemo, useState } from "react";
+import { PlusIcon, SearchIcon } from "lucide-react";
+import { memo, useCallback, useRef } from "react";
+import { z } from "zod";
 
 import { useSessionId, useSessionMutation } from "convex-helpers/react/sessions";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Input } from "@/components/ui/input";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";
-import { uploadAiProfileImage } from "@/lib/convex/uploadFiles";
+
+import { ProfileCard, type ProfileListItem } from "./profiles/-components/profile-card";
+import {
+  ProfilesDialogController,
+  type ProfileEditSeed,
+  type ProfilesDialogControllerHandle,
+} from "./profiles/-components/profiles-dialog-controller";
+import { SortSelect, type SortOption } from "./profiles/-components/sort-select";
+import { LoadingProfilesListSkeleton } from "./profiles/-pending";
 
 export const Route = createFileRoute("/settings/profiles")({
+  validateSearch: z.object({
+    q: z.string().optional(),
+    sort: z.enum(["az", "za", "newest", "oldest", "recently-updated"]).optional(),
+  }),
   component: AiProfilesPage,
-  pendingComponent: LoadingSkeleton,
   head: () => ({ meta: [{ title: "AI Profiles - AI Chat" }] }),
 });
 
-function LoadingSkeleton() {
+const ProfilesHeader = memo(function ProfilesHeader({
+  search,
+  onSearchChange,
+  sort,
+  onSortChange,
+  onCreate,
+}: {
+  search: string;
+  onSearchChange: (value: string) => void;
+  sort: SortOption;
+  onSortChange: (value: SortOption) => void;
+  onCreate: () => void;
+}) {
   return (
-    <main className="space-y-4">
-      <p className="text-sm text-muted-foreground">Loading profiles…</p>
-    </main>
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="relative w-full sm:max-w-md">
+        <SearchIcon className="absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search profiles…"
+          className="pl-8"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+        <SortSelect value={sort} onValueChange={onSortChange} className="w-full sm:w-48" />
+
+        <Button type="button" onClick={onCreate} className="h-9 w-full shadow-xs sm:w-auto">
+          <PlusIcon className="size-4" /> Create profile
+        </Button>
+      </div>
+    </div>
+  );
+});
+
+function ProfilesList({
+  profiles,
+  isLoading,
+  search,
+  onClearSearch,
+  onCreate,
+  onEdit,
+  onDelete,
+}: {
+  profiles: Array<ProfileListItem>;
+  isLoading: boolean;
+  search: string;
+  onClearSearch: () => void;
+  onCreate: () => void;
+  onEdit: (seed: ProfileEditSeed) => void;
+  onDelete: (id: Id<"profiles">) => void;
+}) {
+  const hasSearch = search.trim().length > 0;
+
+  if (isLoading) {
+    return <LoadingProfilesListSkeleton />;
+  }
+
+  if (profiles.length === 0) {
+    if (hasSearch) {
+      return (
+        <Empty className="rounded-md">
+          <EmptyHeader>
+            <EmptyTitle>No matches</EmptyTitle>
+            <EmptyDescription>
+              No profiles match <span className="font-medium text-foreground">“{search}”</span>.
+            </EmptyDescription>
+          </EmptyHeader>
+
+          <EmptyContent>
+            <Button variant="secondary" onClick={onClearSearch} className="h-9">
+              Clear search
+            </Button>
+          </EmptyContent>
+        </Empty>
+      );
+    }
+
+    return (
+      <Empty className="rounded-md bg-card ring-1 ring-foreground/10">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <PlusIcon className="size-4" />
+          </EmptyMedia>
+          <EmptyTitle>Create your first AI profile</EmptyTitle>
+          <EmptyDescription>
+            Profiles are reusable personas. Give it a name, a system prompt, and an optional image.
+          </EmptyDescription>
+        </EmptyHeader>
+
+        <EmptyContent>
+          <Button onClick={onCreate} className="h-9 shadow-xs">
+            <PlusIcon className="size-4" /> Create profile
+          </Button>
+        </EmptyContent>
+      </Empty>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      {profiles.map((p) => (
+        <ProfileCard key={p._id} profile={p} onEdit={onEdit} onDelete={onDelete} />
+      ))}
+    </div>
   );
 }
 
-type SortOption = "az" | "za" | "newest" | "oldest" | "recently-updated";
-
 function AiProfilesPage() {
   const [sessionId] = useSessionId();
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<SortOption>("recently-updated");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<Id<"profiles"> | null>(null);
 
-  // Form state
-  const [name, setName] = useState("");
-  const [systemPrompt, setSystemPrompt] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const searchParams = Route.useSearch();
+  const navigate = Route.useNavigate();
 
-  const { data, refetch } = useSuspenseQuery(
-    convexSessionQuery(api.functions.profiles.listProfilesWithQuery, { search, sort }),
-  );
+  const search = searchParams.q ?? "";
+  const sort = searchParams.sort ?? ("recently-updated" satisfies SortOption);
 
-  const profiles = data ?? [];
-
-  const resetForm = () => {
-    setName("");
-    setSystemPrompt("");
-    setFile(null);
-    setEditingId(null);
-  };
-
-  function onCreateClicked() {
-    resetForm();
-    setEditingId(null);
-    setDialogOpen(true);
-  }
-
-  function onEditClicked(profile: { _id: Id<"profiles">; name: string; systemPrompt: string }) {
-    setEditingId(profile._id);
-    setName(profile.name);
-    setSystemPrompt(profile.systemPrompt);
-    setFile(null);
-    setDialogOpen(true);
-  }
+  const { data, isPending, refetch } = useQuery({
+    ...convexSessionQuery(api.functions.profiles.listProfilesWithQuery, { search, sort }),
+    placeholderData: keepPreviousData,
+  });
+  const profiles = (data ?? []) as Array<ProfileListItem>;
 
   const createProfile = useSessionMutation(api.functions.profiles.createProfile);
   const updateProfile = useSessionMutation(api.functions.profiles.updateProfile);
   const deleteProfile = useSessionMutation(api.functions.profiles.deleteProfile);
 
-  async function onSubmit() {
-    if (!name.trim() || !systemPrompt.trim()) return;
-    setIsSubmitting(true);
+  const dialogRef = useRef<ProfilesDialogControllerHandle | null>(null);
 
-    try {
-      let imageKey: string | undefined | null = undefined;
-      if (file) {
-        imageKey = await uploadAiProfileImage(file, sessionId!);
+  const onSearchChange = useCallback(
+    function onSearchChange(value: string) {
+      void navigate({
+        replace: true,
+        search: (prev) => ({ ...prev, q: value.trim().length === 0 ? undefined : value }),
+      });
+    },
+    [navigate],
+  );
+
+  const onSortChange = useCallback(
+    function onSortChange(value: SortOption) {
+      void navigate({
+        replace: true,
+        search: (prev) => ({ ...prev, sort: value }),
+      });
+    },
+    [navigate],
+  );
+
+  const onClearSearch = useCallback(
+    function onClearSearch() {
+      void navigate({ replace: true, search: (prev) => ({ ...prev, q: undefined }) });
+    },
+    [navigate],
+  );
+
+  const onCreate = useCallback(function onCreate() {
+    dialogRef.current?.openCreate();
+  }, []);
+
+  const onEdit = useCallback(function onEdit(seed: ProfileEditSeed) {
+    dialogRef.current?.openEdit(seed);
+  }, []);
+
+  const onDelete = useCallback(
+    async function onDelete(id: Id<"profiles">) {
+      try {
+        await deleteProfile({ profileId: id });
+        void refetch();
+      } catch (e) {
+        console.error("[AI Profiles] delete error:", e);
       }
-
-      if (editingId) {
-        await updateProfile({ profileId: editingId, name, systemPrompt, imageKey: imageKey });
-      } else {
-        await createProfile({ name, systemPrompt, imageKey: imageKey });
-      }
-
-      setDialogOpen(false);
-      resetForm();
-      void refetch();
-    } catch (e) {
-      console.error("[AI Profiles] submit error:", e);
-    }
-
-    setIsSubmitting(false);
-  }
-
-  async function onConfirmDelete(id: Id<"profiles">) {
-    try {
-      await deleteProfile({ profileId: id });
-      void refetch();
-    } catch (e) {
-      console.error("[AI Profiles] delete error:", e);
-    }
-  }
-
-  const SortControl = useMemo(() => {
-    return (
-      <Select onValueChange={(v) => setSort(v!)} value={sort}>
-        <SelectTrigger className="h-9 w-48 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-
-        <SelectContent>
-          <SelectItem value="az">
-            <ArrowDownAZIcon className="size-4" />
-            <span>A-Z</span>
-          </SelectItem>
-
-          <SelectItem value="za">
-            <ArrowUpZAIcon className="size-4" />
-            <span>Z-A</span>
-          </SelectItem>
-
-          <SelectItem value="newest">
-            <ClockArrowUpIcon className="size-4" />
-            <span>Newest</span>
-          </SelectItem>
-
-          <SelectItem value="oldest">
-            <ClockArrowDownIcon className="size-4" />
-            <span>Oldest</span>
-          </SelectItem>
-
-          <SelectItem value="recently-updated">
-            <CalendarArrowUpIcon className="size-4" />
-            <span>Recently Updated</span>
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    );
-  }, [sort]);
+    },
+    [deleteProfile, refetch],
+  );
 
   return (
     <main className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="relative w-full max-w-md">
-          <SearchIcon className="absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search profiles…"
-            className="pl-8"
-          />
-        </div>
+      <ProfilesHeader
+        search={search}
+        onSearchChange={onSearchChange}
+        sort={sort}
+        onSortChange={onSortChange}
+        onCreate={onCreate}
+      />
 
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:block">{SortControl}</div>
+      <ProfilesList
+        profiles={profiles}
+        isLoading={isPending}
+        search={search}
+        onClearSearch={onClearSearch}
+        onCreate={onCreate}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
 
-          <Button type="button" onMouseDown={onCreateClicked} className="h-9">
-            <PlusIcon className="size-4" /> Create
-          </Button>
-        </div>
-      </div>
-
-      <div className="block sm:hidden">{SortControl}</div>
-
-      {profiles.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No profiles found.</p>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {profiles.map((p) => (
-            <ProfileCard
-              key={p._id}
-              profile={p}
-              onEdit={onEditClicked}
-              onDelete={onConfirmDelete}
-            />
-          ))}
-        </div>
-      )}
-
-      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AlertDialogContent className="max-w-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{editingId ? "Edit Profile" : "Create Profile"}</AlertDialogTitle>
-          </AlertDialogHeader>
-
-          <div className="flex flex-col gap-3 py-2">
-            <label className="flex flex-col gap-2">
-              <span className="text-sm">Name</span>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Helpful Researcher"
-              />
-            </label>
-
-            <label className="flex flex-col gap-2">
-              <span className="text-sm">System Prompt</span>
-              <textarea
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-                rows={6}
-                className="rounded-md border bg-transparent p-2 text-sm outline-none"
-                placeholder="Describe how this AI should behave…"
-              />
-            </label>
-
-            <label className="flex flex-col gap-2">
-              <span className="text-sm">Optional Image</span>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const f = e.target.files?.[0] ?? null;
-                  setFile(f);
-                }}
-              />
-
-              <span className="text-xs text-muted-foreground">PNG, JPG, or WebP.</span>
-            </label>
-          </div>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isSubmitting || !name.trim() || !systemPrompt.trim()}
-              onClick={() => void onSubmit()}
-            >
-              {editingId ? "Save" : "Create"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ProfilesDialogController
+        ref={dialogRef}
+        sessionId={sessionId}
+        createProfile={createProfile}
+        updateProfile={updateProfile}
+        onAfterSubmit={() => void refetch()}
+      />
     </main>
-  );
-}
-
-function ProfileCard({
-  profile,
-  onEdit,
-  onDelete,
-}: {
-  profile: {
-    _id: Id<"profiles">;
-    name: string;
-    systemPrompt: string;
-    imageKey?: string;
-    createdAt: number;
-    updatedAt: number;
-  };
-  onEdit: (p: { _id: Id<"profiles">; name: string; systemPrompt: string }) => void;
-  onDelete: (id: Id<"profiles">) => void;
-}) {
-  const imageUrl =
-    profile.imageKey && profile.imageKey.length > 0
-      ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${profile.imageKey}`
-      : null;
-
-  const shortDesc =
-    profile.systemPrompt.length > 140
-      ? profile.systemPrompt.slice(0, 140) + "…"
-      : profile.systemPrompt;
-
-  return (
-    <Card className="rounded-md">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-base font-semibold">{profile.name}</CardTitle>
-
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            className="h-8 w-8"
-            onMouseDown={() =>
-              onEdit({ _id: profile._id, name: profile.name, systemPrompt: profile.systemPrompt })
-            }
-            title="Edit"
-          >
-            <EditIcon className="size-4" />
-          </Button>
-
-          <AlertDialog>
-            <AlertDialogTrigger
-              render={<Button variant="destructive" size="icon" />}
-              className="h-8 w-8"
-              title="Delete"
-              type="button"
-            >
-              <Trash2Icon className="size-4" />
-            </AlertDialogTrigger>
-
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete “{profile.name}”?</AlertDialogTitle>
-              </AlertDialogHeader>
-              <p className="text-sm text-muted-foreground">
-                This action cannot be undone. This will permanently delete this AI profile.
-              </p>
-
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onDelete(profile._id)}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </CardHeader>
-
-      <CardContent className="flex items-start gap-3">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={profile.name}
-            className="h-16 w-16 shrink-0 rounded-md object-cover"
-          />
-        ) : (
-          <div className="h-16 w-16 shrink-0 rounded-md bg-muted" />
-        )}
-
-        <div className="text-sm text-foreground/80">{shortDesc || "No description"}</div>
-      </CardContent>
-    </Card>
   );
 }
