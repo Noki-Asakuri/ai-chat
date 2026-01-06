@@ -86,9 +86,9 @@ export function useSendChatMessage() {
       { sessionId, threadId, messages: [userMessage, assistantMessage] },
     );
 
-    // Scroll to the bottom after we have added the messages to the thread
+    // Scroll to the bottom after we have added the messages to the thread (only if user is already at bottom)
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("chat:force-scroll-bottom"));
+      window.dispatchEvent(new Event("chat:scroll-if-sticky"));
     }
 
     messageStoreActions.setController(threadId, {

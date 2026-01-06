@@ -2,15 +2,24 @@ import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 
 import { Button } from "../ui/button";
 
+import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { cn } from "@/lib/utils";
 
 export function ScrollButton() {
   function handleScroll(position: "top" | "bottom") {
-    const element = document.querySelector("#messages-scrollarea");
-    element?.scrollTo({
-      top: position === "top" ? 0 : element.scrollHeight,
-      behavior: "smooth",
-    });
+    const element = document.querySelector<HTMLElement>("#messages-scrollarea");
+    if (!element) return;
+
+    if (position === "top") {
+      setStickyToBottom(false);
+      element.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    setStickyToBottom(true);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("chat:force-scroll-bottom"));
+    }
   }
 
   return (

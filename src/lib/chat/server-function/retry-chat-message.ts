@@ -83,9 +83,9 @@ export function useRetryChatMessage() {
       userMessage: options.userMessage,
     });
 
-    // Only scroll down when the message has updated
+    // Only scroll down when the message has updated (only if user is already at bottom)
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("chat:force-scroll-bottom"));
+      window.dispatchEvent(new Event("chat:scroll-if-sticky"));
     }
 
     const body: ChatRequestBody = {

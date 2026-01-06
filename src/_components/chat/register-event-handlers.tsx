@@ -3,6 +3,12 @@ import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
+import {
+  getMessagesScrollAreaElement,
+  scrollToBottom,
+  scrollToBottomIfSticky,
+  setStickyToBottom,
+} from "@/lib/chat/scroll-stickiness";
 import { useAbortChatStream } from "@/lib/chat/server-function/abort-chat-stream";
 import { useWindowEvent } from "@/lib/hooks/use-window-event";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
@@ -139,8 +145,11 @@ export function RegisterEventHandlers() {
       else {
         event.preventDefault();
 
-        const element = document.querySelector("#messages-scrollarea");
-        element?.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
+        const element = getMessagesScrollAreaElement();
+        if (element) {
+          setStickyToBottom(true);
+          scrollToBottom(element, "smooth");
+        }
 
         const chatInput = document.getElementById("textarea-chat-input");
         if (chatInput) chatInput.focus();
@@ -184,21 +193,31 @@ export function RegisterEventHandlers() {
     }
   });
 
-  // Handle scroll-to-bottom requests
+  // Scroll to bottom only if the user is currently "sticky" (already at the bottom).
+  useWindowEvent(
+    "chat:scroll-if-sticky",
+    function handleScrollIfSticky() {
+      const element = getMessagesScrollAreaElement();
+      if (!element) return;
+
+      requestAnimationFrame(() => {
+        scrollToBottomIfSticky(element, "smooth");
+      });
+    },
+    { capture: true },
+  );
+
+  // Scroll to bottom regardless of current scroll position (explicit user intent).
   useWindowEvent(
     "chat:force-scroll-bottom",
     function handleForceScrollBottom() {
-      const element = document.querySelector("#messages-scrollarea");
+      const element = getMessagesScrollAreaElement();
       if (!element) return;
 
-      console.log("[Chat] Scrolling to bottom", {
-        scrollHeight: element.scrollHeight,
-        scrollTop: element.scrollTop,
-        clientHeight: element.clientHeight,
-      });
+      setStickyToBottom(true);
 
       requestAnimationFrame(() => {
-        element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
+        scrollToBottom(element, "smooth");
       });
     },
     { capture: true },

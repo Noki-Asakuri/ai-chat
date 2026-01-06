@@ -80,8 +80,8 @@ function ChatHistory() {
       messageStoreActions.removeController(lastMessage.threadId);
     }
 
-    // Auto scroll to bottom when new messages are added
-    window.dispatchEvent(new Event("chat:force-scroll-bottom"));
+    // Auto scroll to bottom when new messages are added (only if user is already at bottom)
+    window.dispatchEvent(new Event("chat:scroll-if-sticky"));
   });
 
   useEffect(() => {
