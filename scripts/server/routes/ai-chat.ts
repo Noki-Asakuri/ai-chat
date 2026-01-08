@@ -73,8 +73,19 @@ function finalizeStreamParts(parts: unknown): unknown {
     const next: Record<string, unknown> = { ...part };
     const type = next["type"];
 
+    if (type === "step-start") continue;
+
     if ((type === "text" || type === "reasoning") && next["state"] === "streaming") {
       next["state"] = "done";
+    }
+
+    const isSourcePart =
+      type === "source-url" ||
+      type === "source-document" ||
+      (typeof type === "string" && type.startsWith("source-"));
+
+    if ("providerMetadata" in next && !isSourcePart) {
+      delete next["providerMetadata"];
     }
 
     out.push(next);
@@ -513,15 +524,9 @@ export function registerAiChatRoutes(app: Hono): void {
 
           await Promise.all(generatedFiles);
 
-          for (const part of parts) {
-            if ("providerMetadata" in part && part.providerMetadata?.google?.thoughtSignature) {
-              part.providerMetadata.google.thoughtSignature = "skip_thought_signature_validator";
-            }
-          }
-
           type Updates = (typeof api.functions.messages.updateMessageById)["_args"]["updates"];
           const updates: Updates = {
-            parts,
+            parts: finalizeStreamParts(parts) as ChatMessage["parts"],
             metadata,
             resumableStreamId: null,
             status: "complete",
