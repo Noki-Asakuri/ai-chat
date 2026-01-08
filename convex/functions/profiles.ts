@@ -135,7 +135,7 @@ export const getProfile = authenticatedQuery({
 
     if (!args.profileId) return null;
 
-    const doc = await ctx.db.get(args.profileId);
+    const doc = await ctx.db.get("profiles", args.profileId);
     if (!doc) return null;
     if (doc.userId !== user.userId) throw new Error("Not authorized");
     return doc;
@@ -184,7 +184,7 @@ export const updateProfile = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const doc = await ctx.db.get(args.profileId);
+    const doc = await ctx.db.get("profiles", args.profileId);
     if (!doc) throw new Error("Profile not found");
     if (doc.userId !== user.userId) throw new Error("Not authorized");
 
@@ -224,7 +224,7 @@ export const deleteProfile = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const doc = await ctx.db.get(args.profileId);
+    const doc = await ctx.db.get("profiles", args.profileId);
     if (!doc) throw new Error("Profile not found");
     if (doc.userId !== user.userId) throw new Error("Not authorized");
 

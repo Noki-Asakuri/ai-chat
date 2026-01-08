@@ -65,7 +65,7 @@ async function getOrCreate(ctx: MutationCtx, userId: string): Promise<Doc<"user_
     lastUpdatedAt: now,
   });
 
-  const doc = await ctx.db.get(id);
+  const doc = await ctx.db.get("user_stats", id);
   if (!doc) throw new Error("Failed to create user_stats");
 
   return doc;

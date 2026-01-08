@@ -236,7 +236,7 @@ export const getThreadTitle = authenticatedQuery({
 
     if (!args.threadId) return { title: null };
 
-    const thread = await ctx.db.get(args.threadId);
+    const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) return { title: null };
     if (thread.userId !== user.userId) return { title: null };
 
@@ -250,7 +250,7 @@ export const updateThreadTitle = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const thread = await ctx.db.get(args.threadId);
+    const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
@@ -264,7 +264,7 @@ export const deleteThread = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const thread = await ctx.db.get(args.threadId);
+    const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
@@ -298,7 +298,7 @@ export const pinThread = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const thread = await ctx.db.get(args.threadId);
+    const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 

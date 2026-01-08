@@ -15,7 +15,7 @@ export const getAllMessagesFromThread = authenticatedQuery({
     if (!user) throw new Error("Not authenticated");
     if (!args.threadId) throw new Error("Thread not found");
 
-    const thread = await ctx.db.get(args.threadId);
+    const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread?.userId !== user.userId) throw new Error("Not authorized");
 
@@ -117,7 +117,7 @@ export const addMessagesToThread = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const thread = await ctx.db.get(args.threadId);
+    const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
@@ -164,7 +164,7 @@ export const updateErrorMessage = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const message = await ctx.db.get(args.messageId);
+    const message = await ctx.db.get("messages", args.messageId);
     if (!message) throw new Error("Message not found");
     if (message.userId !== user.userId) throw new Error("User not authorized");
 
@@ -206,7 +206,7 @@ export const updateMessageById = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const message = await ctx.db.get(args.messageId);
+    const message = await ctx.db.get("messages", args.messageId);
     console.log("Updating message by Id", {
       userId: user.userId,
       messageId: args.messageId,
@@ -304,11 +304,11 @@ export const retryChatMessage = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const thread = await ctx.db.get(args.threadId);
+    const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
-    const assistantMessage = await ctx.db.get(args.assistantMessageId);
+    const assistantMessage = await ctx.db.get("messages", args.assistantMessageId);
     if (!assistantMessage) throw new Error("Message not found");
 
     const deleteMessages = await ctx.db

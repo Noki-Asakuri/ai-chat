@@ -1,3 +1,4 @@
+import { getAll } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
 
 import type { Id } from "../_generated/dataModel";
@@ -44,7 +45,7 @@ export const getAllAttachments = authenticatedQuery({
 
     return await Promise.all(
       attachments.map(async (attachment) => {
-        const thread = await ctx.db.get(attachment.threadId);
+        const thread = await ctx.db.get("threads", attachment.threadId);
         return { ...attachment, thread };
       }),
     );
@@ -57,7 +58,7 @@ export const deleteAttachment = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const attachment = await ctx.db.get(args.attachmentId);
+    const attachment = await ctx.db.get("attachments", args.attachmentId);
     if (!attachment) throw new Error("Attachment not found");
     if (attachment.userId !== user.userId) throw new Error("Not authorized");
 
@@ -98,10 +99,12 @@ export const deleteAttachments = authenticatedMutation({
     if (args.attachmentIds.length === 0) return;
 
     // Load and validate all attachments
-    const attachments = await Promise.all(args.attachmentIds.map((id) => ctx.db.get(id)));
+    const attachments = await getAll(ctx.db, args.attachmentIds);
     const notFound = attachments.findIndex((a) => a === null);
+
     if (notFound !== -1) throw new Error("Attachment not found");
     const owned = attachments as NonNullable<(typeof attachments)[number]>[];
+
     for (const a of owned) {
       if (a.userId !== user.userId) throw new Error("Not authorized");
     }

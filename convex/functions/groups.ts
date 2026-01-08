@@ -87,7 +87,7 @@ export const deleteGroup = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const group = await ctx.db.get(args.groupId);
+    const group = await ctx.db.get("groups", args.groupId);
     if (!group) throw new Error("Group not found");
     if (group.userId !== user.userId) throw new Error("Not authorized");
 
@@ -120,7 +120,7 @@ export const updateGroupTitle = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const group = await ctx.db.get(args.groupId);
+    const group = await ctx.db.get("groups", args.groupId);
     if (!group) throw new Error("Group not found");
     if (group.userId !== user.userId) throw new Error("Not authorized");
 
@@ -138,7 +138,7 @@ export const reorderThreadWithinGroup = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const thread = await ctx.db.get(args.threadId);
+    const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
@@ -172,7 +172,7 @@ export const removeGroupId = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const thread = await ctx.db.get(args.threadId);
+    const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
@@ -209,7 +209,7 @@ export const moveThreadToGroup = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const thread = await ctx.db.get(args.threadId);
+    const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
@@ -272,7 +272,7 @@ export const moveGroupToIndex = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const group = await ctx.db.get(args.groupId);
+    const group = await ctx.db.get("groups", args.groupId);
     if (!group) throw new Error("Group not found");
     if (group.userId !== user.userId) throw new Error("Not authorized");
 
