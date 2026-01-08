@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
 import {
+  computeIsAtBottom,
   getMessagesScrollAreaElement,
   scrollToBottom,
   scrollToBottomIfSticky,
@@ -130,30 +131,45 @@ export function RegisterEventHandlers() {
     }
 
     if (event.key === "Escape") {
-      if (status === "pending" || status === "streaming") {
-        event.preventDefault();
-        if (threadId) await abortChatStream(threadId);
-      }
+      event.preventDefault();
 
-      //
-      else if (isEditMessage) {
-        event.preventDefault();
-        chatStoreActions.setEditMessage(null);
-      }
+      // 1) If the user is not at the bottom (and not editing), Escape should first scroll to bottom.
+      // This prevents accidentally aborting a stream while the user is reading older messages.
+      const scrollArea = getMessagesScrollAreaElement();
+      const isAtBottom = scrollArea ? computeIsAtBottom(scrollArea) : true;
 
-      //
-      else {
-        event.preventDefault();
-
-        const element = getMessagesScrollAreaElement();
-        if (element) {
+      if (!isEditMessage && !isAtBottom) {
+        if (scrollArea) {
           setStickyToBottom(true);
-          scrollToBottom(element, "smooth");
+          scrollToBottom(scrollArea, "smooth");
         }
 
         const chatInput = document.getElementById("textarea-chat-input");
         if (chatInput) chatInput.focus();
+
+        return;
       }
+
+      // 2) If the user is editing a message, Escape cancels the edit.
+      if (isEditMessage) {
+        chatStoreActions.setEditMessage(null);
+        return;
+      }
+
+      // 3) If the user is at the bottom and streaming, Escape aborts the request.
+      if (status === "pending" || status === "streaming") {
+        if (threadId) await abortChatStream(threadId);
+        return;
+      }
+
+      // 4) Default: scroll to bottom (no-op if already there) and focus composer.
+      if (scrollArea) {
+        setStickyToBottom(true);
+        scrollToBottom(scrollArea, "smooth");
+      }
+
+      const chatInput = document.getElementById("textarea-chat-input");
+      if (chatInput) chatInput.focus();
 
       return;
     }
