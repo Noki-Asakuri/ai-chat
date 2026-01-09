@@ -1,3 +1,4 @@
+import { ActionRetrier } from "@convex-dev/action-retrier";
 import { R2 } from "@convex-dev/r2";
 import { AuthKit, type AuthFunctions } from "@convex-dev/workos-authkit";
 
@@ -11,6 +12,7 @@ import { mutation, query } from "./_generated/server";
 const authFunctions: AuthFunctions = internal.functions.auth;
 
 export const r2 = new R2(components.r2);
+export const retrier = new ActionRetrier(components.actionRetrier);
 export const authKit = new AuthKit<DataModel>(components.workOSAuthKit, {
   authFunctions,
   additionalEventTypes: ["session.created", "session.revoked"],
