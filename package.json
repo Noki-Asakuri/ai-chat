@@ -68,6 +68,7 @@
     "immer": "^11.1.3",
     "input-otp": "^1.4.2",
     "ioredis": "^5.9.1",
+    "iron-session": "^8.0.4",
     "katex": "^0.16.27",
     "lucide-react": "0.562.0",
     "motion": "^12.26.2",
