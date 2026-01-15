@@ -1,10 +1,6 @@
 import { isInlineCode, type Element } from "react-shiki";
-import { Streamdown } from "streamdown";
+import { Streamdown, defaultRemarkPlugins } from "streamdown";
 
-import { harden as rehypeHarden } from "rehype-harden";
-import rehypeKatex from "rehype-katex";
-import rehypeRaw from "rehype-raw";
-import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
 import { ShikiCodeBlock } from "../ui/code-block";
@@ -153,20 +149,14 @@ type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
 export function StreamDownWrapper({ children, role, ...props }: MarkdownProps) {
   return (
     <Streamdown
-      parseIncompleteMarkdown={false}
-      rehypePlugins={[
-        rehypeRaw,
-        [rehypeKatex, { errorColor: "var(--color-muted-foreground)" }],
-        [
-          rehypeHarden,
-          {
-            allowedLinkPrefixes: ["*"],
-            defaultOrigin: "https://chat.asakuri.me",
-            allowedImagePrefixes: ["https://files.chat.asakuri.me", "https://ik.imagekit.io"],
-          },
-        ],
+      mode={role === "assistant" ? "streaming" : "static"}
+      remarkPlugins={[
+        defaultRemarkPlugins.gfm!,
+        defaultRemarkPlugins.cjkAutolinkBoundary!,
+        defaultRemarkPlugins.cjkFriendly!,
+        defaultRemarkPlugins.cjkFriendlyGfmStrikethrough!,
+        [remarkMath, { singleDollarTextMath: true }],
       ]}
-      remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
       components={{ code: CodeBlock }}
       {...props}
     >

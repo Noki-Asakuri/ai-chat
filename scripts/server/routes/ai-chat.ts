@@ -5,7 +5,7 @@ import dedent from "dedent";
 import type { Hono } from "hono";
 import { z } from "zod/v4";
 
-import { APICallError, smoothStream, stepCountIs, streamText, UI_MESSAGE_STREAM_HEADERS } from "ai";
+import { APICallError, stepCountIs, streamText, UI_MESSAGE_STREAM_HEADERS } from "ai";
 
 import { logger } from "@/lib/axiom/logger";
 import { createServerConvexClient } from "@/lib/convex/server";
@@ -358,9 +358,8 @@ export function registerAiChatRoutes(app: Hono): void {
         experimental_telemetry: { isEnabled: false },
 
         maxRetries: 5,
-        stopWhen: stepCountIs(5),
+        stopWhen: stepCountIs(20),
 
-        experimental_transform: smoothStream({ delayInMs: 10, chunking: "line" }),
         experimental_download: (options) => Promise.all(options.map(handleFileCaching)),
 
         async onError({ error }) {
