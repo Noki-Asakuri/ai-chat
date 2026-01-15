@@ -108,6 +108,7 @@
   },
   "overrides": {
     "recharts": "2.15.4",
+    "streamdown": "2.0.1",
     "vite": "beta",
   },
   "packages": {

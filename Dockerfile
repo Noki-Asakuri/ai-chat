@@ -1,7 +1,7 @@
 FROM oven/bun:latest
 WORKDIR /app
 COPY bun.lock package.json ./
-RUN bun install --production --frozen-lockfile
+RUN bun install --production --frozen-lockfile --ignore-scripts
 
 # Install curl, git, and CA certificates (Ubuntu/Debian)
 USER root
