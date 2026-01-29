@@ -1,10 +1,10 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const filePath = resolve(process.cwd(), "node_modules/streamdown/dist/chunk-4PGIZLGZ.js");
+const filePath = resolve(process.cwd(), "node_modules/streamdown/dist/chunk-5FQGJX7Z.js");
 
-const oldSnippet = 'useEffect(()=>{t==="streaming"?C(()=>{E(S);}):E(S);},[S,t]);';
-const newSnippet = "useEffect(()=>{E(S);},[S,t]);";
+const oldSnippet = 'useEffect(()=>{t==="streaming"?P(()=>{A(L);}):A(L);},[L,t]);';
+const newSnippet = "useEffect(()=>{A(L);},[L,t]);";
 
 function main() {
   let contents: string;

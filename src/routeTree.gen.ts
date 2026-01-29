@@ -98,6 +98,7 @@ const Chat_layoutThreadsThreadIdRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof Chat_layoutIndexRoute
   '/settings': typeof SettingsRouteWithChildren
   '/threads': typeof Chat_layoutThreadsRouteRouteWithChildren
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
@@ -108,7 +109,6 @@ export interface FileRoutesByFullPath {
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/settings/account': typeof SettingsAccountRoute
-  '/': typeof Chat_layoutIndexRoute
   '/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
 }
@@ -147,6 +147,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/settings'
     | '/threads'
     | '/settings/attachments'
@@ -157,7 +158,6 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/logout'
     | '/settings/account'
-    | '/'
     | '/threads/$threadId'
     | '/api/auth/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -213,7 +213,7 @@ declare module '@tanstack/react-router' {
     '/_chat_layout': {
       id: '/_chat_layout'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof Chat_layoutRouteImport
       parentRoute: typeof rootRouteImport
     }

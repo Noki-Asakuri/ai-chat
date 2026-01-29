@@ -1,10 +1,10 @@
-import { isInlineCode, type Element } from "react-shiki";
-import { Streamdown, defaultRemarkPlugins } from "streamdown";
+import "katex/dist/katex.min.css";
 
-import remarkMath from "remark-math";
+import { createMathPlugin } from "@streamdown/math";
+import { createMermaidPlugin } from "@streamdown/mermaid";
+import { Streamdown } from "streamdown";
 
-import { ShikiCodeBlock } from "../ui/code-block";
-import { TypographyInlineCode } from "../ui/typography";
+import { CodeBlock } from "@/components/ui/code-block";
 
 import type { ChatMessage } from "@/lib/types";
 
@@ -124,43 +124,23 @@ function escapeInvalidMath(text: string): string {
   return out;
 }
 
-function CodeBlock({
-  className,
-  children,
-  node,
-  ...props
-}: React.ComponentProps<"code"> & { node?: Element }) {
-  const code = String(children as string);
-  const isInline = node ? isInlineCode(node) : undefined;
-  const language = /language-(\w+)/.exec(className ?? "")?.[1];
-
-  if (!isInline) return <ShikiCodeBlock language={language ?? "plaintext"} code={code} />;
-  return (
-    <TypographyInlineCode className={className} {...props}>
-      {code}
-    </TypographyInlineCode>
-  );
-}
-
 type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
   role: ChatMessage["role"];
+  children: string;
 };
+
+const mermaid = createMermaidPlugin();
+const math = createMathPlugin({ singleDollarTextMath: true, errorColor: "var(--destructive)" });
 
 export function StreamDownWrapper({ children, role, ...props }: MarkdownProps) {
   return (
     <Streamdown
+      plugins={{ math, mermaid }}
       mode={role === "assistant" ? "streaming" : "static"}
-      remarkPlugins={[
-        defaultRemarkPlugins.gfm!,
-        defaultRemarkPlugins.cjkAutolinkBoundary!,
-        defaultRemarkPlugins.cjkFriendly!,
-        defaultRemarkPlugins.cjkFriendlyGfmStrikethrough!,
-        [remarkMath, { singleDollarTextMath: true }],
-      ]}
       components={{ code: CodeBlock }}
       {...props}
     >
-      {escapeInvalidMath(children as string)}
+      {escapeInvalidMath(children)}
     </Streamdown>
   );
 }
