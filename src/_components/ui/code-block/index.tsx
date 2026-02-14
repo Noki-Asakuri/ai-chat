@@ -1,4 +1,4 @@
-import { createCodePlugin, type HighlightResult } from "@streamdown/code";
+import { code as codePlugin, type HighlightResult } from "@streamdown/code";
 import { useEffect, useMemo, useState } from "react";
 import type { BundledLanguage } from "shiki";
 
@@ -44,8 +44,6 @@ export const LANGUAGE_DISPLAY_NAME: Record<string, LanguageData> = {
   sql: { name: "SQL" },
   sh: { name: "Shell" },
 };
-
-export const codePlugin = createCodePlugin({ themes: ["one-dark-pro", "one-dark-pro"] });
 
 export function CodeBlock({ className, children }: React.ComponentProps<"code">) {
   const code = String(children).replace(TRAILING_NEWLINES_REGEX, "");

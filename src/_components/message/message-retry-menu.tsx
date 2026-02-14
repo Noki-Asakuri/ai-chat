@@ -85,7 +85,6 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
       <Menu.Trigger
         title="Retry Message"
         data-slot="message-retry-trigger"
-        // @ts-expect-error BaseUI bug
         render={<ButtonWithTip side="bottom" variant="ghost" />}
         disabled={pendingRetry}
         onMouseDown={handleMouseDown}

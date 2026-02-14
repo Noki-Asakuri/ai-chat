@@ -20,6 +20,7 @@ type MessageProps = {
 };
 
 export function Message({ messageId, index, total }: MessageProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const message = useMessageStore(useShallow((state) => state.messagesById[messageId]!));
   const isLast = message.role === "user" ? index === total - 2 : index === total - 1;
 
@@ -30,8 +31,6 @@ export function Message({ messageId, index, total }: MessageProps) {
     })),
   );
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
   const userMessageHeight =
     lastUserMessageHeight > window.innerHeight ? 114 : lastUserMessageHeight;
 
@@ -41,27 +40,26 @@ export function Message({ messageId, index, total }: MessageProps) {
         `${window.innerHeight - 48 - textareaHeight - userMessageHeight - 16}px`
       : "auto";
 
-  // Keep assistant min-height in sync with live changes to the most recent user message
+  // Keep assistant message min-height in sync with live changes to the most recent user message
   useEffect(() => {
-    if (!(message.role === "user" && isLast)) return;
-    const el = containerRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
+    // Only the last assistant message needs to be observed
+    if (message.role === "user" || !isLast || !containerRef.current) return;
 
-    const ro = new ResizeObserver((entries) => {
+    const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const h = Math.round(entry.contentRect.height);
-        chatStoreActions.setMessageHeight(h);
+        const height = Math.round(entry.contentRect.height);
+        chatStoreActions.setMessageHeight(height);
       }
     });
 
     // init and observe
-    chatStoreActions.setMessageHeight(el.clientHeight);
-    ro.observe(el);
+    chatStoreActions.setMessageHeight(containerRef.current.clientHeight);
+    resizeObserver.observe(containerRef.current);
 
     return () => {
-      ro.disconnect();
+      resizeObserver.disconnect();
     };
-  }, [isLast, message.role]);
+  }, [message.role, isLast]);
 
   return (
     <div

@@ -1,6 +1,12 @@
 import type { UseStorage } from "convex-helpers/react/sessions";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+/**
+ * This is a wrapper around useCookie so that React Compiler don't mark it as a hook.
+ * And not auto memoize it.
+ */
+export const sessionUseCookie = useCookie;
+
 export function useCookie<T>(key: string, initialValue: T): ReturnType<UseStorage<T>> {
   const initialRef = useRef(initialValue);
 

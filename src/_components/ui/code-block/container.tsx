@@ -3,8 +3,8 @@ import { useEffect, useEffectEvent, useRef } from "react";
 import { useCodeBlockContext } from "./context";
 
 export function CodeBlockContainer({ children }: { children: React.ReactNode }) {
-  const { language, expanded, setContainerHeightPx } = useCodeBlockContext();
   const rootRef = useRef<HTMLDivElement>(null);
+  const { language, expanded, setContainerHeightPx } = useCodeBlockContext();
 
   const updateHeight = useEffectEvent((element?: HTMLDivElement) => {
     if (!element) return setContainerHeightPx(0);
@@ -13,16 +13,16 @@ export function CodeBlockContainer({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!expanded) return updateHeight();
-    if (typeof ResizeObserver === "undefined") return;
+    if (!rootRef.current) return;
 
-    const el = rootRef.current;
-    if (!el) return;
+    updateHeight(rootRef.current);
+    const resizeObserver = new ResizeObserver(() => updateHeight(rootRef.current!));
 
-    updateHeight(el);
-    const ro = new ResizeObserver(() => updateHeight(el));
+    resizeObserver.observe(rootRef.current);
 
-    ro.observe(el);
-    return () => ro.disconnect();
+    return function cleanup() {
+      resizeObserver.disconnect();
+    };
   }, [expanded]);
 
   return (

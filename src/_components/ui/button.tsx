@@ -49,9 +49,8 @@ function Button({
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
   return (
     <ButtonPrimitive
-      data-slot="button"
-      // @ts-expect-error Weird bug from base-ui
       type="button"
+      data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
