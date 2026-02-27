@@ -346,6 +346,14 @@ export function registerAiChatRoutes(app: Hono): void {
 			</math>
 		`;
 
+      systemInstruction += dedent`
+			<code>
+			## Code Block Update Instruction:
+			If the user provides code in a fenced code block and you update that code,
+			you must return the updated code inside a fenced code block.
+			</code>
+		`;
+
       const startTime = Date.now();
       const serverAbortController = registerStream(requestId);
 
