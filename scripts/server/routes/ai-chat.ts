@@ -337,6 +337,15 @@ export function registerAiChatRoutes(app: Hono): void {
         }
       }
 
+      systemInstruction += dedent`
+			<math>
+			## Math Formatting Instruction:
+			When the user asks a math question, format mathematical expressions using LaTeX delimiters.
+			- Use $...$ for inline math.
+			- Use $$...$$ for block math.
+			</math>
+		`;
+
       const startTime = Date.now();
       const serverAbortController = registerStream(requestId);
 
