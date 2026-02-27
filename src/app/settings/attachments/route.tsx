@@ -14,6 +14,8 @@ import {
   BotIcon,
   CalendarArrowDownIcon,
   CalendarArrowUpIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   FileTextIcon,
   ImageIcon,
   LayersIcon,
@@ -711,6 +713,7 @@ function AttachmentsPage() {
                   onClick={() => onPageChange(currentPage - 1)}
                   disabled={!data.hasPrev}
                 >
+                  <ChevronLeftIcon data-icon="inline-start" />
                   Prev
                 </Button>
               </PaginationItem>
@@ -749,6 +752,7 @@ function AttachmentsPage() {
                   disabled={!data.hasNext}
                 >
                   Next
+                  <ChevronRightIcon data-icon="inline-end" />
                 </Button>
               </PaginationItem>
             </PaginationContent>
