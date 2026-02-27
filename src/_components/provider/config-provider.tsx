@@ -15,13 +15,9 @@ type ConfigStoreProviderProps = {
 };
 
 export function ConfigStoreProvider(props: ConfigStoreProviderProps) {
-  const store = useRef(createConfigStore(props.initialState));
+  const store = createConfigStore(props.initialState);
 
-  return (
-    <ConfigStoreContext.Provider value={store.current}>
-      {props.children}
-    </ConfigStoreContext.Provider>
-  );
+  return <ConfigStoreContext.Provider value={store}>{props.children}</ConfigStoreContext.Provider>;
 }
 
 export function useConfigStore<T>(selector: (state: ConfigStore) => T): T {

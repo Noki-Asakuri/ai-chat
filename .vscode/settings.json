@@ -18,7 +18,7 @@
     "*.css": "tailwindcss"
   },
   "oxc.enable": true,
-  "typescript.experimental.useTsgo": false,
+  "typescript.experimental.useTsgo": true,
   "typescript.preferences.autoImportFileExcludePatterns": ["lucide-react"],
   "typescript.preferences.autoImportSpecifierExcludeRegexes": [
     "@radix-ui",

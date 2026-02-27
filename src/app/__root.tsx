@@ -26,7 +26,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { VersionUpdateNotifier } from "@/components/version-update-notifier";
 
 import { getAuth } from "@/lib/authkit/serverFunctions";
-import { useCookie } from "@/lib/hooks/use-cookie";
+import { sessionUseCookie } from "@/lib/hooks/use-cookie";
 
 type RootContext = {
   queryClient: QueryClient;
@@ -125,7 +125,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
       <body className="dark isolate max-h-svh overflow-hidden font-sans">
         {loaderData.sessionId && (
-          <SessionProvider useStorage={useCookie} idGenerator={() => loaderData.sessionId!}>
+          <SessionProvider useStorage={sessionUseCookie} idGenerator={() => loaderData.sessionId!}>
             {children}
           </SessionProvider>
         )}
