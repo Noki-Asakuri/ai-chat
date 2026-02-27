@@ -1,12 +1,12 @@
 import type { HighlightResult } from "@streamdown/code";
-import { type ComponentProps, memo, useMemo } from "react";
+import { type ComponentProps, type CSSProperties, memo, useMemo } from "react";
 
 import { cn } from "@/lib/utils";
 import { LINE_CLAMP } from ".";
 import { useCodeBlockContext } from "./context";
 import { EllipsisIcon } from "lucide-react";
 
-type CodeBlockBodyProps = ComponentProps<"pre"> & {
+type CodeBlockBodyProps = ComponentProps<"div"> & {
   result: HighlightResult;
   language: string;
 };
@@ -26,6 +26,25 @@ const LINE_NUMBER_CLASSES = cn(
 );
 
 /**
+ * Parse a CSS declarations string (e.g. Shiki's rootStyle) into a style object.
+ * This extracts CSS custom properties like --shiki-dark-bg from Shiki's dual theme output.
+ */
+const parseRootStyle = (rootStyle: string): Record<string, string> => {
+  const style: Record<string, string> = {};
+  for (const decl of rootStyle.split(";")) {
+    const idx = decl.indexOf(":");
+    if (idx > 0) {
+      const prop = decl.slice(0, idx).trim();
+      const val = decl.slice(idx + 1).trim();
+      if (prop && val) {
+        style[prop] = val;
+      }
+    }
+  }
+  return style;
+};
+
+/**
  * The body of the code block. This component is memoized to prevent unnecessary re-renders.
  * The code originates from the `@streamdown` package
  *
@@ -33,45 +52,101 @@ const LINE_NUMBER_CLASSES = cn(
  */
 export const CodeBlockContent = memo(
   ({ children: _code, result, language, className, ...rest }: CodeBlockBodyProps) => {
-    // Memoize the pre style object
-    const preStyle = useMemo(
-      () => ({ backgroundColor: result.bg, color: result.fg }),
-      [result.bg, result.fg],
-    );
+    // Use CSS custom properties instead of direct inline styles so that
+    // dark-mode Tailwind classes can override without !important.
+    // This is necessary because !important syntax differs between Tailwind v3 and v4.
+    const preStyle = useMemo(() => {
+      const style: Record<string, string> = {};
+
+      if (result.bg) {
+        style["--sdm-bg"] = result.bg;
+      }
+      if (result.fg) {
+        style["--sdm-fg"] = result.fg;
+      }
+
+      // Parse rootStyle for Shiki dark theme CSS variables (--shiki-dark-bg, etc.)
+      if (result.rootStyle) {
+        Object.assign(style, parseRootStyle(result.rootStyle));
+      }
+
+      return style as CSSProperties;
+    }, [result.bg, result.fg, result.rootStyle]);
+
+    console.log(result.tokens);
 
     return (
-      <pre
-        className={cn(className, "text-sm dark:bg-(--shiki-dark-bg)!")}
+      <div
+        className={cn(className, "overflow-hidden text-sm")}
         data-language={language}
-        data-slot="code-block-body"
-        style={preStyle}
+        data-streamdown="code-block-body"
         {...rest}
       >
-        <code className="[counter-increment:line_0] [counter-reset:line]">
-          {result.tokens.map((row, index) => (
-            <span className={LINE_NUMBER_CLASSES} key={index}>
-              {row.length === 0 ? (
-                <br />
-              ) : (
-                row.map((token, tokenIndex) => (
-                  <span
-                    key={tokenIndex}
-                    className="dark:bg-(--shiki-dark-bg)! dark:text-(--shiki-dark)!"
-                    style={{
-                      color: token.color,
-                      backgroundColor: token.bgColor,
-                      ...token.htmlStyle,
-                    }}
-                    {...token.htmlAttrs}
-                  >
-                    {token.content}
-                  </span>
-                ))
-              )}
-            </span>
-          ))}
-        </code>
-      </pre>
+        <pre
+          className={cn(
+            className,
+            "bg-[var(--sdm-bg,inherit]",
+            "dark:bg-[var(--shiki-dark-bg,var(--sdm-bg,inherit)]",
+          )}
+          style={preStyle}
+        >
+          <code className="[counter-increment:line_0] [counter-reset:line]">
+            {result.tokens.map((row, index) => (
+              <span className={LINE_NUMBER_CLASSES} key={index}>
+                {row.length === 0 && <br />}
+
+                {row.map((token, tokenIndex) => {
+                  // Shiki dual-theme tokens put direct CSS properties (color,
+                  // background-color) into htmlStyle alongside CSS custom
+                  // properties (--shiki-dark, etc). Direct properties as inline
+                  // styles override the Tailwind class-based dark mode approach,
+                  // so we redirect them to CSS custom properties instead.
+                  const tokenStyle: Record<string, string> = {};
+                  let hasBg = Boolean(token.bgColor);
+
+                  if (token.color) {
+                    tokenStyle["--sdm-c"] = token.color;
+                  }
+
+                  if (token.bgColor) {
+                    tokenStyle["--sdm-tbg"] = token.bgColor;
+                  }
+
+                  if (token.htmlStyle) {
+                    for (const [key, value] of Object.entries(token.htmlStyle)) {
+                      if (key === "color") {
+                        tokenStyle["--sdm-c"] = value;
+                      } else if (key === "background-color") {
+                        tokenStyle["--sdm-tbg"] = value;
+                        hasBg = true;
+                      } else {
+                        tokenStyle[key] = value;
+                      }
+                    }
+                  }
+
+                  return (
+                    <span
+                      className={cn(
+                        "text-[var(--sdm-c,inherit)]",
+                        "dark:text-[var(--shiki-dark,var(--sdm-c,inherit))]",
+                        hasBg && "bg-[var(--sdm-tbg)]",
+                        hasBg && "dark:bg-[var(--shiki-dark-bg,var(--sdm-tbg))]",
+                      )}
+                      // biome-ignore lint/suspicious/noArrayIndexKey: "This is a stable key."
+                      key={tokenIndex}
+                      style={tokenStyle as CSSProperties}
+                      {...token.htmlAttrs}
+                    >
+                      {token.content}
+                    </span>
+                  );
+                })}
+              </span>
+            ))}
+          </code>
+        </pre>
+      </div>
     );
   },
   (prevProps, nextProps) => {
