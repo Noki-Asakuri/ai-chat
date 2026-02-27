@@ -59,23 +59,49 @@ type HighlightedCodeBlockProps = {
   code: string;
 };
 
+function splitCodeToHighlightTokens(code: string) {
+  const result: HighlightResult = {
+    bg: "transparent",
+    fg: "inherit",
+    tokens: [],
+  };
+
+  for (const line of code.split("\n")) {
+    const trimmed = line.trim();
+
+    if (trimmed === "") {
+      result.tokens.push([]);
+      continue;
+    }
+
+    result.tokens.push([
+      { content: line, color: "inherit", bgColor: "transparent", htmlStyle: {}, offset: 0 },
+    ]);
+  }
+
+  return result;
+}
+
+function transformHighlightResult(result: HighlightResult) {
+  const transformed = structuredClone(result);
+
+  for (let i = 0; i < transformed.tokens.length; i++) {
+    const line = transformed.tokens[i];
+
+    if (line && line.length === 1 && line[0]!.content.trim() === "") {
+      transformed.tokens[i] = [];
+      continue;
+    }
+  }
+
+  return transformed;
+}
+
 function HighlightedCodeBlock({ language, code }: HighlightedCodeBlockProps) {
   const totalLines = code.split("\n").length;
   const prevCodeRef = useRef(code);
 
-  const raw: HighlightResult = useMemo(
-    () => ({
-      bg: "transparent",
-      fg: "inherit",
-      tokens: code
-        .split("\n")
-        .map((line) => [
-          { content: line, color: "inherit", bgColor: "transparent", htmlStyle: {}, offset: 0 },
-        ]),
-    }),
-    [code],
-  );
-
+  const raw: HighlightResult = useMemo(() => splitCodeToHighlightTokens(code), [code]);
   const [result, setResult] = useState<HighlightResult>(raw);
 
   useEffect(() => {
@@ -91,12 +117,12 @@ function HighlightedCodeBlock({ language, code }: HighlightedCodeBlockProps) {
       },
       (highlightedResult) => {
         prevCodeRef.current = code;
-        setResult(highlightedResult);
+        setResult(transformHighlightResult(highlightedResult));
       },
     );
 
     if (cachedResult) {
-      setResult(cachedResult);
+      setResult(transformHighlightResult(cachedResult));
       return;
     }
 
