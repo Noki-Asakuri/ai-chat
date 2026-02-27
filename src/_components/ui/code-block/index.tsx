@@ -1,6 +1,5 @@
-import { code as codePlugin, type HighlightResult } from "@streamdown/code";
+import { code as codePlugin, type HighlightOptions, type HighlightResult } from "@streamdown/code";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { BundledLanguage } from "shiki";
 
 import { Icons } from "../icons";
 
@@ -85,7 +84,11 @@ function HighlightedCodeBlock({ language, code }: HighlightedCodeBlockProps) {
     prevCodeRef.current = code;
 
     const cachedResult = codePlugin.highlight(
-      { code, language: language as BundledLanguage, themes: ["one-dark-pro", "one-dark-pro"] },
+      {
+        code,
+        language: language as HighlightOptions["language"],
+        themes: ["one-dark-pro", "one-dark-pro"],
+      },
       (highlightedResult) => {
         prevCodeRef.current = code;
         setResult(highlightedResult);

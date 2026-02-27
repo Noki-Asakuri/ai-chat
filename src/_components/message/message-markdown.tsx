@@ -137,6 +137,7 @@ export function StreamDownWrapper({ children, role, ...props }: MarkdownProps) {
     <Streamdown
       plugins={{ math, mermaid }}
       mode={role === "assistant" ? "streaming" : "static"}
+      // @ts-expect-error For some reason this cause type error despite being correct
       components={{ code: CodeBlock }}
       {...props}
     >
