@@ -412,7 +412,7 @@ function AttachmentsPage() {
         </div>
       </div>
 
-      <div className="sticky top-16 isolate z-30 rounded-md border bg-background p-3 shadow-sm">
+      <div className="sticky top-20 isolate z-30 rounded-md border bg-background p-3 shadow-sm before:pointer-events-none before:absolute before:-top-4 before:right-0 before:left-0 before:h-4 before:bg-background before:content-['']">
         <div className="flex flex-col gap-2">
           <div className="relative w-full">
             <SearchIcon
