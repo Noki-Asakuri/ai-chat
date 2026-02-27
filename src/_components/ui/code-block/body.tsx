@@ -50,20 +50,24 @@ export const CodeBlockContent = memo(
         <code className="[counter-increment:line_0] [counter-reset:line]">
           {result.tokens.map((row, index) => (
             <span className={LINE_NUMBER_CLASSES} key={index}>
-              {row.map((token, tokenIndex) => (
-                <span
-                  key={tokenIndex}
-                  className="dark:bg-(--shiki-dark-bg)! dark:text-(--shiki-dark)!"
-                  style={{
-                    color: token.color,
-                    backgroundColor: token.bgColor,
-                    ...token.htmlStyle,
-                  }}
-                  {...token.htmlAttrs}
-                >
-                  {token.content}
-                </span>
-              ))}
+              {row.length === 0 ? (
+                <br />
+              ) : (
+                row.map((token, tokenIndex) => (
+                  <span
+                    key={tokenIndex}
+                    className="dark:bg-(--shiki-dark-bg)! dark:text-(--shiki-dark)!"
+                    style={{
+                      color: token.color,
+                      backgroundColor: token.bgColor,
+                      ...token.htmlStyle,
+                    }}
+                    {...token.htmlAttrs}
+                  >
+                    {token.content}
+                  </span>
+                ))
+              )}
             </span>
           ))}
         </code>
