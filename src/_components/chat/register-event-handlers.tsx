@@ -216,7 +216,7 @@ export function RegisterEventHandlers() {
       const element = getMessagesScrollAreaElement();
       if (!element) return;
 
-      scrollToBottomIfStickyRaf(element, "smooth");
+      scrollToBottomIfStickyRaf(element, "auto");
     },
     { capture: true },
   );

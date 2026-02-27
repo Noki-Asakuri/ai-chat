@@ -42,19 +42,28 @@ export function Message({ messageId, index, total }: MessageProps) {
 
   // Keep assistant message min-height in sync with live changes to the most recent user message
   useEffect(() => {
-    // Only the last assistant message needs to be observed
-    if (message.role === "user" || !isLast || !containerRef.current) return;
+    // Only the last user message should drive `lastUserMessageHeight`.
+    if (message.role !== "user" || !isLast || !containerRef.current) return;
+
+    const element = containerRef.current;
+    let lastReportedHeight = -1;
+
+    function reportHeight(nextHeight: number): void {
+      if (nextHeight === lastReportedHeight) return;
+
+      lastReportedHeight = nextHeight;
+      chatStoreActions.setMessageHeight(nextHeight);
+    }
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const height = Math.round(entry.contentRect.height);
-        chatStoreActions.setMessageHeight(height);
+        reportHeight(Math.round(entry.contentRect.height));
       }
     });
 
     // init and observe
-    chatStoreActions.setMessageHeight(containerRef.current.clientHeight);
-    resizeObserver.observe(containerRef.current);
+    reportHeight(Math.round(element.getBoundingClientRect().height));
+    resizeObserver.observe(element);
 
     return () => {
       resizeObserver.disconnect();
