@@ -100,14 +100,16 @@ export function CodeBlockBody({ result }: { result: HighlightResult }) {
   })();
 
   return (
-    <div
-      className={cn(
-        "relative px-3 py-2",
-        isCollapsed ? "custom-scroll overflow-auto" : "overflow-hidden",
-      )}
-      style={{ maxHeight: containerMaxHeight }}
-    >
-      <CodeBlockContent result={result} language={language} />
+    <div className="relative">
+      <div
+        className={cn(
+          "px-3 py-2",
+          isCollapsed ? "custom-scroll overflow-auto pb-10" : "overflow-hidden",
+        )}
+        style={{ maxHeight: containerMaxHeight }}
+      >
+        <CodeBlockContent result={result} language={language} />
+      </div>
 
       {isCollapsed && (
         <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center">
