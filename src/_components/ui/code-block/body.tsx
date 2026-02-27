@@ -85,9 +85,10 @@ export function CodeBlockBody({ result }: { result: HighlightResult }) {
   const { expanded, totalLines, setExpanded } = useCodeBlockContext();
 
   const moreCount = totalLines > LINE_CLAMP ? totalLines - LINE_CLAMP : 0;
+  const isCollapsed = !expanded && moreCount > 0;
 
   const containerMaxHeight = (() => {
-    if (expanded || totalLines <= LINE_CLAMP) return undefined;
+    if (!isCollapsed) return undefined;
     const lineHeightPx = 20;
     const verticalPadding = 8;
 
@@ -95,10 +96,16 @@ export function CodeBlockBody({ result }: { result: HighlightResult }) {
   })();
 
   return (
-    <div className="relative overflow-hidden px-3 py-2" style={{ maxHeight: containerMaxHeight }}>
+    <div
+      className={cn(
+        "relative px-3 py-2",
+        isCollapsed ? "custom-scroll overflow-auto" : "overflow-hidden",
+      )}
+      style={{ maxHeight: containerMaxHeight }}
+    >
       <CodeBlockContent result={result} language={language} />
 
-      {!expanded && moreCount > 0 && (
+      {isCollapsed && (
         <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center">
           <button
             type="button"
