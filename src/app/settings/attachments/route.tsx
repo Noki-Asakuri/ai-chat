@@ -37,7 +37,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,6 +83,22 @@ type AttachmentSortValue =
 
 const PAGE_SIZE = 20;
 const PAGE_WINDOW = 1;
+
+const IMAGEKIT_BASE_URL = "https://ik.imagekit.io/gmethsnvl/ai-chat";
+const FILES_BASE_URL = "https://files.chat.asakuri.me";
+const GRID_IMAGE_TRANSFORM = "tr=w-448,h-448,c-at_max,f-auto,q-70";
+
+function getAttachmentImageUrl(path: string): string {
+  return `${IMAGEKIT_BASE_URL}/${path}`;
+}
+
+function getAttachmentThumbnailUrl(path: string): string {
+  return `${IMAGEKIT_BASE_URL}/${path}?${GRID_IMAGE_TRANSFORM}`;
+}
+
+function getAttachmentFileUrl(path: string): string {
+  return `${FILES_BASE_URL}/${path}`;
+}
 
 const SOURCE_FILTER_OPTIONS: Record<SourceFilter, { label: string; Icon: typeof ArrowDownAZIcon }> =
   {
@@ -226,6 +241,15 @@ function AttachmentsPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [selectionMode, setSelectionMode] = useState<boolean>(false);
   const [selected, setSelected] = useState<Set<Id<"attachments">>>(() => new Set());
+  const [deleteDialogState, setDeleteDialogState] = useState<{
+    open: boolean;
+    attachmentId: Id<"attachments"> | null;
+    name: string;
+  }>({
+    open: false,
+    attachmentId: null,
+    name: "",
+  });
   const [page, setPage] = useState<number>(1);
   const [bulkPending, startBulkTransition] = useTransition();
   const deferredSearchText = useDeferredValue(searchText);
@@ -259,7 +283,8 @@ function AttachmentsPage() {
   const lightboxImages = useMemo(
     () =>
       imageItems.map((attachment) => ({
-        src: `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.path}`,
+        src: getAttachmentImageUrl(attachment.path),
+        thumbnailSrc: getAttachmentThumbnailUrl(attachment.path),
         alt: attachment.name,
         name: attachment.name,
         bytes: attachment.size,
@@ -296,6 +321,14 @@ function AttachmentsPage() {
     if (nextPage < 1 || nextPage > totalPages) return;
     setPage(nextPage);
     setSelected(new Set());
+  }
+
+  function openDeleteDialog(attachmentId: Id<"attachments">, name: string) {
+    setDeleteDialogState({ open: true, attachmentId, name });
+  }
+
+  function closeDeleteDialog() {
+    setDeleteDialogState({ open: false, attachmentId: null, name: "" });
   }
 
   function toggleSelectionMode() {
@@ -379,7 +412,7 @@ function AttachmentsPage() {
         </div>
       </div>
 
-      <div className="sticky top-24 z-10 rounded-md border bg-background p-3">
+      <div className="sticky top-16 isolate z-30 rounded-md border bg-background p-3 shadow-sm">
         <div className="flex flex-col gap-2">
           <div className="relative w-full">
             <SearchIcon
@@ -565,17 +598,17 @@ function AttachmentsPage() {
         </Empty>
       ) : (
         <ImageLightboxProvider images={lightboxImages}>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="relative z-0 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {attachments.map((attachment) => {
               const isSelected = selected.has(attachment._id);
-              const imageUrl = `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.path}`;
-              const fileUrl = `https://files.chat.asakuri.me/${attachment.path}`;
+              const thumbnailUrl = getAttachmentThumbnailUrl(attachment.path);
+              const fileUrl = getAttachmentFileUrl(attachment.path);
               const imageIndex = imageIndexMap.get(attachment._id) ?? -1;
 
               return (
                 <div
                   key={attachment._id}
-                  className="group flex flex-col overflow-hidden rounded-md border bg-card"
+                  className="group flex flex-col overflow-hidden rounded-md border bg-card [content-visibility:auto]"
                   data-selected={isSelected}
                 >
                   <div className="relative">
@@ -591,9 +624,11 @@ function AttachmentsPage() {
                           <img
                             alt={attachment.name}
                             className="aspect-square size-full object-cover"
-                            src={imageUrl}
+                            src={thumbnailUrl}
                             loading="lazy"
                             decoding="async"
+                            width={448}
+                            height={448}
                           />
                         ) : (
                           <div className="flex aspect-square size-full items-center justify-center p-2">
@@ -604,11 +639,13 @@ function AttachmentsPage() {
                     ) : attachment.type === "image" && imageIndex >= 0 ? (
                       <ImageLightboxTrigger index={imageIndex} className="block size-full">
                         <img
-                          src={imageUrl}
+                          src={thumbnailUrl}
                           alt={attachment.name}
                           className="aspect-square size-full object-cover object-center"
                           loading="lazy"
                           decoding="async"
+                          width={448}
+                          height={448}
                         />
                       </ImageLightboxTrigger>
                     ) : (
@@ -640,18 +677,14 @@ function AttachmentsPage() {
                       </div>
 
                       {!selectionMode && (
-                        <DeleteAttachmentDialog
-                          attachmentId={attachment._id}
-                          name={attachment.name}
+                        <Button
+                          variant="secondary"
+                          className="pointer-events-auto size-7 transition-colors hover:bg-destructive"
+                          onClick={() => openDeleteDialog(attachment._id, attachment.name)}
                         >
-                          <Button
-                            variant="secondary"
-                            className="pointer-events-auto size-7 transition-colors hover:bg-destructive"
-                          >
-                            <TrashIcon />
-                            <span className="sr-only">Delete {attachment.name}</span>
-                          </Button>
-                        </DeleteAttachmentDialog>
+                          <TrashIcon />
+                          <span className="sr-only">Delete {attachment.name}</span>
+                        </Button>
                       )}
                     </div>
 
@@ -694,6 +727,20 @@ function AttachmentsPage() {
           </div>
         </ImageLightboxProvider>
       )}
+
+      <DeleteAttachmentDialog
+        open={deleteDialogState.open}
+        onOpenChange={(open: boolean) => {
+          if (!open) {
+            closeDeleteDialog();
+            return;
+          }
+
+          setDeleteDialogState((previous) => ({ ...previous, open }));
+        }}
+        attachmentId={deleteDialogState.attachmentId}
+        name={deleteDialogState.name}
+      />
 
       {totalItems > 0 && (
         <div className="space-y-2 pt-1">
@@ -764,16 +811,24 @@ function AttachmentsPage() {
 }
 
 type DeleteAttachmentDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   name: string;
-  children: React.ReactElement;
-  attachmentId: Id<"attachments">;
+  attachmentId: Id<"attachments"> | null;
 };
 
-function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachmentDialogProps) {
+function DeleteAttachmentDialog({
+  open,
+  onOpenChange,
+  attachmentId,
+  name,
+}: DeleteAttachmentDialogProps) {
   const [pending, startTransition] = useTransition();
   const deleteAttachment = useSessionMutation(api.functions.attachments.deleteAttachment);
 
   function onDelete() {
+    if (!attachmentId) return;
+
     startTransition(async function () {
       const [, error] = await tryCatch(deleteAttachment({ attachmentId }));
 
@@ -783,12 +838,12 @@ function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachme
       }
 
       toast.success("File deleted");
+      onOpenChange(false);
     });
   }
 
   return (
-    <AlertDialog>
-      <AlertDialogTrigger render={children} />
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete file {name}?</AlertDialogTitle>
@@ -800,7 +855,7 @@ function DeleteAttachmentDialog({ attachmentId, name, children }: DeleteAttachme
 
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onDelete} disabled={pending}>
+          <AlertDialogAction onClick={onDelete} disabled={pending || !attachmentId}>
             {pending ? "Deleting..." : "Continue"}
           </AlertDialogAction>
         </AlertDialogFooter>
