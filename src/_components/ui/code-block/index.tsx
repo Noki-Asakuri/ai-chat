@@ -1,5 +1,5 @@
 import { code as codePlugin, type HighlightResult } from "@streamdown/code";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { BundledLanguage } from "shiki";
 
 import { Icons } from "../icons";
@@ -62,6 +62,7 @@ type HighlightedCodeBlockProps = {
 
 function HighlightedCodeBlock({ language, code }: HighlightedCodeBlockProps) {
   const totalLines = code.split("\n").length;
+  const prevCodeRef = useRef(code);
 
   const raw: HighlightResult = useMemo(
     () => ({
@@ -79,20 +80,26 @@ function HighlightedCodeBlock({ language, code }: HighlightedCodeBlockProps) {
   const [result, setResult] = useState<HighlightResult>(raw);
 
   useEffect(() => {
+    const isIncrementalUpdate =
+      code.startsWith(prevCodeRef.current) && code.length > prevCodeRef.current.length;
+    prevCodeRef.current = code;
+
     const cachedResult = codePlugin.highlight(
       { code, language: language as BundledLanguage, themes: ["one-dark-pro", "one-dark-pro"] },
-      (highlightedResult) => setResult(highlightedResult),
+      (highlightedResult) => {
+        prevCodeRef.current = code;
+        setResult(highlightedResult);
+      },
     );
 
-    // Already cached, use it immediately
     if (cachedResult) {
       setResult(cachedResult);
       return;
     }
 
-    // Not cached - reset to raw tokens while waiting for highlighting
-    // This is critical for streaming: ensures we show current code, not stale tokens
-    setResult(raw);
+    if (!isIncrementalUpdate) {
+      setResult(raw);
+    }
   }, [code, language, raw]);
 
   return (

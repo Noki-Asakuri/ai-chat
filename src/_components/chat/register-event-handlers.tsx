@@ -7,7 +7,7 @@ import {
   computeIsAtBottom,
   getMessagesScrollAreaElement,
   scrollToBottom,
-  scrollToBottomIfSticky,
+  scrollToBottomIfStickyRaf,
   setStickyToBottom,
 } from "@/lib/chat/scroll-stickiness";
 import { useAbortChatStream } from "@/lib/chat/server-function/abort-chat-stream";
@@ -216,9 +216,7 @@ export function RegisterEventHandlers() {
       const element = getMessagesScrollAreaElement();
       if (!element) return;
 
-      requestAnimationFrame(() => {
-        scrollToBottomIfSticky(element, "smooth");
-      });
+      scrollToBottomIfStickyRaf(element, "smooth");
     },
     { capture: true },
   );

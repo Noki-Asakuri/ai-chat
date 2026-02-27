@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { Message } from "./message";
 
 import {
-  scrollToBottomIfSticky,
+  scrollToBottomIfStickyRaf,
   updateStickyToBottomFromScroll,
 } from "@/lib/chat/scroll-stickiness";
 import { useChatStore } from "@/lib/store/chat-store";
@@ -24,7 +24,7 @@ export function MessageHistory() {
     updateStickyToBottomFromScroll(scrollArea);
 
     const resizeObserver = new ResizeObserver(() => {
-      scrollToBottomIfSticky(scrollArea, "auto");
+      scrollToBottomIfStickyRaf(scrollArea, "auto");
     });
 
     resizeObserver.observe(content);

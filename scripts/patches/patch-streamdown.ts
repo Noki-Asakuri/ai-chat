@@ -1,16 +1,17 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const filePath = resolve(process.cwd(), "node_modules/streamdown/dist/chunk-5FQGJX7Z.js");
+// streamdown 2.3.0
+const filePath = resolve(process.cwd(), "node_modules/streamdown/dist/chunk-RLXIAIE6.js");
 
-const oldSnippet = 'useEffect(()=>{t==="streaming"?P(()=>{A(L);}):A(L);},[L,t]);';
-const newSnippet = "useEffect(()=>{A(L);},[L,t]);";
+const oldSnippet = 'useEffect(()=>{t==="streaming"?B(()=>{v(I);}):v(I);},[I,t]);';
+const newSnippet = "useEffect(()=>{v(I);},[I,t]);";
 
 function main() {
   let contents: string;
   try {
     contents = readFileSync(filePath, "utf8");
-  } catch (error) {
+  } catch {
     // If dependencies aren't installed, don't fail installs/builds.
     console.warn(`[patch-streamdown] Skipping; file not found: ${filePath}`);
     return;

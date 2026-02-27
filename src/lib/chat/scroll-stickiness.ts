@@ -1,6 +1,7 @@
 const BOTTOM_THRESHOLD_PX = 24;
 
 let stickyToBottom = true;
+let scrollRafId: number | null = null;
 
 export function getBottomThresholdPx(): number {
   return BOTTOM_THRESHOLD_PX;
@@ -36,4 +37,14 @@ export function scrollToBottom(element: HTMLElement, behavior: ScrollBehavior): 
 export function scrollToBottomIfSticky(element: HTMLElement, behavior: ScrollBehavior): void {
   if (!stickyToBottom) return;
   scrollToBottom(element, behavior);
+}
+
+export function scrollToBottomIfStickyRaf(element: HTMLElement, behavior: ScrollBehavior): void {
+  if (scrollRafId !== null) {
+    cancelAnimationFrame(scrollRafId);
+  }
+  scrollRafId = requestAnimationFrame(() => {
+    scrollRafId = null;
+    scrollToBottomIfSticky(element, behavior);
+  });
 }
