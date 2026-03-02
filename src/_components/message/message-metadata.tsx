@@ -15,7 +15,7 @@ import {
 import { Icons } from "@/components/ui/icons";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-import { getModelData } from "@/lib/chat/models";
+import { tryGetModelData } from "@/lib/chat/models";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
@@ -27,7 +27,9 @@ type MessageMetadataProps = {
 export function MessageMetadata({ metadata }: MessageMetadataProps) {
   if (!metadata) return null;
 
-  const modelData = getModelData(metadata.model.request);
+  const modelData = tryGetModelData(metadata.model.request);
+  if (!modelData) return null;
+
   const hasFullMetadata = metadata.usages.inputTokens > 0;
 
   const showEffort =

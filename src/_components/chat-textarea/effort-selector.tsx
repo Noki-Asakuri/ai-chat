@@ -6,7 +6,7 @@ import { useConfigStore, useConfigStoreState } from "../provider/config-provider
 import { Button, buttonVariants } from "../ui/button";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "../ui/popover";
 
-import { getModelData } from "@/lib/chat/models";
+import { tryGetModelData } from "@/lib/chat/models";
 import type { ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +41,9 @@ export const EFFORT_OPTIONS: Record<
 };
 
 export function EffortSelectorBase(props: EffortSelectorProps) {
-  const modelData = getModelData(props.model);
+  const modelData = tryGetModelData(props.model);
+  if (!modelData) return null;
+
   const configStore = useConfigStoreState();
 
   const shouldHideSelector =

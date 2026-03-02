@@ -1,7 +1,7 @@
 import { Icons } from "../ui/icons";
 import { Shimmer } from "../ui/ai-elements/shimmer";
 
-import { getModelData, type Provider } from "@/lib/chat/models";
+import { tryGetModelData, type Provider } from "@/lib/chat/models";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +11,7 @@ type MessagePendingProps = {
 
 export function MessagePending({ metadata }: MessagePendingProps) {
   const requestModelId = metadata?.model.request;
-  const modelData = requestModelId ? getModelData(requestModelId) : undefined;
+  const modelData = requestModelId ? tryGetModelData(requestModelId) : null;
 
   const effort = metadata?.modelParams?.effort;
   const showEffort =

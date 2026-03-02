@@ -6,7 +6,7 @@ import { google, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { openai, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import { convertToModelMessages, validateUIMessages, type ToolSet } from "ai";
 
-import { getModelData } from "../chat/models";
+import { resolveModel } from "../chat/models";
 import { metadataSchema, type ReasoningEffort, type UIChatMessage } from "../types";
 import { tryCatch, tryCatchSync } from "../utils";
 
@@ -119,15 +119,15 @@ export async function validateRequestBody(body: Record<string, unknown>) {
 
   const normalizedMessages = moveAssistantFilePartsToNextUserMessageValidated(validatedMessages);
 
-  const [modelData, modelError] = tryCatchSync(() => {
+  const [resolvedModel, modelError] = tryCatchSync(() => {
     if (!data.model || data.model.length === 0) throw new Error("No model provided");
-    return { data: getModelData(data.model), model: data.model };
+    return resolveModel(data.model);
   });
 
   if (modelError) throw new Error(`Invalid model: ${modelError.message}`, { cause: modelError });
 
   const tools: ToolSet = {};
-  const { data: modelInfo, model } = modelData;
+  const { data: modelInfo, requestedId } = resolvedModel;
   const modelMessages = await convertToModelMessages(normalizedMessages);
 
   const providerOptions = {
@@ -158,8 +158,8 @@ export async function validateRequestBody(body: Record<string, unknown>) {
           : providerOptions.google.thinkingConfig.thinkingBudget;
     }
 
-    if (modelInfo.id === "google/gemini-3-flash" && !modelInfo.capabilities.reasoning) {
-      // We disable thinking on normal gemini-3-flash. For thinking, we should use gemini-3-flash-thinking instead.
+    if (requestedId === "google/gemini-3-flash-thinking") {
+      // We disable thinking on normal gemini-3-flash. For thinking, we use gemini-3-flash-thinking.
       providerOptions.google.thinkingConfig = { includeThoughts: true, thinkingLevel: "minimal" };
     }
 
@@ -217,7 +217,7 @@ export async function validateRequestBody(body: Record<string, unknown>) {
     assistantMessageId: data.assistantMessageId,
     threadId: data.threadId,
     modelParams: data.modelParams,
-    model: { id: modelInfo.id, uniqueId: model },
+    model: { id: modelInfo.id, uniqueId: requestedId },
     providerOptions,
     tools,
   };

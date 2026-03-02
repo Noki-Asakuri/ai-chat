@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 
-import { getModelData } from "../../src/lib/chat/models";
+import { tryGetModelData } from "../../src/lib/chat/models";
 import { type Doc, type Id } from "../_generated/dataModel";
 import { internalMutation, type MutationCtx } from "../_generated/server";
 
@@ -182,7 +182,7 @@ export const incrementOnAssistantComplete = internalMutation({
     threadCounts[args.threadId] = (threadCounts[args.threadId] ?? 0) + added.total;
 
     const modelCounts: Record<string, number> = { ...doc.modelCounts };
-    const normalizedModelId = getModelData(args.modelUniqueId).id;
+    const normalizedModelId = tryGetModelData(args.modelUniqueId)?.id ?? args.modelUniqueId;
     modelCounts[normalizedModelId] = (modelCounts[normalizedModelId] ?? 0) + added.total;
 
     const aiProfileCounts: Record<string, number> = { ...doc.aiProfileCounts };

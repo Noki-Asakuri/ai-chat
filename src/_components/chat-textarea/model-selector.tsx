@@ -19,7 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 import { ModelCapability } from "../capability-icon";
 
-import { AllModelIds, getModelData } from "@/lib/chat/models";
+import { AllModelIds, tryGetModelData } from "@/lib/chat/models";
 import { cn } from "@/lib/utils";
 
 type ModelSelectorProps = {
@@ -54,7 +54,16 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   }
 
   function renderTriggerValue(value: string) {
-    const modelData = getModelData(value);
+    const modelData = tryGetModelData(value);
+
+    if (!modelData) {
+      return (
+        <div className="flex min-w-0 items-center gap-2">
+          <Icons.unknown className="size-4 shrink-0" />
+          <span className="min-w-0 truncate">Unknown model</span>
+        </div>
+      );
+    }
 
     return (
       <div className="flex min-w-0 items-center gap-2">
@@ -157,7 +166,8 @@ export function ModelSelector(props: ModelSelectorProps) {
 }
 
 function ModelItem({ selected, value, onChange }: ModelSelectorProps & { selected: boolean }) {
-  const data = getModelData(value);
+  const data = tryGetModelData(value);
+  if (!data) return null;
 
   return (
     <CommandItem

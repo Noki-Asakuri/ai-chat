@@ -6,7 +6,7 @@ import { ImageLightboxProvider, ImageLightboxTrigger } from "@/components/image-
 import { useConfigStore } from "@/components/provider/config-provider";
 import { ButtonWithTip } from "@/components/ui/button";
 
-import { getModelData } from "@/lib/chat/models";
+import { tryGetModelData } from "@/lib/chat/models";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import type { UserAttachment } from "@/lib/types";
 import { format } from "@/lib/utils";
@@ -21,7 +21,7 @@ export function BaseChatAttachmentsButton({
   handleAddAttachments,
   ...props
 }: BaseChatAttachmentsButtonProps) {
-  const hasImageVision = getModelData(model).capabilities.vision;
+  const hasImageVision = tryGetModelData(model)?.capabilities.vision;
   const inputId = useId();
 
   if (!hasImageVision) return null;

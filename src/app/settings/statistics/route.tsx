@@ -15,7 +15,7 @@ import {
 
 import { LoadingStatisticsSkeleton } from "./-pending";
 
-import { getModelData } from "@/lib/chat/models";
+import { tryGetModelData } from "@/lib/chat/models";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { format } from "@/lib/utils";
 
@@ -51,8 +51,8 @@ function StatisticsPage() {
 
   const modelChartData: Array<RankItem> = [];
   for (const item of modelRank.slice(0, 5)) {
-    const model = getModelData(item.name);
-    modelChartData.push({ name: model.display.name, value: item.value });
+    const model = tryGetModelData(item.name);
+    modelChartData.push({ name: model?.display.name ?? item.name, value: item.value });
   }
 
   const threadChartData: Array<RankItem> = [];

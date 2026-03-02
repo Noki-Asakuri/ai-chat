@@ -8,7 +8,7 @@ import { BaseChatAttachmentsButton, ChatAttachmentsButton } from "./attachments-
 import { ChatEffortSelector, EffortSelector } from "./effort-selector";
 import { ChatModelSelector, ModelSelector } from "./model-selector";
 
-import { getModelData } from "@/lib/chat/models";
+import { tryGetModelData } from "@/lib/chat/models";
 import { cn } from "@/lib/utils";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
@@ -75,7 +75,7 @@ export function BaseWebSearchButton({
   webSearch: boolean;
   setWebSearch: (webSearch: boolean) => void;
 }) {
-  const canDoWebSearch = getModelData(model)?.capabilities.webSearch ?? false;
+  const canDoWebSearch = tryGetModelData(model)?.capabilities.webSearch ?? false;
 
   return (
     <ButtonWithTip

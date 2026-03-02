@@ -8,6 +8,7 @@ import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { createProviderRegistry, customProvider, wrapLanguageModel } from "ai";
 
 import { env } from "@/env";
+import { ModelsData } from "@/lib/chat/models";
 
 const providerOptions = { baseURL: env.PROXY_URL, apiKey: env.PROXY_KEY };
 
@@ -44,6 +45,7 @@ const openai = customProvider({
     "gpt-5.2": baseOpenai.languageModel("gpt-5.2"),
     "gpt-5.2-chat": baseOpenai.languageModel("gpt-5.2-chat-latest"),
     "gpt-5.2-pro": baseOpenai.languageModel("gpt-5.2-pro"),
+    "gpt-5.3-codex": baseOpenai.languageModel("proxy-personal/gpt-5.3-codex"),
   },
 });
 
@@ -68,6 +70,24 @@ const google = customProvider({
 });
 
 const providers = createProviderRegistry({ google, openai, deepseek }, { separator: "/" });
+
+function assertModelRegistryCoverage() {
+  const missingRuntimeIds: Array<string> = [];
+
+  for (const modelData of Object.values(ModelsData)) {
+    try {
+      providers.languageModel(modelData.id);
+    } catch {
+      missingRuntimeIds.push(modelData.id);
+    }
+  }
+
+  if (missingRuntimeIds.length > 0) {
+    throw new Error(`Model registry missing runtime ids: ${missingRuntimeIds.join(", ")}`);
+  }
+}
+
+assertModelRegistryCoverage();
 
 export const registry: typeof providers.languageModel = createServerOnlyFn((...args) => {
   const middleware = env.NODE_ENV === "development" ? [devToolsMiddleware()] : [];

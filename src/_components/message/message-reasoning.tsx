@@ -2,7 +2,7 @@ import type { ReasoningUIPart } from "ai";
 
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "../ui/ai-elements/reasoning";
 
-import { getModelData } from "@/lib/chat/models";
+import { tryGetModelData } from "@/lib/chat/models";
 import type { ChatMessage } from "@/lib/types";
 
 type ThinkingToggleProps = {
@@ -14,7 +14,10 @@ type ThinkingToggleProps = {
 export function MessageReasoning({ parts, status, metadata }: ThinkingToggleProps) {
   if (!metadata) return null;
 
-  const isReasoningModel = getModelData(metadata.model.request).capabilities.reasoning;
+  const modelData = tryGetModelData(metadata.model.request);
+  if (!modelData) return null;
+
+  const isReasoningModel = modelData.capabilities.reasoning;
   if (!isReasoningModel || metadata.modelParams.effort === "none") return null;
 
   const reasoning = parts.map((p) => p.text).join("\n\n");
