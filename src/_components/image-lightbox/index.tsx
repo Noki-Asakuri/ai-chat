@@ -199,7 +199,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
 
       <Dialog.Popup className="pointer-events-none fixed inset-0 z-9999 outline-none">
         <div className="pointer-events-none absolute inset-0 flex flex-col">
-          <div className="pointer-events-none flex justify-end p-4">
+          <div className="pointer-events-none flex shrink-0 justify-end p-4">
             <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-lg bg-black/60 p-2 backdrop-blur">
               <Button
                 title="Download image"
@@ -247,7 +247,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
             </div>
           </div>
 
-          <div className="pointer-events-none relative flex flex-1 items-center justify-center px-6">
+          <div className="pointer-events-none relative flex min-h-0 flex-1 items-center justify-center px-6">
             <Button
               aria-label="Previous image"
               className="pointer-events-auto absolute top-1/2 left-4 -translate-y-1/2 rounded-md border bg-black/60 p-3 text-white backdrop-blur hover:bg-black/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
@@ -256,13 +256,13 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
               <ChevronLeftIcon className="size-4" />
             </Button>
 
-            <div className="pointer-events-auto flex flex-col items-center gap-3">
+            <div className="pointer-events-auto flex max-h-full flex-col items-center gap-3">
               <ZoomableImage
                 ref={zoomRef}
                 src={active.src}
                 alt={active.alt ?? active.name ?? "Image"}
                 onNaturalSize={setNaturalSize}
-                className="max-h-[80vh] max-w-[80vw]"
+                className="max-h-[min(80vh,calc(100dvh-14rem))] max-w-[80vw]"
               />
 
               <div className="flex flex-col items-center text-center text-white">
@@ -283,7 +283,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
             </Button>
           </div>
 
-          <div className="pointer-events-none px-4 pb-4">
+          <div className="pointer-events-none shrink-0 px-4 pb-4">
             <div
               ref={thumbsRef}
               className="pointer-events-auto mx-auto w-full max-w-[min(1100px,100%)] rounded-lg bg-black/60 p-2 backdrop-blur"
