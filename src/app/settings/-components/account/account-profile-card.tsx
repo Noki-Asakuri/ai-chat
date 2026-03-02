@@ -1,5 +1,4 @@
 import { useLoaderData, useRouter } from "@tanstack/react-router";
-import { TrashIcon, UploadCloudIcon } from "lucide-react";
 import { useEffect, useRef, useState, useTransition, type SubmitEvent } from "react";
 import { toast } from "sonner";
 
@@ -98,34 +97,6 @@ export function AccountProfileCard() {
     });
   }
 
-  function removeUploadedAvatar() {
-    if (!existingAvatarKey) return;
-
-    startTransition(async () => {
-      const promise = (async () => {
-        await updateAccountProfile({
-          data: {
-            firstName: user.firstName ?? "",
-            lastName: user.lastName ?? "",
-            email: user.email ?? "",
-            avatarKey: null,
-          },
-        });
-
-        await deleteFile(existingAvatarKey);
-      })();
-
-      toast.promise(promise, {
-        loading: "Removing photo...",
-        success: "Profile photo removed",
-        error: (err) => (err instanceof Error ? err.message : "Failed to remove photo"),
-      });
-
-      await promise;
-      await router.invalidate();
-    });
-  }
-
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
       <Card className="rounded-md">
@@ -138,38 +109,21 @@ export function AccountProfileCard() {
           <div className="grid gap-4 md:grid-cols-[auto_1fr] md:items-start">
             <div className="flex w-full flex-col items-center gap-3 md:w-48 md:items-start">
               <div className="group relative w-full">
-                <Avatar className="aspect-square size-full overflow-hidden rounded-md">
-                  <AvatarImage src={avatarUrl} alt="Profile image" className="object-cover" />
-                  <AvatarFallback className="rounded-md">{initials}</AvatarFallback>
-                </Avatar>
+                <button
+                  type="button"
+                  className="w-full cursor-pointer rounded-md disabled:cursor-not-allowed"
+                  aria-label="Change profile image"
+                  title="Click to change profile image"
+                  disabled={pending}
+                  onClick={() => avatarFileInputRef.current?.click()}
+                >
+                  <Avatar className="aspect-square size-full overflow-hidden rounded-md">
+                    <AvatarImage src={avatarUrl} alt="Profile image" className="object-cover" />
+                    <AvatarFallback className="rounded-md">{initials}</AvatarFallback>
+                  </Avatar>
+                </button>
 
                 <div className="pointer-events-none absolute inset-0 z-10 rounded-md bg-black/0 transition-colors group-focus-within:bg-black/25 group-hover:bg-black/25" />
-
-                <div className="pointer-events-none absolute top-2 right-2 z-20 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    className="pointer-events-auto size-8"
-                    aria-label="Upload profile image"
-                    disabled={pending}
-                    onClick={() => avatarFileInputRef.current?.click()}
-                  >
-                    <UploadCloudIcon className="size-4" />
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="pointer-events-auto size-8 border-destructive/60"
-                    aria-label="Remove profile image"
-                    disabled={pending || !existingAvatarKey}
-                    onClick={removeUploadedAvatar}
-                  >
-                    <TrashIcon className="size-4" />
-                  </Button>
-                </div>
 
                 <Input
                   ref={avatarFileInputRef}
@@ -191,10 +145,6 @@ export function AccountProfileCard() {
                   }}
                 />
               </div>
-
-              <p className="text-xs text-muted-foreground">
-                Hover your photo to upload a new one or remove it. <br /> (PNG, JPG, WebP)
-              </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
