@@ -1,6 +1,6 @@
 import { useLoaderData, useRouter } from "@tanstack/react-router";
 import { TrashIcon, UploadCloudIcon } from "lucide-react";
-import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type SubmitEvent } from "react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,8 +11,8 @@ import { Label } from "@/components/ui/label";
 
 import { updateAccountProfile } from "@/lib/authkit/accountServerFunctions";
 import { getUserAvatarUrl, getUserInitials } from "@/lib/authkit/user";
-import { useStorage } from "@/lib/hooks/use-storage";
 import { censorEmail } from "@/lib/email";
+import { useStorage } from "@/lib/hooks/use-storage";
 
 function getFormFile(key: string, formData: FormData): File | null {
   const value = formData.get(key);
@@ -51,7 +51,7 @@ export function AccountProfileCard() {
     };
   }, [avatarPreviewUrl]);
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
@@ -136,7 +136,7 @@ export function AccountProfileCard() {
 
         <CardContent className="space-y-3">
           <div className="grid gap-4 md:grid-cols-[auto_1fr] md:items-start">
-            <div className="flex w-full flex-col items-center gap-3 md:w-64 md:items-start">
+            <div className="flex w-full flex-col items-center gap-3 md:w-48 md:items-start">
               <div className="group relative w-full">
                 <Avatar className="aspect-square size-full overflow-hidden rounded-md">
                   <AvatarImage src={avatarUrl} alt="Profile image" className="object-cover" />
@@ -192,8 +192,8 @@ export function AccountProfileCard() {
                 />
               </div>
 
-              <p className="text-sm text-muted-foreground">
-                Hover your photo to upload a new one or remove it (PNG, JPG, WebP).
+              <p className="text-xs text-muted-foreground">
+                Hover your photo to upload a new one or remove it. <br /> (PNG, JPG, WebP)
               </p>
             </div>
 
@@ -232,7 +232,9 @@ export function AccountProfileCard() {
                   className="bg-input/30"
                   disabled={pending}
                   value={
-                    isEditingEmail ? emailDraft : censorEmail(emailDraft.trim().length > 0 ? emailDraft : userEmail)
+                    isEditingEmail
+                      ? emailDraft
+                      : censorEmail(emailDraft.trim().length > 0 ? emailDraft : userEmail)
                   }
                   placeholder={isEditingEmail ? "Enter a new email" : undefined}
                   onFocus={() => {
