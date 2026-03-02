@@ -1,14 +1,6 @@
 import type { HighlightResult } from "@streamdown/code";
 import { EllipsisIcon } from "lucide-react";
-import {
-  type ComponentProps,
-  type CSSProperties,
-  memo,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ComponentProps, type CSSProperties, memo, useMemo } from "react";
 
 import { cn } from "@/lib/utils";
 import { LINE_CLAMP } from ".";
@@ -16,13 +8,12 @@ import { useCodeBlockContext } from "./context";
 
 const CODE_LINE_HEIGHT_PX = 20;
 const COLLAPSED_VERTICAL_PADDING_PX = 8;
-const COLLAPSED_OVERSCAN_LINES = 6;
-const COLLAPSED_VIRTUALIZATION_MIN_LINES = LINE_CLAMP * 3;
 
 type CodeBlockBodyProps = ComponentProps<"div"> & {
   result: HighlightResult;
   language: string;
-  lineNumberOffset?: number;
+  startLineIndex?: number;
+  endLineIndex?: number;
   virtualPaddingTopPx?: number;
   virtualPaddingBottomPx?: number;
 };
@@ -72,7 +63,8 @@ export const CodeBlockContent = memo(
     result,
     language,
     className,
-    lineNumberOffset = 0,
+    startLineIndex = 0,
+    endLineIndex = Number.POSITIVE_INFINITY,
     virtualPaddingTopPx = 0,
     virtualPaddingBottomPx = 0,
     ...rest
@@ -106,6 +98,72 @@ export const CodeBlockContent = memo(
       return style as CSSProperties;
     }, [result.bg, result.fg, result.rootStyle, virtualPaddingBottomPx, virtualPaddingTopPx]);
 
+    const boundedStartLineIndex = Math.max(0, startLineIndex);
+    const boundedEndLineIndex = Math.min(
+      result.tokens.length,
+      Math.max(boundedStartLineIndex, endLineIndex),
+    );
+
+    const renderedRows: React.ReactNode[] = [];
+
+    for (let lineIndex = boundedStartLineIndex; lineIndex < boundedEndLineIndex; lineIndex++) {
+      const row = result.tokens[lineIndex] ?? [];
+
+      renderedRows.push(
+        <span className={LINE_NUMBER_CLASSES} key={lineIndex}>
+          {row.length === 0 && <br />}
+
+          {row.map((token, tokenIndex) => {
+            // Shiki dual-theme tokens put direct CSS properties (color,
+            // background-color) into htmlStyle alongside CSS custom
+            // properties (--shiki-dark, etc). Direct properties as inline
+            // styles override the Tailwind class-based dark mode approach,
+            // so we redirect them to CSS custom properties instead.
+            const tokenStyle: Record<string, string> = {};
+            let hasBg = Boolean(token.bgColor);
+
+            if (token.color) {
+              tokenStyle["--sdm-c"] = token.color;
+            }
+
+            if (token.bgColor) {
+              tokenStyle["--sdm-tbg"] = token.bgColor;
+            }
+
+            if (token.htmlStyle) {
+              for (const [key, value] of Object.entries(token.htmlStyle)) {
+                if (key === "color") {
+                  tokenStyle["--sdm-c"] = value;
+                } else if (key === "background-color") {
+                  tokenStyle["--sdm-tbg"] = value;
+                  hasBg = true;
+                } else {
+                  tokenStyle[key] = value;
+                }
+              }
+            }
+
+            return (
+              <span
+                className={cn(
+                  "text-[var(--sdm-c,inherit)]",
+                  "dark:text-[var(--shiki-dark,var(--sdm-c,inherit))]",
+                  hasBg && "bg-[var(--sdm-tbg)]",
+                  hasBg && "dark:bg-[var(--shiki-dark-bg,var(--sdm-tbg))]",
+                )}
+                // biome-ignore lint/suspicious/noArrayIndexKey: "This is a stable key."
+                key={tokenIndex}
+                style={tokenStyle as CSSProperties}
+                {...token.htmlAttrs}
+              >
+                {token.content}
+              </span>
+            );
+          })}
+        </span>,
+      );
+    }
+
     return (
       <div
         className={cn(className, "overflow-hidden text-sm")}
@@ -121,61 +179,7 @@ export const CodeBlockContent = memo(
           )}
           style={preStyle}
         >
-          <code style={{ counterReset: `line ${lineNumberOffset}` }}>
-            {result.tokens.map((row, index) => (
-              <span className={LINE_NUMBER_CLASSES} key={index}>
-                {row.length === 0 && <br />}
-
-                {row.map((token, tokenIndex) => {
-                  // Shiki dual-theme tokens put direct CSS properties (color,
-                  // background-color) into htmlStyle alongside CSS custom
-                  // properties (--shiki-dark, etc). Direct properties as inline
-                  // styles override the Tailwind class-based dark mode approach,
-                  // so we redirect them to CSS custom properties instead.
-                  const tokenStyle: Record<string, string> = {};
-                  let hasBg = Boolean(token.bgColor);
-
-                  if (token.color) {
-                    tokenStyle["--sdm-c"] = token.color;
-                  }
-
-                  if (token.bgColor) {
-                    tokenStyle["--sdm-tbg"] = token.bgColor;
-                  }
-
-                  if (token.htmlStyle) {
-                    for (const [key, value] of Object.entries(token.htmlStyle)) {
-                      if (key === "color") {
-                        tokenStyle["--sdm-c"] = value;
-                      } else if (key === "background-color") {
-                        tokenStyle["--sdm-tbg"] = value;
-                        hasBg = true;
-                      } else {
-                        tokenStyle[key] = value;
-                      }
-                    }
-                  }
-
-                  return (
-                    <span
-                      className={cn(
-                        "text-[var(--sdm-c,inherit)]",
-                        "dark:text-[var(--shiki-dark,var(--sdm-c,inherit))]",
-                        hasBg && "bg-[var(--sdm-tbg)]",
-                        hasBg && "dark:bg-[var(--shiki-dark-bg,var(--sdm-tbg))]",
-                      )}
-                      // biome-ignore lint/suspicious/noArrayIndexKey: "This is a stable key."
-                      key={tokenIndex}
-                      style={tokenStyle as CSSProperties}
-                      {...token.htmlAttrs}
-                    >
-                      {token.content}
-                    </span>
-                  );
-                })}
-              </span>
-            ))}
-          </code>
+          <code style={{ counterReset: `line ${boundedStartLineIndex}` }}>{renderedRows}</code>
         </pre>
       </div>
     );
@@ -186,7 +190,8 @@ export const CodeBlockContent = memo(
       prevProps.result === nextProps.result &&
       prevProps.language === nextProps.language &&
       prevProps.className === nextProps.className &&
-      prevProps.lineNumberOffset === nextProps.lineNumberOffset &&
+      prevProps.startLineIndex === nextProps.startLineIndex &&
+      prevProps.endLineIndex === nextProps.endLineIndex &&
       prevProps.virtualPaddingTopPx === nextProps.virtualPaddingTopPx &&
       prevProps.virtualPaddingBottomPx === nextProps.virtualPaddingBottomPx
     );
@@ -194,81 +199,10 @@ export const CodeBlockContent = memo(
 );
 
 export function CodeBlockBody({ result }: { result: HighlightResult }) {
-  const { language, expanded, totalLines, setExpanded, wrapline } = useCodeBlockContext();
-  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
-  const scrollRafIdRef = useRef<number | null>(null);
-  const latestScrollTopRef = useRef(0);
-  const [scrollTop, setScrollTop] = useState(0);
+  const { language, expanded, totalLines, setExpanded } = useCodeBlockContext();
 
   const moreCount = totalLines > LINE_CLAMP ? totalLines - LINE_CLAMP : 0;
   const isCollapsed = !expanded && moreCount > 0;
-  const lineCount = result.tokens.length;
-  const shouldVirtualize =
-    isCollapsed && !wrapline && lineCount >= COLLAPSED_VIRTUALIZATION_MIN_LINES;
-
-  const visibleLineCount = LINE_CLAMP + COLLAPSED_OVERSCAN_LINES * 2;
-  const virtualStartLine = shouldVirtualize
-    ? Math.max(0, Math.floor(scrollTop / CODE_LINE_HEIGHT_PX) - COLLAPSED_OVERSCAN_LINES)
-    : 0;
-  const virtualEndLine = shouldVirtualize
-    ? Math.min(lineCount, virtualStartLine + visibleLineCount)
-    : lineCount;
-
-  const displayResult = useMemo((): HighlightResult => {
-    if (!shouldVirtualize) {
-      return result;
-    }
-
-    return {
-      ...result,
-      tokens: result.tokens.slice(virtualStartLine, virtualEndLine),
-    };
-  }, [result, shouldVirtualize, virtualEndLine, virtualStartLine]);
-
-  const virtualPaddingTopPx = shouldVirtualize ? virtualStartLine * CODE_LINE_HEIGHT_PX : 0;
-  const virtualPaddingBottomPx = shouldVirtualize
-    ? Math.max(0, (lineCount - virtualEndLine) * CODE_LINE_HEIGHT_PX)
-    : 0;
-
-  useEffect(() => {
-    return function cleanupAnimationFrame() {
-      if (scrollRafIdRef.current !== null) {
-        cancelAnimationFrame(scrollRafIdRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isCollapsed) {
-      latestScrollTopRef.current = 0;
-      setScrollTop(0);
-      return;
-    }
-
-    const element = scrollAreaRef.current;
-    if (!element) return;
-
-    latestScrollTopRef.current = element.scrollTop;
-    setScrollTop(element.scrollTop);
-  }, [isCollapsed]);
-
-  function handleScroll(): void {
-    if (!shouldVirtualize) return;
-
-    const element = scrollAreaRef.current;
-    if (!element) return;
-
-    latestScrollTopRef.current = element.scrollTop;
-
-    if (scrollRafIdRef.current !== null) {
-      return;
-    }
-
-    scrollRafIdRef.current = requestAnimationFrame(() => {
-      scrollRafIdRef.current = null;
-      setScrollTop(latestScrollTopRef.current);
-    });
-  }
 
   const containerMaxHeight = (() => {
     if (!isCollapsed) return undefined;
@@ -278,20 +212,17 @@ export function CodeBlockBody({ result }: { result: HighlightResult }) {
   return (
     <div className="relative">
       <div
-        ref={scrollAreaRef}
         className={cn(
           "px-3 py-2",
           isCollapsed ? "custom-scroll overflow-auto pb-10" : "overflow-hidden",
         )}
         style={{ maxHeight: containerMaxHeight }}
-        onScroll={handleScroll}
       >
         <CodeBlockContent
-          result={displayResult}
+          result={result}
           language={language}
-          lineNumberOffset={virtualStartLine}
-          virtualPaddingTopPx={virtualPaddingTopPx}
-          virtualPaddingBottomPx={virtualPaddingBottomPx}
+          startLineIndex={0}
+          endLineIndex={result.tokens.length}
         />
       </div>
 
