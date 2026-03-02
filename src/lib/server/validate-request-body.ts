@@ -56,6 +56,15 @@ const openaiReasoningToGoogle: Record<ReasoningEffort, "minimal" | "low" | "medi
   xhigh: "high",
 };
 
+const openaiReasoningToGoogle31: Record<ReasoningEffort, "low" | "medium" | "high"> = {
+  none: "low",
+  minimal: "low",
+  low: "low",
+  medium: "medium",
+  high: "high",
+  xhigh: "high",
+};
+
 function moveAssistantFilePartsToNextUserMessageValidated(
   messages: Array<UIChatMessage>,
 ): Array<UIChatMessage> {
@@ -159,6 +168,13 @@ export async function validateRequestBody(body: Record<string, unknown>) {
       providerOptions.google.thinkingConfig = {
         includeThoughts: true,
         thinkingLevel: openaiReasoningToGoogle[effort],
+      };
+    }
+
+    if (modelInfo.id === "google/gemini-3.1-pro") {
+      providerOptions.google.thinkingConfig = {
+        includeThoughts: true,
+        thinkingLevel: openaiReasoningToGoogle31[effort],
       };
     }
   }

@@ -101,6 +101,18 @@ export const google: Record<ModelIdKey, ModelData> = {
       customReasoningLevel: ["low", "high"],
     },
   },
+  "google/gemini-3.1-pro": {
+    display: { name: "Gemini 3.1 Pro" },
+    id: "google/gemini-3.1-pro",
+    altModelIds: ["google/gemini-3.1-pro-preview"],
+    provider: "google",
+    capabilities: {
+      vision: true,
+      webSearch: true,
+      reasoning: true,
+      customReasoningLevel: ["low", "medium", "high"],
+    },
+  },
   "google/gemini-3-pro-image": {
     display: { name: "Gemini 3 Pro (Image)", unique: "Gemini 3 Pro (Image)" },
     id: "google/gemini-3-pro-image",
