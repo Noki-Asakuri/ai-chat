@@ -1,8 +1,7 @@
 import type { Doc } from "@/convex/_generated/dataModel";
 
-import { Avatar } from "@base-ui/react/avatar";
-
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ButtonWithTip } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
@@ -25,13 +24,13 @@ export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
       )}
       onClick={() => configStore.setConfig({ profile: isActive ? null : profile._id })}
     >
-      <Avatar.Root className="size-full">
-        <Avatar.Image
+      <Avatar className="size-full">
+        <AvatarImage
           src={`https://ik.imagekit.io/gmethsnvl/ai-chat/${profile.imageKey}`}
           className="size-full object-cover object-center"
         />
-        <Avatar.Fallback>{profile.name.slice(0, 2)}</Avatar.Fallback>
-      </Avatar.Root>
+        <AvatarFallback>{profile.name.slice(0, 2)}</AvatarFallback>
+      </Avatar>
     </ButtonWithTip>
   );
 }
