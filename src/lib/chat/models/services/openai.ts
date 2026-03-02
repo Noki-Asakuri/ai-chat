@@ -163,7 +163,19 @@ export const openai: Record<ModelIdKey, ModelData> = {
       webSearch: true,
       reasoning: true,
       vision: true,
-      customReasoningLevel: ["medium", "high", "xhigh"],
+      customReasoningLevel: ["low", "medium", "high", "xhigh"],
+    },
+  },
+
+  "openai/gpt-5.3-codex": {
+    display: { name: "GPT 5.3 Codex" },
+    id: "openai/gpt-5.3-codex",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+      customReasoningLevel: ["low", "medium", "high", "xhigh"],
     },
   },
 
