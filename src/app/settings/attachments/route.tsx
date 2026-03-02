@@ -14,6 +14,7 @@ import {
   BotIcon,
   CalendarArrowDownIcon,
   CalendarArrowUpIcon,
+  CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   FileTextIcon,
@@ -23,6 +24,7 @@ import {
   SearchIcon,
   TrashIcon,
   UserIcon,
+  XIcon,
 } from "lucide-react";
 import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -49,13 +51,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-} from "@/components/ui/pagination";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 
 import { LoadingAttachmentsSkeleton } from "./-pending";
@@ -82,7 +78,7 @@ type AttachmentSortValue =
   | "size_asc";
 
 const PAGE_SIZE = 20;
-const PAGE_WINDOW = 1;
+const PAGE_WINDOW_SIZE = 3;
 
 const IMAGEKIT_BASE_URL = "https://ik.imagekit.io/gmethsnvl/ai-chat";
 const FILES_BASE_URL = "https://files.chat.asakuri.me";
@@ -207,28 +203,16 @@ function getAttachmentSortValue(
   return "size_asc";
 }
 
-function getPageItems(currentPage: number, totalPages: number): Array<number | "ellipsis"> {
-  if (totalPages <= 7) {
-    const direct: Array<number | "ellipsis"> = [];
-    for (let page = 1; page <= totalPages; page += 1) direct.push(page);
-    return direct;
+function getVisiblePageNumbers(currentPage: number, totalPages: number): Array<number> {
+  const start = Math.max(1, currentPage - PAGE_WINDOW_SIZE);
+  const end = Math.min(totalPages, currentPage + PAGE_WINDOW_SIZE);
+
+  const pageNumbers: Array<number> = [];
+  for (let pageNumber = start; pageNumber <= end; pageNumber += 1) {
+    pageNumbers.push(pageNumber);
   }
 
-  const result: Array<number | "ellipsis"> = [1];
-
-  const start = Math.max(2, currentPage - PAGE_WINDOW);
-  const end = Math.min(totalPages - 1, currentPage + PAGE_WINDOW);
-
-  if (start > 2) result.push("ellipsis");
-
-  for (let page = start; page <= end; page += 1) {
-    result.push(page);
-  }
-
-  if (end < totalPages - 1) result.push("ellipsis");
-
-  result.push(totalPages);
-  return result;
+  return pageNumbers;
 }
 
 function AttachmentsPage() {
@@ -311,7 +295,20 @@ function AttachmentsPage() {
     return sum;
   }, [selected, attachments]);
 
-  const pageItems = useMemo(() => getPageItems(currentPage, totalPages), [currentPage, totalPages]);
+  const currentPageBytes = useMemo(() => {
+    let sum = 0;
+    for (const attachment of attachments) {
+      sum += attachment.size;
+    }
+
+    return sum;
+  }, [attachments]);
+
+  const visiblePageNumbers = useMemo(
+    () => getVisiblePageNumbers(currentPage, totalPages),
+    [currentPage, totalPages],
+  );
+
   const selectedSourceOption = SOURCE_FILTER_OPTIONS[sourceFilter];
   const selectedTypeOption = TYPE_FILTER_OPTIONS[typeFilter];
   const selectedSortValue = getAttachmentSortValue(sortField, sortDirection);
@@ -395,24 +392,7 @@ function AttachmentsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-        <div>
-          <span className="font-medium text-foreground">{format.number(data.overallCount)}</span>{" "}
-          attachments
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span>{format.size(data.overallBytes)} total</span>
-
-          {(searchText.trim().length > 0 || sourceFilter !== "all" || typeFilter !== "all") && (
-            <Badge variant="secondary">
-              Filtered: {format.number(totalItems)} ({format.size(data.filteredBytes)})
-            </Badge>
-          )}
-        </div>
-      </div>
-
-      <div className="sticky top-20 isolate z-30 rounded-md border bg-background p-3 shadow-sm before:pointer-events-none before:absolute before:-top-4 before:right-0 before:left-0 before:h-4 before:bg-background before:content-['']">
+      <div className="sticky top-20 isolate z-30 rounded-md border bg-background p-3 shadow-sm">
         <div className="flex flex-col gap-2">
           <div className="relative w-full">
             <SearchIcon
@@ -531,7 +511,14 @@ function AttachmentsPage() {
             </Select>
 
             {!selectionMode && (
-              <Button variant="outline" className="ml-auto" onClick={toggleSelectionMode}>
+              <Button
+                variant="outline"
+                className="ml-auto"
+                onClick={toggleSelectionMode}
+                title="Select"
+                aria-label="Select"
+              >
+                <CheckIcon data-icon="inline-start" />
                 Select
               </Button>
             )}
@@ -549,19 +536,31 @@ function AttachmentsPage() {
                   variant="secondary"
                   onClick={selectAllVisible}
                   disabled={attachments.length === 0}
+                  title="Select All"
+                  aria-label="Select All"
                 >
-                  Select all
+                  <CheckIcon data-icon="inline-start" />
+                  Select All
                 </Button>
 
                 <Button
                   variant="destructive"
                   onClick={onBulkDelete}
                   disabled={selected.size === 0 || bulkPending}
+                  title="Delete Selected"
+                  aria-label="Delete Selected"
                 >
-                  {bulkPending ? "Deleting..." : "Delete selected"}
+                  <TrashIcon data-icon="inline-start" />
+                  {bulkPending ? "Deleting..." : "Delete Selected"}
                 </Button>
 
-                <Button variant="outline" onClick={toggleSelectionMode}>
+                <Button
+                  variant="outline"
+                  onClick={toggleSelectionMode}
+                  title="Cancel"
+                  aria-label="Cancel"
+                >
+                  <XIcon data-icon="inline-start" />
                   Cancel
                 </Button>
               </div>
@@ -743,15 +742,15 @@ function AttachmentsPage() {
       />
 
       {totalItems > 0 && (
-        <div className="space-y-2 pt-1">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-            <span>{format.number(totalItems)} attachments</span>
-            <span>
-              Page {currentPage} of {totalPages}
-            </span>
-          </div>
+        <div className="flex w-full flex-wrap items-center justify-between gap-2 border-t py-2 text-sm text-muted-foreground">
+          <span className="leading-none">
+            <span className="font-medium text-foreground">{format.number(attachments.length)}</span>{" "}
+            ({format.size(currentPageBytes)}) /{" "}
+            <span className="font-medium text-foreground">{format.number(data.overallCount)}</span>{" "}
+            ({format.size(data.overallBytes)})
+          </span>
 
-          <Pagination>
+          <Pagination className="mx-0 ml-auto w-auto">
             <PaginationContent className="gap-2">
               <PaginationItem>
                 <Button
@@ -765,31 +764,19 @@ function AttachmentsPage() {
                 </Button>
               </PaginationItem>
 
-              {pageItems.map((entry, index) => {
-                if (entry === "ellipsis") {
-                  return (
-                    <PaginationItem key={`ellipsis-${index}`}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  );
-                }
-
-                return (
-                  <PaginationItem key={`page-${entry}`}>
-                    <PaginationLink
-                      href="#"
-                      isActive={entry === currentPage}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        onPageChange(entry);
-                      }}
-                      size="icon"
-                    >
-                      {entry}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              })}
+              {visiblePageNumbers.map((pageNumber) => (
+                <PaginationItem key={`page-${pageNumber}`}>
+                  <Button
+                    variant={pageNumber === currentPage ? "secondary" : "outline"}
+                    size="sm"
+                    className="min-w-8 px-2 tabular-nums"
+                    onClick={() => onPageChange(pageNumber)}
+                    aria-current={pageNumber === currentPage ? "page" : undefined}
+                  >
+                    {pageNumber}
+                  </Button>
+                </PaginationItem>
+              ))}
 
               <PaginationItem>
                 <Button

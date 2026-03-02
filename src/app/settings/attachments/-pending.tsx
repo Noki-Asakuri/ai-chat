@@ -3,11 +3,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function LoadingAttachmentsSkeleton() {
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-2">
-        <Skeleton className="h-5 w-36" />
-        <Skeleton className="h-5 w-28" />
-      </div>
-
       <div className="space-y-2 rounded-md border p-3">
         <Skeleton className="h-9 w-full" />
 
@@ -36,21 +31,13 @@ export function LoadingAttachmentsSkeleton() {
         ))}
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <Skeleton className="h-4 w-44" />
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-1">
+        <Skeleton className="h-4 w-64" />
 
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-8 w-20" />
-          </div>
-        </div>
-
-        <div className="flex justify-center gap-2">
-          <Skeleton className="size-8" />
-          <Skeleton className="size-8" />
-          <Skeleton className="size-8" />
-          <Skeleton className="size-8" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-8 w-20" />
         </div>
       </div>
     </div>
