@@ -26,7 +26,6 @@ import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from "@dnd-
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 import { Button } from "../ui/button";
-import { ButtonGroup, ButtonGroupSeparator } from "../ui/button-group";
 import { Input } from "../ui/input";
 import { Skeleton } from "../ui/skeleton";
 
