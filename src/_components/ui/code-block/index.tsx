@@ -1,5 +1,5 @@
 import { code as codePlugin, type HighlightOptions, type HighlightResult } from "@streamdown/code";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 
 import { Icons } from "../icons";
 
@@ -83,18 +83,27 @@ function splitCodeToHighlightTokens(code: string) {
 }
 
 function transformHighlightResult(result: HighlightResult) {
-  const transformed = structuredClone(result);
+  const transformedTokens = result.tokens.slice();
+  let hasChanges = false;
 
-  for (let i = 0; i < transformed.tokens.length; i++) {
-    const line = transformed.tokens[i];
+  for (let i = 0; i < transformedTokens.length; i++) {
+    const line = transformedTokens[i];
 
     if (line && line.length === 1 && line[0]!.content.trim() === "") {
-      transformed.tokens[i] = [];
+      transformedTokens[i] = [];
+      hasChanges = true;
       continue;
     }
   }
 
-  return transformed;
+  if (!hasChanges) {
+    return result;
+  }
+
+  return {
+    ...result,
+    tokens: transformedTokens,
+  };
 }
 
 function HighlightedCodeBlock({ language, code }: HighlightedCodeBlockProps) {
@@ -117,12 +126,16 @@ function HighlightedCodeBlock({ language, code }: HighlightedCodeBlockProps) {
       },
       (highlightedResult) => {
         prevCodeRef.current = code;
-        setResult(transformHighlightResult(highlightedResult));
+        startTransition(() => {
+          setResult(transformHighlightResult(highlightedResult));
+        });
       },
     );
 
     if (cachedResult) {
-      setResult(transformHighlightResult(cachedResult));
+      startTransition(() => {
+        setResult(transformHighlightResult(cachedResult));
+      });
       return;
     }
 

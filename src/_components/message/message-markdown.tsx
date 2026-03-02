@@ -2,6 +2,7 @@ import "katex/dist/katex.min.css";
 
 import { createMathPlugin } from "@streamdown/math";
 import { createMermaidPlugin } from "@streamdown/mermaid";
+import { memo, useMemo } from "react";
 import { Streamdown } from "streamdown";
 
 import { CodeBlock } from "@/components/ui/code-block";
@@ -132,18 +133,25 @@ type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
 const mermaid = createMermaidPlugin();
 const math = createMathPlugin({ singleDollarTextMath: true, errorColor: "var(--destructive)" });
 
-export function StreamDownWrapper({ children, role, ...props }: MarkdownProps) {
+export const StreamDownWrapper = memo(function StreamDownWrapper({
+  children,
+  role,
+  isAnimating,
+  ...props
+}: MarkdownProps) {
+  const escapedMarkdown = useMemo(() => escapeInvalidMath(children), [children]);
+
   return (
     <Streamdown
       plugins={{ math, mermaid }}
-      mode={role === "assistant" ? "streaming" : "static"}
+      mode={role === "assistant" && isAnimating === true ? "streaming" : "static"}
       // @ts-expect-error For some reason this cause type error despite being correct
       components={{ code: CodeBlock }}
       {...props}
     >
-      {escapeInvalidMath(children)}
+      {escapedMarkdown}
     </Streamdown>
   );
-}
+});
 
 StreamDownWrapper.displayName = "StreamDownWrapper";

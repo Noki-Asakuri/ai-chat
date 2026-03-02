@@ -1,10 +1,14 @@
-const BOTTOM_THRESHOLD_PX = 24;
+const BOTTOM_ATTACH_THRESHOLD_PX = 24;
+const BOTTOM_DETACH_THRESHOLD_PX = 64;
+const MIN_PROGRAMMATIC_SCROLL_INTERVAL_MS = 32;
 
 let stickyToBottom = true;
 let scrollRafId: number | null = null;
+let pendingBehavior: ScrollBehavior | null = null;
+let lastProgrammaticScrollAt = 0;
 
 export function getBottomThresholdPx(): number {
-  return BOTTOM_THRESHOLD_PX;
+  return BOTTOM_ATTACH_THRESHOLD_PX;
 }
 
 export function getStickyToBottom(): boolean {
@@ -21,7 +25,12 @@ export function getMessagesScrollAreaElement(): HTMLElement | null {
 
 export function computeIsAtBottom(element: HTMLElement): boolean {
   const distanceFromBottom = element.scrollHeight - (element.scrollTop + element.clientHeight);
-  return distanceFromBottom <= BOTTOM_THRESHOLD_PX;
+
+  if (stickyToBottom) {
+    return distanceFromBottom <= BOTTOM_DETACH_THRESHOLD_PX;
+  }
+
+  return distanceFromBottom <= BOTTOM_ATTACH_THRESHOLD_PX;
 }
 
 export function updateStickyToBottomFromScroll(element: HTMLElement): boolean {
@@ -40,11 +49,43 @@ export function scrollToBottomIfSticky(element: HTMLElement, behavior: ScrollBeh
 }
 
 export function scrollToBottomIfStickyRaf(element: HTMLElement, behavior: ScrollBehavior): void {
-  if (scrollRafId !== null) {
-    cancelAnimationFrame(scrollRafId);
-  }
+  if (!stickyToBottom) return;
+
+  pendingBehavior = behavior;
+
+  if (scrollRafId !== null) return;
+
   scrollRafId = requestAnimationFrame(() => {
     scrollRafId = null;
-    scrollToBottomIfSticky(element, behavior);
+
+    if (!stickyToBottom) {
+      pendingBehavior = null;
+      return;
+    }
+
+    const now = performance.now();
+    if (now - lastProgrammaticScrollAt < MIN_PROGRAMMATIC_SCROLL_INTERVAL_MS) {
+      if (scrollRafId === null) {
+        scrollRafId = requestAnimationFrame(() => {
+          scrollRafId = null;
+          if (!stickyToBottom) {
+            pendingBehavior = null;
+            return;
+          }
+
+          const queuedBehavior = pendingBehavior ?? behavior;
+          pendingBehavior = null;
+          scrollToBottom(element, queuedBehavior);
+          lastProgrammaticScrollAt = performance.now();
+        });
+      }
+
+      return;
+    }
+
+    const queuedBehavior = pendingBehavior ?? behavior;
+    pendingBehavior = null;
+    scrollToBottom(element, queuedBehavior);
+    lastProgrammaticScrollAt = now;
   });
 }

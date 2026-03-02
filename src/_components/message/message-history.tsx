@@ -14,32 +14,60 @@ export function MessageHistory() {
 
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const scrollRafRef = useRef<number | null>(null);
+  const stickySyncRafRef = useRef<number | null>(null);
 
   useEffect(() => {
     const scrollArea = scrollAreaRef.current;
     const content = contentRef.current;
     if (!scrollArea || !content) return;
 
+    const scrollElement: HTMLElement = scrollArea;
+
     // Initialize sticky state based on the current scroll position (after initial render).
-    updateStickyToBottomFromScroll(scrollArea);
+    updateStickyToBottomFromScroll(scrollElement);
+
+    function syncStickyFromScroll(): void {
+      updateStickyToBottomFromScroll(scrollElement);
+    }
+
+    function handleScroll(): void {
+      if (scrollRafRef.current !== null) return;
+
+      scrollRafRef.current = requestAnimationFrame(() => {
+        scrollRafRef.current = null;
+        syncStickyFromScroll();
+      });
+    }
+
+    const passiveScrollOptions: AddEventListenerOptions = { passive: true };
+    scrollElement.addEventListener("scroll", handleScroll, passiveScrollOptions);
 
     const resizeObserver = new ResizeObserver(() => {
-      scrollToBottomIfStickyRaf(scrollArea, "auto");
+      if (stickySyncRafRef.current !== null) return;
+
+      stickySyncRafRef.current = requestAnimationFrame(() => {
+        stickySyncRafRef.current = null;
+        scrollToBottomIfStickyRaf(scrollElement, "auto");
+      });
     });
 
     resizeObserver.observe(content);
 
     return () => {
       resizeObserver.disconnect();
+
+      scrollElement.removeEventListener("scroll", handleScroll, passiveScrollOptions);
+
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+
+      if (stickySyncRafRef.current !== null) {
+        cancelAnimationFrame(stickySyncRafRef.current);
+      }
     };
   }, []);
-
-  function handleScroll(): void {
-    const scrollArea = scrollAreaRef.current;
-    if (!scrollArea) return;
-
-    updateStickyToBottomFromScroll(scrollArea);
-  }
 
   return (
     <div
@@ -47,7 +75,6 @@ export function MessageHistory() {
       id="messages-scrollarea"
       className="custom-scroll absolute inset-0 overflow-y-scroll"
       style={{ scrollbarGutter: "stable both-edges" }}
-      onScroll={handleScroll}
     >
       <div
         ref={contentRef}
