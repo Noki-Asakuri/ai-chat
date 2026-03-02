@@ -15,6 +15,8 @@ import {
   CalendarArrowDownIcon,
   CalendarArrowUpIcon,
   CheckIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   FileTextIcon,
@@ -756,8 +758,24 @@ function AttachmentsPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => onPageChange(1)}
+                  disabled={!data.hasPrev}
+                  title="First Page"
+                  aria-label="First Page"
+                >
+                  <ChevronsLeftIcon data-icon="inline-start" />
+                  First
+                </Button>
+              </PaginationItem>
+
+              <PaginationItem>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => onPageChange(currentPage - 1)}
                   disabled={!data.hasPrev}
+                  title="Previous Page"
+                  aria-label="Previous Page"
                 >
                   <ChevronLeftIcon data-icon="inline-start" />
                   Prev
@@ -784,9 +802,25 @@ function AttachmentsPage() {
                   size="sm"
                   onClick={() => onPageChange(currentPage + 1)}
                   disabled={!data.hasNext}
+                  title="Next Page"
+                  aria-label="Next Page"
                 >
                   Next
                   <ChevronRightIcon data-icon="inline-end" />
+                </Button>
+              </PaginationItem>
+
+              <PaginationItem>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPageChange(totalPages)}
+                  disabled={!data.hasNext}
+                  title="Last Page"
+                  aria-label="Last Page"
+                >
+                  Last
+                  <ChevronsRightIcon data-icon="inline-end" />
                 </Button>
               </PaginationItem>
             </PaginationContent>
