@@ -94,7 +94,7 @@ export function ChatSendButton() {
               <div className="px-2 pt-1 pb-2 text-sm text-muted-foreground">Choose how to send</div>
 
               <Menu.Item
-                className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+                className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
                 onClick={() => configStore.setConfig({ pref: "enter" })}
               >
                 <span className="inline-flex size-4 items-center justify-center">
@@ -104,7 +104,7 @@ export function ChatSendButton() {
               </Menu.Item>
 
               <Menu.Item
-                className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+                className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
                 onClick={() => configStore.setConfig({ pref: "ctrlEnter" })}
               >
                 <span className="inline-flex size-4 items-center justify-center">
@@ -185,7 +185,7 @@ export function ChatEditSendButton({ isSaving, onSave }: ChatEditSendButtonProps
               <div className="px-2 pt-1 pb-2 text-sm text-muted-foreground">Choose how to send</div>
 
               <Menu.Item
-                className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+                className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
                 onClick={() => configStore.setConfig({ pref: "enter" })}
               >
                 <span className="inline-flex size-4 items-center justify-center">
@@ -195,7 +195,7 @@ export function ChatEditSendButton({ isSaving, onSave }: ChatEditSendButtonProps
               </Menu.Item>
 
               <Menu.Item
-                className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+                className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
                 onClick={() => configStore.setConfig({ pref: "ctrlEnter" })}
               >
                 <span className="inline-flex size-4 items-center justify-center">
