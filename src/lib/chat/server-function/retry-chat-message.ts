@@ -3,6 +3,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { useSessionId } from "convex-helpers/react/sessions";
 import { useConvex } from "convex/react";
+import { toast } from "sonner";
 
 import { useConfigStore } from "@/components/provider/config-provider";
 
@@ -11,6 +12,7 @@ import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
 
 import { convertToUIChatMessages, processStreamResponse } from "../shared";
+import { getClientErrorMessage, isAbortError } from "./chat-errors";
 
 type RetryChatMessage = {
   index: number;
@@ -73,52 +75,72 @@ export function useRetryChatMessage() {
       profile: configProfile === null ? null : (configProfile ?? mergedModelParams.profile ?? null),
     };
 
-    await convexClient.mutation(api.functions.messages.retryChatMessage, {
-      sessionId,
-      threadId,
-      assistantMessageId,
-
-      model,
-      modelParams: mutationModelParams,
-      userMessage: options.userMessage,
-    });
-
-    // Only scroll down when the message has updated (only if user is already at bottom)
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("chat:scroll-if-sticky"));
-    }
-
-    const body: ChatRequestBody = {
-      model,
-      threadId,
-      messages: allMessages,
-      assistantMessageId,
-      modelParams: mutationModelParams,
-    };
-
-    const response = await fetch(new URL("/api/ai/chat", import.meta.env.VITE_API_ENDPOINT), {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: abortController.signal,
-    });
-
-    const streamId = response.headers.get("X-Stream-Id") ?? undefined;
-    if (streamId) {
-      messageStoreActions.setController(threadId, {
-        controller: abortController,
+    try {
+      await convexClient.mutation(api.functions.messages.retryChatMessage, {
+        sessionId,
+        threadId,
         assistantMessageId,
-        streamId,
+
+        model,
+        modelParams: mutationModelParams,
+        userMessage: options.userMessage,
       });
-    }
 
-    const [, error] = await tryCatch(processStreamResponse(response, assistantMessageId, threadId));
-    messageStoreActions.removeController(threadId);
+      // Only scroll down when the message has updated (only if user is already at bottom)
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("chat:scroll-if-sticky"));
+      }
 
-    if (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      throw error;
+      const body: ChatRequestBody = {
+        model,
+        threadId,
+        messages: allMessages,
+        assistantMessageId,
+        modelParams: mutationModelParams,
+      };
+
+      const response = await fetch(new URL("/api/ai/chat", import.meta.env.VITE_API_ENDPOINT), {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: abortController.signal,
+      });
+
+      const streamId = response.headers.get("X-Stream-Id") ?? undefined;
+      if (streamId) {
+        messageStoreActions.setController(threadId, {
+          controller: abortController,
+          assistantMessageId,
+          streamId,
+        });
+      }
+
+      await processStreamResponse(response, assistantMessageId, threadId);
+    } catch (error) {
+      if (isAbortError(error)) return;
+
+      const errorMessage = getClientErrorMessage(error);
+
+      const [, updateError] = await tryCatch(
+        convexClient.mutation(api.functions.messages.updateErrorMessage, {
+          sessionId,
+          messageId: assistantMessageId,
+          error: errorMessage,
+          metadata: {
+            model: { request: model, response: null },
+            modelParams: mutationModelParams,
+          },
+        }),
+      );
+
+      if (updateError) {
+        console.error("[Chat] Failed to persist retry error", updateError);
+      }
+
+      toast.error("Failed to retry message", { description: errorMessage });
+    } finally {
+      messageStoreActions.removeController(threadId);
     }
   }
 

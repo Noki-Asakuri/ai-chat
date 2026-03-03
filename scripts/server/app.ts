@@ -6,7 +6,6 @@ import { secureHeaders } from "hono/secure-headers";
 
 import { env } from "@/env";
 import { logger } from "@/lib/axiom/logger";
-import { tryCatch } from "@/lib/utils";
 
 import { registerAiChatRoutes } from "./routes/ai-chat";
 
@@ -46,8 +45,24 @@ export function createServerApp(options: { commitSha: string }): ServerApp {
     }
 
     state.activeRequests++;
-    await tryCatch(next());
-    state.activeRequests = Math.max(0, state.activeRequests - 1);
+
+    try {
+      await next();
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+
+      logger.error("[Server] Request middleware caught error", {
+        requestId: ctx.get("requestId"),
+        path: ctx.req.path,
+        method: ctx.req.method,
+        message: err.message,
+        stack: err.stack,
+      });
+
+      throw error;
+    } finally {
+      state.activeRequests = Math.max(0, state.activeRequests - 1);
+    }
   });
 
   app.use(

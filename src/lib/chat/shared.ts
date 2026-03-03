@@ -8,6 +8,82 @@ import { uploadFileToR2 } from "../convex/uploadFiles";
 import { messageStoreActions } from "../store/messages-store";
 import type { ChatMessage, UIChatMessage, UserAttachment } from "../types";
 
+type JsonRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null;
+}
+
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeError(error: unknown): Error {
+  if (error instanceof Error) return error;
+  return new Error(String(error));
+}
+
+function extractErrorMessageFromParsedBody(body: unknown): string | null {
+  if (!isRecord(body)) return null;
+
+  const payloadError = body["error"];
+  if (isRecord(payloadError)) {
+    const message = payloadError["message"];
+    if (typeof message === "string" && message.length > 0) {
+      return message;
+    }
+  }
+
+  const message = body["message"];
+  if (typeof message === "string" && message.length > 0) {
+    return message;
+  }
+
+  return null;
+}
+
+function getErrorFallbackMessage(status: number): string {
+  if (status >= 500) {
+    return "The server failed to process the request. Please try again.";
+  }
+
+  return `Request failed with status ${status}.`;
+}
+
+export class ChatStreamHttpError extends Error {
+  readonly status: number;
+
+  constructor(options: { status: number; message: string }) {
+    super(options.message);
+    this.name = "ChatStreamHttpError";
+    this.status = options.status;
+  }
+}
+
+export async function readResponseErrorMessage(response: Response): Promise<string> {
+  const fallback = getErrorFallbackMessage(response.status);
+
+  let bodyText = "";
+  try {
+    bodyText = await response.text();
+  } catch {
+    return fallback;
+  }
+
+  const trimmedBody = bodyText.trim();
+  if (trimmedBody.length === 0) return fallback;
+
+  const parsed = parseJson(trimmedBody);
+  const parsedMessage = extractErrorMessageFromParsedBody(parsed);
+  if (parsedMessage) return parsedMessage;
+
+  return trimmedBody;
+}
+
 export function convertToUIChatMessages(messages: ChatMessage[]): UIChatMessage[] {
   return messages.map(
     (message): UIChatMessage => ({
@@ -24,6 +100,17 @@ export async function processStreamResponse(
   messageId: Id<"messages">,
   threadId: Id<"threads">,
 ) {
+  if (!response.ok) {
+    const errorMessage = await readResponseErrorMessage(response);
+
+    throw new ChatStreamHttpError({
+      status: response.status,
+      message: errorMessage,
+    });
+  }
+
+  let streamError: Error | null = null;
+
   await consumeUIMessageStreamResponse<UIChatMessage>({
     response,
     onEvent(event) {
@@ -38,8 +125,16 @@ export async function processStreamResponse(
       if (event.type === "done") {
         messageStoreActions.removeController(threadId);
       }
+
+      if (event.type === "error" && streamError === null) {
+        streamError = normalizeError(event.error);
+      }
     },
   });
+
+  if (streamError) {
+    throw streamError;
+  }
 }
 
 type UploadedAttachment = {

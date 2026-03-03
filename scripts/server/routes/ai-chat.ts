@@ -19,7 +19,7 @@ import {
   validateRequestBody,
 } from "@/lib/server/validate-request-body";
 import type { ChatMessage } from "@/lib/types";
-import { tryCatch } from "@/lib/utils";
+import { tryCatch, tryCatchSync } from "@/lib/utils";
 
 import { handleFileCaching } from "../../handle-file-caching";
 import { getAuthContextFromCookieHeader } from "../auth";
@@ -55,6 +55,39 @@ const abortRequestBodySchema = z.object({
 });
 
 type AbortRequestBody = z.infer<typeof abortRequestBodySchema>;
+
+type ChatModelParams = NonNullable<ChatMessage["metadata"]>["modelParams"];
+
+const GENERIC_CHAT_ERROR_MESSAGE =
+  "An error has occurred while processing your request. Please try again.";
+const PROVIDER_CHAT_ERROR_MESSAGE =
+  "The AI provider returned an error. Please try again in a moment.";
+
+function normalizeError(error: unknown): Error {
+  if (error instanceof Error) return error;
+  return new Error(String(error));
+}
+
+function parseJsonString(value: string): unknown {
+  const [parsed, parseError] = tryCatchSync(() => JSON.parse(value));
+  if (parseError) return null;
+  return parsed;
+}
+
+function getProviderLogData(error: APICallError): Record<string, unknown> {
+  const responseBody = error.responseBody;
+  if (!responseBody || responseBody.length === 0) {
+    return {
+      providerStatusCode: error.statusCode ?? null,
+      providerResponseBody: null,
+    };
+  }
+
+  return {
+    providerStatusCode: error.statusCode ?? null,
+    providerResponseBody: parseJsonString(responseBody) ?? responseBody,
+  };
+}
 
 function finalizeStreamParts(parts: unknown): unknown {
   if (!Array.isArray(parts)) return parts;
@@ -107,6 +140,8 @@ export function registerAiChatRoutes(app: Hono): void {
   // Resume stream route
   app.get("/api/ai/chat", async (ctx) => {
     const { streamId } = ctx.req.query();
+    const requestId = ctx.get("requestId");
+
     if (!streamId) {
       logger.error("[Chat Error]: Missing streamId!", { streamId });
       return Response.json({ error: { message: "Error: Missing streamId!" } }, { status: 400 });
@@ -117,7 +152,15 @@ export function registerAiChatRoutes(app: Hono): void {
 
     try {
       auth = await getAuthContextFromCookieHeader({ cookieHeader });
-    } catch {
+    } catch (error) {
+      const err = normalizeError(error);
+
+      logger.warn("[Chat] Resume request rejected (unauthenticated)", {
+        requestId,
+        streamId,
+        message: err.message,
+      });
+
       return Response.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
     }
 
@@ -156,12 +199,20 @@ export function registerAiChatRoutes(app: Hono): void {
 
   // Abort stream route (server-side cancellation)
   app.post("/api/ai/chat/abort", async (ctx) => {
+    const requestId = ctx.get("requestId");
     const cookieHeader = ctx.req.header("Cookie");
     let auth: { userId: string; sessionId: string } | null = null;
 
     try {
       auth = await getAuthContextFromCookieHeader({ cookieHeader });
-    } catch {
+    } catch (error) {
+      const err = normalizeError(error);
+
+      logger.warn("[Chat] Abort request rejected (unauthenticated)", {
+        requestId,
+        message: err.message,
+      });
+
       return Response.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
     }
 
@@ -232,6 +283,14 @@ export function registerAiChatRoutes(app: Hono): void {
     logger.info("[Chat] Chat request received", { userId, requestId });
 
     const convexClient = createServerConvexClient();
+    let assistantMessageIdForError: Id<"messages"> | null = null;
+    let threadIdForError: Id<"threads"> | null = null;
+    let modelUniqueIdForError: string | null = null;
+    let modelParamsForError: ChatModelParams | null = null;
+
+    let usageReserved = false;
+    let usageRefunded = false;
+    let errorMessagePersisted = false;
 
     try {
       const body = await req.json();
@@ -255,6 +314,11 @@ export function registerAiChatRoutes(app: Hono): void {
         modelParams,
         tools,
       } = requestBody;
+
+      assistantMessageIdForError = assistantMessageId;
+      threadIdForError = threadId;
+      modelUniqueIdForError = model.uniqueId;
+      modelParamsForError = modelParams;
 
       // Enforce per-user usage limit before processing the request
       const usage = await convexClient.mutation(api.functions.usages.checkAndIncrement, {
@@ -284,6 +348,8 @@ export function registerAiChatRoutes(app: Hono): void {
           { status: 429 },
         );
       }
+
+      usageReserved = true;
 
       let systemInstruction = "";
       const userCustomization = await convexClient.query(api.functions.users.currentUser, {
@@ -380,39 +446,80 @@ export function registerAiChatRoutes(app: Hono): void {
         experimental_download: (options) => Promise.all(options.map(handleFileCaching)),
 
         async onError({ error }) {
-          const err = error as Error;
-          let errorMessage = `An error have occurred. Please try again. \n\nError: ${err.message}`;
+          const err = normalizeError(error);
+          let errorMessage = GENERIC_CHAT_ERROR_MESSAGE;
 
           // Ignore aborts triggered via our server-side abort controller
           if (err.name === "AbortError" && serverAbortController.signal.aborted) return;
 
           if (APICallError.isInstance(err)) {
-            const responseBody = JSON.parse(err.responseBody || "{}");
+            errorMessage = PROVIDER_CHAT_ERROR_MESSAGE;
 
-            errorMessage = dedent.withOptions({ trimWhitespace: true, alignValues: true })`
-						An error have occurred. This is likely a server-side error, Please report to the developer.
-
-						Error:
-						\`\`\`
-						${JSON.stringify(responseBody, null, 2)}
-						\`\`\`
-						`;
+            logger.error("[Chat Error] Provider request failed", {
+              userId,
+              threadId,
+              assistantMessageId,
+              model: model.uniqueId,
+              requestId,
+              message: err.message,
+              name: err.name,
+              stack: err.stack,
+              ...getProviderLogData(err),
+            });
+          } else {
+            logger.error("[Chat Error] Stream request failed", {
+              userId,
+              threadId,
+              assistantMessageId,
+              model: model.uniqueId,
+              requestId,
+              message: err.message,
+              name: err.name,
+              stack: err.stack,
+            });
           }
 
-          logger.error("[Chat Error]: " + err.message, {
-            userId,
-            threadId,
-            assistantMessageId,
-            model: model.uniqueId,
-          });
+          if (usageReserved && !usageRefunded) {
+            const [, refundError] = await tryCatch(
+              convexClient.mutation(api.functions.usages.refundRequest, { amount: 1, sessionId }),
+            );
 
-          await convexClient.mutation(api.functions.usages.refundRequest, { amount: 1, sessionId });
-          await convexClient.mutation(api.functions.messages.updateErrorMessage, {
-            sessionId,
-            error: errorMessage,
-            messageId: assistantMessageId,
-            metadata: { model: { request: model.uniqueId, response: null }, modelParams },
-          });
+            if (refundError) {
+              logger.error("[Chat Error] Failed to refund usage", {
+                userId,
+                threadId,
+                assistantMessageId,
+                requestId,
+                message: refundError.message,
+                stack: refundError.stack,
+              });
+            } else {
+              usageRefunded = true;
+            }
+          }
+
+          const [, persistError] = await tryCatch(
+            convexClient.mutation(api.functions.messages.updateErrorMessage, {
+              sessionId,
+              error: errorMessage,
+              messageId: assistantMessageId,
+              metadata: { model: { request: model.uniqueId, response: null }, modelParams },
+            }),
+          );
+
+          if (persistError) {
+            logger.error("[Chat Error] Failed to persist assistant error message", {
+              userId,
+              threadId,
+              assistantMessageId,
+              requestId,
+              message: persistError.message,
+              stack: persistError.stack,
+            });
+            return;
+          }
+
+          errorMessagePersisted = true;
         },
       });
 
@@ -568,16 +675,67 @@ export function registerAiChatRoutes(app: Hono): void {
         },
       });
     } catch (error) {
-      const requestId = ctx.get("requestId");
-      const err = error instanceof Error ? error : new Error(String(error));
+      const err = normalizeError(error);
 
       logger.error("[Chat Fatal Error]: " + err.message, {
         userId,
         requestId,
+        threadId: threadIdForError,
+        assistantMessageId: assistantMessageIdForError,
+        model: modelUniqueIdForError,
         stack: err.stack,
       });
 
-      return Response.json({ error: { message: "Internal server error" } }, { status: 500 });
+      if (usageReserved && !usageRefunded) {
+        const [, refundError] = await tryCatch(
+          convexClient.mutation(api.functions.usages.refundRequest, { amount: 1, sessionId }),
+        );
+
+        if (refundError) {
+          logger.error("[Chat Fatal Error] Failed to refund usage", {
+            userId,
+            requestId,
+            threadId: threadIdForError,
+            assistantMessageId: assistantMessageIdForError,
+            message: refundError.message,
+            stack: refundError.stack,
+          });
+        } else {
+          usageRefunded = true;
+        }
+      }
+
+      if (
+        !errorMessagePersisted &&
+        assistantMessageIdForError &&
+        modelUniqueIdForError &&
+        modelParamsForError
+      ) {
+        const [, persistError] = await tryCatch(
+          convexClient.mutation(api.functions.messages.updateErrorMessage, {
+            sessionId,
+            messageId: assistantMessageIdForError,
+            error: GENERIC_CHAT_ERROR_MESSAGE,
+            metadata: {
+              model: { request: modelUniqueIdForError, response: null },
+              modelParams: modelParamsForError,
+            },
+          }),
+        );
+
+        if (persistError) {
+          logger.error("[Chat Fatal Error] Failed to persist assistant error", {
+            userId,
+            requestId,
+            threadId: threadIdForError,
+            assistantMessageId: assistantMessageIdForError,
+            message: persistError.message,
+            stack: persistError.stack,
+          });
+        }
+      }
+
+      return Response.json({ error: { message: GENERIC_CHAT_ERROR_MESSAGE } }, { status: 500 });
     }
   });
 }

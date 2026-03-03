@@ -3,6 +3,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { useSessionId } from "convex-helpers/react/sessions";
 import { useConvex } from "convex/react";
+import { toast } from "sonner";
 
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useShallow } from "zustand/shallow";
@@ -15,6 +16,7 @@ import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { fromUUID, toUUID, tryCatch } from "@/lib/utils";
 
 import { convertToUIChatMessages, processStreamResponse, uploadUserAttachment } from "../shared";
+import { getClientErrorMessage, isAbortError } from "./chat-errors";
 
 type CreateMessage =
   (typeof api.functions.messages.addMessagesToThread)["_args"]["messages"][number];
@@ -38,6 +40,7 @@ export function useSendChatMessage() {
     const sessionId = id!;
     let threadId: Id<"threads"> | null = fromUUID<Id<"threads">>(params?.threadId) ?? null;
     const { input, attachments } = useChatStore.getState();
+    const metadataModelParams = { effort, webSearch, profile: profile ?? null };
 
     const messageState = useMessageStore.getState();
 
@@ -56,6 +59,7 @@ export function useSendChatMessage() {
     }
 
     const abortController = new AbortController();
+    let assistantMessageId: Id<"messages"> | null = null;
 
     const userMessage: CreateMessage = {
       messageId: crypto.randomUUID(),
@@ -77,14 +81,15 @@ export function useSendChatMessage() {
         timeToFirstTokenMs: 0,
         usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
         durations: { request: 0, reasoning: 0, text: 0 },
-        modelParams: { effort, webSearch, profile: null },
+        modelParams: metadataModelParams,
       },
     };
 
-    const assistantMessageId = await convexClient.mutation(
-      api.functions.messages.addMessagesToThread,
-      { sessionId, threadId, messages: [userMessage, assistantMessage] },
-    );
+    assistantMessageId = await convexClient.mutation(api.functions.messages.addMessagesToThread, {
+      sessionId,
+      threadId,
+      messages: [userMessage, assistantMessage],
+    });
 
     // Scroll to the bottom after we have added the messages to the thread (only if user is already at bottom)
     if (typeof window !== "undefined") {
@@ -125,37 +130,59 @@ export function useSendChatMessage() {
       });
     }
 
-    const body: ChatRequestBody = {
-      model,
-      threadId,
-      messages,
-      assistantMessageId,
-      modelParams: { effort, webSearch, profile: profile ?? null },
-    };
-
-    const response = await fetch(new URL("/api/ai/chat", import.meta.env.VITE_API_ENDPOINT), {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: abortController.signal,
-    });
-
-    const streamId = response.headers.get("X-Stream-Id") ?? undefined;
-    if (streamId) {
-      messageStoreActions.setController(threadId, {
-        controller: abortController,
+    try {
+      const body: ChatRequestBody = {
+        model,
+        threadId,
+        messages,
         assistantMessageId,
-        streamId,
+        modelParams: metadataModelParams,
+      };
+
+      const response = await fetch(new URL("/api/ai/chat", import.meta.env.VITE_API_ENDPOINT), {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: abortController.signal,
       });
-    }
 
-    const [, error] = await tryCatch(processStreamResponse(response, assistantMessageId, threadId));
-    messageStoreActions.removeController(threadId);
+      const streamId = response.headers.get("X-Stream-Id") ?? undefined;
+      if (streamId) {
+        messageStoreActions.setController(threadId, {
+          controller: abortController,
+          assistantMessageId,
+          streamId,
+        });
+      }
 
-    if (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      throw error;
+      await processStreamResponse(response, assistantMessageId, threadId);
+    } catch (error) {
+      if (isAbortError(error)) return;
+
+      const errorMessage = getClientErrorMessage(error);
+
+      if (assistantMessageId) {
+        const [, updateError] = await tryCatch(
+          convexClient.mutation(api.functions.messages.updateErrorMessage, {
+            sessionId,
+            messageId: assistantMessageId,
+            error: errorMessage,
+            metadata: {
+              model: { request: model, response: null },
+              modelParams: metadataModelParams,
+            },
+          }),
+        );
+
+        if (updateError) {
+          console.error("[Chat] Failed to persist request error", updateError);
+        }
+      }
+
+      toast.error("Failed to send message", { description: errorMessage });
+    } finally {
+      messageStoreActions.removeController(threadId);
     }
   }
 

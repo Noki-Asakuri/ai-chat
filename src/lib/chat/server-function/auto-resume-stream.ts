@@ -2,8 +2,10 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { useParams } from "@tanstack/react-router";
 import { useCallback } from "react";
+import { toast } from "sonner";
 
 import { processStreamResponse } from "../shared";
+import { getClientErrorMessage, isAbortError } from "./chat-errors";
 
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import { fromUUID } from "@/lib/utils";
@@ -39,8 +41,13 @@ export function useAutoResumeStream() {
         await processStreamResponse(response, messageId, threadId);
       } catch (error) {
         cleanupController();
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        throw error;
+        if (isAbortError(error)) return;
+
+        toast.error("Failed to resume chat stream", {
+          description: getClientErrorMessage(error),
+        });
+
+        return;
       }
 
       cleanupController();
