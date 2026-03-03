@@ -49,6 +49,14 @@ function shortUserAgent(value: string | null): string {
   return value.length > 80 ? `${value.slice(0, 80)}…` : value;
 }
 
+function getQueryErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.length > 0) {
+    return error.message;
+  }
+
+  return "Failed to load active sessions";
+}
+
 function AuthMethodBadge({ authMethod }: { authMethod: string }) {
   if (authMethod === "passkey") return <Badge>Passkey</Badge>;
   if (authMethod === "password") return <Badge>Password</Badge>;
@@ -103,7 +111,7 @@ export function AccountSessionsCard() {
   const router = useRouter();
   const { sessionId: currentSessionId } = useLoaderData({ from: "__root__" });
 
-  const { data, isPending, refetch } = useQuery({
+  const { data, error, isError, isPending, refetch } = useQuery({
     queryKey: ["account-sessions"],
     queryFn: async () => await listAccountSessions(),
   });
@@ -182,6 +190,11 @@ export function AccountSessionsCard() {
                 <Skeleton className="h-4 w-48" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-full" />
+              </div>
+            ) : isError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                <p className="text-sm font-medium text-destructive">Failed to load sessions.</p>
+                <p className="text-xs text-muted-foreground">{getQueryErrorMessage(error)}</p>
               </div>
             ) : rows.length === 0 ? (
               <p className="text-sm text-muted-foreground">No sessions found.</p>

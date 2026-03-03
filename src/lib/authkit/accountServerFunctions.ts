@@ -19,6 +19,37 @@ function normalizeEmptyToUndefined(value: string): string | undefined {
   return trimmed.length === 0 ? undefined : trimmed;
 }
 
+function getErrorDetails(error: unknown): {
+  name: string;
+  message: string;
+  code: string | null;
+} {
+  if (error instanceof Error) {
+    const hasCode = "code" in error;
+    const code = hasCode && typeof error.code === "string" ? error.code : null;
+
+    return {
+      name: error.name,
+      message: error.message,
+      code,
+    };
+  }
+
+  if (typeof error === "string") {
+    return {
+      name: "Error",
+      message: error,
+      code: null,
+    };
+  }
+
+  return {
+    name: "UnknownError",
+    message: "Unknown error",
+    code: null,
+  };
+}
+
 export const updateAccountProfile = createServerFn({ method: "POST" })
   .inputValidator((data: UpdateAccountProfileInput) => data)
   .handler(async ({ data }) => {
@@ -78,30 +109,54 @@ export type AccountSession = {
 };
 
 export const listAccountSessions = createServerFn({ method: "GET" }).handler(async () => {
-  const { user } = await withAuth();
-  if (!user) {
-    throw new Error("Not authenticated");
-  }
+  let currentUserId: string | null = null;
+  let currentSessionId: string | null = null;
 
-  const sessions = await getWorkOS().userManagement.listSessions(user.id, { limit: 50 });
+  try {
+    const { user, sessionId } = await withAuth();
+    if (!user) {
+      throw new Error("Not authenticated");
+    }
 
-  const data: Array<AccountSession> = [];
-  for (const session of sessions.data) {
-    data.push({
-      id: session.id,
-      userId: session.userId,
-      ipAddress: session.ipAddress,
-      userAgent: session.userAgent,
-      authMethod: session.authMethod,
-      status: session.status,
-      expiresAt: session.expiresAt,
-      endedAt: session.endedAt,
-      createdAt: session.createdAt,
-      updatedAt: session.updatedAt,
+    currentUserId = user.id;
+    currentSessionId = sessionId ?? null;
+
+    const sessions = await getWorkOS().userManagement.listSessions(user.id, { limit: 50 });
+
+    const data: Array<AccountSession> = [];
+    for (const session of sessions.data) {
+      data.push({
+        id: session.id,
+        userId: session.userId,
+        ipAddress: session.ipAddress,
+        userAgent: session.userAgent,
+        authMethod: session.authMethod,
+        status: session.status,
+        expiresAt: session.expiresAt,
+        endedAt: session.endedAt,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+      });
+    }
+
+    return { sessions: data };
+  } catch (error) {
+    const details = getErrorDetails(error);
+
+    console.error("[AuthKit] Failed to list account sessions", {
+      userId: currentUserId,
+      sessionId: currentSessionId,
+      errorName: details.name,
+      errorCode: details.code,
+      errorMessage: details.message,
     });
-  }
 
-  return { sessions: data };
+    if (details.message === "Not authenticated") {
+      throw new Error("Not authenticated");
+    }
+
+    throw new Error("Failed to load active sessions");
+  }
 });
 
 type RevokeAccountSessionInput = {
