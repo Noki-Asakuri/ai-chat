@@ -9,22 +9,6 @@ export const openai: Record<ModelIdKey, ModelData> = {
       vision: true,
     },
   },
-  "openai/chatgpt-4o": {
-    display: { name: "ChatGPT 4o" },
-    id: "openai/chatgpt-4o",
-    provider: "openai",
-    capabilities: {
-      vision: true,
-    },
-  },
-  "openai/gpt-4o": {
-    display: { name: "GPT 4o" },
-    id: "openai/gpt-4o",
-    provider: "openai",
-    capabilities: {
-      vision: true,
-    },
-  },
 
   "openai/gpt-5": {
     display: { name: "GPT 5" },
