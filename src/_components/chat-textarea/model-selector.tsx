@@ -19,7 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 import { ModelCapability } from "../capability-icon";
 
-import { AllModelIds, tryGetModelData } from "@/lib/chat/models";
+import { SelectableModelIds, tryGetModelData } from "@/lib/chat/models";
 import { cn } from "@/lib/utils";
 
 type ModelSelectorProps = {
@@ -43,7 +43,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   const hiddenModel = useConfigStore(useShallow((state) => state.hiddenModels));
 
   const visibleModels = useMemo(() => {
-    return AllModelIds.slice()
+    return SelectableModelIds.slice()
       .sort((a, b) => a.localeCompare(b))
       .filter((id) => !hiddenModel.includes(id));
   }, [hiddenModel]);

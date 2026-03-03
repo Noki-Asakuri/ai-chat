@@ -17,6 +17,10 @@ export const openai: Record<ModelIdKey, ModelData> = {
     capabilities: {
       vision: true,
     },
+    deprecation: {
+      message: "ChatGPT 4o is deprecated and can no longer be used. Please switch to GPT 5.2.",
+      replacementModelId: "openai/gpt-5.2",
+    },
   },
   "openai/gpt-4o": {
     display: { name: "GPT 4o" },
@@ -24,6 +28,10 @@ export const openai: Record<ModelIdKey, ModelData> = {
     provider: "openai",
     capabilities: {
       vision: true,
+    },
+    deprecation: {
+      message: "GPT 4o is deprecated and can no longer be used. Please switch to GPT 5.2.",
+      replacementModelId: "openai/gpt-5.2",
     },
   },
 
@@ -159,6 +167,18 @@ export const openai: Record<ModelIdKey, ModelData> = {
   "openai/gpt-5.2-pro": {
     display: { name: "GPT 5.2 Pro" },
     id: "openai/gpt-5.2-pro",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+      customReasoningLevel: ["low", "medium", "high", "xhigh"],
+    },
+  },
+
+  "openai/gpt-5.2-codex": {
+    display: { name: "GPT 5.2 Codex" },
+    id: "openai/gpt-5.2-codex",
     provider: "openai",
     capabilities: {
       webSearch: true,

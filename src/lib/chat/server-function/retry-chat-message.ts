@@ -5,14 +5,19 @@ import { useSessionId } from "convex-helpers/react/sessions";
 import { useConvex } from "convex/react";
 import { toast } from "sonner";
 
-import { useConfigStore } from "@/components/provider/config-provider";
+import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
 
 import { convertToUIChatMessages, processStreamResponse } from "../shared";
-import { getClientErrorMessage, isAbortError } from "./chat-errors";
+import {
+  getClientErrorMessage,
+  getDeprecatedModelError,
+  isAbortError,
+  throwIfChatResponseError,
+} from "./chat-errors";
 
 type RetryChatMessage = {
   index: number;
@@ -31,6 +36,7 @@ export function useRetryChatMessage() {
   const [id] = useSessionId();
   const convexClient = useConvex();
   const configProfile = useConfigStore((state) => state.profile);
+  const configStore = useConfigStoreState();
 
   async function retryChatMessage({ index, ...options }: RetryChatMessage) {
     const sessionId = id!;
@@ -107,6 +113,8 @@ export function useRetryChatMessage() {
         signal: abortController.signal,
       });
 
+      await throwIfChatResponseError(response);
+
       const streamId = response.headers.get("X-Stream-Id") ?? undefined;
       if (streamId) {
         messageStoreActions.setController(threadId, {
@@ -121,6 +129,7 @@ export function useRetryChatMessage() {
       if (isAbortError(error)) return;
 
       const errorMessage = getClientErrorMessage(error);
+      const deprecatedModelError = getDeprecatedModelError(error);
 
       const [, updateError] = await tryCatch(
         convexClient.mutation(api.functions.messages.updateErrorMessage, {
@@ -136,6 +145,22 @@ export function useRetryChatMessage() {
 
       if (updateError) {
         console.error("[Chat] Failed to persist retry error", updateError);
+      }
+
+      if (deprecatedModelError) {
+        toast.error("Selected model is deprecated", {
+          description: deprecatedModelError.message,
+          action: {
+            label: `Switch to ${deprecatedModelError.replacementModelName}`,
+            onClick: () => {
+              configStore.setConfig({
+                model: deprecatedModelError.replacementModelId,
+                defaultModel: deprecatedModelError.replacementModelId,
+              });
+            },
+          },
+        });
+        return;
       }
 
       toast.error("Failed to retry message", { description: errorMessage });

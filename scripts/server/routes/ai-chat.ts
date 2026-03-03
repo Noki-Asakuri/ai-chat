@@ -15,6 +15,7 @@ import { updateTitle } from "@/lib/server/update-title";
 import {
   messageIdSchema as messageIdSchemaZ,
   profileIdSchema,
+  RequestValidationError,
   threadIdSchema as threadIdSchemaZ,
   validateRequestBody,
 } from "@/lib/server/validate-request-body";
@@ -297,6 +298,25 @@ export function registerAiChatRoutes(app: Hono): void {
 
       const [requestBody, validateError] = await tryCatch(validateRequestBody(body));
       if (validateError) {
+        if (validateError instanceof RequestValidationError) {
+          logger.info("[Chat] Blocked deprecated model request", {
+            userId,
+            requestId,
+            ...validateError.details,
+          });
+
+          return Response.json(
+            {
+              error: {
+                code: validateError.code,
+                message: validateError.message,
+                details: validateError.details,
+              },
+            },
+            { status: 409 },
+          );
+        }
+
         logger.error("[Chat Error]: Failed to parse request body!", {
           error: validateError,
           userId,

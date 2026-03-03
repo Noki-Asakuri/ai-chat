@@ -8,7 +8,7 @@ import { Menu, MenuArrow } from "@/components/ui/menu";
 import { Separator } from "@/components/ui/separator";
 
 import {
-  AllModelIds,
+  SelectableModelIds,
   ModelsData,
   prettifyProviderName,
   type ModelData,
@@ -35,7 +35,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
 
   const pendingRetry = isPending || message.status === "pending";
 
-  const modelsByProvider = AllModelIds.reduce<GroupedModels>((acc, modelId) => {
+  const modelsByProvider = SelectableModelIds.reduce<GroupedModels>((acc, modelId) => {
     const model = ModelsData[modelId]!;
     const provider = model.provider;
 

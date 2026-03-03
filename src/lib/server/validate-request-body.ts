@@ -6,9 +6,38 @@ import { google, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { openai, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import { convertToModelMessages, validateUIMessages, type ToolSet } from "ai";
 
-import { resolveModel } from "../chat/models";
+import { getModelData, resolveModel } from "../chat/models";
 import { metadataSchema, type ReasoningEffort, type UIChatMessage } from "../types";
 import { tryCatch, tryCatchSync } from "../utils";
+
+type RequestValidationErrorCode = "MODEL_DEPRECATED";
+
+export type DeprecatedModelErrorDetails = {
+  modelId: string;
+  modelName: string;
+  replacementModelId: string;
+  replacementModelName: string;
+};
+
+export class RequestValidationError extends Error {
+  readonly code: RequestValidationErrorCode;
+  readonly details: DeprecatedModelErrorDetails;
+
+  constructor({
+    code,
+    message,
+    details,
+  }: {
+    code: RequestValidationErrorCode;
+    message: string;
+    details: DeprecatedModelErrorDetails;
+  }) {
+    super(message);
+    this.name = "RequestValidationError";
+    this.code = code;
+    this.details = details;
+  }
+}
 
 export const threadIdSchema = z.custom<Id<"threads">>((data) => z.string().parse(data));
 export const messageIdSchema = z.custom<Id<"messages">>((data) => z.string().parse(data));
@@ -128,6 +157,22 @@ export async function validateRequestBody(body: Record<string, unknown>) {
 
   const tools: ToolSet = {};
   const { data: modelInfo, requestedId } = resolvedModel;
+
+  if (modelInfo.deprecation) {
+    const replacementModel = getModelData(modelInfo.deprecation.replacementModelId);
+
+    throw new RequestValidationError({
+      code: "MODEL_DEPRECATED",
+      message: modelInfo.deprecation.message,
+      details: {
+        modelId: requestedId,
+        modelName: modelInfo.display.unique ?? modelInfo.display.name,
+        replacementModelId: modelInfo.deprecation.replacementModelId,
+        replacementModelName: replacementModel.display.unique ?? replacementModel.display.name,
+      },
+    });
+  }
+
   const modelMessages = await convertToModelMessages(normalizedMessages);
 
   const providerOptions = {

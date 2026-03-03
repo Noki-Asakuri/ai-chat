@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Icons } from "@/components/ui/icons";
@@ -8,7 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 
-import type { AllModelIds as ModelId, Provider } from "@/lib/chat/models";
+import type {
+  AllModelIds as ModelId,
+  ModelDeprecation,
+  ModelIdKey,
+  Provider,
+} from "@/lib/chat/models";
 import { AllModelIds, getModelData, prettifyProviderName } from "@/lib/chat/models";
 
 type ModelEntry = {
@@ -16,6 +22,7 @@ type ModelEntry = {
   provider: Provider;
   providerName: string;
   displayName: string;
+  deprecation: ModelDeprecation | null;
   searchText: string;
 };
 
@@ -26,17 +33,56 @@ const MODEL_ENTRIES: Array<ModelEntry> = AllModelIds.slice()
 
     const displayName = data.display.unique ?? data.display.name;
     const providerName = prettifyProviderName(data.provider);
+    const deprecation = data.deprecation ?? null;
 
-    const searchText = `${displayName} ${data.provider} ${providerName}`.toLowerCase();
+    const searchText =
+      `${displayName} ${data.provider} ${providerName} ${deprecation?.message ?? ""}`.toLowerCase();
 
     return {
       modelId,
       provider: data.provider,
       providerName,
       displayName,
+      deprecation,
       searchText,
     };
   });
+
+const SELECTABLE_MODEL_ID_SET: ReadonlySet<string> = new Set<string>(
+  MODEL_ENTRIES.filter((entry) => entry.deprecation === null).map((entry) => entry.modelId),
+);
+
+function isModelIdKey(value: string): value is ModelIdKey {
+  const slashIndex = value.indexOf("/");
+  if (slashIndex <= 0) return false;
+
+  const provider = value.slice(0, slashIndex);
+  return provider === "google" || provider === "openai" || provider === "deepseek";
+}
+
+function sanitizeHiddenModels(hiddenModels: string[]): Set<string> {
+  const sanitized = new Set<string>();
+
+  for (const modelId of hiddenModels) {
+    if (!isModelIdKey(modelId)) continue;
+    if (!SELECTABLE_MODEL_ID_SET.has(modelId)) continue;
+    sanitized.add(modelId);
+  }
+
+  return sanitized;
+}
+
+function toHiddenModelsPayload(hiddenSet: ReadonlySet<string>): string[] {
+  const next: string[] = [];
+
+  for (const modelId of hiddenSet) {
+    if (!isModelIdKey(modelId)) continue;
+    if (!SELECTABLE_MODEL_ID_SET.has(modelId)) continue;
+    next.push(modelId);
+  }
+
+  return next;
+}
 
 function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
   if (a.size !== b.size) return false;
@@ -58,14 +104,16 @@ export function ModelsEditor(props: ModelsEditorProps) {
   const [query, setQuery] = useState("");
   const [visibleOnly, setVisibleOnly] = useState(false);
 
-  const [hiddenSet, setHiddenSet] = useState<Set<string>>(() => new Set(props.initialHiddenModels));
+  const [hiddenSet, setHiddenSet] = useState<Set<string>>(() =>
+    sanitizeHiddenModels(props.initialHiddenModels),
+  );
 
   useEffect(() => {
-    setHiddenSet(new Set(props.initialHiddenModels));
+    setHiddenSet(sanitizeHiddenModels(props.initialHiddenModels));
   }, [props.initialHiddenModels]);
 
   const initialHiddenSet = useMemo(
-    () => new Set(props.initialHiddenModels),
+    () => sanitizeHiddenModels(props.initialHiddenModels),
     [props.initialHiddenModels],
   );
 
@@ -76,6 +124,9 @@ export function ModelsEditor(props: ModelsEditorProps) {
 
   const onSetVisible = useCallback(function onSetVisible(modelId: string, visible: boolean) {
     setHiddenSet((prev) => {
+      if (!isModelIdKey(modelId)) return prev;
+      if (!SELECTABLE_MODEL_ID_SET.has(modelId)) return prev;
+
       const next = new Set(prev);
       if (visible) next.delete(modelId);
       else next.add(modelId);
@@ -95,7 +146,7 @@ export function ModelsEditor(props: ModelsEditorProps) {
     for (const entry of MODEL_ENTRIES) {
       if (normalizedQuery && !entry.searchText.includes(normalizedQuery)) continue;
 
-      if (visibleOnly && hiddenSet.has(entry.modelId)) continue;
+      if (visibleOnly && (entry.deprecation || hiddenSet.has(entry.modelId))) continue;
 
       result.push(entry);
     }
@@ -103,18 +154,51 @@ export function ModelsEditor(props: ModelsEditorProps) {
     return result;
   }, [hiddenSet, normalizedQuery, visibleOnly]);
 
-  const hiddenCount = hiddenSet.size;
-  const visibleCount = MODEL_ENTRIES.length - hiddenCount;
+  const deprecatedCount = useMemo(() => {
+    let count = 0;
+
+    for (const entry of MODEL_ENTRIES) {
+      if (entry.deprecation) count += 1;
+    }
+
+    return count;
+  }, []);
+
+  const hiddenCount = useMemo(() => {
+    let count = 0;
+
+    for (const entry of MODEL_ENTRIES) {
+      if (entry.deprecation) continue;
+      if (hiddenSet.has(entry.modelId)) count += 1;
+    }
+
+    return count;
+  }, [hiddenSet]);
+
+  const visibleCount = MODEL_ENTRIES.length - deprecatedCount - hiddenCount;
 
   const shownHiddenCount = useMemo(() => {
     let count = 0;
+
     for (const entry of filteredModels) {
+      if (entry.deprecation) continue;
       if (hiddenSet.has(entry.modelId)) count += 1;
     }
+
     return count;
   }, [filteredModels, hiddenSet]);
 
-  const shownVisibleCount = filteredModels.length - shownHiddenCount;
+  const shownDeprecatedCount = useMemo(() => {
+    let count = 0;
+
+    for (const entry of filteredModels) {
+      if (entry.deprecation) count += 1;
+    }
+
+    return count;
+  }, [filteredModels]);
+
+  const shownVisibleCount = filteredModels.length - shownHiddenCount - shownDeprecatedCount;
 
   return (
     <Card className="rounded-md">
@@ -122,11 +206,13 @@ export function ModelsEditor(props: ModelsEditorProps) {
         <div className="flex flex-col gap-2 border-b pb-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">
-              {visibleCount} visible • {hiddenCount} hidden
+              {visibleCount} visible • {hiddenCount} hidden • {deprecatedCount} deprecated
             </span>
             <span className="text-xs text-muted-foreground">
               Showing {shownVisibleCount} visible
-              {shownHiddenCount ? `, ${shownHiddenCount} hidden` : ""} in the current filter.
+              {shownHiddenCount ? `, ${shownHiddenCount} hidden` : ""}
+              {shownDeprecatedCount ? `, ${shownDeprecatedCount} deprecated` : ""} in the current
+              filter.
             </span>
           </div>
 
@@ -134,7 +220,7 @@ export function ModelsEditor(props: ModelsEditorProps) {
             <Button
               type="button"
               disabled={props.disabled || !dirty}
-              onClick={() => props.onSave(Array.from(hiddenSet))}
+              onClick={() => props.onSave(toHiddenModelsPayload(hiddenSet))}
             >
               Save changes
             </Button>
@@ -230,7 +316,7 @@ function ModelsGrid(props: ModelsGridProps) {
         <ModelRow
           key={entry.modelId}
           entry={entry}
-          visible={!props.hiddenSet.has(entry.modelId)}
+          visible={!entry.deprecation && !props.hiddenSet.has(entry.modelId)}
           onSetVisible={props.onSetVisible}
         />
       ))}
@@ -245,6 +331,8 @@ type ModelRowProps = {
 };
 
 const ModelRow = memo(function ModelRow(props: ModelRowProps) {
+  const isDeprecated = props.entry.deprecation !== null;
+
   return (
     <Card className="rounded-md">
       <CardContent className="flex items-center justify-between gap-3 py-3">
@@ -252,17 +340,36 @@ const ModelRow = memo(function ModelRow(props: ModelRowProps) {
           <Icons.provider provider={props.entry.provider} className="size-8 shrink-0" />
 
           <div className="min-w-0">
-            <div className="truncate text-sm">{props.entry.displayName}</div>
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="truncate text-sm">{props.entry.displayName}</div>
+              {isDeprecated && (
+                <Badge variant="secondary" className="rounded-sm px-1.5 py-0 text-[10px]">
+                  Deprecated
+                </Badge>
+              )}
+            </div>
             <div className="truncate text-xs text-muted-foreground">{props.entry.providerName}</div>
+            {isDeprecated && (
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                {props.entry.deprecation?.message}
+              </div>
+            )}
           </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <span className="text-xs">{props.visible ? "Visible" : "Hidden"}</span>
+          <span className="text-xs">
+            {isDeprecated ? "Unavailable" : props.visible ? "Visible" : "Hidden"}
+          </span>
           <Switch
-            checked={props.visible}
+            checked={isDeprecated ? false : props.visible}
             onCheckedChange={(next) => props.onSetVisible(props.entry.modelId, next)}
-            aria-label={`Toggle visibility for ${props.entry.displayName}`}
+            disabled={isDeprecated}
+            aria-label={
+              isDeprecated
+                ? `${props.entry.displayName} is deprecated and unavailable`
+                : `Toggle visibility for ${props.entry.displayName}`
+            }
           />
         </div>
       </CardContent>

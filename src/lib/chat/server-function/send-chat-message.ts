@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore } from "@/components/provider/config-provider";
+import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
@@ -16,7 +16,12 @@ import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { fromUUID, toUUID, tryCatch } from "@/lib/utils";
 
 import { convertToUIChatMessages, processStreamResponse, uploadUserAttachment } from "../shared";
-import { getClientErrorMessage, isAbortError } from "./chat-errors";
+import {
+  getClientErrorMessage,
+  getDeprecatedModelError,
+  isAbortError,
+  throwIfChatResponseError,
+} from "./chat-errors";
 
 type CreateMessage =
   (typeof api.functions.messages.addMessagesToThread)["_args"]["messages"][number];
@@ -25,6 +30,7 @@ export function useSendChatMessage() {
   const navigate = useNavigate();
   const [id] = useSessionId();
   const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
+  const configStore = useConfigStoreState();
 
   const convexClient = useConvex();
   const { effort, webSearch, model, profile } = useConfigStore(
@@ -147,6 +153,8 @@ export function useSendChatMessage() {
         signal: abortController.signal,
       });
 
+      await throwIfChatResponseError(response);
+
       const streamId = response.headers.get("X-Stream-Id") ?? undefined;
       if (streamId) {
         messageStoreActions.setController(threadId, {
@@ -161,6 +169,7 @@ export function useSendChatMessage() {
       if (isAbortError(error)) return;
 
       const errorMessage = getClientErrorMessage(error);
+      const deprecatedModelError = getDeprecatedModelError(error);
 
       if (assistantMessageId) {
         const [, updateError] = await tryCatch(
@@ -178,6 +187,22 @@ export function useSendChatMessage() {
         if (updateError) {
           console.error("[Chat] Failed to persist request error", updateError);
         }
+      }
+
+      if (deprecatedModelError) {
+        toast.error("Selected model is deprecated", {
+          description: deprecatedModelError.message,
+          action: {
+            label: `Switch to ${deprecatedModelError.replacementModelName}`,
+            onClick: () => {
+              configStore.setConfig({
+                model: deprecatedModelError.replacementModelId,
+                defaultModel: deprecatedModelError.replacementModelId,
+              });
+            },
+          },
+        });
+        return;
       }
 
       toast.error("Failed to send message", { description: errorMessage });

@@ -18,12 +18,18 @@ type Capability = {
 export type Provider = "google" | "openai" | "deepseek";
 export type ModelIdKey = `${Provider}/${string}`;
 
+export type ModelDeprecation = {
+  message: string;
+  replacementModelId: ModelIdKey;
+};
+
 export type ModelData = {
   display: { unique?: string; name: string };
   id: ModelIdKey;
   altModelIds?: string[];
   provider: Provider;
   capabilities: Capability;
+  deprecation?: ModelDeprecation;
 };
 
 export type ResolvedModel = {
@@ -51,6 +57,9 @@ function isModelIdKey(modelId: string): modelId is ModelIdKey {
 
 function buildModelIndexes() {
   const modelIds: Array<ModelIdKey> = [];
+  const selectableModelIds: Array<ModelIdKey> = [];
+  const deprecatedModelIds: Array<ModelIdKey> = [];
+
   const byRequestedId = new Map<ModelIdKey, ModelData>();
   const aliasToRequestedId = new Map<string, ModelIdKey>();
 
@@ -74,6 +83,13 @@ function buildModelIndexes() {
     const requestedId = requestedIdRaw;
 
     modelIds.push(requestedId);
+
+    if (data.deprecation) {
+      deprecatedModelIds.push(requestedId);
+    } else {
+      selectableModelIds.push(requestedId);
+    }
+
     byRequestedId.set(requestedId, data);
 
     const aliases = data.altModelIds ?? [];
@@ -94,13 +110,39 @@ function buildModelIndexes() {
     }
   }
 
-  return { modelIds, byRequestedId, aliasToRequestedId };
+  for (const [requestedId, data] of byRequestedId.entries()) {
+    const deprecation = data.deprecation;
+    if (!deprecation) continue;
+
+    if (deprecation.replacementModelId === requestedId) {
+      throw new Error(`Model deprecation replacement cannot reference itself: ${requestedId}`);
+    }
+
+    const replacementModel = byRequestedId.get(deprecation.replacementModelId);
+    if (!replacementModel) {
+      throw new Error(
+        `Missing deprecation replacement model for ${requestedId}: ${deprecation.replacementModelId}`,
+      );
+    }
+  }
+
+  return {
+    modelIds,
+    selectableModelIds,
+    deprecatedModelIds,
+    byRequestedId,
+    aliasToRequestedId,
+  };
 }
 
-const { modelIds, byRequestedId, aliasToRequestedId } = buildModelIndexes();
+const { modelIds, selectableModelIds, deprecatedModelIds, byRequestedId, aliasToRequestedId } =
+  buildModelIndexes();
 
 export const AllModelIds = modelIds;
 export type AllModelIds = ModelIdKey;
+
+export const SelectableModelIds = selectableModelIds;
+export const DeprecatedModelIds = deprecatedModelIds;
 
 export function tryResolveModel(modelId: string | null | undefined): ResolvedModel | null {
   if (!modelId || modelId.length === 0) return null;
@@ -135,6 +177,16 @@ export function getModelData(modelId: string): ModelData {
 export function tryGetModelData(modelId: string | null | undefined): ModelData | null {
   const resolved = tryResolveModel(modelId);
   return resolved ? resolved.data : null;
+}
+
+export function tryGetModelDeprecation(
+  modelId: string | null | undefined,
+): ModelDeprecation | null {
+  return tryGetModelData(modelId)?.deprecation ?? null;
+}
+
+export function isDeprecatedModel(modelId: string | null | undefined): boolean {
+  return tryGetModelDeprecation(modelId) !== null;
 }
 
 export function prettifyProviderName(provider: Provider | (string & {})) {

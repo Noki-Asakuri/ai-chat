@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 
 import { processStreamResponse } from "../shared";
-import { getClientErrorMessage, isAbortError } from "./chat-errors";
+import { getClientErrorMessage, isAbortError, throwIfChatResponseError } from "./chat-errors";
 
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import { fromUUID } from "@/lib/utils";
@@ -38,6 +38,8 @@ export function useAutoResumeStream() {
           new URL(`/api/ai/chat?streamId=${streamId}`, import.meta.env.VITE_API_ENDPOINT),
           { credentials: "include", signal: abortController.signal },
         );
+
+        await throwIfChatResponseError(response);
         await processStreamResponse(response, messageId, threadId);
       } catch (error) {
         cleanupController();
