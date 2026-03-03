@@ -1,12 +1,6 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useState,
-} from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
 
 import { uploadAiProfileImage } from "@/lib/convex/uploadFiles";
 
@@ -102,27 +96,38 @@ export const ProfilesDialogController = forwardRef<
         if (!name.trim() || !systemPrompt.trim()) return;
 
         setIsSubmitting(true);
+        const uploadInput = file && sessionId ? { file, sessionId } : null;
+
+        if (file && !uploadInput) {
+          console.error("[AI Profiles] submit error:", new Error("Not authenticated"));
+          setIsSubmitting(false);
+          return;
+        }
+
+        const uploadImage = uploadInput
+          ? function uploadImage() {
+              return uploadAiProfileImage(uploadInput.file, uploadInput.sessionId);
+            }
+          : function uploadImage() {
+              return Promise.resolve(undefined);
+            };
+
+        const saveProfile = editing
+          ? function saveProfile(imageKey: string | undefined) {
+              return updateProfile({
+                profileId: editing.id,
+                name,
+                systemPrompt,
+                imageKey: imageKey,
+              });
+            }
+          : function saveProfile(imageKey: string | undefined) {
+              return createProfile({ name, systemPrompt, imageKey: imageKey });
+            };
 
         try {
-          let imageKey: string | undefined = undefined;
-
-          if (file) {
-            if (!sessionId) {
-              throw new Error("Not authenticated");
-            }
-            imageKey = await uploadAiProfileImage(file, sessionId);
-          }
-
-          if (editing) {
-            await updateProfile({
-              profileId: editing.id,
-              name,
-              systemPrompt,
-              imageKey: imageKey,
-            });
-          } else {
-            await createProfile({ name, systemPrompt, imageKey: imageKey });
-          }
+          const imageKey = await uploadImage();
+          await saveProfile(imageKey);
 
           setOpen(false);
           setEditing(null);

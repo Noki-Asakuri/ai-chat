@@ -27,19 +27,23 @@ export function useAutoResumeStream() {
         streamId,
       });
 
-      const response = await fetch(
-        new URL(`/api/ai/chat?streamId=${streamId}`, import.meta.env.VITE_API_ENDPOINT),
-        { credentials: "include", signal: abortController.signal },
-      );
-
-      try {
-        await processStreamResponse(response, messageId, threadId);
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        throw error;
-      } finally {
+      function cleanupController() {
         messageStoreActions.removeController(threadId);
       }
+
+      try {
+        const response = await fetch(
+          new URL(`/api/ai/chat?streamId=${streamId}`, import.meta.env.VITE_API_ENDPOINT),
+          { credentials: "include", signal: abortController.signal },
+        );
+        await processStreamResponse(response, messageId, threadId);
+      } catch (error) {
+        cleanupController();
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        throw error;
+      }
+
+      cleanupController();
     },
     [params.threadId],
   );

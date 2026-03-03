@@ -40,10 +40,18 @@ export const EFFORT_OPTIONS: Record<
   xhigh: { label: "XHigh", icon: SignalHighIcon },
 };
 
+type EffortSelectorBaseInnerProps = EffortSelectorProps & {
+  modelData: NonNullable<ReturnType<typeof tryGetModelData>>;
+};
+
 export function EffortSelectorBase(props: EffortSelectorProps) {
   const modelData = tryGetModelData(props.model);
   if (!modelData) return null;
 
+  return <EffortSelectorBaseInner {...props} modelData={modelData} />;
+}
+
+function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInnerProps) {
   const configStore = useConfigStoreState();
 
   const shouldHideSelector =
