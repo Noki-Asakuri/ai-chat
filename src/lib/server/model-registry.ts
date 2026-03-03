@@ -44,8 +44,10 @@ const openai = customProvider({
 
     "gpt-5.2": baseOpenai.languageModel("gpt-5.2"),
     "gpt-5.2-chat": baseOpenai.languageModel("gpt-5.2-chat-latest"),
-    "gpt-5.2-pro": baseOpenai.languageModel("gpt-5.2-pro"),
     "gpt-5.2-codex": baseOpenai.languageModel("gpt-5.2-codex"),
+    "gpt-5.2-pro": baseOpenai.languageModel("gpt-5.2-pro"),
+
+    "gpt-5.3-chat": baseOpenai.languageModel("gpt-5.3-chat-latest"),
     "gpt-5.3-codex": baseOpenai.languageModel("gpt-5.3-codex"),
   },
 });
