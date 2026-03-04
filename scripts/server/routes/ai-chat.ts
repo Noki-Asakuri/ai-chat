@@ -428,8 +428,9 @@ export function registerAiChatRoutes(app: Hono): void {
 			<math>
 			## Math Formatting Instruction:
 			When the user asks a math question, format mathematical expressions using LaTeX delimiters.
-			- Use $...$ for inline math.
-			- Use $$...$$ for block math.
+			- Supported inline math delimiters: $...$ and \(...\).
+			- Supported block math delimiters: $$...$$ and \[...\].
+			- Prefer $...$ for inline math and $$...$$ for block math.
 			</math>
 		`;
 
