@@ -56,9 +56,11 @@ export function useRetryChatMessage() {
     const assistantMessageId = assistantMessage._id;
 
     const abortController = new AbortController();
+    const streamId = crypto.randomUUID();
     messageStoreActions.setController(threadId, {
       controller: abortController,
       assistantMessageId,
+      streamId,
     });
 
     const historySlice = messagesHistory.slice(0, userMessageIndex + 1);
@@ -100,6 +102,7 @@ export function useRetryChatMessage() {
       const body: ChatRequestBody = {
         model,
         threadId,
+        streamId,
         messages: allMessages,
         assistantMessageId,
         modelParams: mutationModelParams,
@@ -115,12 +118,12 @@ export function useRetryChatMessage() {
 
       await throwIfChatResponseError(response);
 
-      const streamId = response.headers.get("X-Stream-Id") ?? undefined;
-      if (streamId) {
+      const responseStreamId = response.headers.get("X-Stream-Id") ?? streamId;
+      if (responseStreamId) {
         messageStoreActions.setController(threadId, {
           controller: abortController,
           assistantMessageId,
-          streamId,
+          streamId: responseStreamId,
         });
       }
 

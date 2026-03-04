@@ -41,9 +41,10 @@ export function ChatSendButton() {
   const { abortChatStream } = useAbortChatStream();
   const { sendChatRequest } = useSendChatMessage();
   const [open, setOpen] = React.useState(false);
+  const isInFlight = status === "pending" || status === "streaming";
 
   async function handleSend() {
-    if (status === "streaming" || status === "pending") {
+    if (isInFlight) {
       if (threadId) {
         await abortChatStream(threadId);
       }
@@ -56,23 +57,23 @@ export function ChatSendButton() {
   return (
     <Menu.Root open={open} onOpenChange={setOpen}>
       <div
-        data-streaming={status === "streaming"}
+        data-streaming={isInFlight}
         className="group flex h-9 items-center gap-2 overflow-hidden rounded-md border bg-card px-2 data-[streaming=true]:border-destructive data-[streaming=true]:bg-destructive/60 data-[streaming=true]:pr-3 md:pr-0 md:pl-3"
       >
         <ButtonWithTip
           size="none"
           variant="none"
-          title={status === "streaming" ? "Abort Request" : "Send Message"}
+          title={isInFlight ? "Abort Request" : "Send Message"}
           className="flex h-full flex-1 cursor-pointer items-center gap-2 p-0"
           onClick={handleSend}
         >
-          {status === "streaming" ? (
+          {isInFlight ? (
             <SquareIcon className="size-4" />
           ) : (
             <SendHorizontalIcon className="size-4 -rotate-45" />
           )}
 
-          <span className="hidden md:inline">{status === "streaming" ? "Abort" : "Send"}</span>
+          <span className="hidden md:inline">{isInFlight ? "Abort" : "Send"}</span>
         </ButtonWithTip>
 
         <Menu.Trigger

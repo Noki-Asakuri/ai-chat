@@ -47,6 +47,7 @@ export const profileIdSchema = z.custom<Id<"profiles">>((data) => z.string().par
 export const inputSchema = z.object({
   assistantMessageId: messageIdSchema,
   threadId: threadIdSchema,
+  streamId: z.string().min(1).optional(),
   messages: z.unknown().array(),
 
   model: z.string(),
@@ -261,6 +262,7 @@ export async function validateRequestBody(body: Record<string, unknown>) {
     modelMessages,
     assistantMessageId: data.assistantMessageId,
     threadId: data.threadId,
+    streamId: data.streamId,
     modelParams: data.modelParams,
     model: { id: modelInfo.id, uniqueId: requestedId },
     providerOptions,

@@ -220,6 +220,10 @@ export const updateMessageById = authenticatedMutation({
     if (message.userId !== user.userId) throw new Error("User not authorized");
     if (message.status === "error") return;
 
+    const isAbortedCompletion =
+      message.status === "complete" && message.metadata?.finishReason === "aborted";
+    if (isAbortedCompletion && args.updates.status === "streaming") return;
+
     await ctx.db.patch(args.messageId, { ...args.updates, updatedAt: Date.now() });
 
     if (message.threadId) {

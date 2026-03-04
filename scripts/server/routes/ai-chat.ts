@@ -329,6 +329,7 @@ export function registerAiChatRoutes(app: Hono): void {
         modelMessages,
         assistantMessageId,
         threadId,
+        streamId,
         model,
         providerOptions,
         modelParams,
@@ -441,7 +442,8 @@ export function registerAiChatRoutes(app: Hono): void {
 		`;
 
       const startTime = Date.now();
-      const serverAbortController = registerStream(requestId);
+      const activeStreamId = streamId ?? requestId;
+      const serverAbortController = registerStream(activeStreamId);
 
       const result = streamText({
         model: registry(model.id),
@@ -454,8 +456,13 @@ export function registerAiChatRoutes(app: Hono): void {
         abortSignal: serverAbortController.signal,
 
         onAbort: () => {
-          removeStream(requestId);
-          logger.info("[Chat] Stream aborted (server-side)", { userId, threadId, requestId });
+          removeStream(activeStreamId);
+          logger.info("[Chat] Stream aborted (server-side)", {
+            userId,
+            threadId,
+            requestId,
+            streamId: activeStreamId,
+          });
         },
 
         experimental_telemetry: { isEnabled: false },
@@ -568,16 +575,21 @@ export function registerAiChatRoutes(app: Hono): void {
         generateMessageId: () => requestId,
         sendReasoning: true,
         status: 200,
-        headers: getStreamResponseHeaders(requestId),
+        headers: getStreamResponseHeaders(activeStreamId),
         consumeSseStream: async ({ stream }) => {
-          logger.info("[Chat] Creating resumable stream", { userId, requestId, threadId });
+          logger.info("[Chat] Creating resumable stream", {
+            userId,
+            requestId,
+            streamId: activeStreamId,
+            threadId,
+          });
 
           await Promise.all([
-            streamContext.createNewResumableStream(requestId, () => stream),
+            streamContext.createNewResumableStream(activeStreamId, () => stream),
             convexClient.mutation(api.functions.messages.updateMessageById, {
               sessionId,
               messageId: assistantMessageId,
-              updates: { status: "streaming", resumableStreamId: requestId, metadata },
+              updates: { status: "streaming", resumableStreamId: activeStreamId, metadata },
             }),
           ]);
         },
@@ -627,7 +639,7 @@ export function registerAiChatRoutes(app: Hono): void {
         },
 
         async onFinish({ responseMessage, isAborted }) {
-          removeStream(requestId);
+          removeStream(activeStreamId);
 
           if (isAborted) {
             // Fallback: preferred path is POST /api/ai/chat/abort (persist partial output),
@@ -638,7 +650,12 @@ export function registerAiChatRoutes(app: Hono): void {
               updates: { resumableStreamId: null, status: "complete" },
             });
 
-            logger.info("[Chat] Request finished as aborted", { userId, threadId, requestId });
+            logger.info("[Chat] Request finished as aborted", {
+              userId,
+              threadId,
+              requestId,
+              streamId: activeStreamId,
+            });
             return;
           }
 
@@ -685,6 +702,7 @@ export function registerAiChatRoutes(app: Hono): void {
             profileId: modelParams.profile,
             metadata,
             requestId,
+            streamId: activeStreamId,
           });
 
           await convexClient.mutation(api.functions.messages.updateMessageById, {

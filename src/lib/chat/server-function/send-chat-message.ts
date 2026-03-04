@@ -65,6 +65,7 @@ export function useSendChatMessage() {
     }
 
     const abortController = new AbortController();
+    const streamId = crypto.randomUUID();
     let assistantMessageId: Id<"messages"> | null = null;
 
     const userMessage: CreateMessage = {
@@ -105,6 +106,7 @@ export function useSendChatMessage() {
     messageStoreActions.setController(threadId, {
       controller: abortController,
       assistantMessageId,
+      streamId,
     });
 
     const messages = convertToUIChatMessages(messagesHistory);
@@ -140,6 +142,7 @@ export function useSendChatMessage() {
       const body: ChatRequestBody = {
         model,
         threadId,
+        streamId,
         messages,
         assistantMessageId,
         modelParams: metadataModelParams,
@@ -155,12 +158,12 @@ export function useSendChatMessage() {
 
       await throwIfChatResponseError(response);
 
-      const streamId = response.headers.get("X-Stream-Id") ?? undefined;
-      if (streamId) {
+      const responseStreamId = response.headers.get("X-Stream-Id") ?? streamId;
+      if (responseStreamId) {
         messageStoreActions.setController(threadId, {
           controller: abortController,
           assistantMessageId,
-          streamId,
+          streamId: responseStreamId,
         });
       }
 
