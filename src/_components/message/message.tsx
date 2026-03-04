@@ -22,7 +22,7 @@ type MessageProps = {
 export function Message({ messageId, index, total }: MessageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const message = useMessageStore(useShallow((state) => state.messagesById[messageId]!));
-  const isLast = message.role === "user" ? index === total - 2 : index === total - 1;
+  const isLast = isLastMessage(message.role, index, total);
 
   const { lastUserMessageHeight, textareaHeight } = useChatStore(
     useShallow((state) => ({
@@ -89,6 +89,12 @@ export function Message({ messageId, index, total }: MessageProps) {
       <ConditionallyRenderedMessage message={message} index={index} isLast={isLast} />
     </div>
   );
+}
+
+function isLastMessage(role: ChatMessage["role"], index: number, total: number): boolean {
+  if (index === total - 1) return true;
+  if (role === "user" && index === total - 2) return true;
+  return false;
 }
 
 export function ConditionallyRenderedMessage({ message, ...props }: MessageInnerProps) {

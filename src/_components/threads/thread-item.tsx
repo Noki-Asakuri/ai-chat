@@ -268,9 +268,10 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
               <Menu.Item
                 title="Delete Thread"
                 onClick={() => setDeleteOpen(true)}
+                disabled={isStreaming}
                 className={cn(
                   buttonVariants({ variant: "destructive" }),
-                  "w-full cursor-pointer justify-start rounded-t-none",
+                  "w-full cursor-pointer justify-start rounded-t-none disabled:cursor-not-allowed disabled:opacity-50",
                 )}
               >
                 <DeleteIcon className="size-4" />

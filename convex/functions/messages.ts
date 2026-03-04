@@ -3,8 +3,8 @@ import { getAll } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
-import type { Doc } from "../_generated/dataModel";
-import { authenticatedMutation, authenticatedQuery } from "../components";
+import type { Doc, Id } from "../_generated/dataModel";
+import { authenticatedMutation, authenticatedQuery, r2 } from "../components";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
 export const getAllMessagesFromThread = authenticatedQuery({
@@ -359,6 +359,104 @@ export const retryChatMessage = authenticatedMutation({
         },
       }),
     ]);
+  },
+});
+
+export const deleteMessageAndBelow = authenticatedMutation({
+  args: {
+    threadId: v.id("threads"),
+    messageId: v.id("messages"),
+    deleteAttachments: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const thread = await ctx.db.get("threads", args.threadId);
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
+    if (thread.status === "pending" || thread.status === "streaming") {
+      throw new Error("Cannot delete messages while streaming");
+    }
+
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_userId_threadId", (q) =>
+        q.eq("userId", user.userId).eq("threadId", args.threadId),
+      )
+      .order("asc")
+      .collect();
+
+    let startIndex = -1;
+
+    for (let i = 0; i < messages.length; i += 1) {
+      if (messages[i]?._id === args.messageId) {
+        startIndex = i;
+        break;
+      }
+    }
+
+    if (startIndex === -1) throw new Error("Message not found");
+
+    const messagesToKeep = messages.slice(0, startIndex);
+    const messagesToDelete = messages.slice(startIndex);
+
+    const attachmentIdsInDeletedRange = new Set<Id<"attachments">>();
+
+    for (const message of messagesToDelete) {
+      for (const attachmentId of message.attachments) {
+        attachmentIdsInDeletedRange.add(attachmentId);
+      }
+    }
+
+    let deletedAttachments = 0;
+
+    if (args.deleteAttachments && attachmentIdsInDeletedRange.size > 0) {
+      const usedByRemainingMessages = new Set<Id<"attachments">>();
+
+      for (const message of messagesToKeep) {
+        for (const attachmentId of message.attachments) {
+          usedByRemainingMessages.add(attachmentId);
+        }
+      }
+
+      const attachmentIdsToDelete: Array<Id<"attachments">> = [];
+
+      for (const attachmentId of attachmentIdsInDeletedRange) {
+        if (usedByRemainingMessages.has(attachmentId)) continue;
+        attachmentIdsToDelete.push(attachmentId);
+      }
+
+      if (attachmentIdsToDelete.length > 0) {
+        const attachments = await getAll(ctx.db, attachmentIdsToDelete);
+
+        for (const attachment of attachments) {
+          if (!attachment) continue;
+          if (attachment.userId !== user.userId) continue;
+
+          await r2.deleteObject(ctx, attachment.path);
+          await ctx.db.delete(attachment._id);
+          deletedAttachments += 1;
+        }
+      }
+    }
+
+    for (const message of messagesToDelete) {
+      await ctx.db.delete(message._id);
+    }
+
+    const lastRemainingMessage = messagesToKeep[messagesToKeep.length - 1];
+
+    await ctx.db.patch(args.threadId, {
+      updatedAt: Date.now(),
+      status: lastRemainingMessage?.status ?? "complete",
+    });
+
+    return {
+      deletedMessages: messagesToDelete.length,
+      attachmentCountInDeletedRange: attachmentIdsInDeletedRange.size,
+      deletedAttachments,
+    };
   },
 });
 

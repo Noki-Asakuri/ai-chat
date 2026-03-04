@@ -267,6 +267,9 @@ export const deleteThread = authenticatedMutation({
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
+    if (thread.status === "pending" || thread.status === "streaming") {
+      throw new Error("Cannot delete a thread while it is streaming");
+    }
 
     await ctx.db.delete(args.threadId);
 

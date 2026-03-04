@@ -2,6 +2,7 @@ import { api } from "@/convex/_generated/api";
 
 import { useNavigate } from "@tanstack/react-router";
 import { useSessionMutation } from "convex-helpers/react/sessions";
+import { Trash2Icon } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import {
@@ -12,6 +13,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
 import { Checkbox } from "../ui/checkbox";
@@ -58,6 +60,9 @@ export function ThreadDeleteDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
+          <AlertDialogMedia className="bg-destructive/10 text-destructive">
+            <Trash2Icon className="size-5" />
+          </AlertDialogMedia>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete "{title}" and every messages
@@ -69,15 +74,11 @@ export function ThreadDeleteDialog({
           <Checkbox
             id="delete-attachments"
             checked={checked}
-            onCheckedChange={() => setChecked(!checked)}
+            onCheckedChange={(value) => setChecked(value === true)}
             className="size-5"
           />
 
-          <Label
-            htmlFor="delete-attachments"
-            className="text-sm leading-none"
-            onClick={() => setChecked(!checked)}
-          >
+          <Label htmlFor="delete-attachments" className="text-sm leading-none">
             Delete all attachments?
           </Label>
         </div>
