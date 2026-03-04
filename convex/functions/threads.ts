@@ -6,6 +6,85 @@ import { internal } from "../_generated/api";
 import { authenticatedMutation, authenticatedQuery } from "../components";
 import { status } from "../schema";
 
+type ThreadStatus = "pending" | "streaming" | "complete" | "error";
+
+type AccountThreadRow = {
+  _id: Id<"threads">;
+  _creationTime: number;
+
+  title: string;
+  updatedAt: number;
+  pinned: boolean;
+  status: ThreadStatus;
+
+  messageCount: number;
+  attachmentCount: number;
+};
+
+type AccountThreadSortField =
+  | "title"
+  | "pinned"
+  | "messageCount"
+  | "attachmentCount"
+  | "_creationTime"
+  | "updatedAt"
+  | "status";
+
+type AccountThreadSortDirection = "asc" | "desc";
+
+const MAX_ACCOUNT_THREADS_PAGE_SIZE = 15;
+
+function compareAccountThreadRows(
+  left: AccountThreadRow,
+  right: AccountThreadRow,
+  sortField: AccountThreadSortField,
+  sortDirection: AccountThreadSortDirection,
+): number {
+  let base = 0;
+
+  if (sortField === "title") {
+    base = left.title.localeCompare(right.title, undefined, { sensitivity: "base" });
+  }
+
+  if (sortField === "messageCount") {
+    if (left.messageCount < right.messageCount) base = -1;
+    else if (left.messageCount > right.messageCount) base = 1;
+  }
+
+  if (sortField === "pinned") {
+    if (left.pinned === right.pinned) base = 0;
+    else if (left.pinned) base = 1;
+    else base = -1;
+  }
+
+  if (sortField === "attachmentCount") {
+    if (left.attachmentCount < right.attachmentCount) base = -1;
+    else if (left.attachmentCount > right.attachmentCount) base = 1;
+  }
+
+  if (sortField === "_creationTime") {
+    if (left._creationTime < right._creationTime) base = -1;
+    else if (left._creationTime > right._creationTime) base = 1;
+  }
+
+  if (sortField === "updatedAt") {
+    if (left.updatedAt < right.updatedAt) base = -1;
+    else if (left.updatedAt > right.updatedAt) base = 1;
+  }
+
+  if (sortField === "status") {
+    base = left.status.localeCompare(right.status);
+  }
+
+  if (base === 0) {
+    if (left.updatedAt < right.updatedAt) base = -1;
+    else if (left.updatedAt > right.updatedAt) base = 1;
+  }
+
+  if (sortDirection === "desc") return base * -1;
+  return base;
+}
+
 export const createThread = authenticatedMutation({
   args: { title: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -135,6 +214,16 @@ export const getAllThreads = authenticatedQuery({
 export const listAccountThreads = authenticatedQuery({
   args: {
     query: v.optional(v.string()),
+    sortField: v.union(
+      v.literal("title"),
+      v.literal("pinned"),
+      v.literal("messageCount"),
+      v.literal("attachmentCount"),
+      v.literal("_creationTime"),
+      v.literal("updatedAt"),
+      v.literal("status"),
+    ),
+    sortDirection: v.union(v.literal("asc"), v.literal("desc")),
     paginationOpts: paginationOptsValidator,
   },
   returns: v.object({
@@ -160,34 +249,29 @@ export const listAccountThreads = authenticatedQuery({
     if (!user) throw new Error("Not authenticated");
     const userId = user.userId;
 
-    type ThreadStatus = "pending" | "streaming" | "complete" | "error";
-
-    type AccountThreadRow = {
-      _id: Id<"threads">;
-      _creationTime: number;
-
-      title: string;
-      updatedAt: number;
-      pinned: boolean;
-      status: ThreadStatus;
-
-      messageCount: number;
-      attachmentCount: number;
-    };
-
     const search = (args.query ?? "").trim();
+    const sortField = args.sortField;
+    const sortDirection = args.sortDirection;
     const paginationOpts = {
-      numItems: Math.min(args.paginationOpts.numItems, 10),
+      numItems: Math.min(args.paginationOpts.numItems, MAX_ACCOUNT_THREADS_PAGE_SIZE),
       cursor: args.paginationOpts.cursor,
     };
 
+    const canUseUpdatedAtIndexSort = search.length === 0 && sortField === "updatedAt";
+
     const pageResult =
       search.length === 0
-        ? await ctx.db
-            .query("threads")
-            .withIndex("by_userId_pinned_updatedAt", (q) => q.eq("userId", userId))
-            .order("desc")
-            .paginate(paginationOpts)
+        ? canUseUpdatedAtIndexSort
+          ? await ctx.db
+              .query("threads")
+              .withIndex("by_userId_updatedAt", (q) => q.eq("userId", userId))
+              .order(sortDirection)
+              .paginate(paginationOpts)
+          : await ctx.db
+              .query("threads")
+              .withIndex("by_userId_pinned_updatedAt", (q) => q.eq("userId", userId))
+              .order("desc")
+              .paginate(paginationOpts)
         : await ctx.db
             .query("threads")
             .withSearchIndex("search_title", (q) => q.search("title", search).eq("userId", userId))
@@ -219,6 +303,10 @@ export const listAccountThreads = authenticatedQuery({
         attachmentCount: attachments.length,
       });
     }
+
+    rows.sort(function (left, right) {
+      return compareAccountThreadRows(left, right, sortField, sortDirection);
+    });
 
     return {
       page: rows,

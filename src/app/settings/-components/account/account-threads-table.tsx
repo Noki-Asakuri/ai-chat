@@ -8,13 +8,14 @@ import { Link } from "@tanstack/react-router";
 import {
   flexRender,
   getCoreRowModel,
-  getSortedRowModel,
   useReactTable,
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
 
 import {
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   EllipsisIcon,
@@ -50,6 +51,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Menu } from "@/components/ui/menu";
+import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";
@@ -67,6 +69,56 @@ type AccountThread = {
   messageCount: number;
   attachmentCount: number;
 };
+
+type AccountThreadSortField =
+  | "title"
+  | "pinned"
+  | "messageCount"
+  | "attachmentCount"
+  | "_creationTime"
+  | "updatedAt"
+  | "status";
+
+type AccountThreadSortDirection = "asc" | "desc";
+
+type AccountThreadSort = {
+  sortField: AccountThreadSortField;
+  sortDirection: AccountThreadSortDirection;
+};
+
+const THREADS_PAGE_SIZE = 15;
+const PAGE_WINDOW_SIZE = 3;
+
+function getVisiblePageNumbers(currentPage: number, maxPageNumber: number): Array<number> {
+  const start = Math.max(1, currentPage - PAGE_WINDOW_SIZE);
+  const end = Math.min(maxPageNumber, currentPage + PAGE_WINDOW_SIZE);
+
+  const pageNumbers: Array<number> = [];
+  for (let pageNumber = start; pageNumber <= end; pageNumber += 1) {
+    pageNumbers.push(pageNumber);
+  }
+
+  return pageNumbers;
+}
+
+function getAccountThreadSort(sorting: SortingState): AccountThreadSort {
+  const firstSort = sorting[0];
+  if (!firstSort) {
+    return { sortField: "updatedAt", sortDirection: "desc" };
+  }
+
+  const sortDirection: AccountThreadSortDirection = firstSort.desc ? "desc" : "asc";
+
+  if (firstSort.id === "title") return { sortField: "title", sortDirection };
+  if (firstSort.id === "pinned") return { sortField: "pinned", sortDirection };
+  if (firstSort.id === "messageCount") return { sortField: "messageCount", sortDirection };
+  if (firstSort.id === "attachmentCount") return { sortField: "attachmentCount", sortDirection };
+  if (firstSort.id === "_creationTime") return { sortField: "_creationTime", sortDirection };
+  if (firstSort.id === "updatedAt") return { sortField: "updatedAt", sortDirection };
+  if (firstSort.id === "status") return { sortField: "status", sortDirection };
+
+  return { sortField: "updatedAt", sortDirection: "desc" };
+}
 
 function StatusBadge({ status }: { status: AccountThread["status"] }) {
   if (status === "complete") return <Badge variant="secondary">Complete</Badge>;
@@ -153,6 +205,9 @@ export function AccountThreadsTableSkeleton() {
           <Skeleton className="h-4 w-[32ch] max-w-full" />
         </td>
         <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-10" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
           <Skeleton className="h-4 w-8" />
         </td>
         <td className="px-3 py-1.5 text-left text-sm">
@@ -202,6 +257,9 @@ export function AccountThreadsTableSkeleton() {
               </th>
               <th className="px-3 py-1.5 text-left text-sm font-bold">
                 <Skeleton className="h-4 w-16" />
+              </th>
+              <th className="px-3 py-1.5 text-left text-sm font-bold">
+                <Skeleton className="h-4 w-14" />
               </th>
               <th className="px-3 py-1.5 text-left text-sm font-bold">
                 <Skeleton className="h-4 w-10" />
@@ -274,6 +332,9 @@ function AccountThreadsTableBodySkeleton({ columnCount }: { columnCount: number 
           <Skeleton className="h-4 w-[60ch] max-w-full" />
         </td>
         <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-10" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
           <Skeleton className="h-4 w-8" />
         </td>
         <td className="px-3 py-1.5 text-left text-sm">
@@ -301,7 +362,7 @@ function AccountThreadsTableBodySkeleton({ columnCount }: { columnCount: number 
     <tbody>
       {rows}
 
-      {columnCount <= 8 ? null : (
+      {columnCount <= 9 ? null : (
         <tr className="m-0 p-0">
           <td colSpan={columnCount} className="px-3 py-1.5 text-left text-sm">
             <Skeleton className="h-4 w-full" />
@@ -319,11 +380,15 @@ function AccountThreadsTableBody({
   columns,
   onResolved,
 }: AccountThreadsTableBodyProps) {
+  const sort = getAccountThreadSort(sorting);
+
   const { data } = useSuspenseQuery(
     convexSessionQuery(api.functions.threads.listAccountThreads, {
       query: searchText,
+      sortField: sort.sortField,
+      sortDirection: sort.sortDirection,
       paginationOpts: {
-        numItems: 10,
+        numItems: THREADS_PAGE_SIZE,
         cursor,
       },
     }),
@@ -344,10 +409,8 @@ function AccountThreadsTableBody({
   const table = useReactTable({
     data: rows,
     columns,
-    state: { sorting },
-    onSortingChange: () => {},
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
+    manualSorting: true,
   });
 
   const rowModel = table.getRowModel();
@@ -382,6 +445,8 @@ export function AccountThreadsTable() {
   const [searchText, setSearchText] = useState<string>("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [menuThreadId, setMenuThreadId] = useState<Id<"threads"> | null>(null);
+  const [pendingTargetPageIndex, setPendingTargetPageIndex] = useState<number | null>(null);
+  const [knownLastPageNumber, setKnownLastPageNumber] = useState<number | null>(null);
 
   const [selected, setSelected] = useState<Set<Id<"threads">>>(() => new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -399,15 +464,60 @@ export function AccountThreadsTable() {
 
   const cursor = pageCursors[pageIndex] ?? null;
 
-  const onResolved = useCallback(function (info: AccountThreadsTablePageInfo) {
-    setPageInfo(info);
-    setIsLoadingPage(false);
-  }, []);
+  const onResolved = useCallback(
+    function (info: AccountThreadsTablePageInfo) {
+      setPageInfo(info);
+      setIsLoadingPage(false);
+
+      if (info.isDone) {
+        setKnownLastPageNumber(pageIndex + 1);
+      }
+    },
+    [pageIndex],
+  );
 
   const pinThread = useSessionMutation(api.functions.threads.pinThread);
   const [, startTransition] = useTransition();
 
   const selectedCount = selected.size;
+  const currentPage = pageIndex + 1;
+  const loadedPagesCount = pageCursors.length;
+  const maxPageNumber = useMemo(
+    function () {
+      if (knownLastPageNumber) {
+        return knownLastPageNumber;
+      }
+
+      if (loadedPagesCount <= 0) {
+        return 1;
+      }
+
+      if (
+        pageIndex === loadedPagesCount - 1 &&
+        !isLoadingPage &&
+        !pageInfo.isDone &&
+        typeof pageInfo.continueCursor === "string"
+      ) {
+        return loadedPagesCount + 1;
+      }
+
+      return loadedPagesCount;
+    },
+    [
+      isLoadingPage,
+      knownLastPageNumber,
+      loadedPagesCount,
+      pageIndex,
+      pageInfo.continueCursor,
+      pageInfo.isDone,
+    ],
+  );
+
+  const visiblePageNumbers = useMemo(
+    () => getVisiblePageNumbers(currentPage, maxPageNumber),
+    [currentPage, maxPageNumber],
+  );
+  const lastVisiblePageNumber = visiblePageNumbers[visiblePageNumbers.length - 1] ?? currentPage;
 
   const allSelected =
     pageInfo.visibleIds.length > 0 && pageInfo.visibleIds.every((id) => selected.has(id));
@@ -416,6 +526,8 @@ export function AccountThreadsTable() {
   function resetPaging() {
     setPageIndex(0);
     setPageCursors([null]);
+    setPendingTargetPageIndex(null);
+    setKnownLastPageNumber(null);
     setPageInfo({
       rowsCount: 0,
       isDone: false,
@@ -436,34 +548,107 @@ export function AccountThreadsTable() {
     if (isLoadingPage) return;
 
     setMenuThreadId(null);
+    setPendingTargetPageIndex(null);
     setSelected(new Set());
     setIsLoadingPage(true);
     setPageIndex((prev) => prev - 1);
   }
 
-  function goNextPage() {
-    if (pageInfo.isDone) return;
+  function goFirstPage() {
+    if (pageIndex === 0) return;
     if (isLoadingPage) return;
 
-    const nextIndex = pageIndex + 1;
-    const existing = pageCursors[nextIndex];
-    if (typeof existing === "string") {
+    setMenuThreadId(null);
+    setPendingTargetPageIndex(null);
+    setSelected(new Set());
+    setIsLoadingPage(true);
+    setPageIndex(0);
+  }
+
+  function goLastLoadedPage() {
+    const lastVisiblePageIndex = lastVisiblePageNumber - 1;
+    if (lastVisiblePageIndex < 0) return;
+    if (pageIndex === lastVisiblePageIndex) return;
+    if (isLoadingPage) return;
+
+    goToPage(lastVisiblePageNumber);
+  }
+
+  const goNextPage = useCallback(
+    function (keepPending: boolean = false) {
+      if (pageInfo.isDone) {
+        if (keepPending) setPendingTargetPageIndex(null);
+        return;
+      }
+      if (isLoadingPage) return;
+
+      if (!keepPending) setPendingTargetPageIndex(null);
+
+      const nextIndex = pageIndex + 1;
+      const existing = pageCursors[nextIndex];
+      if (typeof existing === "string") {
+        setMenuThreadId(null);
+        setSelected(new Set());
+        setIsLoadingPage(true);
+        setPageIndex(nextIndex);
+        return;
+      }
+
+      const nextCursor = pageInfo.continueCursor;
+      if (!nextCursor) {
+        if (keepPending) setPendingTargetPageIndex(null);
+        return;
+      }
+
       setMenuThreadId(null);
       setSelected(new Set());
       setIsLoadingPage(true);
+      setPageCursors((prev) => [...prev, nextCursor]);
       setPageIndex(nextIndex);
+    },
+    [isLoadingPage, pageCursors, pageIndex, pageInfo.continueCursor, pageInfo.isDone],
+  );
+
+  function goToPage(pageNumber: number) {
+    if (pageNumber < 1) return;
+    if (pageNumber > maxPageNumber) return;
+
+    const nextPageIndex = pageNumber - 1;
+    if (nextPageIndex === pageIndex) return;
+    if (isLoadingPage) return;
+
+    if (nextPageIndex < loadedPagesCount) {
+      setMenuThreadId(null);
+      setPendingTargetPageIndex(null);
+      setSelected(new Set());
+      setIsLoadingPage(true);
+      setPageIndex(nextPageIndex);
       return;
     }
 
-    const nextCursor = pageInfo.continueCursor;
-    if (!nextCursor) return;
+    if (pageInfo.isDone) return;
 
-    setMenuThreadId(null);
-    setSelected(new Set());
-    setIsLoadingPage(true);
-    setPageCursors((prev) => [...prev, nextCursor]);
-    setPageIndex(nextIndex);
+    setPendingTargetPageIndex(nextPageIndex);
+    goNextPage(true);
   }
+
+  useEffect(() => {
+    if (pendingTargetPageIndex === null) return;
+
+    if (pageIndex >= pendingTargetPageIndex) {
+      setPendingTargetPageIndex(null);
+      return;
+    }
+
+    if (isLoadingPage) return;
+
+    if (pageInfo.isDone) {
+      setPendingTargetPageIndex(null);
+      return;
+    }
+
+    goNextPage(true);
+  }, [goNextPage, isLoadingPage, pageIndex, pageInfo.isDone, pendingTargetPageIndex]);
 
   function toggleRowSelection(id: Id<"threads">) {
     setSelected((prev) => {
@@ -544,6 +729,11 @@ export function AccountThreadsTable() {
             </div>
           );
         },
+      },
+      {
+        accessorKey: "pinned",
+        header: "Pinned",
+        cell: ({ row }) => (row.original.pinned ? "Yes" : "-"),
       },
       {
         accessorKey: "messageCount",
@@ -669,7 +859,8 @@ export function AccountThreadsTable() {
     state: { sorting },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
+    manualSorting: true,
+    enableMultiSort: false,
   });
 
   async function bulkPin(nextPinned: boolean) {
@@ -748,8 +939,8 @@ export function AccountThreadsTable() {
         </div>
       </div>
 
-      <div className="w-full min-w-0 max-w-full overflow-x-auto rounded-md border">
-        <table className="min-w-max w-full">
+      <div className="w-full max-w-full min-w-0 overflow-x-auto rounded-md border">
+        <table className="w-full min-w-max">
           <thead className="bg-muted">
             {headerTable.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id} className="m-0 p-0">
@@ -793,50 +984,86 @@ export function AccountThreadsTable() {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="text-xs text-muted-foreground">Page {pageIndex + 1}</div>
+        <div className="text-xs text-muted-foreground">Page {currentPage}</div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isLoadingPage || pageIndex === 0}
-            onClick={goPreviousPage}
-          >
-            <ChevronLeftIcon className="size-4" />
-            Prev
-          </Button>
+        <Pagination className="mx-0 ml-auto w-auto">
+          <PaginationContent className="gap-2">
+            <PaginationItem>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isLoadingPage || pageIndex === 0}
+                onClick={goFirstPage}
+                title="First Page"
+                aria-label="First Page"
+              >
+                <ChevronsLeftIcon data-icon="inline-start" />
+                First
+              </Button>
+            </PaginationItem>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isLoadingPage || pageInfo.isDone}
-            onClick={goNextPage}
-          >
-            Next
-            <ChevronRightIcon className="size-4" />
-          </Button>
-        </div>
-      </div>
+            <PaginationItem>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isLoadingPage || pageIndex === 0}
+                onClick={goPreviousPage}
+                title="Previous Page"
+                aria-label="Previous Page"
+              >
+                <ChevronLeftIcon data-icon="inline-start" />
+                Prev
+              </Button>
+            </PaginationItem>
 
-      <div className="mt-auto border-t pt-4">
-        <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">Danger zone</h3>
-          <p className="text-sm text-muted-foreground">
-            Permanently delete all of your data. This action cannot be undone.
-          </p>
+            {visiblePageNumbers.map((pageNumber) => (
+              <PaginationItem key={`page-${pageNumber}`}>
+                <Button
+                  type="button"
+                  variant={pageNumber === currentPage ? "secondary" : "outline"}
+                  size="sm"
+                  className="min-w-8 px-2 tabular-nums"
+                  onClick={() => goToPage(pageNumber)}
+                  aria-current={pageNumber === currentPage ? "page" : undefined}
+                >
+                  {pageNumber}
+                </Button>
+              </PaginationItem>
+            ))}
 
-          <div>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => toast.message("This feature is not available yet.")}
-            >
-              Request full data deletion
-            </Button>
-          </div>
-        </div>
+            <PaginationItem>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isLoadingPage || pageInfo.isDone}
+                onClick={() => goNextPage()}
+                title="Next Page"
+                aria-label="Next Page"
+              >
+                Next
+                <ChevronRightIcon data-icon="inline-end" />
+              </Button>
+            </PaginationItem>
+
+            <PaginationItem>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isLoadingPage || currentPage === lastVisiblePageNumber}
+                onClick={goLastLoadedPage}
+                title="Last Page"
+                aria-label="Last Page"
+              >
+                Last
+                <ChevronsRightIcon data-icon="inline-end" />
+              </Button>
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
 
       <BulkDeleteDialog

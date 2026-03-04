@@ -4,6 +4,7 @@ import {
   ChartNoAxesColumnIcon,
   CircleUserRoundIcon,
   Columns3CogIcon,
+  MessagesSquareIcon,
   PaperclipIcon,
   UserRoundPenIcon,
 } from "lucide-react";
@@ -15,6 +16,11 @@ const paths = [
     name: "Account",
     path: "/settings/account",
     icon: CircleUserRoundIcon,
+  },
+  {
+    name: "Threads",
+    path: "/settings/threads",
+    icon: MessagesSquareIcon,
   },
   {
     name: "Customization",

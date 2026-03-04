@@ -9,6 +9,7 @@ import {
   CircleUserRoundIcon,
   Columns3CogIcon,
   LogOutIcon,
+  MessagesSquareIcon,
   PaperclipIcon,
   UserRoundPenIcon,
 } from "lucide-react";
@@ -57,6 +58,11 @@ export function ThreadUserProfile() {
             <UserMenuSettingItem href="/settings/account">
               <CircleUserRoundIcon className="size-5" />
               Account
+            </UserMenuSettingItem>
+
+            <UserMenuSettingItem href="/settings/threads">
+              <MessagesSquareIcon className="size-5" />
+              Threads
             </UserMenuSettingItem>
 
             <UserMenuSettingItem href="/settings/customization">

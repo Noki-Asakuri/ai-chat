@@ -14,6 +14,13 @@ const SETTINGS_HEADERS: Array<{ prefix: string; data: SettingsHeaderData }> = [
     },
   },
   {
+    prefix: "/settings/threads",
+    data: {
+      title: "Threads",
+      description: "Search, sort, and manage your threads.",
+    },
+  },
+  {
     prefix: "/settings/customization",
     data: {
       title: "Customization",
