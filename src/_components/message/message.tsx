@@ -2,6 +2,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { BanIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
+import type { CSSProperties } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { ChatEditTextarea } from "../chat-textarea/chat-edit-textarea";
@@ -19,10 +20,48 @@ type MessageProps = {
   total: number;
 };
 
+const FALLBACK_INTRINSIC_MESSAGE_HEIGHT_PX = 220;
+const MAX_CACHED_MESSAGE_HEIGHTS = 600;
+const messageHeightCachePx = new Map<Id<"messages">, number>();
+
+function trimCachedMessageHeights(): void {
+  while (messageHeightCachePx.size > MAX_CACHED_MESSAGE_HEIGHTS) {
+    const oldestCacheEntry = messageHeightCachePx.keys().next();
+    if (oldestCacheEntry.done) return;
+
+    messageHeightCachePx.delete(oldestCacheEntry.value);
+  }
+}
+
+function getIntrinsicMessageHeightPx(messageId: Id<"messages">): number {
+  const cachedHeight = messageHeightCachePx.get(messageId);
+
+  if (!cachedHeight || cachedHeight <= 0) {
+    return FALLBACK_INTRINSIC_MESSAGE_HEIGHT_PX;
+  }
+
+  return cachedHeight;
+}
+
+function cacheMessageHeight(messageId: Id<"messages">, element: HTMLDivElement): void {
+  const nextHeight = Math.round(element.getBoundingClientRect().height);
+  if (nextHeight <= 0) return;
+
+  if (messageHeightCachePx.has(messageId)) {
+    messageHeightCachePx.delete(messageId);
+  }
+
+  messageHeightCachePx.set(messageId, nextHeight);
+  trimCachedMessageHeights();
+}
+
 export function Message({ messageId, index, total }: MessageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const message = useMessageStore(useShallow((state) => state.messagesById[messageId]!));
   const isLast = isLastMessage(message.role, index, total);
+  const canDeferOffscreenRendering =
+    !isLast && (message.status === "complete" || message.status === "error");
+  const intrinsicMessageHeightPx = getIntrinsicMessageHeightPx(messageId);
 
   const { lastUserMessageHeight, textareaHeight } = useChatStore(
     useShallow((state) => ({
@@ -39,6 +78,31 @@ export function Message({ messageId, index, total }: MessageProps) {
       ? // 100vh - 48px (padding top) - textarea height - user message height - (16px) separator between messages
         `${window.innerHeight - 48 - textareaHeight - userMessageHeight - 16}px`
       : "auto";
+
+  const containerStyle: CSSProperties = canDeferOffscreenRendering
+    ? {
+        minHeight,
+        contentVisibility: "auto",
+        containIntrinsicSize: `auto ${intrinsicMessageHeightPx}px`,
+      }
+    : { minHeight };
+
+  useEffect(() => {
+    if (!canDeferOffscreenRendering || !containerRef.current) return;
+
+    const element = containerRef.current;
+    cacheMessageHeight(messageId, element);
+
+    const resizeObserver = new ResizeObserver(() => {
+      cacheMessageHeight(messageId, element);
+    });
+
+    resizeObserver.observe(element);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [canDeferOffscreenRendering, messageId]);
 
   // Keep assistant message min-height in sync with live changes to the most recent user message
   useEffect(() => {
@@ -73,7 +137,7 @@ export function Message({ messageId, index, total }: MessageProps) {
   return (
     <div
       ref={containerRef}
-      style={{ minHeight }}
+      style={containerStyle}
       data-slot="message"
       className="group flex flex-col gap-2"
       key={message._id}
