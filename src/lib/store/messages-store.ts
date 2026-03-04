@@ -139,7 +139,7 @@ export const useMessageStore = create<MessagesStore>()(
           error: incoming.error ?? existing.error,
           resumableStreamId: isAbortUpdate
             ? incoming.resumableStreamId
-            : incoming.resumableStreamId ?? existing.resumableStreamId,
+            : (incoming.resumableStreamId ?? existing.resumableStreamId),
           attachments: incoming.attachments.length ? incoming.attachments : existing.attachments,
         };
       }
@@ -181,8 +181,11 @@ export const useMessageStore = create<MessagesStore>()(
           }
 
           const sorted = [...messages].sort((a, b) => a.createdAt - b.createdAt);
+          const incomingIds = new Set<Id<"messages">>();
 
           for (const msg of sorted) {
+            incomingIds.add(msg._id);
+
             const existing = thread.messagesById[msg._id];
             if (!existing) {
               thread.messagesById[msg._id] = msg;
@@ -193,7 +196,22 @@ export const useMessageStore = create<MessagesStore>()(
             thread.messagesById[msg._id] = mergeServerMessage(existing, msg, localMeta);
           }
 
-          // Recompute ordering from the merged cache so older snapshots can't drop locally-known messages.
+          for (const cachedMessage of Object.values(thread.messagesById)) {
+            if (incomingIds.has(cachedMessage._id)) continue;
+
+            delete thread.messagesById[cachedMessage._id];
+            delete thread.localMetaById[cachedMessage._id];
+          }
+
+          const activeController = state.controllers[threadId];
+          if (
+            activeController?.assistantMessageId &&
+            !incomingIds.has(activeController.assistantMessageId)
+          ) {
+            delete state.controllers[threadId];
+          }
+
+          // Recompute ordering from merged cache after applying authoritative snapshot deletions.
           const allMessages: Array<ChatMessage> = Object.values(thread.messagesById);
           allMessages.sort((a, b) => a.createdAt - b.createdAt || a.updatedAt - b.updatedAt);
 
