@@ -13,6 +13,7 @@ type LocalMessageMeta = {
 type VariantMessageIdsByUserMessageId = Record<Id<"messages">, Array<Id<"messages">>>;
 type UserMessageIdByMessageId = Record<Id<"messages">, Id<"messages">>;
 type ActiveAssistantMessageIdByUserMessageId = Record<Id<"messages">, Id<"messages">>;
+type SyncMessagesMode = "replace" | "prepend";
 
 type ThreadMessagesState = {
   allMessageIds: Array<Id<"messages">>;
@@ -68,6 +69,7 @@ export type MessagesStore = {
       variantMessageIdsByUserMessageId?: VariantMessageIdsByUserMessageId;
     },
     syncToken?: number,
+    mode?: SyncMessagesMode,
   ) => void;
 
   selectAssistantVariant: (
@@ -283,6 +285,96 @@ export const useMessageStore = create<MessagesStore>()(
       return created;
     }
 
+    function mergeMessageIdLists(
+      existingIds: Array<Id<"messages">>,
+      incomingIds: Array<Id<"messages">>,
+      messagesById: Record<Id<"messages">, ChatMessage>,
+    ): Array<Id<"messages">> {
+      const mergedById: Record<Id<"messages">, ChatMessage> = {};
+
+      for (const id of existingIds) {
+        const message = messagesById[id];
+        if (!message) continue;
+        mergedById[id] = message;
+      }
+
+      for (const id of incomingIds) {
+        const message = messagesById[id];
+        if (!message) continue;
+        mergedById[id] = message;
+      }
+
+      const mergedMessages = sortMessagesByCreatedAt(Object.values(mergedById));
+      const nextIds: Array<Id<"messages">> = [];
+
+      for (const message of mergedMessages) {
+        nextIds.push(message._id);
+      }
+
+      return nextIds;
+    }
+
+    function mergeVariantMaps(
+      existingMap: VariantMessageIdsByUserMessageId,
+      incomingMap: VariantMessageIdsByUserMessageId,
+      messagesById: Record<Id<"messages">, ChatMessage>,
+    ): VariantMessageIdsByUserMessageId {
+      const merged: VariantMessageIdsByUserMessageId = {};
+
+      const existingUserIds = Object.keys(existingMap) as Array<Id<"messages">>;
+      for (const userMessageId of existingUserIds) {
+        const userMessage = messagesById[userMessageId];
+        if (!userMessage || userMessage.role !== "user") continue;
+
+        const variants = existingMap[userMessageId] ?? [];
+        const validVariants: Array<Id<"messages">> = [];
+
+        for (const variantId of variants) {
+          const assistantMessage = messagesById[variantId];
+          if (!assistantMessage || assistantMessage.role !== "assistant") continue;
+          validVariants.push(variantId);
+        }
+
+        if (validVariants.length > 0) {
+          merged[userMessageId] = validVariants;
+        }
+      }
+
+      const incomingUserIds = Object.keys(incomingMap) as Array<Id<"messages">>;
+      for (const userMessageId of incomingUserIds) {
+        const userMessage = messagesById[userMessageId];
+        if (!userMessage || userMessage.role !== "user") continue;
+
+        const previousVariants = merged[userMessageId] ?? [];
+        const incomingVariants = incomingMap[userMessageId] ?? [];
+        const mergedVariantsById: Record<Id<"messages">, ChatMessage> = {};
+
+        for (const variantId of previousVariants) {
+          const assistantMessage = messagesById[variantId];
+          if (!assistantMessage || assistantMessage.role !== "assistant") continue;
+          mergedVariantsById[variantId] = assistantMessage;
+        }
+
+        for (const variantId of incomingVariants) {
+          const assistantMessage = messagesById[variantId];
+          if (!assistantMessage || assistantMessage.role !== "assistant") continue;
+          mergedVariantsById[variantId] = assistantMessage;
+        }
+
+        const mergedVariants = sortMessagesByCreatedAt(Object.values(mergedVariantsById));
+        if (mergedVariants.length === 0) continue;
+
+        const nextVariants: Array<Id<"messages">> = [];
+        for (const variantMessage of mergedVariants) {
+          nextVariants.push(variantMessage._id);
+        }
+
+        merged[userMessageId] = nextVariants;
+      }
+
+      return merged;
+    }
+
     function updateCurrentViewFromThread(
       state: MessagesStore,
       threadId: Id<"threads"> | null,
@@ -384,7 +476,7 @@ export const useMessageStore = create<MessagesStore>()(
         });
       },
 
-      syncMessages: function syncMessages(threadId, payload, syncToken) {
+      syncMessages: function syncMessages(threadId, payload, syncToken, mode = "replace") {
         set(function sync(state) {
           const thread = ensureThreadStateInDraft(state, threadId);
 
@@ -398,6 +490,9 @@ export const useMessageStore = create<MessagesStore>()(
           const canonicalMessages = sortMessagesByCreatedAt(payload.messages);
           const allMessages = sortMessagesByCreatedAt(payload.allMessages ?? payload.messages);
           const incomingIds = new Set<Id<"messages">>();
+          const earliestIncomingCreatedAt = allMessages[0]?.createdAt ?? null;
+          const activeController = state.controllers[threadId];
+          const activeAssistantMessageId = activeController?.assistantMessageId;
 
           for (const msg of allMessages) {
             incomingIds.add(msg._id);
@@ -412,51 +507,97 @@ export const useMessageStore = create<MessagesStore>()(
             thread.messagesById[msg._id] = mergeServerMessage(existing, msg, localMeta);
           }
 
-          for (const cachedMessage of Object.values(thread.messagesById)) {
-            if (incomingIds.has(cachedMessage._id)) continue;
+          if (mode === "replace") {
+            for (const cachedMessage of Object.values(thread.messagesById)) {
+              if (incomingIds.has(cachedMessage._id)) continue;
+              if (activeAssistantMessageId && cachedMessage._id === activeAssistantMessageId)
+                continue;
 
-            delete thread.messagesById[cachedMessage._id];
-            delete thread.localMetaById[cachedMessage._id];
+              delete thread.messagesById[cachedMessage._id];
+              delete thread.localMetaById[cachedMessage._id];
+            }
           }
 
-          const activeController = state.controllers[threadId];
-          if (
-            activeController?.assistantMessageId &&
-            !incomingIds.has(activeController.assistantMessageId)
-          ) {
+          if (mode === "prepend" && earliestIncomingCreatedAt !== null) {
+            for (const cachedMessage of Object.values(thread.messagesById)) {
+              if (incomingIds.has(cachedMessage._id)) continue;
+              if (cachedMessage.createdAt < earliestIncomingCreatedAt) continue;
+              if (activeAssistantMessageId && cachedMessage._id === activeAssistantMessageId)
+                continue;
+
+              delete thread.messagesById[cachedMessage._id];
+              delete thread.localMetaById[cachedMessage._id];
+            }
+          }
+
+          if (activeAssistantMessageId && !thread.messagesById[activeAssistantMessageId]) {
             delete state.controllers[threadId];
           }
 
-          const nextAllMessageIds: Array<Id<"messages">> = [];
+          const incomingAllMessageIds: Array<Id<"messages">> = [];
           for (const message of allMessages) {
-            nextAllMessageIds.push(message._id);
+            incomingAllMessageIds.push(message._id);
           }
 
-          const nextCanonicalMessageIds: Array<Id<"messages">> = [];
+          const incomingCanonicalMessageIds: Array<Id<"messages">> = [];
           for (const message of canonicalMessages) {
-            nextCanonicalMessageIds.push(message._id);
+            incomingCanonicalMessageIds.push(message._id);
+          }
+
+          const nextAllMessageIds =
+            mode === "prepend"
+              ? mergeMessageIdLists(
+                  thread.allMessageIds,
+                  incomingAllMessageIds,
+                  thread.messagesById,
+                )
+              : incomingAllMessageIds;
+
+          const nextCanonicalMessageIds =
+            mode === "prepend"
+              ? mergeMessageIdLists(
+                  thread.messageIds,
+                  incomingCanonicalMessageIds,
+                  thread.messagesById,
+                )
+              : incomingCanonicalMessageIds;
+
+          const nextCanonicalMessages: ChatMessage[] = [];
+          for (const messageId of nextCanonicalMessageIds) {
+            const message = thread.messagesById[messageId];
+            if (!message) continue;
+            nextCanonicalMessages.push(message);
           }
 
           const baseVariantMap = payload.variantMessageIdsByUserMessageId
             ? sanitizeVariantMap(payload.variantMessageIdsByUserMessageId, thread.messagesById)
             : buildVariantMapFromCanonical(canonicalMessages);
 
+          const nextVariantMap =
+            mode === "prepend"
+              ? mergeVariantMaps(
+                  thread.variantMessageIdsByUserMessageId,
+                  baseVariantMap,
+                  thread.messagesById,
+                )
+              : baseVariantMap;
+
           const nextUserMessageMap = buildUserMessageMap(
-            canonicalMessages,
+            nextCanonicalMessages,
             thread.messagesById,
-            baseVariantMap,
+            nextVariantMap,
           );
 
           const nextActiveAssistantMap = buildActiveAssistantMap(
-            canonicalMessages,
-            baseVariantMap,
+            nextCanonicalMessages,
+            nextVariantMap,
             nextUserMessageMap,
           );
 
           thread.allMessageIds = nextAllMessageIds;
           thread.messageIds = nextCanonicalMessageIds;
 
-          thread.variantMessageIdsByUserMessageId = baseVariantMap;
+          thread.variantMessageIdsByUserMessageId = nextVariantMap;
           thread.userMessageIdByMessageId = nextUserMessageMap;
           thread.activeAssistantMessageIdByUserMessageId = nextActiveAssistantMap;
 

@@ -12,6 +12,19 @@ type MessageAttachmentsDisplayProps = React.ComponentPropsWithoutRef<"div"> & {
   parts: FileUIPart[];
 };
 
+const IMAGEKIT_CHAT_PATH_PREFIX = "https://ik.imagekit.io/gmethsnvl/ai-chat/";
+const MESSAGE_THUMBNAIL_TRANSFORM = "tr=w-320,h-320,c-at_max,f-auto,q-70";
+const MESSAGE_ATTACHMENT_SIZE_PX = 160;
+
+function getAttachmentThumbnailUrl(url: string): string {
+  if (!url.startsWith(IMAGEKIT_CHAT_PATH_PREFIX)) {
+    return url;
+  }
+
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}${MESSAGE_THUMBNAIL_TRANSFORM}`;
+}
+
 export function MessageAttachmentsDisplay({
   messageId,
   parts,
@@ -23,7 +36,13 @@ export function MessageAttachmentsDisplay({
 
   const images = parts
     .filter((p) => p.mediaType.includes("image"))
-    .map((p) => ({ src: p.url, alt: p.url, name: extractNameFromUrl(p.url), size: 0 }));
+    .map((p) => ({
+      src: p.url,
+      thumbnailSrc: getAttachmentThumbnailUrl(p.url),
+      alt: p.url,
+      name: extractNameFromUrl(p.url),
+      size: 0,
+    }));
 
   return (
     <div className={cn("flex max-w-full flex-col gap-2", className)} {...props}>
@@ -51,14 +70,20 @@ export function MessageAttachmentsDisplay({
             }
 
             const imageIndex = images.findIndex((i) => i.src === part.url);
+            const thumbnailUrl = getAttachmentThumbnailUrl(part.url);
 
             return (
               <ImageLightboxTrigger index={imageIndex} key={`${messageId}-attachment-${index}`}>
                 <div className="size-40 overflow-hidden rounded-md">
                   <img
-                    src={part.url}
+                    src={thumbnailUrl}
                     alt={extractNameFromUrl(part.url)}
                     className="aspect-square size-full object-cover object-center"
+                    loading="lazy"
+                    decoding="async"
+                    fetchPriority="low"
+                    width={MESSAGE_ATTACHMENT_SIZE_PX}
+                    height={MESSAGE_ATTACHMENT_SIZE_PX}
                   />
                 </div>
               </ImageLightboxTrigger>

@@ -10,6 +10,7 @@ import { useShallow } from "zustand/shallow";
 
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 
+import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
@@ -98,9 +99,10 @@ export function useSendChatMessage() {
       messages: [userMessage, assistantMessage],
     });
 
-    // Scroll to the bottom after we have added the messages to the thread (only if user is already at bottom)
+    // Sending a new message is explicit intent to follow the latest response.
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("chat:scroll-if-sticky"));
+      setStickyToBottom(true);
+      window.dispatchEvent(new Event("chat:force-scroll-bottom"));
     }
 
     messageStoreActions.setController(threadId, {

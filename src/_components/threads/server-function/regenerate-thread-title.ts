@@ -35,16 +35,16 @@ export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
       });
 
       const [result, error] = await tryCatch(
-        serverConvexClient.query(api.functions.messages.getAllMessagesFromThread, {
+        serverConvexClient.query(api.functions.messages.getAllMessagesWithoutAttachments, {
           threadId: data.threadId,
           sessionId,
         }),
       );
 
       if (error) return { error: error.message };
-      if (result.messages.length === 0) return { error: "No messages found" };
+      if (result.length === 0) return { error: "No messages found" };
 
-      const firstUser = result.messages.find((m) => m.role === "user");
+      const firstUser = result.find((m) => m.role === "user");
       if (!firstUser || !firstUser.parts.length) return { error: "No user message found" };
 
       const messages = await convertToModelMessages([

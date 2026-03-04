@@ -10,6 +10,9 @@ type MessageDoc = Doc<"messages">;
 type UserMessageDoc = MessageDoc & { role: "user" };
 type AssistantMessageDoc = MessageDoc & { role: "assistant" };
 
+const DEFAULT_THREAD_MESSAGES_PAGE_SIZE = 60;
+const MAX_THREAD_MESSAGES_PAGE_SIZE = 200;
+
 type ThreadMessageGraph = {
   messagesById: Record<Id<"messages">, MessageDoc>;
 
@@ -237,7 +240,11 @@ function getNextVariantIndex(variants: AssistantMessageDoc[]): number {
 }
 
 export const getAllMessagesFromThread = authenticatedQuery({
-  args: { threadId: v.id("threads") },
+  args: {
+    threadId: v.id("threads"),
+    limit: v.optional(v.number()),
+    beforeCreatedAt: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
     const user = ctx.user;
 
@@ -256,53 +263,157 @@ export const getAllMessagesFromThread = authenticatedQuery({
       .order("asc")
       .collect();
 
+    const safeLimit = Math.max(
+      1,
+      Math.min(
+        MAX_THREAD_MESSAGES_PAGE_SIZE,
+        Math.floor(args.limit ?? DEFAULT_THREAD_MESSAGES_PAGE_SIZE),
+      ),
+    );
+    const beforeCreatedAt = args.beforeCreatedAt;
+
     type MessageWithAttachments = Omit<Doc<"messages">, "attachments"> & {
       attachments: Doc<"attachments">[];
     };
 
-    const allMessagesWithAttachments: MessageWithAttachments[] = [];
+    const messagesById: Record<Id<"messages">, MessageDoc> = {};
     for (const message of messages) {
-      const attachmentsRaw = await getAll(ctx.db, message.attachments);
-      const attachments = attachmentsRaw.filter(Boolean) as Doc<"attachments">[];
-
-      allMessagesWithAttachments.push({
-        ...message,
-        attachments,
-      });
-    }
-
-    const allMessagesById: Record<Id<"messages">, MessageWithAttachments> = {};
-    for (const message of allMessagesWithAttachments) {
-      allMessagesById[message._id] = message;
+      messagesById[message._id] = message;
     }
 
     const graph = buildThreadMessageGraph(messages);
 
+    const canonicalMessageIds = graph.canonicalMessageIds;
+    let endExclusive = canonicalMessageIds.length;
+
+    if (beforeCreatedAt !== undefined) {
+      for (let i = canonicalMessageIds.length - 1; i >= 0; i -= 1) {
+        const messageId = canonicalMessageIds[i];
+        if (!messageId) continue;
+
+        const candidate = messagesById[messageId];
+        if (!candidate) continue;
+
+        if (candidate.createdAt < beforeCreatedAt) {
+          endExclusive = i + 1;
+          break;
+        }
+
+        endExclusive = i;
+      }
+    }
+
+    const startInclusive = Math.max(0, endExclusive - safeLimit);
+    let adjustedStartInclusive = startInclusive;
+
+    const firstSliceMessageId = canonicalMessageIds[adjustedStartInclusive];
+    const firstSliceMessage = firstSliceMessageId ? graph.messagesById[firstSliceMessageId] : null;
+
+    if (firstSliceMessage?.role === "assistant" && adjustedStartInclusive > 0) {
+      adjustedStartInclusive -= 1;
+    }
+
+    const canonicalSliceIds = canonicalMessageIds.slice(adjustedStartInclusive, endExclusive);
+
+    const sliceUserMessageIds = new Set<Id<"messages">>();
+    for (const messageId of canonicalSliceIds) {
+      const message = graph.messagesById[messageId];
+      if (!message) continue;
+
+      if (message.role === "user") {
+        sliceUserMessageIds.add(message._id);
+        continue;
+      }
+
+      const parentUserMessageId = message.parentUserMessageId;
+      if (parentUserMessageId) {
+        sliceUserMessageIds.add(parentUserMessageId);
+      }
+    }
+
+    const visibleMessageIds = new Set<Id<"messages">>(canonicalSliceIds);
+    for (const userMessageId of sliceUserMessageIds) {
+      visibleMessageIds.add(userMessageId);
+
+      const variants = graph.assistantsByUserId[userMessageId] ?? [];
+      for (const variant of variants) {
+        visibleMessageIds.add(variant._id);
+      }
+    }
+
+    const visibleMessages: MessageDoc[] = [];
+    for (const messageId of visibleMessageIds) {
+      const message = graph.messagesById[messageId];
+      if (!message) continue;
+      visibleMessages.push(message);
+    }
+
+    const attachmentIdSet = new Set<Id<"attachments">>();
+    for (const message of visibleMessages) {
+      for (const attachmentId of message.attachments) {
+        attachmentIdSet.add(attachmentId);
+      }
+    }
+
+    const attachmentIds = Array.from(attachmentIdSet);
+    const attachmentDocs = attachmentIds.length > 0 ? await getAll(ctx.db, attachmentIds) : [];
+
+    const attachmentsById: Record<Id<"attachments">, Doc<"attachments">> = {};
+    for (const attachmentDoc of attachmentDocs) {
+      if (!attachmentDoc) continue;
+      attachmentsById[attachmentDoc._id] = attachmentDoc;
+    }
+
+    const hydratedVisibleMessagesById: Record<Id<"messages">, MessageWithAttachments> = {};
+    for (const message of visibleMessages) {
+      const attachments: Doc<"attachments">[] = [];
+
+      for (const attachmentId of message.attachments) {
+        const attachment = attachmentsById[attachmentId];
+        if (!attachment) continue;
+        attachments.push(attachment);
+      }
+
+      hydratedVisibleMessagesById[message._id] = {
+        ...message,
+        attachments,
+      };
+    }
+
+    const allMessages: MessageWithAttachments[] = [];
+    const sortedVisibleMessages = sortMessagesAscending(visibleMessages);
+    for (const message of sortedVisibleMessages) {
+      const hydrated = hydratedVisibleMessagesById[message._id];
+      if (!hydrated) continue;
+      allMessages.push(hydrated);
+    }
+
     const canonicalMessages: MessageWithAttachments[] = [];
-    for (const messageId of graph.canonicalMessageIds) {
-      const message = allMessagesById[messageId];
+    for (const messageId of canonicalSliceIds) {
+      const message = hydratedVisibleMessagesById[messageId];
       if (!message) continue;
       canonicalMessages.push(message);
     }
 
     const variantMessageIdsByUserMessageId: Record<Id<"messages">, Array<Id<"messages">>> = {};
 
-    for (const userMessage of graph.users) {
-      const variants = graph.assistantsByUserId[userMessage._id] ?? [];
+    for (const userMessageId of sliceUserMessageIds) {
+      const variants = graph.assistantsByUserId[userMessageId] ?? [];
       if (variants.length === 0) continue;
 
-      variantMessageIdsByUserMessageId[userMessage._id] = [];
+      variantMessageIdsByUserMessageId[userMessageId] = [];
 
       for (const variant of variants) {
-        variantMessageIdsByUserMessageId[userMessage._id]!.push(variant._id);
+        variantMessageIdsByUserMessageId[userMessageId]!.push(variant._id);
       }
     }
 
     return {
       messages: canonicalMessages,
-      allMessages: allMessagesWithAttachments,
+      allMessages,
       thread,
       variantMessageIdsByUserMessageId,
+      hasOlderMessages: adjustedStartInclusive > 0,
     };
   },
 });

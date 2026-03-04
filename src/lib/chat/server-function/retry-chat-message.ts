@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 
+import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
@@ -115,9 +116,10 @@ export function useRetryChatMessage() {
         streamId,
       });
 
-      // Only scroll down when the message has updated (only if user is already at bottom)
+      // Retrying is explicit intent to follow the latest response.
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("chat:scroll-if-sticky"));
+        setStickyToBottom(true);
+        window.dispatchEvent(new Event("chat:force-scroll-bottom"));
       }
 
       const body: ChatRequestBody = {

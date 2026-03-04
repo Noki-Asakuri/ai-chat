@@ -64,6 +64,8 @@ export class ChatStreamHttpError extends Error {
   }
 }
 
+type UIConvertibleMessage = Pick<ChatMessage, "messageId" | "role" | "parts" | "metadata">;
+
 export async function readResponseErrorMessage(response: Response): Promise<string> {
   const fallback = getErrorFallbackMessage(response.status);
 
@@ -84,7 +86,7 @@ export async function readResponseErrorMessage(response: Response): Promise<stri
   return trimmedBody;
 }
 
-export function convertToUIChatMessages(messages: ChatMessage[]): UIChatMessage[] {
+export function convertToUIChatMessages(messages: UIConvertibleMessage[]): UIChatMessage[] {
   return messages.map(
     (message): UIChatMessage => ({
       id: message.messageId,

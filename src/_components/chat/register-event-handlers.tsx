@@ -231,7 +231,11 @@ export function RegisterEventHandlers() {
       setStickyToBottom(true);
 
       requestAnimationFrame(() => {
-        scrollToBottom(element, "smooth");
+        scrollToBottom(element, "auto");
+
+        requestAnimationFrame(() => {
+          scrollToBottom(element, "auto");
+        });
       });
     },
     { capture: true },
