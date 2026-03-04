@@ -7,10 +7,13 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
-    "check": "bun lint && bun typecheck",
+    "dev:web": "vite dev",
     "dev:server": "bun run --watch scripts/server.ts",
+    "dev:convex": "convex dev --typecheck disable",
+    "build": "vite build",
+    "start": "node --env-file=.env .output/server/index.mjs",
+    "start:server": "bun run scripts/server.ts",
+    "check": "bun lint && bun typecheck",
     "format:check": "prettier --check .",
     "format:write": "prettier --write .",
     "lint": "oxlint --type-aware",
@@ -18,8 +21,6 @@
     "patch:streamdown": "bun run scripts/patches/patch-streamdown.ts",
     "postinstall": "bun run scripts/patches/patch-streamdown.ts",
     "preview": "vite build && vite preview",
-    "start": "node --env-file=.env .output/server/index.mjs",
-    "start:server": "bun run scripts/server.ts",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
