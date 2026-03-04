@@ -6,14 +6,17 @@ import { Textarea } from "../ui/textarea";
 
 import { ChatActionButtons } from "./action-buttons";
 import { ChatAttachmentsDisplay } from "./attachments-display";
+import { ScrollButton } from "./scroll-group-button";
 import { ChatSendButton } from "./send-button";
 
 import { useGetSendDescription, useShouldSend } from "@/lib/chat/send-preference";
 import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
+import { useMessageStore } from "@/lib/store/messages-store";
 
 export function ChatTextarea() {
-  const parentRef = useRef<HTMLDivElement>(null);
+  const parentRef = useRef<HTMLFormElement>(null);
+  const hasMessages = useMessageStore((state) => state.messageIds.length > 0);
 
   const onResize = useEffectEvent((entries: ResizeObserverEntry[]) => {
     const entry = entries[0];
@@ -36,12 +39,10 @@ export function ChatTextarea() {
   }, []);
 
   return (
-    <div
-      ref={parentRef}
-      data-slot="chat-textarea"
-      className="pointer-events-none absolute bottom-2 w-full px-4"
-    >
-      <form className="mx-auto space-y-2">
+    <div data-slot="chat-textarea" className="pointer-events-none absolute bottom-2 w-full px-4">
+      {hasMessages ? <ScrollButton /> : null}
+
+      <form ref={parentRef} className="mx-auto space-y-2">
         <div className="pointer-events-auto relative mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150">
           <ChatAttachmentsDisplay />
 
