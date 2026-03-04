@@ -31,6 +31,7 @@ import {
 import { ButtonWithTip } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { MessageRetryMenu } from "./message-retry-menu";
 
 import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
@@ -53,6 +54,20 @@ type VariantPagerState = {
   userMessageId: Id<"messages"> | null;
   variants: Array<Id<"messages">>;
   activeVariantIndex: number;
+  isStreaming: boolean;
+};
+
+type DeleteScope = "turnAndBelow" | "assistantVariantOnly";
+
+type DeleteState = {
+  threadId: Id<"threads"> | null;
+  turnDeleteCount: number;
+  variantDeleteCount: number;
+  turnAttachmentCount: number;
+  variantAttachmentCount: number;
+  assistantTurnVariantCount: number;
+  assistantLaterDeleteCount: number;
+  canDeleteVariantOnly: boolean;
   isStreaming: boolean;
 };
 
@@ -237,24 +252,132 @@ function DeleteButton({ message }: { message: ChatMessage }) {
   const deleteMessageAndBelow = useSessionMutation(api.functions.messages.deleteMessageAndBelow);
   const [open, setOpen] = React.useState(false);
   const [deleteAttachments, setDeleteAttachments] = React.useState(false);
+  const [deleteScope, setDeleteScope] = React.useState<DeleteScope>("turnAndBelow");
   const [pending, startTransition] = React.useTransition();
 
-  const { threadId, deleteCount, attachmentCount, isStreaming } = useMessageStore(
-    useShallow((state) => {
+  const {
+    threadId,
+    turnDeleteCount,
+    variantDeleteCount,
+    turnAttachmentCount,
+    variantAttachmentCount,
+    assistantTurnVariantCount,
+    assistantLaterDeleteCount,
+    canDeleteVariantOnly,
+    isStreaming,
+  } = useMessageStore(
+    useShallow((state): DeleteState => {
       const messageIndex = state.messageIds.indexOf(message._id);
-      const deleteCount = messageIndex < 0 ? 0 : state.messageIds.length - messageIndex;
+      const canonicalUserMessageIds: Array<Id<"messages">> = [];
 
-      const attachmentIds = new Set<Id<"attachments">>();
-      if (messageIndex >= 0) {
-        for (let i = messageIndex; i < state.messageIds.length; i += 1) {
-          const currentMessageId = state.messageIds[i];
-          if (!currentMessageId) continue;
+      for (const currentMessageId of state.messageIds) {
+        const currentMessage = state.messagesById[currentMessageId];
+        if (!currentMessage || currentMessage.role !== "user") continue;
+        canonicalUserMessageIds.push(currentMessage._id);
+      }
 
-          const currentMessage = state.messagesById[currentMessageId];
-          if (!currentMessage) continue;
+      let targetUserMessageId: Id<"messages"> | null = null;
 
-          for (const attachment of currentMessage.attachments) {
-            attachmentIds.add(attachment._id);
+      if (message.role === "user") {
+        targetUserMessageId = message._id;
+      } else {
+        targetUserMessageId =
+          state.userMessageIdByMessageId[message._id] ?? message.parentUserMessageId ?? null;
+
+        if (!targetUserMessageId && messageIndex > 0) {
+          for (let i = messageIndex - 1; i >= 0; i -= 1) {
+            const previousMessageId = state.messageIds[i];
+            if (!previousMessageId) continue;
+
+            const previousMessage = state.messagesById[previousMessageId];
+            if (!previousMessage || previousMessage.role !== "user") continue;
+
+            targetUserMessageId = previousMessage._id;
+            break;
+          }
+        }
+      }
+
+      const targetUserTurnIndex = targetUserMessageId
+        ? canonicalUserMessageIds.indexOf(targetUserMessageId)
+        : -1;
+
+      const turnDeleteMessageIds = new Set<Id<"messages">>();
+      let assistantTurnVariantCount = 0;
+      let assistantLaterDeleteCount = 0;
+
+      if (targetUserTurnIndex >= 0) {
+        if (message.role === "assistant" && targetUserMessageId) {
+          const targetVariants = state.variantMessageIdsByUserMessageId[targetUserMessageId] ?? [];
+
+          if (targetVariants.length > 0) {
+            assistantTurnVariantCount = targetVariants.length;
+
+            for (const variantId of targetVariants) {
+              turnDeleteMessageIds.add(variantId);
+            }
+          } else {
+            assistantTurnVariantCount = 1;
+            turnDeleteMessageIds.add(message._id);
+          }
+        }
+
+        const startTurnIndex =
+          message.role === "user" ? targetUserTurnIndex : targetUserTurnIndex + 1;
+
+        for (let i = startTurnIndex; i < canonicalUserMessageIds.length; i += 1) {
+          const userMessageId = canonicalUserMessageIds[i];
+          if (!userMessageId) continue;
+
+          turnDeleteMessageIds.add(userMessageId);
+
+          const variants = state.variantMessageIdsByUserMessageId[userMessageId] ?? [];
+
+          if (message.role === "assistant") {
+            assistantLaterDeleteCount += 1 + variants.length;
+          }
+
+          for (const variantId of variants) {
+            turnDeleteMessageIds.add(variantId);
+          }
+        }
+      }
+
+      const turnAttachmentIds = new Set<Id<"attachments">>();
+
+      for (const turnDeleteMessageId of turnDeleteMessageIds) {
+        const currentMessage = state.messagesById[turnDeleteMessageId];
+        if (!currentMessage) continue;
+
+        for (const attachment of currentMessage.attachments) {
+          turnAttachmentIds.add(attachment._id);
+        }
+      }
+
+      let variantDeleteCount = 0;
+      let variantAttachmentCount = 0;
+      let canDeleteVariantOnly = false;
+
+      if (message.role === "assistant") {
+        const userMessageId = targetUserMessageId;
+
+        if (userMessageId) {
+          const variants = state.variantMessageIdsByUserMessageId[userMessageId] ?? [];
+          canDeleteVariantOnly = variants.length > 1;
+
+          if (canDeleteVariantOnly) {
+            variantDeleteCount = 1;
+            const targetMessage = state.messagesById[message._id];
+
+            if (targetMessage) {
+              const variantAttachmentIds = new Set<Id<"attachments">>();
+
+              for (const attachment of targetMessage.attachments) {
+                variantAttachmentIds.add(attachment._id);
+              }
+
+              variantAttachmentCount = variantAttachmentIds.size;
+            }
           }
         }
       }
@@ -264,20 +387,56 @@ function DeleteButton({ message }: { message: ChatMessage }) {
 
       return {
         threadId: state.currentThreadId,
-        deleteCount,
-        attachmentCount: attachmentIds.size,
+        turnDeleteCount: turnDeleteMessageIds.size,
+        variantDeleteCount,
+        turnAttachmentCount: turnAttachmentIds.size,
+        variantAttachmentCount,
+        assistantTurnVariantCount,
+        assistantLaterDeleteCount,
+        canDeleteVariantOnly,
         isStreaming: lastStatus === "pending" || lastStatus === "streaming",
       };
     }),
   );
 
+  const effectiveDeleteScope: DeleteScope = canDeleteVariantOnly ? deleteScope : "turnAndBelow";
+  const deleteCount =
+    effectiveDeleteScope === "assistantVariantOnly" ? variantDeleteCount : turnDeleteCount;
+  const attachmentCount =
+    effectiveDeleteScope === "assistantVariantOnly" ? variantAttachmentCount : turnAttachmentCount;
+
   const disabled = pending || !threadId || deleteCount === 0;
-  const title = getDeleteTitle(deleteCount);
+  const title = getDeleteTitle(
+    deleteCount,
+    effectiveDeleteScope,
+    message.role,
+    assistantTurnVariantCount,
+    assistantLaterDeleteCount,
+  );
+  const deleteButtonTitle =
+    effectiveDeleteScope === "assistantVariantOnly"
+      ? "Delete response variant"
+      : "Delete message and below";
+  const deleteButtonSrLabel =
+    effectiveDeleteScope === "assistantVariantOnly"
+      ? "Delete response variant"
+      : "Delete message and below";
+
+  React.useEffect(() => {
+    if (canDeleteVariantOnly) {
+      setDeleteScope("assistantVariantOnly");
+      return;
+    }
+
+    setDeleteScope("turnAndBelow");
+  }, [canDeleteVariantOnly, message._id]);
 
   if (isStreaming) return null;
 
   function handleOpenChange(nextOpen: boolean): void {
     setOpen(nextOpen);
+    setDeleteScope(canDeleteVariantOnly ? "assistantVariantOnly" : "turnAndBelow");
+
     if (!nextOpen) {
       setDeleteAttachments(false);
     }
@@ -286,7 +445,9 @@ function DeleteButton({ message }: { message: ChatMessage }) {
   function handleDelete() {
     if (!threadId || deleteCount === 0) return;
 
-    const shouldClearEditMessage = shouldClearEditMessageForTarget(message._id);
+    const requestedScope: DeleteScope = canDeleteVariantOnly ? deleteScope : "turnAndBelow";
+
+    const shouldClearEditMessage = shouldClearEditMessageForTarget(message._id, requestedScope);
 
     startTransition(async () => {
       try {
@@ -294,6 +455,7 @@ function DeleteButton({ message }: { message: ChatMessage }) {
           threadId,
           messageId: message._id,
           deleteAttachments,
+          deleteScope: requestedScope,
         });
 
         if (shouldClearEditMessage) {
@@ -302,8 +464,9 @@ function DeleteButton({ message }: { message: ChatMessage }) {
 
         handleOpenChange(false);
 
-        const deletedMessageLabel = result.deletedMessages === 1 ? "message" : "messages";
-        const successTitle = `Deleted ${result.deletedMessages} ${deletedMessageLabel}`;
+        const deletedMessageCount = result.deletedDocumentMessages ?? result.deletedMessages;
+        const deletedMessageLabel = deletedMessageCount === 1 ? "message" : "messages";
+        const successTitle = `Deleted ${deletedMessageCount} ${deletedMessageLabel}`;
 
         if (result.attachmentCountInDeletedRange > 0) {
           const attachmentTitle = deleteAttachments
@@ -334,10 +497,10 @@ function DeleteButton({ message }: { message: ChatMessage }) {
         className="size-8"
         onClick={() => handleOpenChange(true)}
         disabled={disabled}
-        title="Delete message and below"
+        title={deleteButtonTitle}
       >
         <Trash2Icon className="size-4" />
-        <span className="sr-only">Delete message and below</span>
+        <span className="sr-only">{deleteButtonSrLabel}</span>
       </ButtonWithTip>
 
       <AlertDialog open={open} onOpenChange={handleOpenChange}>
@@ -352,6 +515,40 @@ function DeleteButton({ message }: { message: ChatMessage }) {
               {pluralize(deleteCount)} from this thread.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {canDeleteVariantOnly && (
+            <RadioGroup
+              value={deleteScope}
+              onValueChange={(value) => {
+                if (value === "assistantVariantOnly" || value === "turnAndBelow") {
+                  setDeleteScope(value);
+                }
+              }}
+              className="gap-2"
+            >
+              <Label className="flex w-full items-start gap-2 rounded-md border px-3 py-2 text-left">
+                <RadioGroupItem value="assistantVariantOnly" className="mt-0.5" />
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-sm leading-none font-medium">Delete this variant only</span>
+                  <span className="text-xs text-muted-foreground">
+                    Keep newer messages in this thread.
+                  </span>
+                </span>
+              </Label>
+
+              <Label className="flex w-full items-start gap-2 rounded-md border px-3 py-2 text-left">
+                <RadioGroupItem value="turnAndBelow" className="mt-0.5" />
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-sm leading-none font-medium">
+                    Delete this message and newer
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Also removes newer messages in this thread.
+                  </span>
+                </span>
+              </Label>
+            </RadioGroup>
+          )}
 
           {attachmentCount > 0 && (
             <div className="flex items-center gap-2">
@@ -533,7 +730,14 @@ function VariantPager({ message }: { message: ChatMessage }) {
   );
 }
 
-function shouldClearEditMessageForTarget(targetMessageId: Id<"messages">): boolean {
+function shouldClearEditMessageForTarget(
+  targetMessageId: Id<"messages">,
+  deleteScope: DeleteScope,
+): boolean {
+  if (deleteScope === "assistantVariantOnly") {
+    return false;
+  }
+
   const editMessage = useChatStore.getState().editMessage;
   if (!editMessage) return false;
 
@@ -546,7 +750,38 @@ function shouldClearEditMessageForTarget(targetMessageId: Id<"messages">): boole
   return editIndex >= targetIndex;
 }
 
-function getDeleteTitle(deleteCount: number): string {
+function getDeleteTitle(
+  deleteCount: number,
+  deleteScope: DeleteScope,
+  role: ChatMessage["role"],
+  assistantTurnVariantCount: number,
+  assistantLaterDeleteCount: number,
+): string {
+  if (deleteCount <= 0) return "Delete this message?";
+
+  if (deleteScope === "assistantVariantOnly") {
+    return "Delete this variant?";
+  }
+
+  if (role === "assistant") {
+    const sameTurnVariantCount = Math.max(1, assistantTurnVariantCount);
+    const newerMessageCount = Math.max(0, assistantLaterDeleteCount);
+
+    if (newerMessageCount === 0) {
+      if (sameTurnVariantCount <= 1) {
+        return "Delete this response?";
+      }
+
+      return `Delete this response and ${sameTurnVariantCount - 1} alternate response${pluralize(sameTurnVariantCount - 1)}?`;
+    }
+
+    if (sameTurnVariantCount <= 1) {
+      return `Delete this response and ${newerMessageCount} newer message${pluralize(newerMessageCount)}?`;
+    }
+
+    return `Delete this response turn and ${newerMessageCount} newer message${pluralize(newerMessageCount)}?`;
+  }
+
   const newerMessageCount = Math.max(0, deleteCount - 1);
   if (newerMessageCount === 0) return "Delete this message?";
   return `Delete this message and ${newerMessageCount} newer message${pluralize(newerMessageCount)}?`;

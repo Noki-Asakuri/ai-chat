@@ -9,6 +9,7 @@ import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 type MessageDoc = Doc<"messages">;
 type UserMessageDoc = MessageDoc & { role: "user" };
 type AssistantMessageDoc = MessageDoc & { role: "assistant" };
+type DeleteScope = "turnAndBelow" | "assistantVariantOnly";
 
 const DEFAULT_THREAD_MESSAGES_PAGE_SIZE = 60;
 const MAX_THREAD_MESSAGES_PAGE_SIZE = 200;
@@ -879,10 +880,13 @@ export const deleteMessageAndBelow = authenticatedMutation({
     threadId: v.id("threads"),
     messageId: v.id("messages"),
     deleteAttachments: v.boolean(),
+    deleteScope: v.optional(v.union(v.literal("turnAndBelow"), v.literal("assistantVariantOnly"))),
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
+
+    const deleteScope: DeleteScope = args.deleteScope ?? "turnAndBelow";
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -917,7 +921,29 @@ export const deleteMessageAndBelow = authenticatedMutation({
       messagesToDeleteMap[message._id] = message;
     }
 
-    if (targetMessage.role === "user") {
+    if (deleteScope === "assistantVariantOnly") {
+      if (targetMessage.role !== "assistant") {
+        throw new Error("Variant-only delete is only available for assistant messages");
+      }
+
+      const targetVariants = graph.assistantsByUserId[targetUserMessageId] ?? [];
+      if (targetVariants.length <= 1) {
+        throw new Error("Cannot delete the only response variant");
+      }
+
+      let hasTargetVariant = false;
+      for (const variant of targetVariants) {
+        if (variant._id !== targetMessage._id) continue;
+        hasTargetVariant = true;
+        break;
+      }
+
+      if (!hasTargetVariant) {
+        throw new Error("Target variant not found");
+      }
+
+      addMessageToDelete(targetMessage);
+    } else if (targetMessage.role === "user") {
       const fromTurnMessages = collectMessagesFromUserTurnIndex(graph, targetUserTurnIndex);
       for (const message of fromTurnMessages) {
         addMessageToDelete(message);
@@ -949,10 +975,6 @@ export const deleteMessageAndBelow = authenticatedMutation({
       if (deletedMessageIds.has(message._id)) continue;
       messagesToKeep.push(message);
     }
-
-    const remainingCanonicalMessageIds = graph.canonicalMessageIds.filter(
-      (messageId) => !deletedMessageIds.has(messageId),
-    );
 
     const attachmentIdsInDeletedRange = new Set<Id<"attachments">>();
 
@@ -1006,12 +1028,30 @@ export const deleteMessageAndBelow = authenticatedMutation({
       userMessageId: Id<"messages">;
       activeAssistantMessageId: Id<"messages"> | undefined;
     }> = [];
+    const patchedActiveAssistantByUserId = new Map<Id<"messages">, Id<"messages"> | undefined>();
 
     for (const userMessage of remainingUserMessages) {
       const variants = graph.assistantsByUserId[userMessage._id] ?? [];
 
       const remainingVariants = variants.filter((variant) => !deletedMessageIds.has(variant._id));
-      const nextActiveAssistantMessageId = remainingVariants[remainingVariants.length - 1]?._id;
+      let nextActiveAssistantMessageId: Id<"messages"> | undefined;
+
+      if (remainingVariants.length > 0) {
+        const currentActiveAssistantMessageId = userMessage.activeAssistantMessageId;
+        let hasCurrentActiveAssistantMessage = false;
+
+        if (currentActiveAssistantMessageId) {
+          for (const variant of remainingVariants) {
+            if (variant._id !== currentActiveAssistantMessageId) continue;
+            hasCurrentActiveAssistantMessage = true;
+            break;
+          }
+        }
+
+        nextActiveAssistantMessageId = hasCurrentActiveAssistantMessage
+          ? currentActiveAssistantMessageId
+          : remainingVariants[remainingVariants.length - 1]?._id;
+      }
 
       if (userMessage.activeAssistantMessageId === nextActiveAssistantMessageId) continue;
 
@@ -1019,6 +1059,7 @@ export const deleteMessageAndBelow = authenticatedMutation({
         userMessageId: userMessage._id,
         activeAssistantMessageId: nextActiveAssistantMessageId,
       });
+      patchedActiveAssistantByUserId.set(userMessage._id, nextActiveAssistantMessageId);
     }
 
     for (const payload of userMessagePatchPayloads) {
@@ -1028,14 +1069,36 @@ export const deleteMessageAndBelow = authenticatedMutation({
       });
     }
 
-    const lastCanonicalMessageId =
-      remainingCanonicalMessageIds[remainingCanonicalMessageIds.length - 1] ?? null;
-    const lastRemainingMessage = lastCanonicalMessageId
-      ? graph.messagesById[lastCanonicalMessageId]
-      : null;
+    const adjustedRemainingMessages: MessageDoc[] = [];
 
-    const deletedCanonicalMessages =
-      graph.canonicalMessageIds.length - remainingCanonicalMessageIds.length;
+    for (const message of messagesToKeep) {
+      if (message.role !== "user") {
+        adjustedRemainingMessages.push(message);
+        continue;
+      }
+
+      if (!patchedActiveAssistantByUserId.has(message._id)) {
+        adjustedRemainingMessages.push(message);
+        continue;
+      }
+
+      adjustedRemainingMessages.push({
+        ...message,
+        activeAssistantMessageId: patchedActiveAssistantByUserId.get(message._id),
+      });
+    }
+
+    const remainingGraph = buildThreadMessageGraph(adjustedRemainingMessages);
+    const deletedCanonicalMessages = Math.max(
+      0,
+      graph.canonicalMessageIds.length - remainingGraph.canonicalMessageIds.length,
+    );
+
+    const lastCanonicalMessageId =
+      remainingGraph.canonicalMessageIds[remainingGraph.canonicalMessageIds.length - 1] ?? null;
+    const lastRemainingMessage = lastCanonicalMessageId
+      ? remainingGraph.messagesById[lastCanonicalMessageId]
+      : null;
 
     await ctx.db.patch(args.threadId, {
       updatedAt: Date.now(),
@@ -1044,6 +1107,7 @@ export const deleteMessageAndBelow = authenticatedMutation({
 
     return {
       deletedMessages: deletedCanonicalMessages,
+      deletedDocumentMessages: messagesToDelete.length,
       attachmentCountInDeletedRange: attachmentIdsInDeletedRange.size,
       deletedAttachments,
     };
