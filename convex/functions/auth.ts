@@ -14,6 +14,7 @@ export const { authKitEvent } = authKit.events({
         backgroundId: null,
         disableBlur: false,
         hiddenModels: [],
+        favoriteModels: [],
         name: event.data.firstName ?? "user",
         occupation: "unknown",
         showFullCode: false,

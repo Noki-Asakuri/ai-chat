@@ -19,6 +19,7 @@ type UserCustomization = {
   wrapline: boolean;
   defaultShowFullCode: boolean;
   hiddenModels: string[];
+  favoriteModels: string[];
 };
 
 export type ConfigStoreData = ChatConfig & UserCustomization;
@@ -27,6 +28,7 @@ export type ConfigStore = ConfigStoreData & {
   setConfig: (config: Partial<ChatConfig>) => void;
   toggleWrapline: () => void;
   setHiddenModels: (hiddenModels: string[]) => void;
+  setFavoriteModels: (favoriteModels: string[]) => void;
 };
 
 export function createConfigStore(initialState: Partial<ConfigStoreData>) {
@@ -49,6 +51,9 @@ export function createConfigStore(initialState: Partial<ConfigStoreData>) {
 
         hiddenModels: [],
         setHiddenModels: (hiddenModels) => set({ hiddenModels }),
+
+        favoriteModels: [],
+        setFavoriteModels: (favoriteModels) => set({ favoriteModels }),
 
         ...initialState,
       }),

@@ -4,6 +4,34 @@ import { internal } from "../_generated/api";
 import { internalAction, internalMutation, type QueryCtx } from "../_generated/server";
 import { authenticatedMutation, authenticatedQuery, r2 } from "../components";
 
+const MODEL_PROVIDER_PREFIXES = ["google/", "openai/", "deepseek/"] as const;
+
+function isValidModelId(modelId: string) {
+  for (const prefix of MODEL_PROVIDER_PREFIXES) {
+    if (modelId.startsWith(prefix)) {
+      const remainder = modelId.slice(prefix.length);
+      return remainder.length > 0;
+    }
+  }
+
+  return false;
+}
+
+function sanitizeModelIds(modelIds: string[]) {
+  const next: string[] = [];
+  const seen = new Set<string>();
+
+  for (const modelId of modelIds) {
+    if (!isValidModelId(modelId)) continue;
+    if (seen.has(modelId)) continue;
+
+    seen.add(modelId);
+    next.push(modelId);
+  }
+
+  return next;
+}
+
 export const deleteUserData = internalMutation({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
@@ -95,6 +123,7 @@ export const updateUserCustomization = authenticatedMutation({
         backgroundId: v.nullable(v.string()),
         disableBlur: v.boolean(),
         hiddenModels: v.array(v.string()),
+        favoriteModels: v.array(v.string()),
         showFullCode: v.boolean(),
       })
       .partial(),
@@ -103,7 +132,17 @@ export const updateUserCustomization = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    await ctx.db.patch(user._id, { customization: { ...user.customization, ...data } });
+    const updates = { ...data };
+
+    if (updates.hiddenModels !== undefined) {
+      updates.hiddenModels = sanitizeModelIds(updates.hiddenModels);
+    }
+
+    if (updates.favoriteModels !== undefined) {
+      updates.favoriteModels = sanitizeModelIds(updates.favoriteModels);
+    }
+
+    await ctx.db.patch(user._id, { customization: { ...user.customization, ...updates } });
   },
 });
 
@@ -113,9 +152,10 @@ export const currentUser = authenticatedQuery({
     const user = ctx.user;
     if (!user) return null;
 
-    // Ensure hiddenModels is always defined for clients
-    const hiddenModels = user.customization?.hiddenModels ?? [];
-    return { ...user, customization: { ...user.customization, hiddenModels } };
+    // Ensure model customization arrays are always defined for clients
+    const hiddenModels = sanitizeModelIds(user.customization?.hiddenModels ?? []);
+    const favoriteModels = sanitizeModelIds(user.customization?.favoriteModels ?? []);
+    return { ...user, customization: { ...user.customization, hiddenModels, favoriteModels } };
   },
 });
 

@@ -256,6 +256,7 @@ export default defineSchema({
       backgroundId: v.nullable(v.string()),
       disableBlur: v.boolean(),
       hiddenModels: v.array(v.string()),
+      favoriteModels: v.optional(v.array(v.string())),
       showFullCode: v.boolean(),
     }),
   }).index("by_userId", ["userId"]),

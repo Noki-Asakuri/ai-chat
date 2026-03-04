@@ -131,6 +131,7 @@ function ChatComponentPage() {
     <ConfigStoreProvider
       initialState={{
         hiddenModels: data?.customization.hiddenModels ?? [],
+        favoriteModels: data?.customization.favoriteModels ?? [],
         defaultShowFullCode: data?.customization.showFullCode,
       }}
     >
