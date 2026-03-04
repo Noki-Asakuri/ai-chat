@@ -1,4 +1,3 @@
-import { asyncMap } from "convex-helpers";
 import { getAll } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
 
@@ -6,6 +5,236 @@ import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { authenticatedMutation, authenticatedQuery, r2 } from "../components";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
+
+type MessageDoc = Doc<"messages">;
+type UserMessageDoc = MessageDoc & { role: "user" };
+type AssistantMessageDoc = MessageDoc & { role: "assistant" };
+
+type ThreadMessageGraph = {
+  messagesById: Record<Id<"messages">, MessageDoc>;
+
+  users: UserMessageDoc[];
+  userById: Record<Id<"messages">, UserMessageDoc>;
+
+  assistantsByUserId: Record<Id<"messages">, AssistantMessageDoc[]>;
+  parentUserIdByAssistantId: Record<Id<"messages">, Id<"messages">>;
+  activeAssistantByUserId: Record<Id<"messages">, AssistantMessageDoc>;
+
+  canonicalMessageIds: Array<Id<"messages">>;
+};
+
+function isUserMessage(message: MessageDoc): message is UserMessageDoc {
+  return message.role === "user";
+}
+
+function isAssistantMessage(message: MessageDoc): message is AssistantMessageDoc {
+  return message.role === "assistant";
+}
+
+function sortMessagesAscending(messages: MessageDoc[]): MessageDoc[] {
+  const sorted = [...messages];
+  sorted.sort((a, b) => {
+    const createdAtDelta = a.createdAt - b.createdAt;
+    if (createdAtDelta !== 0) return createdAtDelta;
+
+    const creationTimeDelta = a._creationTime - b._creationTime;
+    if (creationTimeDelta !== 0) return creationTimeDelta;
+
+    return a.updatedAt - b.updatedAt;
+  });
+
+  return sorted;
+}
+
+function sortAssistantVariants(variants: AssistantMessageDoc[]): AssistantMessageDoc[] {
+  const sorted = [...variants];
+
+  sorted.sort((a, b) => {
+    const aVariantIndex = a.variantIndex;
+    const bVariantIndex = b.variantIndex;
+
+    if (aVariantIndex !== undefined && bVariantIndex !== undefined) {
+      const variantDelta = aVariantIndex - bVariantIndex;
+      if (variantDelta !== 0) return variantDelta;
+    }
+
+    const createdAtDelta = a.createdAt - b.createdAt;
+    if (createdAtDelta !== 0) return createdAtDelta;
+
+    return a._creationTime - b._creationTime;
+  });
+
+  return sorted;
+}
+
+function findFallbackParentUserId(
+  users: UserMessageDoc[],
+  assistant: AssistantMessageDoc,
+): Id<"messages"> | null {
+  let fallbackUserId: Id<"messages"> | null = null;
+
+  for (const userMessage of users) {
+    if (userMessage._creationTime > assistant._creationTime) break;
+    fallbackUserId = userMessage._id;
+  }
+
+  return fallbackUserId;
+}
+
+function buildThreadMessageGraph(messages: MessageDoc[]): ThreadMessageGraph {
+  const sortedMessages = sortMessagesAscending(messages);
+
+  const messagesById: Record<Id<"messages">, MessageDoc> = {};
+  const users: UserMessageDoc[] = [];
+  const assistants: AssistantMessageDoc[] = [];
+
+  for (const message of sortedMessages) {
+    messagesById[message._id] = message;
+
+    if (isUserMessage(message)) {
+      users.push(message);
+      continue;
+    }
+
+    if (isAssistantMessage(message)) {
+      assistants.push(message);
+    }
+  }
+
+  const userById: Record<Id<"messages">, UserMessageDoc> = {};
+  for (const userMessage of users) {
+    userById[userMessage._id] = userMessage;
+  }
+
+  const assistantsByUserId: Record<Id<"messages">, AssistantMessageDoc[]> = {};
+  const parentUserIdByAssistantId: Record<Id<"messages">, Id<"messages">> = {};
+
+  for (const assistantMessage of assistants) {
+    let parentUserMessageId: Id<"messages"> | null = null;
+
+    if (assistantMessage.parentUserMessageId) {
+      const parentUser = userById[assistantMessage.parentUserMessageId];
+      if (parentUser) {
+        parentUserMessageId = parentUser._id;
+      }
+    }
+
+    if (parentUserMessageId === null) {
+      parentUserMessageId = findFallbackParentUserId(users, assistantMessage);
+    }
+
+    if (parentUserMessageId === null) continue;
+
+    if (!assistantsByUserId[parentUserMessageId]) {
+      assistantsByUserId[parentUserMessageId] = [];
+    }
+
+    assistantsByUserId[parentUserMessageId]!.push(assistantMessage);
+    parentUserIdByAssistantId[assistantMessage._id] = parentUserMessageId;
+  }
+
+  const groupedUserMessageIds = Object.keys(assistantsByUserId) as Array<Id<"messages">>;
+  for (const userMessageId of groupedUserMessageIds) {
+    const variants = assistantsByUserId[userMessageId];
+    if (!variants || variants.length === 0) continue;
+    assistantsByUserId[userMessageId] = sortAssistantVariants(variants);
+  }
+
+  const activeAssistantByUserId: Record<Id<"messages">, AssistantMessageDoc> = {};
+  const canonicalMessageIds: Array<Id<"messages">> = [];
+
+  for (const userMessage of users) {
+    canonicalMessageIds.push(userMessage._id);
+
+    const variants = assistantsByUserId[userMessage._id] ?? [];
+    if (variants.length === 0) continue;
+
+    let activeAssistant: AssistantMessageDoc | null = null;
+
+    if (userMessage.activeAssistantMessageId) {
+      for (const variant of variants) {
+        if (variant._id === userMessage.activeAssistantMessageId) {
+          activeAssistant = variant;
+          break;
+        }
+      }
+    }
+
+    if (activeAssistant === null) {
+      activeAssistant = variants[variants.length - 1] ?? null;
+    }
+
+    if (activeAssistant === null) continue;
+
+    activeAssistantByUserId[userMessage._id] = activeAssistant;
+    canonicalMessageIds.push(activeAssistant._id);
+  }
+
+  return {
+    messagesById,
+    users,
+    userById,
+    assistantsByUserId,
+    parentUserIdByAssistantId,
+    activeAssistantByUserId,
+    canonicalMessageIds,
+  };
+}
+
+function resolveUserMessageIdForMessage(
+  graph: ThreadMessageGraph,
+  messageId: Id<"messages">,
+): Id<"messages"> | null {
+  const message = graph.messagesById[messageId];
+  if (!message) return null;
+
+  if (message.role === "user") return message._id;
+
+  return graph.parentUserIdByAssistantId[message._id] ?? null;
+}
+
+function collectMessagesFromUserTurnIndex(
+  graph: ThreadMessageGraph,
+  userTurnStartIndex: number,
+): MessageDoc[] {
+  const toDelete: MessageDoc[] = [];
+  const seen = new Set<Id<"messages">>();
+
+  for (let i = userTurnStartIndex; i < graph.users.length; i += 1) {
+    const userMessage = graph.users[i];
+    if (!userMessage) continue;
+
+    if (!seen.has(userMessage._id)) {
+      seen.add(userMessage._id);
+      toDelete.push(userMessage);
+    }
+
+    const variants = graph.assistantsByUserId[userMessage._id] ?? [];
+    for (const assistantMessage of variants) {
+      if (seen.has(assistantMessage._id)) continue;
+      seen.add(assistantMessage._id);
+      toDelete.push(assistantMessage);
+    }
+  }
+
+  return toDelete;
+}
+
+function getNextVariantIndex(variants: AssistantMessageDoc[]): number {
+  let maxVariantIndex = -1;
+  let fallbackIndex = 0;
+
+  for (const variant of variants) {
+    const currentIndex = variant.variantIndex ?? fallbackIndex;
+    if (currentIndex > maxVariantIndex) {
+      maxVariantIndex = currentIndex;
+    }
+
+    fallbackIndex += 1;
+  }
+
+  return maxVariantIndex + 1;
+}
 
 export const getAllMessagesFromThread = authenticatedQuery({
   args: { threadId: v.id("threads") },
@@ -27,13 +256,54 @@ export const getAllMessagesFromThread = authenticatedQuery({
       .order("asc")
       .collect();
 
-    const messagesWithAttachments = await asyncMap(messages, async (message) => {
+    type MessageWithAttachments = Omit<Doc<"messages">, "attachments"> & {
+      attachments: Doc<"attachments">[];
+    };
+
+    const allMessagesWithAttachments: MessageWithAttachments[] = [];
+    for (const message of messages) {
       const attachmentsRaw = await getAll(ctx.db, message.attachments);
       const attachments = attachmentsRaw.filter(Boolean) as Doc<"attachments">[];
-      return { ...message, attachments };
-    });
 
-    return { messages: messagesWithAttachments, thread };
+      allMessagesWithAttachments.push({
+        ...message,
+        attachments,
+      });
+    }
+
+    const allMessagesById: Record<Id<"messages">, MessageWithAttachments> = {};
+    for (const message of allMessagesWithAttachments) {
+      allMessagesById[message._id] = message;
+    }
+
+    const graph = buildThreadMessageGraph(messages);
+
+    const canonicalMessages: MessageWithAttachments[] = [];
+    for (const messageId of graph.canonicalMessageIds) {
+      const message = allMessagesById[messageId];
+      if (!message) continue;
+      canonicalMessages.push(message);
+    }
+
+    const variantMessageIdsByUserMessageId: Record<Id<"messages">, Array<Id<"messages">>> = {};
+
+    for (const userMessage of graph.users) {
+      const variants = graph.assistantsByUserId[userMessage._id] ?? [];
+      if (variants.length === 0) continue;
+
+      variantMessageIdsByUserMessageId[userMessage._id] = [];
+
+      for (const variant of variants) {
+        variantMessageIdsByUserMessageId[userMessage._id]!.push(variant._id);
+      }
+    }
+
+    return {
+      messages: canonicalMessages,
+      allMessages: allMessagesWithAttachments,
+      thread,
+      variantMessageIdsByUserMessageId,
+    };
   },
 });
 
@@ -51,7 +321,16 @@ export const getAllMessagesWithoutAttachments = authenticatedQuery({
       .order("asc")
       .collect();
 
-    return messages;
+    const graph = buildThreadMessageGraph(messages);
+
+    const canonicalMessages: MessageDoc[] = [];
+    for (const messageId of graph.canonicalMessageIds) {
+      const message = graph.messagesById[messageId];
+      if (!message) continue;
+      canonicalMessages.push(message);
+    }
+
+    return canonicalMessages;
   },
 });
 
@@ -126,6 +405,14 @@ export const addMessagesToThread = authenticatedMutation({
       (typeof args.messages)[1],
     ];
 
+    if (!userMessage || !assistantMessage) {
+      throw new Error("Messages payload must contain user and assistant messages");
+    }
+
+    if (userMessage.role !== "user" || assistantMessage.role !== "assistant") {
+      throw new Error("Messages payload must be [user, assistant]");
+    }
+
     const now = Date.now();
 
     const shared = {
@@ -138,11 +425,28 @@ export const addMessagesToThread = authenticatedMutation({
       resumableStreamId: null,
     };
 
-    const [, assistantMessageId] = await Promise.all([
-      ctx.db.insert("messages", { ...shared, ...userMessage }),
+    const userMessageId = await ctx.db.insert("messages", {
+      ...shared,
+      ...userMessage,
+      activeAssistantMessageId: undefined,
+      parentUserMessageId: undefined,
+      variantIndex: undefined,
+    });
+
+    const assistantMessageId = await ctx.db.insert("messages", {
+      ...shared,
+      ...assistantMessage,
       // So that we can sort by createdAt and have the assistant message come after the user message
-      ctx.db.insert("messages", { ...shared, ...assistantMessage, createdAt: now + 1 }),
-    ]);
+      createdAt: now + 1,
+
+      parentUserMessageId: userMessageId,
+      variantIndex: 0,
+      activeAssistantMessageId: undefined,
+    });
+
+    await ctx.db.patch(userMessageId, {
+      activeAssistantMessageId: assistantMessageId,
+    });
 
     await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
       userId: user.userId,
@@ -312,20 +616,40 @@ export const retryChatMessage = authenticatedMutation({
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
-    const assistantMessage = await ctx.db.get("messages", args.assistantMessageId);
-    if (!assistantMessage) throw new Error("Message not found");
+    const targetAssistantMessage = await ctx.db.get("messages", args.assistantMessageId);
+    if (!targetAssistantMessage) throw new Error("Message not found");
+    if (targetAssistantMessage.userId !== user.userId) throw new Error("Not authorized");
+    if (targetAssistantMessage.role !== "assistant") {
+      throw new Error("Retry target must be an assistant message");
+    }
 
-    const deleteMessages = await ctx.db
+    const messages = await ctx.db
       .query("messages")
       .withIndex("by_userId_threadId", (q) =>
-        q
-          .eq("userId", user.userId)
-          .eq("threadId", args.threadId)
-          .gt("_creationTime", assistantMessage._creationTime),
+        q.eq("userId", user.userId).eq("threadId", args.threadId),
       )
+      .order("asc")
       .collect();
 
+    const graph = buildThreadMessageGraph(messages);
+
+    const resolvedUserMessageId = resolveUserMessageIdForMessage(graph, targetAssistantMessage._id);
+    if (!resolvedUserMessageId) {
+      throw new Error("Could not resolve user message for retry target");
+    }
+
+    const userTurnIndex = graph.users.findIndex((message) => message._id === resolvedUserMessageId);
+    if (userTurnIndex === -1) {
+      throw new Error("User turn not found");
+    }
+
+    const messagesToDelete = collectMessagesFromUserTurnIndex(graph, userTurnIndex + 1);
+
     if (args.userMessage) {
+      if (args.userMessage.messageId !== resolvedUserMessageId) {
+        throw new Error("Edited message must match the retried user turn");
+      }
+
       await ctx.db.patch(args.userMessage.messageId, {
         updatedAt: Date.now(),
         parts: args.userMessage.parts,
@@ -333,32 +657,109 @@ export const retryChatMessage = authenticatedMutation({
       });
     }
 
-    for (const message of deleteMessages) {
+    for (const message of messagesToDelete) {
       await ctx.db.delete(message._id);
     }
 
+    const variants = graph.assistantsByUserId[resolvedUserMessageId] ?? [];
+    const variantIndex = getNextVariantIndex(variants);
+    const now = Date.now();
+
+    const assistantMessageId = await ctx.db.insert("messages", {
+      threadId: args.threadId,
+      userId: user.userId,
+
+      messageId: crypto.randomUUID(),
+      status: "pending",
+      parts: [],
+      attachments: [],
+
+      role: "assistant",
+      resumableStreamId: null,
+      error: undefined,
+
+      parentUserMessageId: resolvedUserMessageId,
+      variantIndex,
+      activeAssistantMessageId: undefined,
+
+      createdAt: now,
+      updatedAt: now,
+
+      metadata: {
+        durations: { request: 0, reasoning: 0, text: 0 },
+        usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+        timeToFirstTokenMs: 0,
+        finishReason: null,
+
+        modelParams: args.modelParams,
+        model: { request: args.model, response: null },
+      },
+    });
+
     await Promise.all([
-      ctx.db.patch("threads", args.threadId, { status: "pending", updatedAt: Date.now() }),
-      ctx.db.patch("messages", args.assistantMessageId, {
-        messageId: crypto.randomUUID(),
-        status: "pending",
-        parts: [],
-        resumableStreamId: null,
-        error: undefined,
-
-        updatedAt: Date.now(),
-
-        metadata: {
-          durations: { request: 0, reasoning: 0, text: 0 },
-          usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
-          timeToFirstTokenMs: 0,
-          finishReason: null,
-
-          modelParams: args.modelParams,
-          model: { request: args.model, response: null },
-        },
+      ctx.db.patch("threads", args.threadId, { status: "pending", updatedAt: now }),
+      ctx.db.patch("messages", resolvedUserMessageId, {
+        updatedAt: now,
+        activeAssistantMessageId: assistantMessageId,
       }),
     ]);
+
+    return { assistantMessageId, userMessageId: resolvedUserMessageId };
+  },
+});
+
+export const setActiveAssistantVariant = authenticatedMutation({
+  args: {
+    threadId: v.id("threads"),
+    userMessageId: v.id("messages"),
+    assistantMessageId: v.id("messages"),
+  },
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const thread = await ctx.db.get("threads", args.threadId);
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
+
+    const userMessage = await ctx.db.get("messages", args.userMessageId);
+    if (!userMessage) throw new Error("User message not found");
+    if (userMessage.role !== "user") throw new Error("Target user message is invalid");
+    if (userMessage.threadId !== args.threadId) throw new Error("User message is not in thread");
+
+    const assistantMessage = await ctx.db.get("messages", args.assistantMessageId);
+    if (!assistantMessage) throw new Error("Assistant message not found");
+    if (assistantMessage.role !== "assistant")
+      throw new Error("Target assistant message is invalid");
+    if (assistantMessage.threadId !== args.threadId) {
+      throw new Error("Assistant message is not in thread");
+    }
+
+    let resolvedUserMessageId = assistantMessage.parentUserMessageId ?? null;
+
+    if (!resolvedUserMessageId) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_userId_threadId", (q) =>
+          q.eq("userId", user.userId).eq("threadId", args.threadId),
+        )
+        .order("asc")
+        .collect();
+
+      const graph = buildThreadMessageGraph(messages);
+      resolvedUserMessageId = resolveUserMessageIdForMessage(graph, args.assistantMessageId);
+    }
+
+    if (resolvedUserMessageId !== args.userMessageId) {
+      throw new Error("Assistant message does not belong to the selected user turn");
+    }
+
+    await ctx.db.patch(args.userMessageId, {
+      activeAssistantMessageId: args.assistantMessageId,
+      updatedAt: Date.now(),
+    });
+
+    return { activeAssistantMessageId: args.assistantMessageId };
   },
 });
 
@@ -387,19 +788,60 @@ export const deleteMessageAndBelow = authenticatedMutation({
       .order("asc")
       .collect();
 
-    let startIndex = -1;
+    const graph = buildThreadMessageGraph(messages);
+    const targetMessage = graph.messagesById[args.messageId];
+    if (!targetMessage) throw new Error("Message not found");
 
-    for (let i = 0; i < messages.length; i += 1) {
-      if (messages[i]?._id === args.messageId) {
-        startIndex = i;
-        break;
+    const targetUserMessageId = resolveUserMessageIdForMessage(graph, args.messageId);
+    if (!targetUserMessageId) throw new Error("Failed to resolve target user turn");
+
+    const targetUserTurnIndex = graph.users.findIndex(
+      (message) => message._id === targetUserMessageId,
+    );
+    if (targetUserTurnIndex === -1) throw new Error("Failed to resolve target user turn");
+
+    const messagesToDeleteMap: Record<Id<"messages">, MessageDoc> = {};
+
+    function addMessageToDelete(message: MessageDoc): void {
+      messagesToDeleteMap[message._id] = message;
+    }
+
+    if (targetMessage.role === "user") {
+      const fromTurnMessages = collectMessagesFromUserTurnIndex(graph, targetUserTurnIndex);
+      for (const message of fromTurnMessages) {
+        addMessageToDelete(message);
+      }
+    } else {
+      const targetVariants = graph.assistantsByUserId[targetUserMessageId] ?? [];
+      for (const variant of targetVariants) {
+        addMessageToDelete(variant);
+      }
+
+      const newerTurnMessages = collectMessagesFromUserTurnIndex(graph, targetUserTurnIndex + 1);
+      for (const message of newerTurnMessages) {
+        addMessageToDelete(message);
       }
     }
 
-    if (startIndex === -1) throw new Error("Message not found");
+    const messagesToDelete = Object.values(messagesToDeleteMap);
+    if (messagesToDelete.length === 0) {
+      throw new Error("No messages matched delete request");
+    }
 
-    const messagesToKeep = messages.slice(0, startIndex);
-    const messagesToDelete = messages.slice(startIndex);
+    const deletedMessageIds = new Set<Id<"messages">>();
+    for (const message of messagesToDelete) {
+      deletedMessageIds.add(message._id);
+    }
+
+    const messagesToKeep: MessageDoc[] = [];
+    for (const message of messages) {
+      if (deletedMessageIds.has(message._id)) continue;
+      messagesToKeep.push(message);
+    }
+
+    const remainingCanonicalMessageIds = graph.canonicalMessageIds.filter(
+      (messageId) => !deletedMessageIds.has(messageId),
+    );
 
     const attachmentIdsInDeletedRange = new Set<Id<"attachments">>();
 
@@ -445,7 +887,44 @@ export const deleteMessageAndBelow = authenticatedMutation({
       await ctx.db.delete(message._id);
     }
 
-    const lastRemainingMessage = messagesToKeep[messagesToKeep.length - 1];
+    const remainingUserMessages = graph.users.filter(
+      (message) => !deletedMessageIds.has(message._id),
+    );
+
+    const userMessagePatchPayloads: Array<{
+      userMessageId: Id<"messages">;
+      activeAssistantMessageId: Id<"messages"> | undefined;
+    }> = [];
+
+    for (const userMessage of remainingUserMessages) {
+      const variants = graph.assistantsByUserId[userMessage._id] ?? [];
+
+      const remainingVariants = variants.filter((variant) => !deletedMessageIds.has(variant._id));
+      const nextActiveAssistantMessageId = remainingVariants[remainingVariants.length - 1]?._id;
+
+      if (userMessage.activeAssistantMessageId === nextActiveAssistantMessageId) continue;
+
+      userMessagePatchPayloads.push({
+        userMessageId: userMessage._id,
+        activeAssistantMessageId: nextActiveAssistantMessageId,
+      });
+    }
+
+    for (const payload of userMessagePatchPayloads) {
+      await ctx.db.patch(payload.userMessageId, {
+        updatedAt: Date.now(),
+        activeAssistantMessageId: payload.activeAssistantMessageId,
+      });
+    }
+
+    const lastCanonicalMessageId =
+      remainingCanonicalMessageIds[remainingCanonicalMessageIds.length - 1] ?? null;
+    const lastRemainingMessage = lastCanonicalMessageId
+      ? graph.messagesById[lastCanonicalMessageId]
+      : null;
+
+    const deletedCanonicalMessages =
+      graph.canonicalMessageIds.length - remainingCanonicalMessageIds.length;
 
     await ctx.db.patch(args.threadId, {
       updatedAt: Date.now(),
@@ -453,7 +932,7 @@ export const deleteMessageAndBelow = authenticatedMutation({
     });
 
     return {
-      deletedMessages: messagesToDelete.length,
+      deletedMessages: deletedCanonicalMessages,
       attachmentCountInDeletedRange: attachmentIdsInDeletedRange.size,
       deletedAttachments,
     };

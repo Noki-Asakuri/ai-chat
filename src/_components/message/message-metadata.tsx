@@ -19,12 +19,14 @@ import { tryGetModelData } from "@/lib/chat/models";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
+import type { ReactNode } from "react";
 
 type MessageMetadataProps = {
   metadata: ChatMessage["metadata"];
+  rightAccessory?: ReactNode;
 };
 
-export function MessageMetadata({ metadata }: MessageMetadataProps) {
+export function MessageMetadata({ metadata, rightAccessory }: MessageMetadataProps) {
   if (!metadata) return null;
 
   const modelData = tryGetModelData(metadata.model.request);
@@ -46,7 +48,12 @@ export function MessageMetadata({ metadata }: MessageMetadataProps) {
         {showEffort && <span className="text-sm capitalize">({metadata.modelParams.effort})</span>}
       </div>
 
-      {hasFullMetadata && <PopoverInfo metadata={metadata} />}
+      {(rightAccessory || hasFullMetadata) && (
+        <div className="flex items-center gap-2">
+          {rightAccessory}
+          {hasFullMetadata && <PopoverInfo metadata={metadata} />}
+        </div>
+      )}
     </div>
   );
 }

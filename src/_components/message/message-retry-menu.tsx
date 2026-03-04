@@ -20,14 +20,14 @@ import { cn } from "@/lib/utils";
 import { EFFORT_OPTIONS } from "../chat-textarea/effort-selector";
 
 type RetryModelPopupProps = React.ComponentPropsWithoutRef<typeof Button> & {
-  index: number;
+  userMessageId: ChatMessage["_id"];
   message: ChatMessage;
 };
 
 type ModelWithId = ModelData & { modelId: string };
 type GroupedModels = Partial<Record<Provider, ModelWithId[]>>;
 
-export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupProps) {
+export function MessageRetryMenu({ userMessageId, message, ...props }: RetryModelPopupProps) {
   const [open, setOpen] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
 
@@ -55,7 +55,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
       event.stopPropagation();
 
       startTransition(async () => {
-        await retryChatMessage({ index });
+        await retryChatMessage({ userMessageId });
       });
     }
   }
@@ -103,7 +103,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
               className={cn(buttonVariants({ variant: "ghost" }), "w-full justify-start")}
               onClick={async () => {
                 setOpen(false);
-                await retryChatMessage({ index });
+                await retryChatMessage({ userMessageId });
               }}
             >
               <RefreshCcwIcon className="size-4" />
@@ -139,7 +139,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
                           <ModelProviderPicker
                             key={model.modelId}
                             model={model}
-                            index={index}
+                            userMessageId={userMessageId}
                             provider={model.provider}
                             messageRole={message.role}
                           />
@@ -158,7 +158,7 @@ export function MessageRetryMenu({ index, message, ...props }: RetryModelPopupPr
 }
 
 type ModelProviderPickerProps = {
-  index: number;
+  userMessageId: ChatMessage["_id"];
   provider: Provider;
   model: ModelWithId;
   messageRole: ChatMessage["role"];
@@ -177,7 +177,12 @@ function ModelProviderPicker(props: ModelProviderPickerProps) {
         buttonVariants({ variant: "ghost" }),
         "w-full items-center justify-between gap-4 p-2",
       )}
-      onClick={() => retryChatMessage({ index: props.index, modelId: props.model.modelId })}
+      onClick={() =>
+        retryChatMessage({
+          userMessageId: props.userMessageId,
+          modelId: props.model.modelId,
+        })
+      }
     >
       <div className="pointer-events-none flex items-center gap-2">
         <Icons.provider provider={props.model.provider} />
@@ -235,7 +240,7 @@ function EffortSelector(props: ModelProviderPickerProps) {
                   )}
                   onClick={() =>
                     retryChatMessage({
-                      index: props.index,
+                      userMessageId: props.userMessageId,
                       modelId: props.model.modelId,
                       modelParams: { effort: key as ReasoningEffort },
                     })

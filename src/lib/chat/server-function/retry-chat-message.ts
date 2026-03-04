@@ -20,7 +20,7 @@ import {
 } from "./chat-errors";
 
 type RetryChatMessage = {
-  index: number;
+  userMessageId: Id<"messages">;
 
   modelId?: string;
   modelParams?: Partial<NonNullable<ChatMessage["metadata"]>["modelParams"]>;
@@ -38,7 +38,7 @@ export function useRetryChatMessage() {
   const configProfile = useConfigStore((state) => state.profile);
   const configStore = useConfigStoreState();
 
-  async function retryChatMessage({ index, ...options }: RetryChatMessage) {
+  async function retryChatMessage({ userMessageId, ...options }: RetryChatMessage) {
     const sessionId = id!;
     const messageState = useMessageStore.getState();
 
@@ -49,11 +49,23 @@ export function useRetryChatMessage() {
       .map((id) => messageState.messagesById[id]!)
       .sort((a, b) => a.createdAt - b.createdAt);
 
-    // Find the user message and assistant response pair
-    const userMessageIndex = index % 2 === 0 ? index : index - 1;
-    const assistantMessage = messagesHistory[userMessageIndex + 1]!;
+    const userMessageIndex = messagesHistory.findIndex((message) => message._id === userMessageId);
+    if (userMessageIndex < 0) return;
+
+    const userMessage = messagesHistory[userMessageIndex];
+    if (!userMessage || userMessage.role !== "user") return;
+
+    const activeAssistantMessageId =
+      messageState.activeAssistantMessageIdByUserMessageId[userMessageId] ??
+      messageState.variantMessageIdsByUserMessageId[userMessageId]?.at(-1);
+
+    if (!activeAssistantMessageId) return;
+
+    const assistantMessage = messageState.messagesById[activeAssistantMessageId];
+    if (!assistantMessage || assistantMessage.role !== "assistant") return;
 
     const assistantMessageId = assistantMessage._id;
+    let errorTargetMessageId = assistantMessageId;
 
     const abortController = new AbortController();
     const streamId = crypto.randomUUID();
@@ -66,8 +78,8 @@ export function useRetryChatMessage() {
     const historySlice = messagesHistory.slice(0, userMessageIndex + 1);
 
     if (options.userMessage) {
-      const userMessage = historySlice[userMessageIndex]!;
-      historySlice[userMessageIndex] = { ...userMessage, parts: options.userMessage.parts };
+      const message = historySlice[userMessageIndex]!;
+      historySlice[userMessageIndex] = { ...message, parts: options.userMessage.parts };
     }
 
     const allMessages = convertToUIChatMessages(historySlice);
@@ -84,7 +96,7 @@ export function useRetryChatMessage() {
     };
 
     try {
-      await convexClient.mutation(api.functions.messages.retryChatMessage, {
+      const retryResult = await convexClient.mutation(api.functions.messages.retryChatMessage, {
         sessionId,
         threadId,
         assistantMessageId,
@@ -92,6 +104,15 @@ export function useRetryChatMessage() {
         model,
         modelParams: mutationModelParams,
         userMessage: options.userMessage,
+      });
+
+      const nextAssistantMessageId = retryResult.assistantMessageId;
+      errorTargetMessageId = nextAssistantMessageId;
+
+      messageStoreActions.setController(threadId, {
+        controller: abortController,
+        assistantMessageId: nextAssistantMessageId,
+        streamId,
       });
 
       // Only scroll down when the message has updated (only if user is already at bottom)
@@ -104,7 +125,7 @@ export function useRetryChatMessage() {
         threadId,
         streamId,
         messages: allMessages,
-        assistantMessageId,
+        assistantMessageId: nextAssistantMessageId,
         modelParams: mutationModelParams,
       };
 
@@ -122,12 +143,12 @@ export function useRetryChatMessage() {
       if (responseStreamId) {
         messageStoreActions.setController(threadId, {
           controller: abortController,
-          assistantMessageId,
+          assistantMessageId: nextAssistantMessageId,
           streamId: responseStreamId,
         });
       }
 
-      await processStreamResponse(response, assistantMessageId, threadId);
+      await processStreamResponse(response, nextAssistantMessageId, threadId);
     } catch (error) {
       if (isAbortError(error)) return;
 
@@ -137,7 +158,7 @@ export function useRetryChatMessage() {
       const [, updateError] = await tryCatch(
         convexClient.mutation(api.functions.messages.updateErrorMessage, {
           sessionId,
-          messageId: assistantMessageId,
+          messageId: errorTargetMessageId,
           error: errorMessage,
           metadata: {
             model: { request: model, response: null },

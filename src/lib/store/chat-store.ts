@@ -7,7 +7,6 @@ import type { ReasoningEffort, RemoveAllExceptFunctions, UserAttachment } from "
 
 type EditMessage = {
   _id: Id<"messages">;
-  index: number;
   input: string;
 
   model: string;

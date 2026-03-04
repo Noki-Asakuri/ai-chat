@@ -17,6 +17,12 @@ import { messageStoreActions } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
 import { fromUUID } from "@/lib/utils";
 
+type ChatHistoryPayload = {
+  messages: ChatMessage[];
+  allMessages?: ChatMessage[];
+  variantMessageIdsByUserMessageId?: Record<Id<"messages">, Array<Id<"messages">>>;
+};
+
 export const Route = createFileRoute("/_chat_layout/threads/$threadId")({
   component: ChatComponentPage,
   loader: async ({ context, params }) => {
@@ -58,10 +64,10 @@ function ChatHistory() {
     },
   });
 
-  const syncMessage = useEffectEvent((messages: ChatMessage[], syncToken: number) => {
-    messageStoreActions.syncMessages(threadId, messages, syncToken);
+  const syncMessage = useEffectEvent((payload: ChatHistoryPayload, syncToken: number) => {
+    messageStoreActions.syncMessages(threadId, payload, syncToken);
 
-    const lastMessage = messages[messages.length - 1];
+    const lastMessage = payload.messages[payload.messages.length - 1];
     if (!lastMessage) return;
 
     if (lastMessage.metadata) {
@@ -85,7 +91,16 @@ function ChatHistory() {
   });
 
   useEffect(() => {
-    if (data) syncMessage(data.messages, dataUpdatedAt);
+    if (data) {
+      syncMessage(
+        {
+          messages: data.messages,
+          allMessages: data.allMessages,
+          variantMessageIdsByUserMessageId: data.variantMessageIdsByUserMessageId,
+        },
+        dataUpdatedAt,
+      );
+    }
   }, [data, dataUpdatedAt]);
 
   return <MessageHistory />;

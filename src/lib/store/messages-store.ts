@@ -10,9 +10,19 @@ type LocalMessageMeta = {
   localUpdatedAt: number;
 };
 
+type VariantMessageIdsByUserMessageId = Record<Id<"messages">, Array<Id<"messages">>>;
+type UserMessageIdByMessageId = Record<Id<"messages">, Id<"messages">>;
+type ActiveAssistantMessageIdByUserMessageId = Record<Id<"messages">, Id<"messages">>;
+
 type ThreadMessagesState = {
+  allMessageIds: Array<Id<"messages">>;
   messageIds: Array<Id<"messages">>;
   messagesById: Record<Id<"messages">, ChatMessage>;
+
+  variantMessageIdsByUserMessageId: VariantMessageIdsByUserMessageId;
+  userMessageIdByMessageId: UserMessageIdByMessageId;
+  activeAssistantMessageIdByUserMessageId: ActiveAssistantMessageIdByUserMessageId;
+
   localMetaById: Record<Id<"messages">, LocalMessageMeta>;
 
   /**
@@ -39,13 +49,32 @@ export type MessagesStore = {
   messageIds: Array<Id<"messages">>;
   messagesById: Record<Id<"messages">, ChatMessage>;
 
+  allMessageIds: Array<Id<"messages">>;
+  variantMessageIdsByUserMessageId: VariantMessageIdsByUserMessageId;
+  userMessageIdByMessageId: UserMessageIdByMessageId;
+  activeAssistantMessageIdByUserMessageId: ActiveAssistantMessageIdByUserMessageId;
+
   threadsById: Record<Id<"threads">, ThreadMessagesState>;
 
   /**
    * Merge server snapshot into the per-thread cache.
    * Must not downgrade local streaming progress with an older server snapshot.
    */
-  syncMessages: (threadId: Id<"threads">, messages: ChatMessage[], syncToken?: number) => void;
+  syncMessages: (
+    threadId: Id<"threads">,
+    payload: {
+      messages: ChatMessage[];
+      allMessages?: ChatMessage[];
+      variantMessageIdsByUserMessageId?: VariantMessageIdsByUserMessageId;
+    },
+    syncToken?: number,
+  ) => void;
+
+  selectAssistantVariant: (
+    threadId: Id<"threads">,
+    userMessageId: Id<"messages">,
+    assistantMessageId: Id<"messages">,
+  ) => void;
 
   /**
    * Clears only the current view (does not delete cached per-thread data).
@@ -76,6 +105,160 @@ export type MessagesStore = {
 
 export const useMessageStore = create<MessagesStore>()(
   immer((set) => {
+    function sortMessagesByCreatedAt(messages: ChatMessage[]): ChatMessage[] {
+      const sorted = [...messages];
+
+      sorted.sort((a, b) => {
+        const createdAtDelta = a.createdAt - b.createdAt;
+        if (createdAtDelta !== 0) return createdAtDelta;
+
+        const creationTimeDelta = a._creationTime - b._creationTime;
+        if (creationTimeDelta !== 0) return creationTimeDelta;
+
+        return a.updatedAt - b.updatedAt;
+      });
+
+      return sorted;
+    }
+
+    function sanitizeVariantMap(
+      variantMap: VariantMessageIdsByUserMessageId,
+      messagesById: Record<Id<"messages">, ChatMessage>,
+    ): VariantMessageIdsByUserMessageId {
+      const next: VariantMessageIdsByUserMessageId = {};
+
+      const userMessageIds = Object.keys(variantMap) as Array<Id<"messages">>;
+      for (const userMessageId of userMessageIds) {
+        const userMessage = messagesById[userMessageId];
+        if (!userMessage || userMessage.role !== "user") continue;
+
+        const variants = variantMap[userMessageId] ?? [];
+        const nextVariants: Array<Id<"messages">> = [];
+
+        for (const variantId of variants) {
+          const assistantMessage = messagesById[variantId];
+          if (!assistantMessage || assistantMessage.role !== "assistant") continue;
+          nextVariants.push(variantId);
+        }
+
+        if (nextVariants.length === 0) continue;
+        next[userMessageId] = nextVariants;
+      }
+
+      return next;
+    }
+
+    function buildVariantMapFromCanonical(
+      messages: ChatMessage[],
+    ): VariantMessageIdsByUserMessageId {
+      const next: VariantMessageIdsByUserMessageId = {};
+
+      let previousUserMessageId: Id<"messages"> | null = null;
+      for (const message of messages) {
+        if (message.role === "user") {
+          previousUserMessageId = message._id;
+          continue;
+        }
+
+        if (message.role !== "assistant") continue;
+        if (!previousUserMessageId) continue;
+
+        if (!next[previousUserMessageId]) {
+          next[previousUserMessageId] = [];
+        }
+
+        next[previousUserMessageId]!.push(message._id);
+      }
+
+      return next;
+    }
+
+    function buildUserMessageMap(
+      canonicalMessages: ChatMessage[],
+      allMessagesById: Record<Id<"messages">, ChatMessage>,
+      variantMap: VariantMessageIdsByUserMessageId,
+    ): UserMessageIdByMessageId {
+      const next: UserMessageIdByMessageId = {};
+
+      for (const message of canonicalMessages) {
+        if (message.role === "user") {
+          next[message._id] = message._id;
+        }
+      }
+
+      let previousUserMessageId: Id<"messages"> | null = null;
+      for (const message of canonicalMessages) {
+        if (message.role === "user") {
+          previousUserMessageId = message._id;
+          continue;
+        }
+
+        if (message.role !== "assistant") continue;
+
+        const parentUserMessageId = message.parentUserMessageId ?? previousUserMessageId;
+        if (!parentUserMessageId) continue;
+
+        next[message._id] = parentUserMessageId;
+      }
+
+      const userMessageIds = Object.keys(variantMap) as Array<Id<"messages">>;
+      for (const userMessageId of userMessageIds) {
+        next[userMessageId] = userMessageId;
+
+        const variants = variantMap[userMessageId] ?? [];
+        for (const variantId of variants) {
+          next[variantId] = userMessageId;
+        }
+      }
+
+      const messageIds = Object.keys(allMessagesById) as Array<Id<"messages">>;
+      for (const messageId of messageIds) {
+        const message = allMessagesById[messageId];
+        if (!message || message.role !== "assistant") continue;
+
+        if (!message.parentUserMessageId) continue;
+        next[messageId] = message.parentUserMessageId;
+      }
+
+      return next;
+    }
+
+    function buildActiveAssistantMap(
+      canonicalMessages: ChatMessage[],
+      variantMap: VariantMessageIdsByUserMessageId,
+      userMessageMap: UserMessageIdByMessageId,
+    ): ActiveAssistantMessageIdByUserMessageId {
+      const next: ActiveAssistantMessageIdByUserMessageId = {};
+
+      let previousUserMessageId: Id<"messages"> | null = null;
+      for (const message of canonicalMessages) {
+        if (message.role === "user") {
+          previousUserMessageId = message._id;
+          continue;
+        }
+
+        if (message.role !== "assistant") continue;
+
+        const userMessageId = userMessageMap[message._id] ?? previousUserMessageId;
+        if (!userMessageId) continue;
+
+        next[userMessageId] = message._id;
+      }
+
+      const userMessageIds = Object.keys(variantMap) as Array<Id<"messages">>;
+      for (const userMessageId of userMessageIds) {
+        if (next[userMessageId]) continue;
+
+        const variants = variantMap[userMessageId] ?? [];
+        const latestVariantId = variants[variants.length - 1];
+        if (!latestVariantId) continue;
+
+        next[userMessageId] = latestVariantId;
+      }
+
+      return next;
+    }
+
     function ensureThreadStateInDraft(
       state: MessagesStore,
       threadId: Id<"threads">,
@@ -84,8 +267,14 @@ export const useMessageStore = create<MessagesStore>()(
       if (existing) return existing;
 
       const created: ThreadMessagesState = {
+        allMessageIds: [],
         messageIds: [],
         messagesById: {},
+
+        variantMessageIdsByUserMessageId: {},
+        userMessageIdByMessageId: {},
+        activeAssistantMessageIdByUserMessageId: {},
+
         localMetaById: {},
         latestAppliedSyncToken: 0,
       };
@@ -99,20 +288,36 @@ export const useMessageStore = create<MessagesStore>()(
       threadId: Id<"threads"> | null,
     ): void {
       if (!threadId) {
+        state.allMessageIds = [];
         state.messageIds = [];
         state.messagesById = {};
+
+        state.variantMessageIdsByUserMessageId = {};
+        state.userMessageIdByMessageId = {};
+        state.activeAssistantMessageIdByUserMessageId = {};
         return;
       }
 
       const thread = state.threadsById[threadId];
       if (!thread) {
+        state.allMessageIds = [];
         state.messageIds = [];
         state.messagesById = {};
+
+        state.variantMessageIdsByUserMessageId = {};
+        state.userMessageIdByMessageId = {};
+        state.activeAssistantMessageIdByUserMessageId = {};
         return;
       }
 
+      state.allMessageIds = thread.allMessageIds;
       state.messageIds = thread.messageIds;
       state.messagesById = thread.messagesById;
+
+      state.variantMessageIdsByUserMessageId = thread.variantMessageIdsByUserMessageId;
+      state.userMessageIdByMessageId = thread.userMessageIdByMessageId;
+      state.activeAssistantMessageIdByUserMessageId =
+        thread.activeAssistantMessageIdByUserMessageId;
     }
 
     function mergeServerMessage(
@@ -159,17 +364,27 @@ export const useMessageStore = create<MessagesStore>()(
       messageIds: [],
       messagesById: {},
 
+      allMessageIds: [],
+      variantMessageIdsByUserMessageId: {},
+      userMessageIdByMessageId: {},
+      activeAssistantMessageIdByUserMessageId: {},
+
       threadsById: {},
 
       clearMessages: function clearMessages() {
         // Clear only the view state (keep per-thread cache so navigation won't regress streaming state).
         set(function clear(state) {
+          state.allMessageIds = [];
           state.messageIds = [];
           state.messagesById = {};
+
+          state.variantMessageIdsByUserMessageId = {};
+          state.userMessageIdByMessageId = {};
+          state.activeAssistantMessageIdByUserMessageId = {};
         });
       },
 
-      syncMessages: function syncMessages(threadId, messages, syncToken) {
+      syncMessages: function syncMessages(threadId, payload, syncToken) {
         set(function sync(state) {
           const thread = ensureThreadStateInDraft(state, threadId);
 
@@ -180,10 +395,11 @@ export const useMessageStore = create<MessagesStore>()(
             thread.latestAppliedSyncToken = syncToken;
           }
 
-          const sorted = [...messages].sort((a, b) => a.createdAt - b.createdAt);
+          const canonicalMessages = sortMessagesByCreatedAt(payload.messages);
+          const allMessages = sortMessagesByCreatedAt(payload.allMessages ?? payload.messages);
           const incomingIds = new Set<Id<"messages">>();
 
-          for (const msg of sorted) {
+          for (const msg of allMessages) {
             incomingIds.add(msg._id);
 
             const existing = thread.messagesById[msg._id];
@@ -211,16 +427,79 @@ export const useMessageStore = create<MessagesStore>()(
             delete state.controllers[threadId];
           }
 
-          // Recompute ordering from merged cache after applying authoritative snapshot deletions.
-          const allMessages: Array<ChatMessage> = Object.values(thread.messagesById);
-          allMessages.sort((a, b) => a.createdAt - b.createdAt || a.updatedAt - b.updatedAt);
-
-          const nextIds: Array<Id<"messages">> = [];
-          for (const m of allMessages) {
-            nextIds.push(m._id);
+          const nextAllMessageIds: Array<Id<"messages">> = [];
+          for (const message of allMessages) {
+            nextAllMessageIds.push(message._id);
           }
 
-          thread.messageIds = nextIds;
+          const nextCanonicalMessageIds: Array<Id<"messages">> = [];
+          for (const message of canonicalMessages) {
+            nextCanonicalMessageIds.push(message._id);
+          }
+
+          const baseVariantMap = payload.variantMessageIdsByUserMessageId
+            ? sanitizeVariantMap(payload.variantMessageIdsByUserMessageId, thread.messagesById)
+            : buildVariantMapFromCanonical(canonicalMessages);
+
+          const nextUserMessageMap = buildUserMessageMap(
+            canonicalMessages,
+            thread.messagesById,
+            baseVariantMap,
+          );
+
+          const nextActiveAssistantMap = buildActiveAssistantMap(
+            canonicalMessages,
+            baseVariantMap,
+            nextUserMessageMap,
+          );
+
+          thread.allMessageIds = nextAllMessageIds;
+          thread.messageIds = nextCanonicalMessageIds;
+
+          thread.variantMessageIdsByUserMessageId = baseVariantMap;
+          thread.userMessageIdByMessageId = nextUserMessageMap;
+          thread.activeAssistantMessageIdByUserMessageId = nextActiveAssistantMap;
+
+          if (state.currentThreadId === threadId) {
+            updateCurrentViewFromThread(state, threadId);
+          }
+        });
+      },
+
+      selectAssistantVariant: function selectAssistantVariant(
+        threadId,
+        userMessageId,
+        assistantMessageId,
+      ) {
+        set(function select(state) {
+          const thread = ensureThreadStateInDraft(state, threadId);
+          const variants = thread.variantMessageIdsByUserMessageId[userMessageId] ?? [];
+
+          let hasVariant = false;
+          for (const variantId of variants) {
+            if (variantId !== assistantMessageId) continue;
+            hasVariant = true;
+            break;
+          }
+
+          if (!hasVariant) return;
+
+          const assistantMessage = thread.messagesById[assistantMessageId];
+          if (!assistantMessage || assistantMessage.role !== "assistant") return;
+
+          thread.activeAssistantMessageIdByUserMessageId[userMessageId] = assistantMessageId;
+
+          const userIndex = thread.messageIds.indexOf(userMessageId);
+          if (userIndex === -1) return;
+
+          const nextMessageId = thread.messageIds[userIndex + 1];
+          const nextMessage = nextMessageId ? thread.messagesById[nextMessageId] : undefined;
+
+          if (nextMessageId && nextMessage?.role === "assistant") {
+            thread.messageIds[userIndex + 1] = assistantMessageId;
+          } else {
+            thread.messageIds.splice(userIndex + 1, 0, assistantMessageId);
+          }
 
           if (state.currentThreadId === threadId) {
             updateCurrentViewFromThread(state, threadId);

@@ -1,16 +1,15 @@
-import { MessageActionButtons } from "./message-action-buttons";
+import { MessageActionButtons, MessageVariantPager } from "./message-action-buttons";
 import { MessageMetadata } from "./message-metadata";
 
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type MessageFooterProps = {
-  index: number;
   isLast: boolean;
   message: ChatMessage;
 };
 
-export function MessageFooter({ index, isLast, message }: MessageFooterProps) {
+export function MessageFooter({ isLast, message }: MessageFooterProps) {
   const isFinished = message.status === "complete" || message.status === "error";
 
   return (
@@ -24,8 +23,14 @@ export function MessageFooter({ index, isLast, message }: MessageFooterProps) {
         },
       )}
     >
-      <MessageActionButtons index={index} message={message} isFinished={isFinished} />
-      {message.role === "assistant" && <MessageMetadata metadata={message.metadata} />}
+      <MessageActionButtons message={message} isFinished={isFinished} />
+
+      {message.role === "assistant" && (
+        <MessageMetadata
+          metadata={message.metadata}
+          rightAccessory={<MessageVariantPager message={message} />}
+        />
+      )}
     </div>
   );
 }

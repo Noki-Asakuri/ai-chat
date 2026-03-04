@@ -78,7 +78,7 @@ export function useChatEditSave() {
       chatStoreActions.setEditMessage(null);
 
       await retryChatMessage({
-        index: editMessage.index,
+        userMessageId: editMessage._id,
         modelId: editMessage.model,
         modelParams: editMessage.modelParams,
 

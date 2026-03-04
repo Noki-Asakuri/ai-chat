@@ -86,7 +86,7 @@ export function Message({ messageId, index, total }: MessageProps) {
       data-effort={message.metadata?.modelParams.effort}
       data-web-search={message.metadata?.modelParams.webSearch ?? false}
     >
-      <ConditionallyRenderedMessage message={message} index={index} isLast={isLast} />
+      <ConditionallyRenderedMessage message={message} isLast={isLast} />
     </div>
   );
 }
@@ -107,11 +107,10 @@ export function ConditionallyRenderedMessage({ message, ...props }: MessageInner
 
 type MessageInnerProps = {
   message: ChatMessage;
-  index: number;
   isLast: boolean;
 };
 
-function MessageInner({ message, index, isLast }: MessageInnerProps) {
+function MessageInner({ message, isLast }: MessageInnerProps) {
   const editMessageId = useChatStore((state) => state.editMessage?._id);
   const isEditingMessage = message._id === editMessageId;
 
@@ -124,7 +123,7 @@ function MessageInner({ message, index, isLast }: MessageInnerProps) {
     <>
       <MessageContent message={message} />
       {isMessageCancelled && <CancelledMessage />}
-      <MessageFooter index={index} isLast={isLast} message={message} />
+      <MessageFooter isLast={isLast} message={message} />
     </>
   );
 }

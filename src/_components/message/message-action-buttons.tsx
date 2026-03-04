@@ -4,6 +4,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useSessionMutation } from "convex-helpers/react/sessions";
 import {
   BugPlayIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   Loader2Icon,
   PencilIcon,
   SplitIcon,
@@ -33,36 +35,60 @@ import { MessageRetryMenu } from "./message-retry-menu";
 
 import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
-import { useMessageStore } from "@/lib/store/messages-store";
+import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
 
 type MessageActionButtonsProps = {
-  index: number;
   isFinished: boolean;
   message: ChatMessage;
 };
 
-export function MessageActionButtons({ index, isFinished, message }: MessageActionButtonsProps) {
+type RetryState = {
+  canRetry: boolean;
+  retryUserMessageId: Id<"messages"> | null;
+};
+
+type VariantPagerState = {
+  threadId: Id<"threads"> | null;
+  userMessageId: Id<"messages"> | null;
+  variants: Array<Id<"messages">>;
+  activeVariantIndex: number;
+  isStreaming: boolean;
+};
+
+export function MessageActionButtons({ isFinished, message }: MessageActionButtonsProps) {
   const { branchThread } = useBranchThread();
 
-  const canRetry = useMessageStore(
-    useShallow((state) => {
+  const { canRetry, retryUserMessageId } = useMessageStore(
+    useShallow((state): RetryState => {
       const messageIndex = state.messageIds.indexOf(message._id);
-      if (messageIndex < 0) return false;
+      if (messageIndex < 0) return { canRetry: false, retryUserMessageId: null };
 
       if (message.role === "assistant") {
         const previousMessageId = state.messageIds[messageIndex - 1];
-        if (!previousMessageId) return false;
+        if (!previousMessageId) {
+          return { canRetry: false, retryUserMessageId: null };
+        }
 
         const previousMessage = state.messagesById[previousMessageId];
-        return previousMessage?.role === "user";
+        if (previousMessage?.role !== "user") {
+          return { canRetry: false, retryUserMessageId: null };
+        }
+
+        return { canRetry: true, retryUserMessageId: previousMessage._id };
       }
 
       const nextMessageId = state.messageIds[messageIndex + 1];
-      if (!nextMessageId) return false;
+      if (!nextMessageId) {
+        return { canRetry: false, retryUserMessageId: null };
+      }
 
       const nextMessage = state.messagesById[nextMessageId];
-      return nextMessage?.role === "assistant";
+      if (nextMessage?.role !== "assistant") {
+        return { canRetry: false, retryUserMessageId: null };
+      }
+
+      return { canRetry: true, retryUserMessageId: message._id };
     }),
   );
 
@@ -96,7 +122,13 @@ export function MessageActionButtons({ index, isFinished, message }: MessageActi
             </ButtonWithTip>
           )}
 
-          {canRetry && <MessageRetryMenu index={index} message={message} className="size-8" />}
+          {canRetry && retryUserMessageId && (
+            <MessageRetryMenu
+              userMessageId={retryUserMessageId}
+              message={message}
+              className="size-8"
+            />
+          )}
         </>
       )}
 
@@ -105,6 +137,10 @@ export function MessageActionButtons({ index, isFinished, message }: MessageActi
       <DebugButton messageId={message._id} />
     </div>
   );
+}
+
+export function MessageVariantPager({ message }: { message: ChatMessage }) {
+  return <VariantPager message={message} />;
 }
 
 function DebugButton({ messageId }: { messageId: Id<"messages"> }) {
@@ -147,10 +183,10 @@ function EditButton({ message }: { message: ChatMessage }) {
         };
       }
 
-      const messageIndex = state.messageIds.indexOf(message._id);
-      const nextMessageId = messageIndex >= 0 ? state.messageIds[messageIndex + 1] : undefined;
-      const nextMessage = nextMessageId ? state.messagesById[nextMessageId] : undefined;
-      const pairedAssistantMessage = nextMessage?.role === "assistant" ? nextMessage : null;
+      const activeAssistantMessageId = state.activeAssistantMessageIdByUserMessageId[message._id];
+      const pairedAssistantMessage = activeAssistantMessageId
+        ? state.messagesById[activeAssistantMessageId]
+        : null;
 
       return {
         canEdit: pairedAssistantMessage?.metadata !== undefined,
@@ -162,18 +198,13 @@ function EditButton({ message }: { message: ChatMessage }) {
 
   const pairedAssistantMetadata = pairedAssistantMessage?.metadata;
   if (!canEdit || !pairedAssistantMetadata) return null;
+
   function handleEditMessage() {
     const metadata = pairedAssistantMetadata;
     if (!metadata) return;
 
-    const state = useMessageStore.getState();
-    const userMessageIndex = state.messageIds.indexOf(message._id);
-
-    if (userMessageIndex < 0) return;
-
     chatStoreActions.setEditMessage({
       _id: message._id,
-      index: userMessageIndex,
       input: message.parts
         .filter((p) => p.type === "text")
         .map((p) => p.text)
@@ -366,6 +397,139 @@ function DeleteButton({ message }: { message: ChatMessage }) {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+function VariantPager({ message }: { message: ChatMessage }) {
+  const setActiveVariant = useSessionMutation(api.functions.messages.setActiveAssistantVariant);
+  const [pendingDirection, setPendingDirection] = React.useState<"prev" | "next" | null>(null);
+
+  const { threadId, userMessageId, variants, activeVariantIndex, isStreaming } = useMessageStore(
+    useShallow((state): VariantPagerState => {
+      if (message.role !== "assistant") {
+        return {
+          threadId: state.currentThreadId,
+          userMessageId: null,
+          variants: [] as Array<Id<"messages">>,
+          activeVariantIndex: -1,
+          isStreaming: false,
+        };
+      }
+
+      const userMessageId =
+        state.userMessageIdByMessageId[message._id] ?? message.parentUserMessageId;
+      if (!userMessageId) {
+        return {
+          threadId: state.currentThreadId,
+          userMessageId: null,
+          variants: [] as Array<Id<"messages">>,
+          activeVariantIndex: -1,
+          isStreaming: false,
+        };
+      }
+
+      const variants = state.variantMessageIdsByUserMessageId[userMessageId] ?? [];
+      const activeAssistantMessageId = state.activeAssistantMessageIdByUserMessageId[userMessageId];
+      const activeVariantIndex = activeAssistantMessageId
+        ? variants.indexOf(activeAssistantMessageId)
+        : variants.indexOf(message._id);
+
+      const nonNullUserMessageId: Id<"messages"> = userMessageId;
+
+      const lastMessageId = state.messageIds.at(-1);
+      const lastStatus = lastMessageId ? state.messagesById[lastMessageId]?.status : "complete";
+
+      return {
+        threadId: state.currentThreadId,
+        userMessageId: nonNullUserMessageId,
+        variants,
+        activeVariantIndex,
+        isStreaming: lastStatus === "pending" || lastStatus === "streaming",
+      };
+    }),
+  );
+
+  if (!userMessageId || variants.length <= 1 || activeVariantIndex < 0) return null;
+
+  const canGoPrev = activeVariantIndex > 0;
+  const canGoNext = activeVariantIndex < variants.length - 1;
+  const isPending = pendingDirection !== null;
+  const ensuredUserMessageId: Id<"messages"> = userMessageId;
+
+  async function switchVariant(nextVariantIndex: number, direction: "prev" | "next") {
+    if (!threadId || isPending || isStreaming) return;
+
+    const previousAssistantMessageId = variants[activeVariantIndex];
+    const nextAssistantMessageId = variants[nextVariantIndex];
+    if (!nextAssistantMessageId) return;
+
+    setPendingDirection(direction);
+
+    try {
+      messageStoreActions.selectAssistantVariant(
+        threadId,
+        ensuredUserMessageId,
+        nextAssistantMessageId,
+      );
+
+      await setActiveVariant({
+        threadId,
+        userMessageId: ensuredUserMessageId,
+        assistantMessageId: nextAssistantMessageId,
+      });
+    } catch (error) {
+      if (previousAssistantMessageId) {
+        messageStoreActions.selectAssistantVariant(
+          threadId,
+          ensuredUserMessageId,
+          previousAssistantMessageId,
+        );
+      }
+
+      toast.error("Failed to switch response", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setPendingDirection(null);
+    }
+  }
+
+  return (
+    <div className="inline-flex items-center gap-1 rounded-md border bg-background/80 p-1 backdrop-blur-md backdrop-saturate-150">
+      <ButtonWithTip
+        variant="ghost"
+        side="bottom"
+        className="size-8"
+        title="Previous response"
+        disabled={!canGoPrev || isPending || isStreaming}
+        onClick={() => void switchVariant(activeVariantIndex - 1, "prev")}
+      >
+        {pendingDirection === "prev" ? (
+          <Loader2Icon className="size-4 animate-spin" />
+        ) : (
+          <ChevronLeftIcon className="size-4" />
+        )}
+      </ButtonWithTip>
+
+      <span className="min-w-10 text-center text-xs text-muted-foreground">
+        {activeVariantIndex + 1}/{variants.length}
+      </span>
+
+      <ButtonWithTip
+        variant="ghost"
+        side="bottom"
+        className="size-8"
+        title="Next response"
+        disabled={!canGoNext || isPending || isStreaming}
+        onClick={() => void switchVariant(activeVariantIndex + 1, "next")}
+      >
+        {pendingDirection === "next" ? (
+          <Loader2Icon className="size-4 animate-spin" />
+        ) : (
+          <ChevronRightIcon className="size-4" />
+        )}
+      </ButtonWithTip>
+    </div>
   );
 }
 

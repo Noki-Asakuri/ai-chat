@@ -2,7 +2,7 @@
 import { Migrations } from "@convex-dev/migrations";
 
 import { components, internal } from "./_generated/api";
-import type { DataModel } from "./_generated/dataModel";
+import type { DataModel, Id } from "./_generated/dataModel";
 
 /**
  * Initialize migrations component with DataModel for proper typing.
@@ -38,7 +38,32 @@ export const backfillMessages = migrations.define({
     //     profile: null,
     //   };
     // }
-    // await ctx.db.patch(data._id, updates);
+    const updates: {
+      parentUserMessageId?: Id<"messages"> | undefined;
+      activeAssistantMessageId?: Id<"messages"> | undefined;
+      variantIndex?: number | undefined;
+    } = {};
+
+    let shouldPatch = false;
+
+    if (typeof data.parentUserMessageId === "undefined") {
+      updates.parentUserMessageId = undefined;
+      shouldPatch = true;
+    }
+
+    if (typeof data.activeAssistantMessageId === "undefined") {
+      updates.activeAssistantMessageId = undefined;
+      shouldPatch = true;
+    }
+
+    if (typeof data.variantIndex === "undefined") {
+      updates.variantIndex = undefined;
+      shouldPatch = true;
+    }
+
+    if (!shouldPatch) return;
+
+    await ctx.db.patch(data._id, updates);
   },
 });
 

@@ -207,11 +207,18 @@ export default defineSchema({
     metadata: v.optional(AISDKMetadata),
     attachments: v.array(v.id("attachments")),
 
+    // Assistant variants are grouped under the user turn they answer.
+    // User turns can point to the currently selected assistant variant.
+    parentUserMessageId: v.optional(v.id("messages")),
+    activeAssistantMessageId: v.optional(v.id("messages")),
+    variantIndex: v.optional(v.number()),
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_userId_threadId", ["userId", "threadId"])
     .index("by_threadId", ["threadId"])
+    .index("by_threadId_parentUserMessageId", ["threadId", "parentUserMessageId"])
     .index("by_messageId", ["messageId"])
     .index("by_userId_resumableStreamId", ["userId", "resumableStreamId"]),
 
