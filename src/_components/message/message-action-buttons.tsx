@@ -2,7 +2,14 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { useSessionMutation } from "convex-helpers/react/sessions";
-import { BugPlayIcon, PencilIcon, SplitIcon, Trash2Icon } from "lucide-react";
+import {
+  BugPlayIcon,
+  Loader2Icon,
+  PencilIcon,
+  SplitIcon,
+  Trash2Icon,
+  TriangleAlertIcon,
+} from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/shallow";
@@ -305,8 +312,8 @@ function DeleteButton({ message }: { message: ChatMessage }) {
       <AlertDialog open={open} onOpenChange={handleOpenChange}>
         <AlertDialogContent className="gap-3 p-4">
           <AlertDialogHeader className="gap-1">
-            <AlertDialogMedia className="bg-destructive/10 text-destructive">
-              <Trash2Icon className="size-5" />
+            <AlertDialogMedia className="bg-amber-500/15 text-amber-400">
+              <TriangleAlertIcon className="size-5" />
             </AlertDialogMedia>
             <AlertDialogTitle>{title}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -343,7 +350,17 @@ function DeleteButton({ message }: { message: ChatMessage }) {
               disabled={disabled}
               className="bg-destructive/10 text-destructive hover:bg-destructive/20"
             >
-              {pending ? "Deleting..." : "Delete"}
+              {pending ? (
+                <>
+                  <Loader2Icon className="size-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2Icon className="size-4" />
+                  Delete
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

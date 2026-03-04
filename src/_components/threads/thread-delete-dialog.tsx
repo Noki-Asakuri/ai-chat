@@ -2,7 +2,7 @@ import { api } from "@/convex/_generated/api";
 
 import { useNavigate } from "@tanstack/react-router";
 import { useSessionMutation } from "convex-helpers/react/sessions";
-import { Trash2Icon } from "lucide-react";
+import { Loader2Icon, Trash2Icon, TriangleAlertIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import {
@@ -60,8 +60,8 @@ export function ThreadDeleteDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogMedia className="bg-destructive/10 text-destructive">
-            <Trash2Icon className="size-5" />
+          <AlertDialogMedia className="bg-amber-500/15 text-amber-400">
+            <TriangleAlertIcon className="size-5" />
           </AlertDialogMedia>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
@@ -86,7 +86,17 @@ export function ThreadDeleteDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={deleteThreadHandler} disabled={pending}>
-            {pending ? "Deleting..." : "Delete"}
+            {pending ? (
+              <>
+                <Loader2Icon className="size-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2Icon className="size-4" />
+                Delete
+              </>
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
