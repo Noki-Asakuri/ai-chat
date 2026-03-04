@@ -10,7 +10,7 @@ This part is for agents to know what is the most important thing to do.
 2. Always use sub-agents in planning or building, same apply to skills when working with code and docs.
 3. Follow the user's instructions exactly. If you are not sure, ask the user for confirmation.
 4. For any non-trivial work (3+ distinct steps), create a `todowrite` list before doing any work, then keep it updated.
-5. Do not use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
+5. Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user. If you want to verify something, ask the user first before doing it.
 
 ### Docs lookup
 
@@ -53,6 +53,8 @@ These scripts must not be run by the agent under any circumstances.
 
 TypeScript are meant to be strict, predictable and type-safe.
 It's forbidden to use `any` or casting `as`, instead use type narrowing.
+
+If the type checking failing due to unrelated change not related to the task, ignore and do not fix it. Only fix the type checking if it's related to the task.
 
 ## Comments
 
