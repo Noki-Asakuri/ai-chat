@@ -1,10 +1,48 @@
+import { useEffect, useState } from "react";
+
 import { ChevronDownIcon } from "lucide-react";
 
 import { ButtonWithTip } from "../ui/button";
 
-import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
+import {
+  computeIsAtBottom,
+  getMessagesScrollAreaElement,
+  setStickyToBottom,
+} from "@/lib/chat/scroll-stickiness";
+
+function getIsAtBottom(): boolean {
+  const scrollElement = getMessagesScrollAreaElement();
+  if (!scrollElement) return true;
+  return computeIsAtBottom(scrollElement);
+}
 
 export function ScrollButton() {
+  const [isAtBottom, setIsAtBottom] = useState(getIsAtBottom);
+
+  useEffect(() => {
+    function syncButtonVisibility(): void {
+      setIsAtBottom(getIsAtBottom());
+    }
+
+    const scrollEventOptions: AddEventListenerOptions = { capture: true, passive: true };
+
+    syncButtonVisibility();
+
+    window.addEventListener("scroll", syncButtonVisibility, scrollEventOptions);
+    window.addEventListener("resize", syncButtonVisibility);
+    window.addEventListener("chat:scroll-if-sticky", syncButtonVisibility);
+    window.addEventListener("chat:force-scroll-bottom", syncButtonVisibility);
+
+    return () => {
+      window.removeEventListener("scroll", syncButtonVisibility, scrollEventOptions);
+      window.removeEventListener("resize", syncButtonVisibility);
+      window.removeEventListener("chat:scroll-if-sticky", syncButtonVisibility);
+      window.removeEventListener("chat:force-scroll-bottom", syncButtonVisibility);
+    };
+  }, []);
+
+  if (isAtBottom) return null;
+
   function handleScrollBottom(): void {
     setStickyToBottom(true);
     if (typeof window !== "undefined") {
