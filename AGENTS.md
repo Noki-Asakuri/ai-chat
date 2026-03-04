@@ -30,6 +30,7 @@ Do not make any changes to the `components.json` file.
 ## Scripts
 
 This repo uses Bun for install and run scripts. But only use scripts that you're allowed to run or asked to run.
+Anything else are forbidden to run by the agent. Same as manually run with `bunx`.
 
 These scripts are needed to be run everytime you finished the task.
 
@@ -44,7 +45,7 @@ These scripts are not needed, prefer to not use them and use `bun check` instead
 
 These scripts must not be run by the agent under any circumstances.
 
-- `bun dev` and `bun dev:server`: Start up a development server for the web app and API with watch mode.
+- `bun dev` and `bun dev:server` and `bun dev:convex`: Start up a development server for the web/API/Convex with watch mode.
 - `bun start` and `bun start:server`: Start up a production server for the web app and API.
 - `bun preview`: Build and preview the codebase.
 - `bun build`: Build the codebase.
@@ -55,6 +56,10 @@ TypeScript are meant to be strict, predictable and type-safe.
 It's forbidden to use `any` or casting `as`, instead use type narrowing.
 
 If the type checking failing due to unrelated change not related to the task, ignore and do not fix it. Only fix the type checking if it's related to the task.
+
+### Convex
+
+This project uses Convex for database. After updating anything inside `convex/` folder, make sure to run `bun check` to ensure the type generation is correct. But do not run any codegen scripts, just tell the user to update the generated types after the task is done.
 
 ## Comments
 
