@@ -15,6 +15,7 @@ import {
   PinIcon,
   PinOffIcon,
   RefreshCwIcon,
+  Share2Icon,
 } from "lucide-react";
 import { useRef, useState, useTransition, type ComponentProps } from "react";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ import { Input } from "../ui/input";
 
 import { regenerateThreadTitleServerFn } from "./server-function/regenerate-thread-title";
 import { ThreadDeleteDialog } from "./thread-delete-dialog";
+import { ThreadShareDialog } from "./thread-share-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
 import { useSessionId } from "@/lib/hooks/use-session";
@@ -122,6 +124,7 @@ type ThreadActionsProps = ComponentProps<typeof Menu.Trigger> & {
 function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActionsProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(thread.title);
   const [isSaving, startSaving] = useTransition();
 
@@ -266,6 +269,20 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
               </Menu.Item>
 
               <Menu.Item
+                title="Share Thread"
+                onClick={() => {
+                  setShareOpen(true);
+                }}
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "w-full cursor-pointer justify-start rounded-none",
+                )}
+              >
+                <Share2Icon className="size-4" />
+                <span className="pointer-events-none">Share Thread</span>
+              </Menu.Item>
+
+              <Menu.Item
                 title="Delete Thread"
                 onClick={() => setDeleteOpen(true)}
                 disabled={isStreaming}
@@ -327,6 +344,13 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
         title={thread.title}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
+      />
+
+      <ThreadShareDialog
+        threadId={thread._id}
+        threadTitle={thread.title}
+        open={shareOpen}
+        onOpenChange={setShareOpen}
       />
     </>
   );

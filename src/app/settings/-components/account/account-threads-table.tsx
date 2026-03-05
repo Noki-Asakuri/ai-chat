@@ -22,6 +22,7 @@ import {
   ExternalLinkIcon,
   PinIcon,
   PinOffIcon,
+  Share2Icon,
   TrashIcon,
 } from "lucide-react";
 import {
@@ -64,6 +65,7 @@ type AccountThread = {
   title: string;
   updatedAt: number;
   pinned: boolean;
+  shared: boolean;
   status: "pending" | "streaming" | "complete" | "error";
 
   messageCount: number;
@@ -73,6 +75,7 @@ type AccountThread = {
 type AccountThreadSortField =
   | "title"
   | "pinned"
+  | "shared"
   | "messageCount"
   | "attachmentCount"
   | "_creationTime"
@@ -111,6 +114,7 @@ function getAccountThreadSort(sorting: SortingState): AccountThreadSort {
 
   if (firstSort.id === "title") return { sortField: "title", sortDirection };
   if (firstSort.id === "pinned") return { sortField: "pinned", sortDirection };
+  if (firstSort.id === "shared") return { sortField: "shared", sortDirection };
   if (firstSort.id === "messageCount") return { sortField: "messageCount", sortDirection };
   if (firstSort.id === "attachmentCount") return { sortField: "attachmentCount", sortDirection };
   if (firstSort.id === "_creationTime") return { sortField: "_creationTime", sortDirection };
@@ -214,6 +218,9 @@ export function AccountThreadsTableSkeleton() {
           <Skeleton className="h-4 w-8" />
         </td>
         <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-8" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
           <Skeleton className="h-4 w-24" />
         </td>
         <td className="px-3 py-1.5 text-left text-sm">
@@ -263,6 +270,9 @@ export function AccountThreadsTableSkeleton() {
               </th>
               <th className="px-3 py-1.5 text-left text-sm font-bold">
                 <Skeleton className="h-4 w-10" />
+              </th>
+              <th className="px-3 py-1.5 text-left text-sm font-bold">
+                <Skeleton className="h-4 w-12" />
               </th>
               <th className="px-3 py-1.5 text-left text-sm font-bold">
                 <Skeleton className="h-4 w-10" />
@@ -333,6 +343,9 @@ function AccountThreadsTableBodySkeleton({ columnCount }: { columnCount: number 
         </td>
         <td className="px-3 py-1.5 text-left text-sm">
           <Skeleton className="h-4 w-10" />
+        </td>
+        <td className="px-3 py-1.5 text-left text-sm">
+          <Skeleton className="h-4 w-8" />
         </td>
         <td className="px-3 py-1.5 text-left text-sm">
           <Skeleton className="h-4 w-8" />
@@ -734,6 +747,21 @@ export function AccountThreadsTable() {
         accessorKey: "pinned",
         header: "Pinned",
         cell: ({ row }) => (row.original.pinned ? "Yes" : "-"),
+      },
+      {
+        accessorKey: "shared",
+        header: "Shared",
+        cell: ({ row }) => {
+          const isShared = row.original.shared;
+          if (!isShared) return "-";
+
+          return (
+            <span className="inline-flex items-center gap-1">
+              <Share2Icon className="size-3 text-muted-foreground" />
+              Yes
+            </span>
+          );
+        },
       },
       {
         accessorKey: "messageCount",

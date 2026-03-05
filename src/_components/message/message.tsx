@@ -18,6 +18,8 @@ type MessageProps = {
   messageId: Id<"messages">;
   index: number;
   total: number;
+  readOnly?: boolean;
+  showUserAvatar?: boolean;
 };
 
 const FALLBACK_INTRINSIC_MESSAGE_HEIGHT_PX = 220;
@@ -55,7 +57,13 @@ function cacheMessageHeight(messageId: Id<"messages">, element: HTMLDivElement):
   trimCachedMessageHeights();
 }
 
-export function Message({ messageId, index, total }: MessageProps) {
+export function Message({
+  messageId,
+  index,
+  total,
+  readOnly = false,
+  showUserAvatar = true,
+}: MessageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const message = useMessageStore(useShallow((state) => state.messagesById[messageId]!));
   const isLast = isLastMessage(message.role, index, total);
@@ -150,7 +158,12 @@ export function Message({ messageId, index, total }: MessageProps) {
       data-effort={message.metadata?.modelParams.effort}
       data-web-search={message.metadata?.modelParams.webSearch ?? false}
     >
-      <ConditionallyRenderedMessage message={message} isLast={isLast} />
+      <ConditionallyRenderedMessage
+        message={message}
+        isLast={isLast}
+        readOnly={readOnly}
+        showUserAvatar={showUserAvatar}
+      />
     </div>
   );
 }
@@ -172,22 +185,29 @@ export function ConditionallyRenderedMessage({ message, ...props }: MessageInner
 type MessageInnerProps = {
   message: ChatMessage;
   isLast: boolean;
+  readOnly?: boolean;
+  showUserAvatar?: boolean;
 };
 
-function MessageInner({ message, isLast }: MessageInnerProps) {
+function MessageInner({
+  message,
+  isLast,
+  readOnly = false,
+  showUserAvatar = true,
+}: MessageInnerProps) {
   const editMessageId = useChatStore((state) => state.editMessage?._id);
   const isEditingMessage = message._id === editMessageId;
 
-  if (isEditingMessage) return <ChatEditTextarea />;
+  if (isEditingMessage && !readOnly) return <ChatEditTextarea />;
 
   const isMessageCancelled =
     message.role === "assistant" && message.metadata?.finishReason === "aborted";
 
   return (
     <>
-      <MessageContent message={message} />
+      <MessageContent message={message} showUserAvatar={showUserAvatar} />
       {isMessageCancelled && <CancelledMessage />}
-      <MessageFooter isLast={isLast} message={message} />
+      <MessageFooter isLast={isLast} message={message} readOnly={readOnly} />
     </>
   );
 }

@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils";
 type MessageFooterProps = {
   isLast: boolean;
   message: ChatMessage;
+  readOnly?: boolean;
 };
 
-export function MessageFooter({ isLast, message }: MessageFooterProps) {
+export function MessageFooter({ isLast, message, readOnly = false }: MessageFooterProps) {
   const isFinished = message.status === "complete" || message.status === "error";
 
   return (
@@ -23,12 +24,12 @@ export function MessageFooter({ isLast, message }: MessageFooterProps) {
         },
       )}
     >
-      <MessageActionButtons message={message} isFinished={isFinished} />
+      {!readOnly && <MessageActionButtons message={message} isFinished={isFinished} />}
 
       {message.role === "assistant" && (
         <MessageMetadata
           metadata={message.metadata}
-          rightAccessory={<MessageVariantPager message={message} />}
+          rightAccessory={readOnly ? undefined : <MessageVariantPager message={message} />}
         />
       )}
     </div>

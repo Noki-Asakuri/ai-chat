@@ -13,9 +13,10 @@ import type { ChatMessage } from "@/lib/types";
 
 type MessageContentProps = {
   message: ChatMessage;
+  showUserAvatar?: boolean;
 };
 
-export function MessageContent({ message }: MessageContentProps) {
+export function MessageContent({ message, showUserAvatar = true }: MessageContentProps) {
   const isMobile = useIsMobile();
 
   if (message.status === "error") {
@@ -67,7 +68,7 @@ export function MessageContent({ message }: MessageContentProps) {
             </MessageContentElement>
           ))}
 
-          {message.role === "user" && (
+          {showUserAvatar && message.role === "user" && (
             <MessageAvatar className={isMobile ? "" : "absolute top-0 -right-13"} />
           )}
         </div>

@@ -2,6 +2,7 @@ import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
 import type { Id } from "../_generated/dataModel";
+import { query } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { authenticatedMutation, authenticatedQuery } from "../components";
 import { status } from "../schema";
@@ -15,6 +16,7 @@ type AccountThreadRow = {
   title: string;
   updatedAt: number;
   pinned: boolean;
+  shared: boolean;
   status: ThreadStatus;
 
   messageCount: number;
@@ -24,6 +26,7 @@ type AccountThreadRow = {
 type AccountThreadSortField =
   | "title"
   | "pinned"
+  | "shared"
   | "messageCount"
   | "attachmentCount"
   | "_creationTime"
@@ -54,6 +57,12 @@ function compareAccountThreadRows(
   if (sortField === "pinned") {
     if (left.pinned === right.pinned) base = 0;
     else if (left.pinned) base = 1;
+    else base = -1;
+  }
+
+  if (sortField === "shared") {
+    if (left.shared === right.shared) base = 0;
+    else if (left.shared) base = 1;
     else base = -1;
   }
 
@@ -217,6 +226,7 @@ export const listAccountThreads = authenticatedQuery({
     sortField: v.union(
       v.literal("title"),
       v.literal("pinned"),
+      v.literal("shared"),
       v.literal("messageCount"),
       v.literal("attachmentCount"),
       v.literal("_creationTime"),
@@ -235,6 +245,7 @@ export const listAccountThreads = authenticatedQuery({
         title: v.string(),
         updatedAt: v.number(),
         pinned: v.boolean(),
+        shared: v.boolean(),
         status: status,
 
         messageCount: v.number(),
@@ -290,6 +301,11 @@ export const listAccountThreads = authenticatedQuery({
         .withIndex("by_userId_threadId", (q) => q.eq("userId", userId).eq("threadId", thread._id))
         .collect();
 
+      const threadShare = await ctx.db
+        .query("threadShares")
+        .withIndex("by_threadId", (q) => q.eq("threadId", thread._id))
+        .unique();
+
       rows.push({
         _id: thread._id,
         _creationTime: thread._creationTime,
@@ -297,6 +313,7 @@ export const listAccountThreads = authenticatedQuery({
         title: thread.title,
         updatedAt: thread.updatedAt,
         pinned: thread.pinned,
+        shared: threadShare !== null,
         status: thread.status,
 
         messageCount: messages.length,
@@ -322,13 +339,18 @@ export const getThreadTitle = authenticatedQuery({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    if (!args.threadId) return { title: null };
+    if (!args.threadId) return { title: null, pinned: false, isShared: false };
 
     const thread = await ctx.db.get("threads", args.threadId);
-    if (!thread) return { title: null };
-    if (thread.userId !== user.userId) return { title: null };
+    if (!thread) return { title: null, pinned: false, isShared: false };
+    if (thread.userId !== user.userId) return { title: null, pinned: false, isShared: false };
 
-    return { title: thread.title };
+    const threadShare = await ctx.db
+      .query("threadShares")
+      .withIndex("by_threadId", (q) => q.eq("threadId", thread._id))
+      .unique();
+
+    return { title: thread.title, pinned: thread.pinned, isShared: threadShare !== null };
   },
 });
 
@@ -394,5 +416,20 @@ export const pinThread = authenticatedMutation({
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
     await ctx.db.patch(args.threadId, { pinned: args.pinned });
+  },
+});
+
+export const getThreadTitleWithoutSession = query({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) return { title: null, pinned: false, isShared: false };
+
+    const threadShare = await ctx.db
+      .query("threadShares")
+      .withIndex("by_threadId", (q) => q.eq("threadId", thread._id))
+      .unique();
+
+    return { title: thread.title, pinned: thread.pinned, isShared: threadShare !== null };
   },
 });

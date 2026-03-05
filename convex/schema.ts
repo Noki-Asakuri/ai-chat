@@ -20,6 +20,9 @@ export const status = v.union(
   v.literal("error"),
 );
 
+export const threadShareVisibility = v.union(v.literal("public"), v.literal("private"));
+export const threadShareMode = v.union(v.literal("snapshot"), v.literal("live"));
+
 export const AISDKParts = v.array(
   v.union(
     v.object({ type: v.literal("step-start") }),
@@ -174,6 +177,23 @@ export default defineSchema({
     .index("by_userId_groupId_order", ["userId", "groupId", "order"])
     .index("by_userId_pinned_updatedAt", ["userId", "pinned", "updatedAt"])
     .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "pinned"] }),
+
+  threadShares: defineTable({
+    threadId: v.id("threads"),
+    ownerUserId: v.string(),
+    shareId: v.string(),
+
+    visibility: threadShareVisibility,
+    mode: threadShareMode,
+    allowedEmails: v.array(v.string()),
+    snapshotAt: v.optional(v.number()),
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_threadId", ["threadId"])
+    .index("by_shareId", ["shareId"])
+    .index("by_ownerUserId_updatedAt", ["ownerUserId", "updatedAt"]),
 
   attachments: defineTable({
     id: v.string(),

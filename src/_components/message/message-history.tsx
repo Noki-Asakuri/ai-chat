@@ -16,12 +16,19 @@ export function MessageHistory({
   hasOlderMessages = false,
   isLoadingOlderMessages = false,
   onLoadOlderMessages,
+  readOnly = false,
+  showUserAvatar = true,
+  bottomPaddingPx,
 }: {
   hasOlderMessages?: boolean;
   isLoadingOlderMessages?: boolean;
   onLoadOlderMessages?: () => Promise<void> | void;
+  readOnly?: boolean;
+  showUserAvatar?: boolean;
+  bottomPaddingPx?: number;
 }) {
   const textareaHeight = useChatStore((state) => state.textareaHeight);
+  const resolvedBottomPadding = bottomPaddingPx ?? textareaHeight;
 
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -91,7 +98,7 @@ export function MessageHistory({
         ref={contentRef}
         data-slot="message-history"
         className="mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 pt-12"
-        style={{ paddingBottom: `${textareaHeight}px` }}
+        style={{ paddingBottom: `${resolvedBottomPadding}px` }}
       >
         {hasOlderMessages && (
           <div className="flex w-full justify-center">
@@ -113,16 +120,29 @@ export function MessageHistory({
           </div>
         )}
 
-        <Messages />
+        <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />
       </div>
     </div>
   );
 }
 
-function Messages() {
+function Messages({
+  readOnly = false,
+  showUserAvatar = true,
+}: {
+  readOnly?: boolean;
+  showUserAvatar?: boolean;
+}) {
   const messages = useMessageStore((state) => state.messageIds);
 
   return messages.map((messageId, index) => (
-    <Message key={messageId} messageId={messageId} index={index} total={messages.length} />
+    <Message
+      key={messageId}
+      messageId={messageId}
+      index={index}
+      total={messages.length}
+      readOnly={readOnly}
+      showUserAvatar={showUserAvatar}
+    />
   ));
 }

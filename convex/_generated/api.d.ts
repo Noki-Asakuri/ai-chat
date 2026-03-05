@@ -17,6 +17,7 @@ import type * as functions_groups from "../functions/groups.js";
 import type * as functions_messages from "../functions/messages.js";
 import type * as functions_profiles from "../functions/profiles.js";
 import type * as functions_statistics from "../functions/statistics.js";
+import type * as functions_threadShares from "../functions/threadShares.js";
 import type * as functions_threads from "../functions/threads.js";
 import type * as functions_usages from "../functions/usages.js";
 import type * as functions_userStats from "../functions/userStats.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   "functions/messages": typeof functions_messages;
   "functions/profiles": typeof functions_profiles;
   "functions/statistics": typeof functions_statistics;
+  "functions/threadShares": typeof functions_threadShares;
   "functions/threads": typeof functions_threads;
   "functions/usages": typeof functions_usages;
   "functions/userStats": typeof functions_userStats;
