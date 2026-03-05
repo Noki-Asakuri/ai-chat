@@ -4,8 +4,6 @@ import { useSessionMutation } from "convex-helpers/react/sessions";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useTransition } from "react";
-import { toast } from "sonner";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";
 
@@ -23,22 +21,17 @@ function RouteComponent() {
   const { data, isPending } = useSuspenseQuery(convexSessionQuery(api.functions.users.currentUser));
   const updateCustomization = useSessionMutation(api.functions.users.updateUserCustomization);
 
-  const [pendingUpdate, startTransition] = useTransition();
-
-  const disabled = pendingUpdate || isPending;
+  const disabled = isPending;
 
   return (
     <div className="space-y-6">
       <ModelsEditor
         disabled={disabled}
         initialHiddenModels={data?.customization?.hiddenModels ?? []}
-        onSave={(hiddenModels) => {
-          startTransition(async function () {
-            toast.promise(updateCustomization({ data: { hiddenModels } }), {
-              loading: "Saving preferences...",
-              success: "Preferences saved",
-              error: "Failed to save preferences",
-            });
+        initialFavoriteModels={data?.customization?.favoriteModels ?? []}
+        onSaveCustomization={async function onSaveCustomization(customization) {
+          await updateCustomization({
+            data: customization,
           });
         }}
       />
