@@ -35,6 +35,38 @@ export const openai: Record<ModelIdKey, ModelData> = {
     },
   },
 
+  "openai/o3": {
+    display: { name: "o3" },
+    id: "openai/o3",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+    },
+  },
+
+  "openai/o3-mini": {
+    display: { name: "o3 Mini" },
+    id: "openai/o3-mini",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+    },
+  },
+  "openai/o4-mini": {
+    display: { name: "o4 Mini" },
+    id: "openai/o4-mini",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+    },
+  },
+
   "openai/gpt-5": {
     display: { name: "GPT 5" },
     id: "openai/gpt-5",
@@ -153,7 +185,6 @@ export const openai: Record<ModelIdKey, ModelData> = {
       customReasoningLevel: ["none", "low", "medium", "high", "xhigh"],
     },
   },
-
   "openai/gpt-5.2-chat": {
     display: { name: "GPT 5.2 Chat" },
     id: "openai/gpt-5.2-chat",
@@ -163,17 +194,6 @@ export const openai: Record<ModelIdKey, ModelData> = {
       vision: true,
     },
   },
-
-  "openai/gpt-5.3-chat": {
-    display: { name: "GPT 5.3 Chat" },
-    id: "openai/gpt-5.3-chat",
-    provider: "openai",
-    capabilities: {
-      webSearch: true,
-      vision: true,
-    },
-  },
-
   "openai/gpt-5.2-pro": {
     display: { name: "GPT 5.2 Pro" },
     id: "openai/gpt-5.2-pro",
@@ -185,7 +205,6 @@ export const openai: Record<ModelIdKey, ModelData> = {
       customReasoningLevel: ["low", "medium", "high", "xhigh"],
     },
   },
-
   "openai/gpt-5.2-codex": {
     display: { name: "GPT 5.2 Codex" },
     id: "openai/gpt-5.2-codex",
@@ -198,6 +217,15 @@ export const openai: Record<ModelIdKey, ModelData> = {
     },
   },
 
+  "openai/gpt-5.3-chat": {
+    display: { name: "GPT 5.3 Chat" },
+    id: "openai/gpt-5.3-chat",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      vision: true,
+    },
+  },
   "openai/gpt-5.3-codex": {
     display: { name: "GPT 5.3 Codex" },
     id: "openai/gpt-5.3-codex",
@@ -210,35 +238,26 @@ export const openai: Record<ModelIdKey, ModelData> = {
     },
   },
 
-  "openai/o3": {
-    display: { name: "o3" },
-    id: "openai/o3",
+  "openai/gpt-5.4": {
+    display: { name: "GPT 5.4" },
+    id: "openai/gpt-5.4",
     provider: "openai",
     capabilities: {
       webSearch: true,
       reasoning: true,
       vision: true,
+      customReasoningLevel: ["none", "low", "medium", "high", "xhigh"],
     },
   },
-
-  "openai/o3-mini": {
-    display: { name: "o3 Mini" },
-    id: "openai/o3-mini",
+  "openai/gpt-5.4-pro": {
+    display: { name: "GPT 5.4 Pro" },
+    id: "openai/gpt-5.4-pro",
     provider: "openai",
     capabilities: {
       webSearch: true,
       reasoning: true,
       vision: true,
-    },
-  },
-  "openai/o4-mini": {
-    display: { name: "o4 Mini" },
-    id: "openai/o4-mini",
-    provider: "openai",
-    capabilities: {
-      webSearch: true,
-      reasoning: true,
-      vision: true,
+      customReasoningLevel: ["low", "medium", "high", "xhigh"],
     },
   },
 };
