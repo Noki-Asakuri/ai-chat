@@ -10,6 +10,7 @@ import { MessageReasoning } from "./message-reasoning";
 
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type MessageContentProps = {
   message: ChatMessage;
@@ -18,6 +19,7 @@ type MessageContentProps = {
 
 export function MessageContent({ message, showUserAvatar = true }: MessageContentProps) {
   const isMobile = useIsMobile();
+  const parts = message.parts ?? [];
 
   if (message.status === "error") {
     const error = message.error?.length
@@ -27,11 +29,18 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
     return <MessageError message={error} />;
   }
 
-  if (!message.parts || message.parts.length === 0) return null;
+  const textParts = parts.filter((part) => part.type === "text");
+  const fileParts = parts.filter((part) => part.type === "file");
+  const reasoningParts = parts.filter((part) => part.type === "reasoning");
 
-  const textParts = message.parts.filter((p) => p.type === "text");
-  const fileParts = message.parts.filter((p) => p.type === "file");
-  const reasoningParts = message.parts.filter((p) => p.type === "reasoning");
+  const shouldRenderUserAvatar = showUserAvatar && message.role === "user";
+  const hasRenderableContent =
+    textParts.length > 0 || fileParts.length > 0 || reasoningParts.length > 0;
+
+  const shouldRenderMessageBody = textParts.length > 0 || shouldRenderUserAvatar;
+  const shouldReserveUserAvatarSpace = shouldRenderUserAvatar && textParts.length > 0;
+
+  if (!hasRenderableContent && !shouldRenderUserAvatar) return null;
 
   return (
     <>
@@ -49,29 +58,49 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
           parts={fileParts}
           role={message.role}
           messageId={message._id}
-          className={isMobile ? "mr-13" : ""}
+          className={cn(
+            shouldRenderUserAvatar && "self-end",
+            shouldReserveUserAvatarSpace && "max-w-[calc(100%-3.25rem)]",
+            isMobile && shouldRenderUserAvatar && "mr-13",
+          )}
         />
 
-        <div className="relative flex gap-2 group-[.is-assistant]:w-full group-[.is-user]:max-w-full">
-          {textParts.map((part, i) => (
-            <MessageContentElement
-              key={`${message._id}-${i}`}
-              className="backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
-            >
-              <StreamDownWrapper
-                isAnimating={part.state === "streaming"}
-                role={message.role}
-                className={message.role === "user" ? "whitespace-pre-wrap" : undefined}
+        {shouldRenderMessageBody && (
+          <div
+            className={cn("relative flex items-start gap-2", {
+              "w-full": message.role === "assistant",
+              "max-w-full justify-end self-end": message.role === "user",
+            })}
+          >
+            {textParts.length > 0 && (
+              <div
+                className={cn("flex min-w-0 flex-col gap-2", {
+                  "w-full": message.role === "assistant",
+                  "max-w-[calc(100%-3.25rem)]": shouldReserveUserAvatarSpace,
+                })}
               >
-                {part.text}
-              </StreamDownWrapper>
-            </MessageContentElement>
-          ))}
+                {textParts.map((part, i) => (
+                  <MessageContentElement
+                    key={`${message._id}-${i}`}
+                    className="backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
+                  >
+                    <StreamDownWrapper
+                      isAnimating={part.state === "streaming"}
+                      role={message.role}
+                      className={message.role === "user" ? "whitespace-pre-wrap" : undefined}
+                    >
+                      {part.text}
+                    </StreamDownWrapper>
+                  </MessageContentElement>
+                ))}
+              </div>
+            )}
 
-          {showUserAvatar && message.role === "user" && (
-            <MessageAvatar className={isMobile ? "" : "absolute top-0 -right-13"} />
-          )}
-        </div>
+            {shouldRenderUserAvatar && (
+              <MessageAvatar className={cn("shrink-0", textParts.length === 0 && "self-start")} />
+            )}
+          </div>
+        )}
       </Message>
     </>
   );

@@ -260,6 +260,7 @@ const math = createMathPlugin({ singleDollarTextMath: true, errorColor: "var(--d
 const supportedLanguages = [
   ...Object.keys(bundledLanguages).filter((language) => !["mermaid"].includes(language)),
   "plaintext",
+  "text",
 ];
 
 export const StreamDownWrapper = memo(function StreamDownWrapper({
