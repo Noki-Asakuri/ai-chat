@@ -14,6 +14,39 @@ import type { ChatMessage } from "@/lib/types";
 const NORMALIZED_INLINE_MATH_TOKEN = "__AICHAT_INLINE_MATH_52C527F2__";
 const NORMALIZED_BLOCK_MATH_TOKEN = "__AICHAT_BLOCK_MATH_52C527F2__";
 
+function normalizeMissingFenceLanguages(text: string): string {
+  const parts = text.split(/(\r?\n)/);
+  let out = "";
+  let inFence = false;
+
+  for (let i = 0; i < parts.length; i += 2) {
+    const line = parts[i] ?? "";
+    const newline = parts[i + 1] ?? "";
+    const trimmedLine = line.trimStart();
+    const isBareTripleBacktickFence = /^```[ \t]*$/.test(trimmedLine);
+
+    if (!inFence && trimmedLine.startsWith("```")) {
+      if (isBareTripleBacktickFence) {
+        const leadingWhitespace = line.slice(0, line.length - trimmedLine.length);
+        out += leadingWhitespace + "```plaintext" + newline;
+      } else {
+        out += line + newline;
+      }
+
+      inFence = true;
+      continue;
+    }
+
+    if (inFence && isBareTripleBacktickFence) {
+      inFence = false;
+    }
+
+    out += line + newline;
+  }
+
+  return out;
+}
+
 function normalizeLatexMathDelimiters(text: string): string {
   const len: number = text.length;
   let out = "";
@@ -224,9 +257,10 @@ type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
 const mermaid = createMermaidPlugin();
 const math = createMathPlugin({ singleDollarTextMath: true, errorColor: "var(--destructive)" });
 
-const supportedLanguages = Object.keys(bundledLanguages).filter(
-  (language) => !["mermaid"].includes(language),
-);
+const supportedLanguages = [
+  ...Object.keys(bundledLanguages).filter((language) => !["mermaid"].includes(language)),
+  "plaintext",
+];
 
 export const StreamDownWrapper = memo(function StreamDownWrapper({
   role,
@@ -235,7 +269,8 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
   ...props
 }: MarkdownProps) {
   const escapedMarkdown = useMemo(() => {
-    const normalizedLatexMarkdown = normalizeLatexMathDelimiters(children);
+    const markdownWithFenceLanguages = normalizeMissingFenceLanguages(children);
+    const normalizedLatexMarkdown = normalizeLatexMathDelimiters(markdownWithFenceLanguages);
     const markdownWithEscapedInvalidMath = escapeInvalidMath(normalizedLatexMarkdown);
     return restoreNormalizedMathDelimiters(markdownWithEscapedInvalidMath);
   }, [children]);
