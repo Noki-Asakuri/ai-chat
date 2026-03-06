@@ -72,7 +72,33 @@ function groupProviderModels(models: Array<VisibleModelEntry>): ProviderModels {
     grouped[model.provider].push(model);
   }
 
+  for (const provider of PROVIDER_ORDER) {
+    grouped[provider].sort(sortEntriesByLabel);
+  }
+
   return grouped;
+}
+
+function appendProviderGroups(
+  groups: Array<ModelGroup>,
+  providerModels: ProviderModels,
+  options?: {
+    keyPrefix?: string;
+    titleSuffix?: string;
+  },
+) {
+  for (const provider of PROVIDER_ORDER) {
+    const models = providerModels[provider];
+    if (models.length === 0) continue;
+
+    const title = prettifyProviderName(provider);
+
+    groups.push({
+      key: options?.keyPrefix ? `${options.keyPrefix}-${provider}` : provider,
+      title: options?.titleSuffix ? `${title} ${options.titleSuffix}` : title,
+      models,
+    });
+  }
 }
 
 function sanitizeFavoriteModels(
@@ -194,6 +220,10 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
     return next;
   }, [sanitizedFavoriteModels, allViewModelMap]);
 
+  const favoriteProviderModels = useMemo(() => {
+    return groupProviderModels(favoriteVisibleModels);
+  }, [favoriteVisibleModels]);
+
   const providerModels = useMemo(() => {
     return groupProviderModels(selectableModels);
   }, [selectableModels]);
@@ -221,28 +251,17 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
     const next: Array<ModelGroup> = [];
 
     if (selectedSection === "favorites") {
-      if (favoriteVisibleModels.length > 0) {
-        next.push({ key: "favorites", title: "Favorites", models: favoriteVisibleModels });
-      }
+      appendProviderGroups(next, favoriteProviderModels, { keyPrefix: "favorites" });
 
       return next;
     }
 
     if (selectedSection === "all") {
-      if (favoriteVisibleModels.length > 0) {
-        next.push({ key: "favorites", title: "Favorites", models: favoriteVisibleModels });
-      }
-
-      for (const provider of PROVIDER_ORDER) {
-        const models = allViewProviderModelsWithoutFavorites[provider];
-        if (models.length === 0) continue;
-
-        next.push({
-          key: provider,
-          title: prettifyProviderName(provider),
-          models,
-        });
-      }
+      appendProviderGroups(next, favoriteProviderModels, {
+        keyPrefix: "favorites",
+        titleSuffix: "Favorites",
+      });
+      appendProviderGroups(next, allViewProviderModelsWithoutFavorites);
 
       return next;
     }
@@ -258,7 +277,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
 
     return next;
   }, [
-    favoriteVisibleModels,
+    favoriteProviderModels,
     providerModels,
     allViewProviderModelsWithoutFavorites,
     selectedSection,
