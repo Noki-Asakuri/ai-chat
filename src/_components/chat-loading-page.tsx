@@ -16,11 +16,14 @@ import { ThreadCommand } from "./threads/thread-command";
 import { ChatTextarea } from "./chat-textarea/main-textarea";
 
 export function ChatLoadingPage() {
-  const { backgroundImage, defaultOpenSidebar } = useLoaderData({ from: "/_chat_layout" });
+  const { backgroundImage, defaultOpenSidebar, disableBlur } = useLoaderData({
+    from: "/_chat_layout",
+  });
 
   return (
     <SidebarProvider
       id="sidebar-provider"
+      data-disable-blur={disableBlur}
       style={{ backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined }}
       className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat"
       defaultOpen={defaultOpenSidebar}

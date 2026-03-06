@@ -1,12 +1,12 @@
 import { api } from "@/convex/_generated/api";
 
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 
 import { PlusIcon } from "lucide-react";
-import { Suspense, useEffect } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { GlobalDropzone } from "@/components/chat/global-dropzone";
 import { LoadingSkeleton } from "@/components/chat/loading-skeleton";
@@ -18,24 +18,93 @@ import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
+import {
+  CHAT_APPEARANCE_COOKIE_NAME,
+  LEGACY_BACKGROUND_IMAGE_COOKIE_NAME,
+  LEGACY_DISABLE_BLUR_COOKIE_NAME,
+  readChatAppearanceFromCookieValues,
+  type ChatAppearance,
+  writeChatAppearanceCookie,
+} from "@/lib/chat/appearance-cookie";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 
-const getCookiesServerFunction = createIsomorphicFn()
-  .server(async () => {
-    const backgroundImage = getCookie("background-image");
-    const disableBlur = getCookie("disable-blur") === "true";
-    const defaultOpenSidebar = getCookie(SIDEBAR_COOKIE_NAME) === "true";
+const BACKGROUND_IMAGE_PREFIX = "https://ik.imagekit.io/gmethsnvl/ai-chat";
 
-    console.log("Server cookies", backgroundImage, defaultOpenSidebar);
-    return { backgroundImage, defaultOpenSidebar, disableBlur };
+type ChatCustomization = {
+  backgroundId?: string | null;
+  disableBlur?: boolean;
+};
+
+type ChatLayoutCookies = ChatAppearance & {
+  defaultOpenSidebar: boolean;
+};
+
+function getBackgroundImageUrl(backgroundId: string): string {
+  return `${BACKGROUND_IMAGE_PREFIX}/${backgroundId}`;
+}
+
+function resolveBackgroundImage(
+  backgroundId: string | null | undefined,
+  fallbackBackgroundImage: string | undefined,
+): string | undefined {
+  if (backgroundId === null) {
+    return undefined;
+  }
+
+  if (backgroundId) {
+    return getBackgroundImageUrl(backgroundId);
+  }
+
+  return fallbackBackgroundImage;
+}
+
+function resolveAppearanceFromCustomization(
+  customization: ChatCustomization,
+  fallbackAppearance: ChatAppearance,
+): ChatAppearance {
+  return {
+    backgroundImage: resolveBackgroundImage(
+      customization.backgroundId,
+      fallbackAppearance.backgroundImage,
+    ),
+    disableBlur: customization.disableBlur ?? fallbackAppearance.disableBlur,
+  };
+}
+
+function toChatLayoutCookies(values: {
+  chatAppearance: string | undefined;
+  backgroundImage: string | undefined;
+  disableBlur: string | undefined;
+  defaultOpenSidebar: string | undefined;
+}): ChatLayoutCookies {
+  const appearance = readChatAppearanceFromCookieValues({
+    chatAppearance: values.chatAppearance,
+    backgroundImage: values.backgroundImage,
+    disableBlur: values.disableBlur,
+  });
+
+  return {
+    ...appearance,
+    defaultOpenSidebar: values.defaultOpenSidebar === "true",
+  };
+}
+
+const getChatLayoutCookies = createIsomorphicFn()
+  .server(async () => {
+    return toChatLayoutCookies({
+      chatAppearance: getCookie(CHAT_APPEARANCE_COOKIE_NAME),
+      backgroundImage: getCookie(LEGACY_BACKGROUND_IMAGE_COOKIE_NAME),
+      disableBlur: getCookie(LEGACY_DISABLE_BLUR_COOKIE_NAME),
+      defaultOpenSidebar: getCookie(SIDEBAR_COOKIE_NAME),
+    });
   })
   .client(async () => {
-    const backgroundImage = (await cookieStore.get("background-image"))?.value;
-    const disableBlur = (await cookieStore.get("disable-blur"))?.value === "true";
-    const defaultOpenSidebar = (await cookieStore.get(SIDEBAR_COOKIE_NAME))?.value === "true";
-
-    console.log("Client cookies", backgroundImage, defaultOpenSidebar);
-    return { backgroundImage, defaultOpenSidebar, disableBlur };
+    return toChatLayoutCookies({
+      chatAppearance: (await cookieStore.get(CHAT_APPEARANCE_COOKIE_NAME))?.value,
+      backgroundImage: (await cookieStore.get(LEGACY_BACKGROUND_IMAGE_COOKIE_NAME))?.value,
+      disableBlur: (await cookieStore.get(LEGACY_DISABLE_BLUR_COOKIE_NAME))?.value,
+      defaultOpenSidebar: (await cookieStore.get(SIDEBAR_COOKIE_NAME))?.value,
+    });
   });
 
 export const Route = createFileRoute("/_chat_layout")({
@@ -51,7 +120,7 @@ export const Route = createFileRoute("/_chat_layout")({
   },
 
   loader: async ({ context }) => {
-    const cookiesDefaultOptions = await getCookiesServerFunction();
+    const cookiesDefaultOptions = await getChatLayoutCookies();
     return { ...cookiesDefaultOptions, user: context.user! };
   },
 
@@ -62,20 +131,28 @@ export const Route = createFileRoute("/_chat_layout")({
 
 function RouteComponent() {
   const { backgroundImage, defaultOpenSidebar, disableBlur } = Route.useLoaderData();
-  const { data } = useQuery(convexSessionQuery(api.functions.users.currentUser));
+  const [appearance, setAppearance] = useState<ChatAppearance>(() => ({
+    backgroundImage,
+    disableBlur,
+  }));
 
-  const backgroundImageUrl =
-    data?.customization.backgroundId === null
-      ? undefined
-      : data?.customization.backgroundId
-        ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization.backgroundId}`
-        : backgroundImage;
+  const handleCustomizationChange = useCallback((customization: ChatCustomization) => {
+    setAppearance((currentAppearance) => {
+      const nextAppearance = resolveAppearanceFromCustomization(customization, currentAppearance);
+      writeChatAppearanceCookie(nextAppearance);
+      return nextAppearance;
+    });
+  }, []);
 
   return (
     <SidebarProvider
       id="sidebar-provider"
-      data-disable-blur={data?.customization.disableBlur ?? disableBlur ?? false}
-      style={{ backgroundImage: backgroundImageUrl ? `url(${backgroundImageUrl})` : undefined }}
+      data-disable-blur={appearance.disableBlur}
+      style={{
+        backgroundImage: appearance.backgroundImage
+          ? `url(${appearance.backgroundImage})`
+          : undefined,
+      }}
       className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat"
       defaultOpen={defaultOpenSidebar}
     >
@@ -100,7 +177,7 @@ function RouteComponent() {
         </div>
 
         <Suspense fallback={<LoadingSkeleton />}>
-          <ChatComponentPage />
+          <ChatComponentPage onCustomizationChange={handleCustomizationChange} />
         </Suspense>
       </GlobalDropzone>
 
@@ -109,30 +186,29 @@ function RouteComponent() {
   );
 }
 
-function ChatComponentPage() {
+type ChatComponentPageProps = {
+  onCustomizationChange: (customization: ChatCustomization) => void;
+};
+
+function ChatComponentPage({ onCustomizationChange }: ChatComponentPageProps) {
   const { data } = useSuspenseQuery(convexSessionQuery(api.functions.users.currentUser));
+  const customization = data?.customization;
 
   useEffect(() => {
-    if (data?.customization.backgroundId) {
-      const url = `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.customization.backgroundId}`;
-      document.cookie = `background-image=${url}; path=/;`;
-    } else {
-      document.cookie = `background-image=; path=/;`;
-    }
+    if (!customization) return;
 
-    if (data?.customization.disableBlur) {
-      document.cookie = `disable-blur=true; path=/;`;
-    } else {
-      document.cookie = `disable-blur=false; path=/;`;
-    }
-  }, [data?.customization]);
+    onCustomizationChange({
+      backgroundId: customization.backgroundId,
+      disableBlur: customization.disableBlur,
+    });
+  }, [customization, onCustomizationChange]);
 
   return (
     <ConfigStoreProvider
       initialState={{
-        hiddenModels: data?.customization.hiddenModels ?? [],
-        favoriteModels: data?.customization.favoriteModels ?? [],
-        defaultShowFullCode: data?.customization.showFullCode,
+        hiddenModels: customization?.hiddenModels ?? [],
+        favoriteModels: customization?.favoriteModels ?? [],
+        defaultShowFullCode: customization?.showFullCode,
       }}
     >
       <Outlet />

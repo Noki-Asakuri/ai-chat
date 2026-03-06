@@ -1,6 +1,4 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
 
 import { z } from "zod/v4";
 
@@ -9,11 +7,6 @@ import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import { UserNavbar } from "@/components/user/navbar";
 
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
-
-const getCookiesServerFunction = createServerFn({ method: "GET" }).handler(async () => {
-  const backgroundImage = getCookie("background-image");
-  return { backgroundImage };
-});
 
 export const Route = createFileRoute("/settings")({
   validateSearch: z.object({
@@ -35,8 +28,7 @@ export const Route = createFileRoute("/settings")({
   },
 
   loader: async ({ context }) => {
-    const { backgroundImage } = await getCookiesServerFunction();
-    return { user: context.user, backgroundImage };
+    return { user: context.user };
   },
   component: AuthLayout,
 });
@@ -47,10 +39,10 @@ function AuthLayout() {
       <div className="grid h-full min-h-0 w-full gap-2 md:gap-4 lg:grid-cols-[300px_1fr]">
         <SettingsSidebar />
 
-        <div className="flex min-h-0 min-w-0 max-w-full flex-col">
+        <div className="flex min-h-0 max-w-full min-w-0 flex-col">
           <UserNavbar />
 
-          <div className="custom-scroll isolate z-10 flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col gap-1 overflow-visible pr-3 lg:overflow-y-auto [&>div:not(:first-child)]:pl-1">
+          <div className="custom-scroll isolate z-10 flex min-h-0 w-full max-w-full min-w-0 flex-1 flex-col gap-1 overflow-visible pr-3 lg:overflow-y-auto [&>div:not(:first-child)]:pl-1">
             <SettingsRouteHeader />
             <Outlet />
           </div>

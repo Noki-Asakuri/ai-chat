@@ -92,6 +92,7 @@ export type AccountSession = {
   ipAddress: string | null;
   userAgent: string | null;
   authMethod:
+    | "cross_app_auth"
     | "external_auth"
     | "impersonation"
     | "magic_code"
