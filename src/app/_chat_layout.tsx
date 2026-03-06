@@ -1,3 +1,5 @@
+import "streamdown/styles.css";
+
 import { api } from "@/convex/_generated/api";
 
 import { useSuspenseQuery } from "@tanstack/react-query";

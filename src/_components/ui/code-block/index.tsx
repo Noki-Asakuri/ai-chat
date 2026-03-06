@@ -1,5 +1,6 @@
 import { code as codePlugin, type HighlightOptions, type HighlightResult } from "@streamdown/code";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import type { CustomRendererProps } from "streamdown";
 
 import { Icons } from "../icons";
 
@@ -7,7 +8,6 @@ import { CodeBlockBody } from "./body";
 import { CodeBlockContainer } from "./container";
 import { CodeBlockProvider } from "./context";
 import { CodeBlockHeader } from "./header";
-import { InlineCodeBlock } from "./inline-codeblock";
 
 type LanguageData = {
   name: string;
@@ -44,13 +44,8 @@ export const LANGUAGE_DISPLAY_NAME: Record<string, LanguageData> = {
   sh: { name: "Shell" },
 };
 
-export function CodeBlock({ className, children }: React.ComponentProps<"code">) {
-  const code = String(children).replace(TRAILING_NEWLINES_REGEX, "");
-
-  const isInline = !code.includes("\n");
-  const language = /language-(\w+)/.exec(className ?? "")?.[1] ?? "plaintext";
-
-  if (isInline) return <InlineCodeBlock language={language} code={code} />;
+export function CodeBlock({ code: rawCode, language }: CustomRendererProps) {
+  const code = String(rawCode).replace(TRAILING_NEWLINES_REGEX, "");
   return <HighlightedCodeBlock language={language} code={code} />;
 }
 
@@ -153,3 +148,5 @@ function HighlightedCodeBlock({ language, code }: HighlightedCodeBlockProps) {
     </CodeBlockProvider>
   );
 }
+
+export { InlineCodeBlock } from "./inline-codeblock";
