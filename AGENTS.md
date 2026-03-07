@@ -62,6 +62,10 @@ If the type checking failing due to unrelated change not related to the task, ig
 
 This project uses Convex for database. After updating anything inside `convex/` folder, make sure to run `bun check` to ensure the type generation is correct. But do not run any codegen scripts, just tell the user to update the generated types after the task is done.
 
+### React
+
+This project have React Compiler enabled. So avoid manually adding memoization or optimization for React components, unless it's a clear performance bottleneck. Focus on following the rules of react and let the compiler handle the optimizations. Docs: https://react.dev/reference/rules
+
 ## Comments
 
 Comment are for clarifying complex logic or workarounds, not for describing what the code does.
