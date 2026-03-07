@@ -75,9 +75,7 @@ function SharedThreadPage() {
     );
   }
 
-  const payload = data as SharedQueryResult;
-
-  return <SharedThreadViewer data={payload} isFetching={isFetching} onRefresh={refetch} />;
+  return <SharedThreadViewer data={data} isFetching={isFetching} onRefresh={refetch} />;
 }
 
 function SharedThreadViewer(props: {
@@ -120,7 +118,7 @@ function SharedThreadViewer(props: {
       : "Live mode: this view updates as new messages are added.";
 
   return (
-    <div className="relative min-h-dvh bg-background">
+    <div className="relative flex min-h-dvh flex-col bg-background">
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
@@ -148,14 +146,23 @@ function SharedThreadViewer(props: {
         </div>
       </header>
 
-      <main className="relative mx-auto h-[calc(100dvh-61px)] w-full max-w-5xl">
-        <ReadOnlyMessageHistory />
+      <main className="relative mx-auto flex min-h-0 w-full max-w-5xl flex-1">
+        <ReadOnlyMessageHistory
+          userIdentity={{
+            displayName: data.user.displayName,
+            avatarUrl: data.user.avatarUrl,
+          }}
+        />
       </main>
     </div>
   );
 }
 
-function ReadOnlyMessageHistory() {
+function ReadOnlyMessageHistory({
+  userIdentity,
+}: {
+  userIdentity: { displayName: string; avatarUrl?: string | null };
+}) {
   const messageCount = useMessageStore((state) => state.messageIds.length);
 
   if (messageCount === 0) {
@@ -166,7 +173,7 @@ function ReadOnlyMessageHistory() {
     );
   }
 
-  return <MessageHistory readOnly showUserAvatar={false} bottomPaddingPx={64} />;
+  return <MessageHistory readOnly userIdentity={userIdentity} bottomPaddingPx={64} />;
 }
 
 function PrivateShareGate({ shareId }: { shareId: string }) {

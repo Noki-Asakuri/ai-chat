@@ -115,25 +115,25 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
     .join("\n\n");
 
   return (
-    <div className="flex items-center gap-0.5 rounded-md border bg-background/80 p-1 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
+    <div className="flex items-center gap-0.5 rounded-md border border-border/70 bg-card/95 p-0.5 shadow-lg backdrop-blur-xl backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-border/70">
       {isFinished && (
         <>
           <CopyButton
-            side="bottom"
-            className="size-8"
+            side="top"
+            className="size-7"
             content={message.status === "error" ? message.error || "" : content}
           />
 
           {message.role === "assistant" && (
             <ButtonWithTip
               variant="ghost"
-              side="bottom"
-              className="size-8"
-              onMouseDown={() => branchThread(message._id)}
+              side="top"
+              className="size-7"
+              onClick={() => branchThread(message._id)}
               title="Branch off at this message"
               disabled={message.status === "pending" || message.status === "streaming"}
             >
-              <SplitIcon className="size-4 rotate-180" />
+              <SplitIcon className="size-3.5 rotate-180" />
             </ButtonWithTip>
           )}
 
@@ -141,7 +141,7 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
             <MessageRetryMenu
               userMessageId={retryUserMessageId}
               message={message}
-              className="size-8"
+              className="size-7"
             />
           )}
         </>
@@ -173,12 +173,12 @@ function DebugButton({ messageId }: { messageId: Id<"messages"> }) {
   return (
     <ButtonWithTip
       variant="ghost"
-      side="bottom"
-      className="size-8"
+      side="top"
+      className="size-7"
       title="Debug"
       onClick={handleDebug}
     >
-      <BugPlayIcon className="size-4" />
+      <BugPlayIcon className="size-3.5" />
       <span className="sr-only">Debug</span>
     </ButtonWithTip>
   );
@@ -236,13 +236,13 @@ function EditButton({ message }: { message: ChatMessage }) {
   return (
     <ButtonWithTip
       variant="ghost"
-      side="bottom"
-      className="size-8"
+      side="top"
+      className="size-7"
       onClick={handleEditMessage}
       disabled={isPending}
       title="Edit Message"
     >
-      <PencilIcon className="size-4" />
+      <PencilIcon className="size-3.5" />
       <span className="sr-only">Edit Message</span>
     </ButtonWithTip>
   );
@@ -493,13 +493,13 @@ function DeleteButton({ message }: { message: ChatMessage }) {
     <>
       <ButtonWithTip
         variant="ghost"
-        side="bottom"
-        className="size-8"
+        side="top"
+        className="size-7"
         onClick={() => handleOpenChange(true)}
         disabled={disabled}
         title={deleteButtonTitle}
       >
-        <Trash2Icon className="size-4" />
+        <Trash2Icon className="size-3.5" />
         <span className="sr-only">{deleteButtonSrLabel}</span>
       </ButtonWithTip>
 

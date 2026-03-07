@@ -435,6 +435,11 @@ export const getSharedThread = query({
     const thread = await ctx.db.get(share.threadId);
     if (!thread) throw new Error("Shared thread not found");
 
+    const ownerUser = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", thread.userId))
+      .unique();
+
     let viewerUser: Doc<"users"> | null = null;
 
     if (sessionId) {
@@ -584,9 +589,20 @@ export const getSharedThread = query({
         _id: thread._id,
         title: thread.title,
       },
+      user: {
+        displayName: getSharedThreadUserDisplayName(ownerUser),
+        avatarUrl: ownerUser?.imageUrl ?? null,
+      },
       messages: canonicalMessages,
       allMessages,
       variantMessageIdsByUserMessageId,
     };
   },
 });
+
+function getSharedThreadUserDisplayName(user: Doc<"users"> | null): string {
+  if (!user?.username) return "User";
+
+  const username = user.username.trim();
+  return username.length > 0 ? username : "User";
+}

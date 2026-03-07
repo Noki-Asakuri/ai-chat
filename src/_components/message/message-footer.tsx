@@ -1,5 +1,4 @@
-import { MessageActionButtons, MessageVariantPager } from "./message-action-buttons";
-import { MessageMetadata } from "./message-metadata";
+import { MessageVariantPager } from "./message-action-buttons";
 
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -11,27 +10,17 @@ type MessageFooterProps = {
 };
 
 export function MessageFooter({ isLast, message, readOnly = false }: MessageFooterProps) {
-  const isFinished = message.status === "complete" || message.status === "error";
+  if (message.role !== "assistant") return null;
 
   return (
     <div
       className={cn(
-        "flex w-full items-center gap-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100",
-        "group-has-[button[aria-expanded=true]]:opacity-100",
-        {
-          "justify-end bg-transparent": message.role === "user",
-          "opacity-100": isLast,
-        },
+        "flex w-full items-center justify-center gap-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 max-md:opacity-100",
+        "mt-2 w-full items-center group-has-[button[aria-expanded=true]]:opacity-100",
+        { "opacity-100": isLast },
       )}
     >
-      {!readOnly && <MessageActionButtons message={message} isFinished={isFinished} />}
-
-      {message.role === "assistant" && (
-        <MessageMetadata
-          metadata={message.metadata}
-          rightAccessory={readOnly ? undefined : <MessageVariantPager message={message} />}
-        />
-      )}
+      {!readOnly && <MessageVariantPager message={message} />}
     </div>
   );
 }

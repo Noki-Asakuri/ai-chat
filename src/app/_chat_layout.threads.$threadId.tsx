@@ -3,12 +3,13 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useLoaderData, useParams } from "@tanstack/react-router";
 import { Suspense, useEffect, useEffectEvent, useState } from "react";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { LoadingSkeleton } from "@/components/chat/loading-skeleton";
 import { MessageHistory } from "@/components/message/message-history";
+import { buildMessageUserIdentity } from "@/components/message/message-identity";
 import { useConfigStoreState } from "@/components/provider/config-provider";
 
 import { useAutoResumeStream } from "@/lib/chat/server-function/auto-resume-stream";
@@ -56,10 +57,12 @@ function ChatComponentPage() {
 }
 
 function ChatHistory() {
+  const { user } = useLoaderData({ from: "/_chat_layout" });
   const params = useParams({ from: "/_chat_layout/threads/$threadId" });
   const threadId = fromUUID<Id<"threads">>(params.threadId);
   const { autoResumeStream } = useAutoResumeStream();
   const configStore = useConfigStoreState();
+  const userIdentity = buildMessageUserIdentity(user);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [hasLoadedOlderPages, setHasLoadedOlderPages] = useState(false);
   const [olderBeforeCreatedAt, setOlderBeforeCreatedAt] = useState<number | null>(null);
@@ -196,6 +199,7 @@ function ChatHistory() {
       hasOlderMessages={hasOlderMessages}
       isLoadingOlderMessages={isLoadingOlderMessages}
       onLoadOlderMessages={handleLoadOlderMessages}
+      userIdentity={userIdentity}
     />
   );
 }

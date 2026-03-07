@@ -85,13 +85,13 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
       <Menu.Trigger
         title="Retry Message"
         data-slot="message-retry-trigger"
-        render={<ButtonWithTip side="bottom" variant="ghost" />}
+        render={<ButtonWithTip side="top" variant="ghost" />}
         disabled={pendingRetry}
         onMouseDown={handleMouseDown}
         onContextMenu={handleContextMenu}
         {...props}
       >
-        <RefreshCcwIcon className="size-4" />
+        <RefreshCcwIcon className="size-3.5" />
       </Menu.Trigger>
 
       <Menu.Portal>

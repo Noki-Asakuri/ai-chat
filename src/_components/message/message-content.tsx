@@ -1,120 +1,115 @@
-import {
-  Message,
-  MessageAvatar,
-  MessageContent as MessageContentElement,
-} from "../ui/ai-elements/message";
+import { Message } from "../ui/ai-elements/message";
 
 import { MessageAttachmentsDisplay } from "./message-attachments-display";
+import {
+  getMessageIdentity,
+  MessageIdentityAvatar,
+  MessageIdentityHeader,
+} from "./message-identity";
 import { StreamDownWrapper } from "./message-markdown";
+import { MessageMetadata } from "./message-metadata";
 import { MessageReasoning } from "./message-reasoning";
 
-import { useIsMobile } from "@/lib/hooks/use-mobile";
-import type { ChatMessage } from "@/lib/types";
+import type { ChatMessage, MessageUserIdentity } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type MessageContentProps = {
   message: ChatMessage;
-  showUserAvatar?: boolean;
+  userIdentity: MessageUserIdentity;
 };
 
-export function MessageContent({ message, showUserAvatar = true }: MessageContentProps) {
-  const isMobile = useIsMobile();
+export function MessageContent({ message, userIdentity }: MessageContentProps) {
   const parts = message.parts ?? [];
+  const identity = getMessageIdentity(message, userIdentity);
 
   if (message.status === "error") {
     const error = message.error?.length
       ? message.error
       : "An error have occurred. Please try again.";
 
-    return <MessageError message={error} />;
+    return <MessageError identity={identity} message={error} role={message.role} />;
   }
 
   const textParts = parts.filter((part) => part.type === "text");
   const fileParts = parts.filter((part) => part.type === "file");
   const reasoningParts = parts.filter((part) => part.type === "reasoning");
 
-  const shouldRenderUserAvatar = showUserAvatar && message.role === "user";
-  const hasRenderableContent =
-    textParts.length > 0 || fileParts.length > 0 || reasoningParts.length > 0;
-
-  const shouldRenderMessageBody = textParts.length > 0 || shouldRenderUserAvatar;
-  const shouldReserveUserAvatarSpace = shouldRenderUserAvatar && textParts.length > 0;
-
-  if (!hasRenderableContent && !shouldRenderUserAvatar) return null;
-
   return (
-    <>
-      <MessageReasoning
-        parts={reasoningParts}
-        status={message.status}
-        metadata={message.metadata}
-      />
+    <Message from={message.role}>
+      <div className="flex h-full shrink-0 flex-col items-center justify-between gap-2 pt-0.5">
+        <MessageIdentityAvatar identity={identity} />
+        <MessageMetadata metadata={message.metadata} />
+      </div>
 
-      <Message
-        from={message.role}
-        className="relative flex-col items-end [.is-assistant]:flex-col-reverse [.is-assistant]:items-start"
-      >
-        <MessageAttachmentsDisplay
-          parts={fileParts}
-          role={message.role}
-          messageId={message._id}
-          className={cn(
-            shouldRenderUserAvatar && "self-end",
-            shouldReserveUserAvatarSpace && "max-w-[calc(100%-3.25rem)]",
-            isMobile && shouldRenderUserAvatar && "mr-13",
-          )}
+      <div className="min-w-0 flex-1 space-y-2">
+        <MessageIdentityHeader identity={identity} />
+
+        <MessageReasoning
+          parts={reasoningParts}
+          status={message.status}
+          metadata={message.metadata}
+          className="w-full"
         />
 
-        {shouldRenderMessageBody && (
-          <div
-            className={cn("relative flex items-start gap-2", {
-              "w-full": message.role === "assistant",
-              "max-w-full justify-end self-end": message.role === "user",
-            })}
-          >
-            {textParts.length > 0 && (
+        {textParts.length > 0 && (
+          <div className="flex min-w-0 flex-col gap-3">
+            {textParts.map((part, index) => (
               <div
-                className={cn("flex min-w-0 flex-col gap-2", {
-                  "w-full": message.role === "assistant",
-                  "max-w-[calc(100%-3.25rem)]": shouldReserveUserAvatarSpace,
-                })}
+                key={`${message._id}-${index}`}
+                className={cn("w-full", message.role === "assistant" && "text-foreground")}
               >
-                {textParts.map((part, i) => (
-                  <MessageContentElement
-                    key={`${message._id}-${i}`}
-                    className="backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
-                  >
-                    <StreamDownWrapper
-                      isAnimating={part.state === "streaming"}
-                      role={message.role}
-                      className={message.role === "user" ? "whitespace-pre-wrap" : undefined}
-                    >
-                      {part.text}
-                    </StreamDownWrapper>
-                  </MessageContentElement>
-                ))}
+                <StreamDownWrapper
+                  isAnimating={part.state === "streaming"}
+                  role={message.role}
+                  className={message.role === "user" ? "whitespace-pre-wrap" : undefined}
+                >
+                  {part.text}
+                </StreamDownWrapper>
               </div>
-            )}
-
-            {shouldRenderUserAvatar && (
-              <MessageAvatar className={cn("shrink-0", textParts.length === 0 && "self-start")} />
-            )}
+            ))}
           </div>
         )}
-      </Message>
-    </>
+
+        {fileParts.length > 0 && (
+          <MessageAttachmentsDisplay
+            parts={fileParts}
+            role={message.role}
+            messageId={message._id}
+            className="w-full"
+          />
+        )}
+      </div>
+    </Message>
   );
 }
 
-function MessageError({ message }: { message: string }) {
+function MessageError({
+  identity,
+  message,
+  role,
+}: {
+  identity: ReturnType<typeof getMessageIdentity>;
+  message: string;
+  role: ChatMessage["role"];
+}) {
   return (
-    <div
-      data-slot="message-error"
-      className="rounded-md bg-destructive/80 px-4 py-2 text-destructive-foreground backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-destructive"
-    >
-      <StreamDownWrapper role="assistant" isAnimating={false}>
-        {message}
-      </StreamDownWrapper>
-    </div>
+    <Message from={role}>
+      <div className="flex shrink-0 pt-0.5">
+        <MessageIdentityAvatar identity={identity} />
+      </div>
+
+      <div className="min-w-0 flex-1 space-y-2">
+        <MessageIdentityHeader identity={identity} />
+
+        <div
+          data-slot="message-error"
+          className="max-w-3xl rounded-xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-destructive backdrop-blur-md backdrop-saturate-150"
+        >
+          <StreamDownWrapper role={role} isAnimating={false}>
+            {message}
+          </StreamDownWrapper>
+        </div>
+      </div>
+    </Message>
   );
 }

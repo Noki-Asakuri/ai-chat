@@ -25,8 +25,8 @@ import {
   LEGACY_BACKGROUND_IMAGE_COOKIE_NAME,
   LEGACY_DISABLE_BLUR_COOKIE_NAME,
   readChatAppearanceFromCookieValues,
-  type ChatAppearance,
   writeChatAppearanceCookie,
+  type ChatAppearance,
 } from "@/lib/chat/appearance-cookie";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 
@@ -150,6 +150,7 @@ function RouteComponent() {
     <SidebarProvider
       id="sidebar-provider"
       data-disable-blur={appearance.disableBlur}
+      data-has-background={!!appearance.backgroundImage}
       style={{
         backgroundImage: appearance.backgroundImage
           ? `url(${appearance.backgroundImage})`
@@ -164,7 +165,7 @@ function RouteComponent() {
         data-slot="chat"
         className="relative inset-0 h-dvh w-screen overflow-hidden border-x"
       >
-        <div className="absolute top-0 z-10 flex h-10 w-full max-w-full items-center gap-2 border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar">
+        <div className="absolute top-0 z-9999 flex h-10 w-full max-w-full items-center gap-2 border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar">
           <SidebarTrigger />
 
           <Link

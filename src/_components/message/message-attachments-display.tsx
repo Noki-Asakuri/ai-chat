@@ -74,7 +74,7 @@ export function MessageAttachmentsDisplay({
 
             return (
               <ImageLightboxTrigger index={imageIndex} key={`${messageId}-attachment-${index}`}>
-                <div className="size-40 overflow-hidden rounded-md">
+                <div className="size-16 overflow-hidden rounded-md">
                   <img
                     src={thumbnailUrl}
                     alt={extractNameFromUrl(part.url)}

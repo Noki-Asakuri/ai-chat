@@ -9,6 +9,7 @@ import {
   scrollToBottomIfStickyRaf,
   updateStickyToBottomFromScroll,
 } from "@/lib/chat/scroll-stickiness";
+import type { MessageUserIdentity } from "@/lib/types";
 import { useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 
@@ -17,18 +18,22 @@ export function MessageHistory({
   isLoadingOlderMessages = false,
   onLoadOlderMessages,
   readOnly = false,
-  showUserAvatar = true,
+  userIdentity,
   bottomPaddingPx,
 }: {
   hasOlderMessages?: boolean;
   isLoadingOlderMessages?: boolean;
   onLoadOlderMessages?: () => Promise<void> | void;
   readOnly?: boolean;
-  showUserAvatar?: boolean;
+  userIdentity?: MessageUserIdentity;
   bottomPaddingPx?: number;
 }) {
   const textareaHeight = useChatStore((state) => state.textareaHeight);
   const resolvedBottomPadding = bottomPaddingPx ?? textareaHeight;
+  const resolvedUserIdentity = userIdentity ?? {
+    displayName: "User",
+    avatarUrl: undefined,
+  };
 
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -97,7 +102,7 @@ export function MessageHistory({
       <div
         ref={contentRef}
         data-slot="message-history"
-        className="mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 pt-12"
+        className="mx-auto min-h-full max-w-6xl space-y-10 px-3 pt-20 md:px-6"
         style={{ paddingBottom: `${resolvedBottomPadding}px` }}
       >
         {hasOlderMessages && (
@@ -120,7 +125,7 @@ export function MessageHistory({
           </div>
         )}
 
-        <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />
+        <Messages readOnly={readOnly} userIdentity={resolvedUserIdentity} />
       </div>
     </div>
   );
@@ -128,10 +133,10 @@ export function MessageHistory({
 
 function Messages({
   readOnly = false,
-  showUserAvatar = true,
+  userIdentity,
 }: {
   readOnly?: boolean;
-  showUserAvatar?: boolean;
+  userIdentity: MessageUserIdentity;
 }) {
   const messages = useMessageStore((state) => state.messageIds);
 
@@ -142,7 +147,7 @@ function Messages({
       index={index}
       total={messages.length}
       readOnly={readOnly}
-      showUserAvatar={showUserAvatar}
+      userIdentity={userIdentity}
     />
   ));
 }

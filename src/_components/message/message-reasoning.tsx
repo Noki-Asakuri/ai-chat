@@ -9,9 +9,10 @@ type ThinkingToggleProps = {
   parts: ReasoningUIPart[];
   status: ChatMessage["status"];
   metadata: ChatMessage["metadata"];
+  className?: string;
 };
 
-export function MessageReasoning({ parts, status, metadata }: ThinkingToggleProps) {
+export function MessageReasoning({ parts, status, metadata, className }: ThinkingToggleProps) {
   if (!metadata) return null;
 
   const modelData = tryGetModelData(metadata.model.request);
@@ -30,15 +31,16 @@ export function MessageReasoning({ parts, status, metadata }: ThinkingToggleProp
       defaultOpen={false}
       duration={metadata.durations.reasoning}
       isStreaming={isReasoningStreaming}
+      className={className}
     >
       <ReasoningTrigger
         disabled={reasoning.length === 0}
         showArrow={reasoning.length > 0}
-        className="w-max rounded-md bg-background/80 p-2 backdrop-blur-md backdrop-contrast-150"
+        className="w-max rounded-full border border-border/60 bg-card/70 px-3 py-1.5 backdrop-blur-md backdrop-contrast-150"
       />
 
       {reasoning.length > 0 && (
-        <ReasoningContent className="w-full space-y-3 rounded-md border bg-card/80 p-3 backdrop-blur-md backdrop-contrast-150">
+        <ReasoningContent className="w-full space-y-3 rounded-2xl border border-border/60 bg-card/80 p-4 backdrop-blur-md backdrop-contrast-150">
           {reasoning}
         </ReasoningContent>
       )}

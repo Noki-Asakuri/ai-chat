@@ -11,6 +11,11 @@ type ReasoningEffort = NonNullable<Doc<"messages">["metadata"]>["modelParams"]["
 
 type UserAttachment = { id: string; file: File; type: "image" | "pdf" };
 
+type MessageUserIdentity = {
+  displayName: string;
+  avatarUrl?: string | null;
+};
+
 type ChatMessage = Omit<Doc<"messages">, "attachments"> & {
   attachments: Doc<"attachments">[];
 };
@@ -54,6 +59,7 @@ export type {
   ReasoningEffort,
   Thread,
   UIChatMessage,
+  MessageUserIdentity,
   UserAttachment,
   RemoveFunctions,
   RemoveAllExceptFunctions,

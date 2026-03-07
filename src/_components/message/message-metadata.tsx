@@ -12,57 +12,41 @@ import {
   ZapIcon,
 } from "lucide-react";
 
-import { Icons } from "@/components/ui/icons";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+import { Icons } from "@/components/ui/icons";
 
 import { tryGetModelData } from "@/lib/chat/models";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
-import type { ReactNode } from "react";
-
 type MessageMetadataProps = {
   metadata: ChatMessage["metadata"];
-  rightAccessory?: ReactNode;
 };
 
-export function MessageMetadata({ metadata, rightAccessory }: MessageMetadataProps) {
+export function MessageMetadata({ metadata }: MessageMetadataProps) {
   if (!metadata) return null;
 
   const modelData = tryGetModelData(metadata.model.request);
   if (!modelData) return null;
 
-  const hasFullMetadata = metadata.usages.inputTokens > 0;
+  const hasFullMetadata =
+    metadata.usages.inputTokens > 0 ||
+    metadata.usages.outputTokens > 0 ||
+    metadata.usages.reasoningTokens > 0 ||
+    metadata.durations.request > 0 ||
+    metadata.durations.text > 0 ||
+    (metadata.timeToFirstTokenMs ?? 0) > 0;
 
-  const showEffort =
-    typeof modelData.capabilities.reasoning === "boolean" &&
-    modelData.capabilities.reasoning === true &&
-    metadata.modelParams.effort &&
-    metadata.modelParams.effort !== "medium";
+  if (!hasFullMetadata) return null;
 
-  return (
-    <div className="flex h-full w-full items-center justify-between">
-      <div className="flex h-10.5 items-center justify-center gap-2 rounded-md border bg-background/80 p-2 backdrop-blur-md backdrop-saturate-150">
-        <Icons.provider provider={modelData?.provider} className="size-4 rounded-md" />
-        {modelData?.display.name}{" "}
-        {showEffort && <span className="text-sm capitalize">({metadata.modelParams.effort})</span>}
-      </div>
-
-      {(rightAccessory || hasFullMetadata) && (
-        <div className="flex items-center gap-2">
-          {rightAccessory}
-          {hasFullMetadata && <PopoverInfo metadata={metadata} />}
-        </div>
-      )}
-    </div>
-  );
+  return <PopoverInfo metadata={metadata} />;
 }
 
 type PopoverInfoProps = { metadata: ChatMessage["metadata"] };
 
 function PopoverInfo({ metadata }: PopoverInfoProps) {
   const queryClient = useQueryClient();
-
   if (!metadata) return null;
 
   function getProfile() {
@@ -75,10 +59,11 @@ function PopoverInfo({ metadata }: PopoverInfoProps) {
     return data?.find((p) => p._id === metadata.modelParams.profile) ?? null;
   }
 
-  const tokPerSec = (
-    (metadata.usages.outputTokens + metadata.usages.reasoningTokens) /
-    (metadata.durations.text / 1000)
-  ).toFixed(2);
+  const outputTokenCount = metadata.usages.outputTokens + metadata.usages.reasoningTokens;
+  const tokPerSec =
+    metadata.durations.text > 0
+      ? (outputTokenCount / (metadata.durations.text / 1000)).toFixed(2)
+      : null;
 
   return (
     <Popover>
@@ -89,15 +74,20 @@ function PopoverInfo({ metadata }: PopoverInfoProps) {
       <PopoverContent
         className="w-max bg-card p-2 text-sm"
         align="end"
+        side="left"
         sideOffset={12}
         includeArrow={false}
       >
         <PopoverArrow className="fill-card" />
 
         <div className="grid grid-cols-1 gap-x-4 gap-y-2">
-          <div data-slot="metadata-tok-per-sec" className="flex items-center gap-2">
+          <div
+            data-slot="metadata-tok-per-sec"
+            className="flex items-center gap-2"
+            hidden={tokPerSec === null}
+          >
             <ZapIcon className="size-4" />
-            <span>Speed: {tokPerSec} tok/sec</span>
+            <span>Speed: {tokPerSec ?? "-"} tok/sec</span>
           </div>
 
           <div
