@@ -11,6 +11,8 @@ import {
   ImagesIcon,
   XIcon,
 } from "lucide-react";
+import type { Transition } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -24,6 +26,8 @@ export function extractNameFromUrl(url: string) {
 export type LightboxImage = {
   id?: string;
   src: string;
+  clipboardSrc?: string;
+  downloadSrc?: string;
   thumbnailSrc?: string;
   alt?: string;
   name?: string;
@@ -93,6 +97,9 @@ type ImageLightboxDialogProps = {
   initialIndex: number;
 };
 
+type ImageLoadState = "loading" | "loaded" | "error";
+type NavigationDirection = -1 | 0 | 1;
+
 function ImageLightboxDialog(props: ImageLightboxDialogProps) {
   const { images, initialIndex } = props;
 
@@ -102,9 +109,15 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
   const [naturalSize, setNaturalSize] = React.useState<{ width: number; height: number } | null>(
     null,
   );
+  const [imageLoadState, setImageLoadState] = React.useState<ImageLoadState>("loading");
+  const [retryVersion, setRetryVersion] = React.useState(0);
+  const [navigationDirection, setNavigationDirection] = React.useState<NavigationDirection>(0);
 
   const zoomRef = React.useRef<ZoomableImageHandle | null>(null);
   const thumbsRef = React.useRef<HTMLDivElement | null>(null);
+  const dialogTitleId = React.useId();
+  const dialogDescriptionId = React.useId();
+  const prefersReducedMotion = useReducedMotion();
 
   React.useEffect(() => {
     setActiveIndex(wrapIndex(initialIndex, images.length));
@@ -113,39 +126,49 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
   React.useEffect(() => {
     zoomRef.current?.reset();
     setNaturalSize(null);
+    setImageLoadState("loading");
   }, [activeIndex]);
 
   React.useEffect(() => {
     setActiveIndex((i) => wrapIndex(i, images.length));
   }, [images.length]);
 
+  const hasMultipleImages = images.length > 1;
+
   const goPrev = React.useCallback(() => {
+    if (!hasMultipleImages) return;
+    setNavigationDirection(-1);
     setActiveIndex((i) => wrapIndex(i - 1, images.length));
-  }, [images.length]);
+  }, [hasMultipleImages, images.length]);
 
   const goNext = React.useCallback(() => {
+    if (!hasMultipleImages) return;
+    setNavigationDirection(1);
     setActiveIndex((i) => wrapIndex(i + 1, images.length));
-  }, [images.length]);
+  }, [hasMultipleImages, images.length]);
 
   const onThumbClick = React.useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (!hasMultipleImages) return;
       const raw = e.currentTarget.dataset.index;
       const idx = raw ? Number(raw) : Number.NaN;
       if (!Number.isFinite(idx)) return;
+      setNavigationDirection(getShortestNavigationDirection(activeIndex, idx, images.length));
       setActiveIndex(wrapIndex(idx, images.length));
     },
-    [images.length],
+    [activeIndex, hasMultipleImages, images.length],
   );
 
   React.useEffect(() => {
+    if (!hasMultipleImages) return;
     const el = thumbsRef.current?.querySelector<HTMLButtonElement>(
       `button[data-index="${activeIndex}"]`,
     );
     el?.scrollIntoView({ block: "nearest", inline: "center" });
-  }, [activeIndex]);
+  }, [activeIndex, hasMultipleImages]);
 
   React.useEffect(() => {
-    if (images.length < 2) return;
+    if (!hasMultipleImages) return;
     const next = images[wrapIndex(activeIndex + 1, images.length)];
     const prev = images[wrapIndex(activeIndex - 1, images.length)];
 
@@ -158,29 +181,32 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
     const img2 = new Image();
     img2.decoding = "async";
     img2.src = prev!.src;
-  }, [activeIndex, images]);
+  }, [activeIndex, hasMultipleImages, images]);
 
-  React.useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      const target = e.target;
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+  const handleDialogKeyDown = React.useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!hasMultipleImages) return;
+
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (shouldIgnoreLightboxArrowKeyTarget(e.target)) return;
 
       if (e.key === "ArrowLeft") {
         e.preventDefault();
+        e.stopPropagation();
         goPrev();
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
+        e.stopPropagation();
         goNext();
       }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [goPrev, goNext]);
+    },
+    [goPrev, goNext, hasMultipleImages],
+  );
 
   if (images.length === 0) return null;
 
   const active = images[activeIndex]!;
+  const activeTitle = active.name ?? "Image viewer";
 
   const resolvedWidth = active.width ?? naturalSize?.width;
   const resolvedHeight = active.height ?? naturalSize?.height;
@@ -189,16 +215,49 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
   if (typeof active.bytes === "number") metaParts.push(format.size(active.bytes));
   if (resolvedWidth && resolvedHeight) metaParts.push(`${resolvedWidth}×${resolvedHeight}`);
   const meta = metaParts.join(" · ");
+  const imagePositionLabel = hasMultipleImages
+    ? `${activeIndex + 1} of ${images.length}`
+    : "Single image";
+  const liveMessageParts = [imagePositionLabel, activeTitle, meta].filter(Boolean);
+  const liveMessage = liveMessageParts.join(" - ");
+  const dialogDescription = hasMultipleImages
+    ? "Use left and right arrow keys to switch between images."
+    : "Zoom and inspect the image.";
 
   const actionBtn =
     "rounded-md bg-white/10 p-2 border text-xs font-medium text-white hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
+  const imageClassName = hasMultipleImages
+    ? "max-h-[min(68vh,calc(100dvh-20rem))] max-w-[80vw]"
+    : "max-h-[min(80vh,calc(100dvh-14rem))] max-w-[80vw]";
+  const slideTransition: Transition = prefersReducedMotion
+    ? { duration: 0.16 }
+    : { duration: 0.22, ease: [0.22, 1, 0.36, 1] };
+
+  function handleRetryImageLoad() {
+    setRetryVersion((value) => value + 1);
+    setNaturalSize(null);
+    setImageLoadState("loading");
+  }
 
   return (
     <Dialog.Portal>
       <Dialog.Backdrop className="fixed inset-0 z-9998 bg-black/80" />
 
-      <Dialog.Popup className="pointer-events-none fixed inset-0 z-9999 outline-none">
+      <Dialog.Popup
+        aria-labelledby={dialogTitleId}
+        aria-describedby={dialogDescriptionId}
+        onKeyDownCapture={handleDialogKeyDown}
+        className="pointer-events-none fixed inset-0 z-9999 outline-none"
+      >
         <div className="pointer-events-none absolute inset-0 flex flex-col">
+          <div className="sr-only">
+            <div id={dialogTitleId}>{activeTitle}</div>
+            <div id={dialogDescriptionId}>{dialogDescription}</div>
+            <div aria-live="polite" aria-atomic="true">
+              {liveMessage}
+            </div>
+          </div>
+
           <div className="pointer-events-none flex shrink-0 justify-end p-4">
             <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-lg bg-black/60 p-2 backdrop-blur">
               <Button
@@ -231,7 +290,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
               <Button
                 title="Copy image"
                 className={actionBtn}
-                onClick={() => void copyImage(active.src)}
+                onClick={() => void copyImage(active)}
               >
                 <ImagesIcon className="size-4" />
                 <span className="sr-only">Copy image</span>
@@ -247,78 +306,150 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
             </div>
           </div>
 
-          <div className="pointer-events-none relative flex min-h-0 flex-1 items-center justify-center px-6">
-            <Button
-              aria-label="Previous image"
-              className="pointer-events-auto absolute top-1/2 left-4 -translate-y-1/2 rounded-md border bg-black/60 p-3 text-white backdrop-blur hover:bg-black/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-              onClick={goPrev}
-            >
-              <ChevronLeftIcon className="size-4" />
-            </Button>
+          <div
+            className={cn(
+              "pointer-events-none relative flex min-h-0 flex-1 items-center justify-center px-6",
+              hasMultipleImages && "pb-4",
+            )}
+          >
+            {hasMultipleImages && (
+              <Button
+                aria-label="Previous image"
+                className="pointer-events-auto absolute top-1/2 left-4 -translate-y-1/2 rounded-md border bg-black/60 p-3 text-white backdrop-blur hover:bg-black/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                onClick={goPrev}
+              >
+                <ChevronLeftIcon className="size-4" />
+              </Button>
+            )}
 
-            <div className="pointer-events-auto flex max-h-full flex-col items-center gap-3">
-              <ZoomableImage
-                ref={zoomRef}
-                src={active.src}
-                alt={active.alt ?? active.name ?? "Image"}
-                onNaturalSize={setNaturalSize}
-                className="max-h-[min(80vh,calc(100dvh-14rem))] max-w-[80vw]"
-              />
+            <div className="pointer-events-auto flex min-h-0 flex-1 items-center justify-center self-stretch">
+              <div className="flex max-w-full flex-col items-center gap-3">
+                <div className="relative flex items-center justify-center">
+                  <AnimatePresence initial={false} custom={navigationDirection} mode="wait">
+                    <motion.div
+                      key={`${active.src}-${retryVersion}`}
+                      custom={navigationDirection}
+                      initial={
+                        prefersReducedMotion
+                          ? { opacity: 0 }
+                          : {
+                              opacity: 0,
+                              x: navigationDirection >= 0 ? 32 : -32,
+                            }
+                      }
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={
+                        prefersReducedMotion
+                          ? { opacity: 0 }
+                          : {
+                              opacity: 0,
+                              x: navigationDirection >= 0 ? -32 : 32,
+                            }
+                      }
+                      transition={slideTransition}
+                      className="relative flex items-center justify-center"
+                    >
+                      <ZoomableImage
+                        ref={zoomRef}
+                        src={active.src}
+                        alt={active.alt ?? active.name ?? "Image"}
+                        onNaturalSize={setNaturalSize}
+                        onLoadStateChange={setImageLoadState}
+                        className={imageClassName}
+                      />
 
-              <div className="flex flex-col items-center text-center text-white">
-                <div className="max-w-[80vw] truncate text-sm font-medium">
-                  {active.name ?? "Untitled"}
+                      {imageLoadState === "loading" && (
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-md bg-black/30 text-sm font-medium text-white/90 backdrop-blur-sm">
+                          Loading image...
+                        </div>
+                      )}
+
+                      {imageLoadState === "error" && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-md bg-black/70 px-4 text-center text-white backdrop-blur-sm">
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium">Unable to load image</div>
+                            <div className="text-xs text-white/70">
+                              Try again or open the original file in a new tab.
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center justify-center gap-2">
+                            <Button className={actionBtn} onClick={handleRetryImageLoad}>
+                              Retry
+                            </Button>
+                            <Button className={actionBtn} onClick={() => openInNewTab(active.src)}>
+                              Open in new tab
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
 
-                {meta ? <div className="text-xs text-white/70">{meta}</div> : null}
+                <div className="relative z-10 flex shrink-0 flex-col items-center rounded-lg bg-black/55 px-3 py-2 text-center text-white backdrop-blur-sm">
+                  <div className="text-xs text-white/70">{imagePositionLabel}</div>
+                  <div className="max-w-[80vw] truncate text-sm font-medium">
+                    {active.name ?? "Untitled"}
+                  </div>
+
+                  {meta ? <div className="text-xs text-white/70">{meta}</div> : null}
+                </div>
               </div>
             </div>
 
-            <Button
-              aria-label="Next image"
-              className="pointer-events-auto absolute top-1/2 right-4 -translate-y-1/2 rounded-md border bg-black/60 p-3 text-white backdrop-blur hover:bg-black/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
-              onClick={goNext}
-            >
-              <ChevronRightIcon className="size-4" />
-            </Button>
+            {hasMultipleImages && (
+              <Button
+                aria-label="Next image"
+                className="pointer-events-auto absolute top-1/2 right-4 -translate-y-1/2 rounded-md border bg-black/60 p-3 text-white backdrop-blur hover:bg-black/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                onClick={goNext}
+              >
+                <ChevronRightIcon className="size-4" />
+              </Button>
+            )}
           </div>
 
-          <div className="pointer-events-none shrink-0 px-4 pb-4">
-            <div
-              ref={thumbsRef}
-              className="pointer-events-auto mx-auto w-full max-w-[min(1100px,100%)] rounded-lg bg-black/60 p-2 backdrop-blur"
-            >
-              <div className="flex items-center gap-2">
-                {images.map((img, i) => {
-                  const isActive = i === activeIndex;
-                  const src = img.thumbnailSrc ?? img.src;
+          {hasMultipleImages && (
+            <div className="pointer-events-none shrink-0 px-4 pb-4">
+              <div
+                ref={thumbsRef}
+                aria-label="Image thumbnails"
+                className="pointer-events-auto mx-auto w-fit max-w-full overflow-x-auto rounded-lg bg-black/60 p-2 backdrop-blur"
+              >
+                <div className="flex w-max items-center gap-2">
+                  {images.map((img, i) => {
+                    const isActive = i === activeIndex;
+                    const src = img.thumbnailSrc ?? img.src;
 
-                  return (
-                    <button
-                      key={`${src}-${i}`}
-                      type="button"
-                      data-index={i}
-                      onClick={onThumbClick}
-                      className={cn(
-                        "h-14 w-14 shrink-0 overflow-hidden rounded-md ring-1 ring-white/10 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                        isActive ? "scale-110 ring-white/40" : "hover:scale-105",
-                      )}
-                      aria-label={img.name ? `View ${img.name}` : `View image ${i + 1}`}
-                    >
-                      <img
-                        src={src}
-                        alt={img.alt ?? img.name ?? `Thumbnail ${i + 1}`}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                        draggable={false}
-                      />
-                    </button>
-                  );
-                })}
+                    return (
+                      <button
+                        key={`${src}-${i}`}
+                        type="button"
+                        data-index={i}
+                        onClick={onThumbClick}
+                        aria-current={isActive ? "true" : undefined}
+                        aria-pressed={isActive}
+                        className={cn(
+                          "h-14 w-14 shrink-0 overflow-hidden rounded-md ring-1 ring-white/10 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                          isActive ? "scale-110 ring-white/40" : "hover:scale-105",
+                        )}
+                        aria-label={img.name ? `View ${img.name}` : `View image ${i + 1}`}
+                      >
+                        <img
+                          src={src}
+                          alt={img.alt ?? img.name ?? `Thumbnail ${i + 1}`}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                          draggable={false}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </Dialog.Popup>
     </Dialog.Portal>
@@ -336,13 +467,23 @@ type ZoomableImageProps = {
   minScale?: number;
   maxScale?: number;
   onNaturalSize?: (size: { width: number; height: number }) => void;
+  onLoadStateChange?: (state: ImageLoadState) => void;
 };
 
 const ZoomableImage = React.forwardRef<ZoomableImageHandle, ZoomableImageProps>(
   function ZoomableImage(props, ref) {
-    const { src, alt, className, minScale = 0.2, maxScale = 8, onNaturalSize } = props;
+    const {
+      src,
+      alt,
+      className,
+      minScale = 0.2,
+      maxScale = 8,
+      onNaturalSize,
+      onLoadStateChange,
+    } = props;
 
     const imgRef = React.useRef<HTMLImageElement | null>(null);
+    const viewportRef = React.useRef<HTMLDivElement | null>(null);
     const rafRef = React.useRef<number | null>(null);
 
     const stateRef = React.useRef({ scale: 1, x: 0, y: 0 });
@@ -354,6 +495,30 @@ const ZoomableImage = React.forwardRef<ZoomableImageHandle, ZoomableImageProps>(
       startTranslateX: number;
       startTranslateY: number;
     } | null>(null);
+
+    const clampPosition = React.useCallback((nextX: number, nextY: number, nextScale: number) => {
+      const img = imgRef.current;
+      const viewport = viewportRef.current;
+      if (!img || !viewport || nextScale <= 1) {
+        return { x: 0, y: 0 };
+      }
+
+      const baseWidth = img.clientWidth;
+      const baseHeight = img.clientHeight;
+      const viewportWidth = viewport.clientWidth;
+      const viewportHeight = viewport.clientHeight;
+      if (baseWidth <= 0 || baseHeight <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
+        return { x: nextX, y: nextY };
+      }
+
+      const maxOffsetX = Math.max(0, (baseWidth * nextScale - viewportWidth) / 2);
+      const maxOffsetY = Math.max(0, (baseHeight * nextScale - viewportHeight) / 2);
+
+      return {
+        x: clamp(nextX, -maxOffsetX, maxOffsetX),
+        y: clamp(nextY, -maxOffsetY, maxOffsetY),
+      };
+    }, []);
 
     const applyNow = React.useCallback(() => {
       const el = imgRef.current;
@@ -394,6 +559,14 @@ const ZoomableImage = React.forwardRef<ZoomableImageHandle, ZoomableImageProps>(
 
     React.useEffect(() => {
       const el = imgRef.current;
+      if (!el || !el.complete || el.naturalWidth <= 0 || el.naturalHeight <= 0) return;
+
+      onLoadStateChange?.("loaded");
+      onNaturalSize?.({ width: el.naturalWidth, height: el.naturalHeight });
+    }, [onLoadStateChange, onNaturalSize, src]);
+
+    React.useEffect(() => {
+      const el = imgRef.current;
       if (!el) return;
 
       function onWheel(e: WheelEvent) {
@@ -401,8 +574,11 @@ const ZoomableImage = React.forwardRef<ZoomableImageHandle, ZoomableImageProps>(
 
         const factor = Math.exp(-e.deltaY * 0.001);
         const nextScale = clamp(stateRef.current.scale * factor, minScale, maxScale);
+        const nextPosition = clampPosition(stateRef.current.x, stateRef.current.y, nextScale);
 
         stateRef.current.scale = nextScale;
+        stateRef.current.x = nextPosition.x;
+        stateRef.current.y = nextPosition.y;
 
         if (nextScale <= 1) {
           stateRef.current.x = 0;
@@ -414,7 +590,7 @@ const ZoomableImage = React.forwardRef<ZoomableImageHandle, ZoomableImageProps>(
 
       el.addEventListener("wheel", onWheel, { passive: false });
       return () => el.removeEventListener("wheel", onWheel);
-    }, [maxScale, minScale, scheduleApply]);
+    }, [clampPosition, maxScale, minScale, scheduleApply]);
 
     React.useEffect(() => {
       return () => {
@@ -426,6 +602,7 @@ const ZoomableImage = React.forwardRef<ZoomableImageHandle, ZoomableImageProps>(
       if (e.button !== 0) return;
       const el = imgRef.current;
       if (!el) return;
+      if (stateRef.current.scale <= 1) return;
 
       el.setPointerCapture(e.pointerId);
       dragRef.current = {
@@ -444,14 +621,25 @@ const ZoomableImage = React.forwardRef<ZoomableImageHandle, ZoomableImageProps>(
       if (!drag || drag.pointerId !== e.pointerId) return;
       if (stateRef.current.scale <= 1) return;
 
-      stateRef.current.x = drag.startTranslateX + (e.clientX - drag.startX);
-      stateRef.current.y = drag.startTranslateY + (e.clientY - drag.startY);
+      const nextPosition = clampPosition(
+        drag.startTranslateX + (e.clientX - drag.startX),
+        drag.startTranslateY + (e.clientY - drag.startY),
+        stateRef.current.scale,
+      );
+      stateRef.current.x = nextPosition.x;
+      stateRef.current.y = nextPosition.y;
       scheduleApply();
     }
 
     function onPointerUp(e: React.PointerEvent<HTMLImageElement>) {
+      const el = imgRef.current;
       const drag = dragRef.current;
       if (!drag || drag.pointerId !== e.pointerId) return;
+
+      if (el?.hasPointerCapture(e.pointerId)) {
+        el.releasePointerCapture(e.pointerId);
+      }
+
       dragRef.current = null;
       applyNow();
     }
@@ -461,6 +649,7 @@ const ZoomableImage = React.forwardRef<ZoomableImageHandle, ZoomableImageProps>(
     }
 
     function onLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+      onLoadStateChange?.("loaded");
       if (!onNaturalSize) return;
       const el = e.currentTarget;
       if (el.naturalWidth && el.naturalHeight) {
@@ -468,27 +657,44 @@ const ZoomableImage = React.forwardRef<ZoomableImageHandle, ZoomableImageProps>(
       }
     }
 
+    function onError() {
+      onLoadStateChange?.("error");
+    }
+
     return (
-      <img
-        ref={imgRef}
-        src={src}
-        alt={alt}
-        draggable={false}
-        decoding="async"
-        onLoad={onLoad}
-        onDoubleClick={onDoubleClick}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        className={cn(
-          "touch-none rounded-md object-contain will-change-transform select-none",
-          className,
-        )}
-      />
+      <div
+        ref={viewportRef}
+        className="relative flex size-full min-h-0 items-center justify-center rounded-md"
+      >
+        <img
+          ref={imgRef}
+          src={src}
+          alt={alt}
+          draggable={false}
+          decoding="async"
+          onLoad={onLoad}
+          onError={onError}
+          onDoubleClick={onDoubleClick}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          className={cn(
+            "block touch-none rounded-md object-contain will-change-transform select-none",
+            className,
+          )}
+        />
+      </div>
     );
   },
 );
+
+function shouldIgnoreLightboxArrowKeyTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+
+  return !!target.closest("input, textarea, select, [contenteditable='true']");
+}
 
 function isClipboardImageWriteSupported(): boolean {
   const hasSecure = typeof window !== "undefined" && window.isSecureContext;
@@ -508,6 +714,23 @@ function wrapIndex(index: number, length: number) {
   return mod < 0 ? mod + length : mod;
 }
 
+function getShortestNavigationDirection(
+  currentIndex: number,
+  nextIndex: number,
+  length: number,
+): NavigationDirection {
+  if (length <= 1 || currentIndex === nextIndex) return 0;
+
+  const forwardSteps = (nextIndex - currentIndex + length) % length;
+  const backwardSteps = (currentIndex - nextIndex + length) % length;
+
+  if (forwardSteps === backwardSteps) {
+    return nextIndex > currentIndex ? 1 : -1;
+  }
+
+  return forwardSteps < backwardSteps ? 1 : -1;
+}
+
 async function copyText(text: string) {
   if (!navigator.clipboard?.writeText) return;
   await navigator.clipboard.writeText(text);
@@ -517,7 +740,16 @@ function openInNewTab(url: string) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-async function copyImage(url: string) {
+function resolveClipboardImageUrl(img: LightboxImage): string {
+  if (img.clipboardSrc) return img.clipboardSrc;
+
+  return img.src.replace(
+    "https://ik.imagekit.io/gmethsnvl/ai-chat/",
+    "https://files.chat.asakuri.me/",
+  );
+}
+
+async function copyImage(img: LightboxImage) {
   if (!isClipboardImageWriteSupported()) {
     return toast.error("Copying image is not supported in this browser.", {
       position: "top-center",
@@ -525,10 +757,7 @@ async function copyImage(url: string) {
     });
   }
 
-  const fileUrl = url.replace(
-    "https://ik.imagekit.io/gmethsnvl/ai-chat/",
-    "https://files.chat.asakuri.me/",
-  );
+  const fileUrl = resolveClipboardImageUrl(img);
 
   const htmlImage = new Image();
   htmlImage.crossOrigin = "anonymous"; // requires proper CORS headers from the server
@@ -583,9 +812,14 @@ async function copyImage(url: string) {
 
 async function downloadImage(img: LightboxImage) {
   const name = img.downloadName ?? img.name ?? "image";
+  const downloadUrl = img.downloadSrc ?? img.src;
 
   try {
-    const res = await fetch(img.src);
+    const res = await fetch(downloadUrl);
+    if (!res.ok) {
+      throw new Error(`Download failed with status ${res.status}`);
+    }
+
     const blob = await res.blob();
     const objectUrl = URL.createObjectURL(blob);
 
@@ -595,7 +829,7 @@ async function downloadImage(img: LightboxImage) {
     setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
     toast.success("Image downloaded", { position: "top-center", duration: 3000 });
   } catch {
-    triggerDownload(img.src, name);
+    triggerDownload(downloadUrl, name);
   }
 }
 
