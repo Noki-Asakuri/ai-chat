@@ -56,6 +56,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
       >
         <MessageAttachmentsDisplay
           parts={fileParts}
+          attachments={message.attachments}
           role={message.role}
           messageId={message._id}
           className={cn(
