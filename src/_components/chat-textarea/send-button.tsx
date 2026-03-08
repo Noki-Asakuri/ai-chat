@@ -139,7 +139,7 @@ export function ChatEditSendButton({ isSaving, onSave }: ChatEditSendButtonProps
         size="none"
         variant="none"
         title="Cancel Editing"
-        className="h-9 cursor-pointer gap-2 rounded-md border bg-card px-3"
+        className="h-9 cursor-pointer gap-2 rounded-md border border-border bg-card px-3"
         onClick={() => chatStoreActions.setEditMessage(null)}
         disabled={isSaving}
       >
@@ -169,7 +169,7 @@ export function ChatEditSendButton({ isSaving, onSave }: ChatEditSendButtonProps
 
           <Menu.Trigger
             type="button"
-            className="h-9 rounded-none border-l group-data-[streaming=true]:hidden"
+            className="h-9 rounded-none border-0 border-l border-border group-data-[streaming=true]:hidden"
             title="Send Preferences"
             disabled={isSaving}
             render={<ButtonWithTip delay={1000} side="top" variant="none" className="size-8" />}

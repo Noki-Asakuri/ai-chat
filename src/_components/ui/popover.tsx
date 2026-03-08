@@ -87,7 +87,7 @@ function PopoverArrow({
   return (
     <PopoverPrimitive.Arrow
       {...props}
-      className="data-[side=bottom]:-top-2 data-[side=left]:-right-3.25 data-[side=left]:rotate-90 data-[side=right]:-left-3.25 data-[side=right]:-rotate-90 data-[side=top]:-bottom-2.25 data-[side=top]:rotate-180"
+      className="data-[side=bottom]:-top-2.5 data-[side=left]:-right-3.25 data-[side=left]:rotate-90 data-[side=right]:-left-3.25 data-[side=right]:-rotate-90 data-[side=top]:-bottom-2.25 data-[side=top]:rotate-180"
     >
       <Icons.arrow className={cn("fill-popover", className)} />
     </PopoverPrimitive.Arrow>
