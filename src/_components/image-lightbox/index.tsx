@@ -324,8 +324,8 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
               </Button>
             )}
 
-            <div className="pointer-events-auto flex min-h-0 flex-1 items-center justify-center self-stretch">
-              <div className="flex max-w-full flex-col items-center gap-3">
+            <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center self-stretch">
+              <div className="pointer-events-auto flex max-w-full flex-col items-center gap-3">
                 <div className="relative flex items-center justify-center">
                   <AnimatePresence initial={false} custom={navigationDirection} mode="wait">
                     <motion.div
