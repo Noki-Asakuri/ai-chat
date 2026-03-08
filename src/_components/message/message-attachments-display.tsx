@@ -3,6 +3,7 @@ import { BotIcon, FileTextIcon } from "lucide-react";
 
 import { extractNameFromUrl, ImageLightboxProvider, ImageLightboxTrigger } from "../image-lightbox";
 
+import { buildImageThumbnailUrl } from "@/lib/assets/urls";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -12,17 +13,11 @@ type MessageAttachmentsDisplayProps = React.ComponentPropsWithoutRef<"div"> & {
   parts: FileUIPart[];
 };
 
-const IMAGEKIT_CHAT_PATH_PREFIX = "https://ik.imagekit.io/gmethsnvl/ai-chat/";
 const MESSAGE_THUMBNAIL_TRANSFORM = "tr=w-320,h-320,c-at_max,f-auto,q-70";
 const MESSAGE_ATTACHMENT_SIZE_PX = 160;
 
 function getAttachmentThumbnailUrl(url: string): string {
-  if (!url.startsWith(IMAGEKIT_CHAT_PATH_PREFIX)) {
-    return url;
-  }
-
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}${MESSAGE_THUMBNAIL_TRANSFORM}`;
+  return buildImageThumbnailUrl(url, MESSAGE_THUMBNAIL_TRANSFORM);
 }
 
 export function MessageAttachmentsDisplay({

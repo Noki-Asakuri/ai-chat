@@ -28,9 +28,8 @@ import {
   type ChatAppearance,
   writeChatAppearanceCookie,
 } from "@/lib/chat/appearance-cookie";
+import { buildImageAssetUrl } from "@/lib/assets/urls";
 import { convexSessionQuery } from "@/lib/convex/helpers";
-
-const BACKGROUND_IMAGE_PREFIX = "https://ik.imagekit.io/gmethsnvl/ai-chat";
 
 type ChatCustomization = {
   backgroundId?: string | null;
@@ -42,7 +41,7 @@ type ChatLayoutCookies = ChatAppearance & {
 };
 
 function getBackgroundImageUrl(backgroundId: string): string {
-  return `${BACKGROUND_IMAGE_PREFIX}/${backgroundId}`;
+  return buildImageAssetUrl(backgroundId);
 }
 
 function resolveBackgroundImage(

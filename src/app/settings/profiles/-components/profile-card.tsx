@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { buildImageAssetUrl } from "@/lib/assets/urls";
 
 export type ProfileListItem = {
   _id: Id<"profiles">;
@@ -41,9 +42,7 @@ export const ProfileCard = memo(function ProfileCard({
   onDelete: (id: Id<"profiles">) => void;
 }) {
   const imageUrl =
-    profile.imageKey && profile.imageKey.length > 0
-      ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${profile.imageKey}`
-      : null;
+    profile.imageKey && profile.imageKey.length > 0 ? buildImageAssetUrl(profile.imageKey) : null;
 
   const shortDesc =
     profile.systemPrompt.length > 140

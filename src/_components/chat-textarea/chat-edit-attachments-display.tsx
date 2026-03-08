@@ -1,9 +1,10 @@
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 
 import { FileTextIcon, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ImageLightboxProvider, ImageLightboxTrigger } from "@/components/image-lightbox";
+import { buildAttachmentUrl } from "@/lib/assets/urls";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { cn, format } from "@/lib/utils";
 
@@ -22,14 +23,6 @@ type ExistingPreview = {
   type: "image" | "pdf";
   url: string;
 };
-
-function buildAttachmentUrl(attachment: Pick<Doc<"attachments">, "mimeType" | "path">): string {
-  if (attachment.mimeType.includes("image")) {
-    return `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.path}`;
-  }
-
-  return `https://files.chat.asakuri.me/${attachment.path}`;
-}
 
 export function ChatEditAttachmentsDisplay() {
   const editMessage = useChatStore((state) => state.editMessage);
@@ -66,7 +59,7 @@ export function ChatEditAttachmentsDisplay() {
       size: a.size,
       mimeType: a.mimeType,
       type: a.type,
-      url: buildAttachmentUrl(a),
+      url: buildAttachmentUrl(a.path, a.mimeType),
     }));
 
   const hasAny = existingPreview.length > 0 || localPreview.length > 0;

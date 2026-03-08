@@ -58,6 +58,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/u
 
 import { LoadingAttachmentsSkeleton } from "./-pending";
 
+import { buildImageAssetUrl, buildImageThumbnailUrl, buildRawFileUrl } from "@/lib/assets/urls";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { format, toUUID, tryCatch } from "@/lib/utils";
 
@@ -82,20 +83,18 @@ type AttachmentSortValue =
 const PAGE_SIZE = 20;
 const PAGE_WINDOW_SIZE = 3;
 
-const IMAGEKIT_BASE_URL = "https://ik.imagekit.io/gmethsnvl/ai-chat";
-const FILES_BASE_URL = "https://files.chat.asakuri.me";
 const GRID_IMAGE_TRANSFORM = "tr=w-448,h-448,c-at_max,f-auto,q-70";
 
 function getAttachmentImageUrl(path: string): string {
-  return `${IMAGEKIT_BASE_URL}/${path}`;
+  return buildImageAssetUrl(path);
 }
 
 function getAttachmentThumbnailUrl(path: string): string {
-  return `${IMAGEKIT_BASE_URL}/${path}?${GRID_IMAGE_TRANSFORM}`;
+  return buildImageThumbnailUrl(buildImageAssetUrl(path), GRID_IMAGE_TRANSFORM);
 }
 
 function getAttachmentFileUrl(path: string): string {
-  return `${FILES_BASE_URL}/${path}`;
+  return buildRawFileUrl(path);
 }
 
 const SOURCE_FILTER_OPTIONS: Record<SourceFilter, { label: string; Icon: typeof ArrowDownAZIcon }> =

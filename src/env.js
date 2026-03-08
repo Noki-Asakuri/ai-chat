@@ -35,6 +35,8 @@ export const env = createEnv({
     VITE_AXIOM_DATASET: z.string(),
 
     VITE_API_ENDPOINT: z.string(),
+    VITE_PUBLIC_ASSET_BASE_URL: z.string(),
+    VITE_RAW_FILE_BASE_URL: z.string(),
   },
 
   clientPrefix: "VITE_",

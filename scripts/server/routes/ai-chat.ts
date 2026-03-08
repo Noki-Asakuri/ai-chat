@@ -8,6 +8,7 @@ import { z } from "zod/v4";
 import { APICallError, stepCountIs, streamText, UI_MESSAGE_STREAM_HEADERS } from "ai";
 
 import { logger } from "@/lib/axiom/logger";
+import { buildAttachmentUrl } from "@/lib/assets/urls";
 import { createServerConvexClient } from "@/lib/convex/server";
 import { serverUploadFileR2 } from "@/lib/server/file-upload";
 import { registry } from "@/lib/server/model-registry";
@@ -675,9 +676,7 @@ export function registerAiChatRoutes(app: Hono): void {
 
             if (!data) return;
 
-            const url = file.mediaType.includes("image")
-              ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${data.filePathname}`
-              : `https://files.chat.asakuri.me/${data.filePathname}`;
+            const url = buildAttachmentUrl(data.filePathname, file.mediaType);
 
             attachmentIds.push(data.attachmentDocId);
             fileParts[index]!.url = url;

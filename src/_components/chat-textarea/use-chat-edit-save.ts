@@ -5,6 +5,7 @@ import * as React from "react";
 
 import { useRetryChatMessage } from "@/lib/chat/server-function/retry-chat-message";
 import { uploadUserAttachment } from "@/lib/chat/shared";
+import { buildAttachmentUrl } from "@/lib/assets/urls";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
@@ -51,17 +52,13 @@ export function useChatEditSave() {
         const attachment = attachmentById.get(attachmentId);
         if (!attachment) continue;
 
-        const url = attachment.mimeType.includes("image")
-          ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${attachment.path}`
-          : `https://files.chat.asakuri.me/${attachment.path}`;
+        const url = buildAttachmentUrl(attachment.path, attachment.mimeType);
 
         fileParts.push({ type: "file", url, mediaType: attachment.mimeType });
       }
 
       for (const item of uploaded) {
-        const url = item.mediaType.includes("image")
-          ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${item.path}`
-          : `https://files.chat.asakuri.me/${item.path}`;
+        const url = buildAttachmentUrl(item.path, item.mediaType);
 
         fileParts.push({ type: "file", url, mediaType: item.mediaType });
       }

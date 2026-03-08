@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { buildImageAssetUrl } from "@/lib/assets/urls";
 
 export type BackgroundCardProps = {
   disabled: boolean;
@@ -35,7 +36,7 @@ export function BackgroundCard(props: BackgroundCardProps) {
   }, [backgroundImage]);
 
   const existingBackgroundUrl = props.existingBackgroundId
-    ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${props.existingBackgroundId}`
+    ? buildImageAssetUrl(props.existingBackgroundId)
     : null;
 
   const backgroundPreviewSrc = backgroundPreviewUrl ?? existingBackgroundUrl;

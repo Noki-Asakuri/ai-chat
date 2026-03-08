@@ -1,3 +1,5 @@
+import { buildImageAssetUrl } from "@/lib/assets/urls";
+
 export type WorkOSUserLike = {
   firstName: string | null;
   lastName: string | null;
@@ -6,11 +8,9 @@ export type WorkOSUserLike = {
   metadata: Record<string, string>;
 };
 
-const R2_PUBLIC_BASE_URL = "https://ik.imagekit.io/gmethsnvl/ai-chat";
-
 export function getUserAvatarUrl(user: WorkOSUserLike): string | undefined {
   const avatarKey = user.metadata.avatarKey;
-  if (avatarKey) return `${R2_PUBLIC_BASE_URL}/${avatarKey}`;
+  if (avatarKey) return buildImageAssetUrl(avatarKey);
 
   const metadataAvatarUrl = user.metadata.avatarUrl;
   if (metadataAvatarUrl) return metadataAvatarUrl;

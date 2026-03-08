@@ -16,6 +16,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import * as React from "react";
 import { toast } from "sonner";
 
+import { toRawFileUrl } from "@/lib/assets/urls";
 import { cn, format } from "@/lib/utils";
 
 export function extractNameFromUrl(url: string) {
@@ -743,10 +744,7 @@ function openInNewTab(url: string) {
 function resolveClipboardImageUrl(img: LightboxImage): string {
   if (img.clipboardSrc) return img.clipboardSrc;
 
-  return img.src.replace(
-    "https://ik.imagekit.io/gmethsnvl/ai-chat/",
-    "https://files.chat.asakuri.me/",
-  );
+  return toRawFileUrl(img.src);
 }
 
 async function copyImage(img: LightboxImage) {

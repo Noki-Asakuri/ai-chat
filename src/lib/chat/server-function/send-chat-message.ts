@@ -13,6 +13,7 @@ import { useConfigStore, useConfigStoreState } from "@/components/provider/confi
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
+import { buildAttachmentUrl } from "@/lib/assets/urls";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { fromUUID, toUUID, tryCatch } from "@/lib/utils";
 
@@ -125,9 +126,7 @@ export function useSendChatMessage() {
       const attachmentIds = uploadedAttachments.map((a) => a.attachmentId);
 
       for (const { path, mediaType } of uploadedAttachments) {
-        const url = mediaType.includes("image")
-          ? `https://ik.imagekit.io/gmethsnvl/ai-chat/${path}`
-          : `https://files.chat.asakuri.me/${path}`;
+        const url = buildAttachmentUrl(path, mediaType);
 
         userMessageParts.push({ type: "file", url, mediaType });
       }

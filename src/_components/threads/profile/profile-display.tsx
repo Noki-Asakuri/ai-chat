@@ -4,6 +4,7 @@ import { useConfigStore, useConfigStoreState } from "@/components/provider/confi
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ButtonWithTip } from "@/components/ui/button";
 
+import { buildImageAssetUrl } from "@/lib/assets/urls";
 import { cn } from "@/lib/utils";
 
 export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
@@ -11,6 +12,7 @@ export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
   const state = useConfigStore((state) => state);
 
   const isActive = state.profile === profile._id;
+  const profileImageUrl = profile.imageKey ? buildImageAssetUrl(profile.imageKey) : undefined;
 
   return (
     <ButtonWithTip
@@ -25,10 +27,7 @@ export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
       onClick={() => configStore.setConfig({ profile: isActive ? null : profile._id })}
     >
       <Avatar className="size-full">
-        <AvatarImage
-          src={`https://ik.imagekit.io/gmethsnvl/ai-chat/${profile.imageKey}`}
-          className="size-full object-cover object-center"
-        />
+        <AvatarImage src={profileImageUrl} className="size-full object-cover object-center" />
         <AvatarFallback>{profile.name.slice(0, 2)}</AvatarFallback>
       </Avatar>
     </ButtonWithTip>
