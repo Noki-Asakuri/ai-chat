@@ -35,6 +35,7 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { MessageRetryMenu } from "./message-retry-menu";
 
 import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
+import { suppressStickyResizeAutoScroll } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
@@ -217,6 +218,8 @@ function EditButton({ message }: { message: ChatMessage }) {
   function handleEditMessage() {
     const metadata = pairedAssistantMetadata;
     if (!metadata) return;
+
+    suppressStickyResizeAutoScroll();
 
     chatStoreActions.setEditMessage({
       _id: message._id,

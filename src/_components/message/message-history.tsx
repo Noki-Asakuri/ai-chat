@@ -6,6 +6,7 @@ import { Message } from "./message";
 import { Button } from "@/components/ui/button";
 
 import {
+  consumeStickyResizeAutoScrollSuppression,
   scrollToBottomIfStickyRaf,
   updateStickyToBottomFromScroll,
 } from "@/lib/chat/scroll-stickiness";
@@ -66,6 +67,7 @@ export function MessageHistory({
 
       stickySyncRafRef.current = requestAnimationFrame(() => {
         stickySyncRafRef.current = null;
+        if (consumeStickyResizeAutoScrollSuppression()) return;
         scrollToBottomIfStickyRaf(scrollElement, "auto");
       });
     });

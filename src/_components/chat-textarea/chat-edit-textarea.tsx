@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
@@ -7,11 +8,89 @@ import { BaseInputTextArea } from "./main-textarea";
 import { ChatEditSendButton } from "./send-button";
 import { useChatEditSave } from "./use-chat-edit-save";
 
+import {
+  getMessagesScrollAreaElement,
+  setStickyToBottom,
+  updateStickyToBottomFromScroll,
+} from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
+const EDITOR_VIEWPORT_MARGIN_PX = 16;
+
+function syncEditorIntoView(editorElement: HTMLDivElement): void {
+  const scrollArea = getMessagesScrollAreaElement();
+  if (!scrollArea) return;
+
+  const editorRect = editorElement.getBoundingClientRect();
+  const scrollAreaRect = scrollArea.getBoundingClientRect();
+
+  const visibleTop = scrollAreaRect.top + EDITOR_VIEWPORT_MARGIN_PX;
+  const visibleBottom = scrollAreaRect.bottom - EDITOR_VIEWPORT_MARGIN_PX;
+  const visibleHeight = Math.max(visibleBottom - visibleTop, 0);
+  const editorHeight = editorRect.height;
+
+  let scrollDelta = 0;
+
+  if (editorHeight > visibleHeight) {
+    const editorTopOffset = editorRect.top - visibleTop;
+    if (editorTopOffset !== 0) {
+      scrollDelta = editorTopOffset;
+    }
+  } else if (editorRect.top < visibleTop) {
+    scrollDelta = editorRect.top - visibleTop;
+  } else if (editorRect.bottom > visibleBottom) {
+    scrollDelta = editorRect.bottom - visibleBottom;
+  }
+
+  if (scrollDelta !== 0) {
+    scrollArea.scrollTop += scrollDelta;
+    setStickyToBottom(false);
+  } else {
+    updateStickyToBottomFromScroll(scrollArea);
+  }
+
+  const textarea = document.getElementById("textarea-user-message-edit");
+  if (textarea instanceof HTMLTextAreaElement) {
+    textarea.focus({ preventScroll: true });
+  }
+}
+
 export function ChatEditTextarea() {
+  const editorRef = useRef<HTMLDivElement>(null);
   const editMessage = useChatStore((state) => state.editMessage);
   const { isSaving, saveEdits } = useChatEditSave();
+
+  useLayoutEffect(() => {
+    if (!editMessage) return;
+
+    let firstRafId = 0;
+    let secondRafId = 0;
+
+    function revealEditor(): void {
+      const editorElement = editorRef.current;
+      if (!editorElement) return;
+
+      syncEditorIntoView(editorElement);
+    }
+
+    firstRafId = requestAnimationFrame(() => {
+      revealEditor();
+
+      secondRafId = requestAnimationFrame(() => {
+        revealEditor();
+      });
+    });
+
+    return () => {
+      if (firstRafId !== 0) {
+        cancelAnimationFrame(firstRafId);
+      }
+
+      if (secondRafId !== 0) {
+        cancelAnimationFrame(secondRafId);
+      }
+    };
+  }, [editMessage]);
 
   if (!editMessage) return null;
 
@@ -38,7 +117,7 @@ export function ChatEditTextarea() {
   }
 
   return (
-    <div data-slot="chat-textarea" className="pointer-events-none">
+    <div ref={editorRef} data-slot="chat-textarea" className="pointer-events-none">
       <form className="mx-auto space-y-2">
         <div className="pointer-events-auto relative mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150">
           <ChatEditAttachmentsDisplay />
