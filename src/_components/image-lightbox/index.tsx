@@ -207,6 +207,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
   if (images.length === 0) return null;
 
   const active = images[activeIndex]!;
+  const activeActionUrl = resolvePrimaryActionUrl(active);
   const activeTitle = active.name ?? "Image viewer";
 
   const resolvedWidth = active.width ?? naturalSize?.width;
@@ -273,7 +274,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
               <Button
                 title="Copy URL"
                 className={actionBtn}
-                onClick={() => void copyText(active.src)}
+                onClick={() => void copyText(activeActionUrl)}
               >
                 <CopyIcon className="size-4" />
                 <span className="sr-only">Copy URL</span>
@@ -282,7 +283,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
               <Button
                 title="Open in new tab"
                 className={actionBtn}
-                onClick={() => openInNewTab(active.src)}
+                onClick={() => openInNewTab(activeActionUrl)}
               >
                 <ExternalLinkIcon className="size-4" />
                 <span className="sr-only">New tab</span>
@@ -378,7 +379,10 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
                             <Button className={actionBtn} onClick={handleRetryImageLoad}>
                               Retry
                             </Button>
-                            <Button className={actionBtn} onClick={() => openInNewTab(active.src)}>
+                            <Button
+                              className={actionBtn}
+                              onClick={() => openInNewTab(activeActionUrl)}
+                            >
                               Open in new tab
                             </Button>
                           </div>
@@ -747,6 +751,12 @@ function resolveClipboardImageUrl(img: LightboxImage): string {
   return toRawFileUrl(img.src);
 }
 
+function resolvePrimaryActionUrl(img: LightboxImage): string {
+  if (img.downloadSrc) return img.downloadSrc;
+
+  return toRawFileUrl(img.src);
+}
+
 async function copyImage(img: LightboxImage) {
   if (!isClipboardImageWriteSupported()) {
     return toast.error("Copying image is not supported in this browser.", {
@@ -810,7 +820,7 @@ async function copyImage(img: LightboxImage) {
 
 async function downloadImage(img: LightboxImage) {
   const name = img.downloadName ?? img.name ?? "image";
-  const downloadUrl = img.downloadSrc ?? img.src;
+  const downloadUrl = resolvePrimaryActionUrl(img);
 
   try {
     const res = await fetch(downloadUrl);
