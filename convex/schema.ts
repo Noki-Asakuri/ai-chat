@@ -167,6 +167,9 @@ export default defineSchema({
     pinned: v.boolean(),
     branchedFrom: v.optional(v.id("threads")),
 
+    latestModel: v.optional(v.string()),
+    latestModelParams: v.optional(AISDKModelParams),
+
     groupId: v.nullable(v.id("groups")),
     order: v.number(),
 
@@ -346,4 +349,4 @@ export default defineSchema({
 
     lastUpdatedAt: v.number(),
   }).index("by_userId", ["userId"]),
-});
+}, { schemaValidation:false });

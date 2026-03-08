@@ -5,7 +5,7 @@ import type { Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { authenticatedMutation, authenticatedQuery } from "../components";
-import { status } from "../schema";
+import { AISDKModelParams, status } from "../schema";
 
 type ThreadStatus = "pending" | "streaming" | "complete" | "error";
 
@@ -95,7 +95,11 @@ function compareAccountThreadRows(
 }
 
 export const createThread = authenticatedMutation({
-  args: { title: v.optional(v.string()) },
+  args: {
+    title: v.optional(v.string()),
+    latestModel: v.optional(v.string()),
+    latestModelParams: v.optional(AISDKModelParams),
+  },
   handler: async (ctx, args) => {
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
@@ -112,6 +116,38 @@ export const createThread = authenticatedMutation({
       updatedAt: Date.now() + 1,
       groupId: null,
       order: 0,
+      latestModel: args.latestModel,
+      latestModelParams: args.latestModelParams,
+    });
+  },
+});
+
+export const updateThreadModelConfig = authenticatedMutation({
+  args: {
+    threadId: v.id("threads"),
+    latestModel: v.string(),
+    latestModelParams: AISDKModelParams,
+  },
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const thread = await ctx.db.get("threads", args.threadId);
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
+
+    if (
+      thread.latestModel === args.latestModel &&
+      thread.latestModelParams?.effort === args.latestModelParams.effort &&
+      thread.latestModelParams?.webSearch === args.latestModelParams.webSearch &&
+      thread.latestModelParams?.profile === args.latestModelParams.profile
+    ) {
+      return;
+    }
+
+    await ctx.db.patch(args.threadId, {
+      latestModel: args.latestModel,
+      latestModelParams: args.latestModelParams,
     });
   },
 });
@@ -146,6 +182,8 @@ export const branchThread = authenticatedMutation({
       branchedFrom: args.threadId,
       groupId: null,
       order: 0,
+      latestModel: thread.latestModel,
+      latestModelParams: thread.latestModelParams,
     });
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

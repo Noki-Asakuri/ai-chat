@@ -1,19 +1,29 @@
 import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
+
+import { useSessionMutation } from "convex-helpers/react/sessions";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { Suspense, useEffect, useEffectEvent, useState } from "react";
+import { Suspense, useEffect, useEffectEvent, useRef, useState } from "react";
+import { useShallow } from "zustand/shallow";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { LoadingSkeleton } from "@/components/chat/loading-skeleton";
 import { MessageHistory } from "@/components/message/message-history";
-import { useConfigStoreState } from "@/components/provider/config-provider";
+import { useConfigStore } from "@/components/provider/config-provider";
 
 import { useAutoResumeStream } from "@/lib/chat/server-function/auto-resume-stream";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
+import {
+  isThreadModelConfigValid,
+  isSameThreadModelConfig,
+  threadStoreActions,
+  useThreadStore,
+  type ThreadModelConfig,
+} from "@/lib/store/thread-store";
 import type { ChatMessage } from "@/lib/types";
 import { fromUUID } from "@/lib/utils";
 
@@ -26,6 +36,45 @@ type ChatHistoryPayload = {
 };
 
 type SyncMode = "replace" | "prepend";
+
+function getLatestMessageModelConfig(messages: ChatMessage[]): ThreadModelConfig | null {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (!message?.metadata) continue;
+
+    const next: ThreadModelConfig = {
+      model: message.metadata.model.request,
+      modelParams: {
+        effort: message.metadata.modelParams.effort,
+        webSearch: message.metadata.modelParams.webSearch,
+        profile: message.metadata.modelParams.profile ?? null,
+      },
+    };
+
+    if (!isThreadModelConfigValid(next)) continue;
+    return next;
+  }
+
+  return null;
+}
+
+function getThreadModelConfigFromThreadDoc(
+  thread: Doc<"threads"> | null | undefined,
+): ThreadModelConfig | null {
+  if (!thread?.latestModel || !thread.latestModelParams) return null;
+
+  const next: ThreadModelConfig = {
+    model: thread.latestModel,
+    modelParams: {
+      effort: thread.latestModelParams.effort,
+      webSearch: thread.latestModelParams.webSearch,
+      profile: thread.latestModelParams.profile ?? null,
+    },
+  };
+
+  if (!isThreadModelConfigValid(next)) return null;
+  return next;
+}
 
 export const Route = createFileRoute("/_chat_layout/threads/$threadId")({
   component: ChatComponentPage,
@@ -59,7 +108,19 @@ function ChatHistory() {
   const params = useParams({ from: "/_chat_layout/threads/$threadId" });
   const threadId = fromUUID<Id<"threads">>(params.threadId);
   const { autoResumeStream } = useAutoResumeStream();
-  const configStore = useConfigStoreState();
+  const updateThreadModelConfig = useSessionMutation(api.functions.threads.updateThreadModelConfig);
+  const setConfig = useConfigStore((state) => state.setConfig);
+  const { model, effort, webSearch, profile } = useConfigStore(
+    useShallow((state) => ({
+      model: state.model,
+      effort: state.effort,
+      webSearch: state.webSearch,
+      profile: state.profile,
+    })),
+  );
+  const threadModelConfig = useThreadStore((state) => state.threadModelConfigById[threadId]);
+  const currentThreadConfigRef = useRef<ThreadModelConfig | null>(null);
+  const skipNextPersistRef = useRef(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [hasLoadedOlderPages, setHasLoadedOlderPages] = useState(false);
   const [olderBeforeCreatedAt, setOlderBeforeCreatedAt] = useState<number | null>(null);
@@ -121,13 +182,6 @@ function ChatHistory() {
       const lastMessage = payload.messages[payload.messages.length - 1];
       if (!lastMessage) return;
 
-      if (lastMessage.metadata) {
-        configStore.setConfig({
-          model: lastMessage.metadata.model.request,
-          ...lastMessage.metadata.modelParams,
-        });
-      }
-
       if (lastMessage.status === "streaming" && lastMessage.resumableStreamId) {
         void autoResumeStream(lastMessage.resumableStreamId, lastMessage._id);
       }
@@ -143,6 +197,86 @@ function ChatHistory() {
       });
     },
   );
+
+  useEffect(() => {
+    currentThreadConfigRef.current = {
+      model,
+      modelParams: {
+        effort,
+        webSearch,
+        profile: profile ?? null,
+      },
+    };
+  }, [model, effort, webSearch, profile]);
+
+  useEffect(() => {
+    if (!threadModelConfig) return;
+
+    const currentThreadConfig = currentThreadConfigRef.current;
+    if (currentThreadConfig && isSameThreadModelConfig(currentThreadConfig, threadModelConfig)) {
+      return;
+    }
+
+    skipNextPersistRef.current = true;
+    setConfig({
+      model: threadModelConfig.model,
+      ...threadModelConfig.modelParams,
+    });
+  }, [threadId, threadModelConfig, setConfig]);
+
+  useEffect(() => {
+    if (threadModelConfig) return;
+
+    const threadModelConfigFromDoc = getThreadModelConfigFromThreadDoc(data.thread);
+    const fallbackModelConfig =
+      threadModelConfigFromDoc ?? getLatestMessageModelConfig(data.messages);
+    if (!fallbackModelConfig) return;
+
+    threadStoreActions.setThreadModelConfig(threadId, fallbackModelConfig);
+
+    const currentThreadConfig = currentThreadConfigRef.current;
+    if (currentThreadConfig && isSameThreadModelConfig(currentThreadConfig, fallbackModelConfig)) {
+      return;
+    }
+
+    skipNextPersistRef.current = true;
+    setConfig({
+      model: fallbackModelConfig.model,
+      ...fallbackModelConfig.modelParams,
+    });
+  }, [threadId, threadModelConfig, data.thread, data.messages, setConfig]);
+
+  useEffect(() => {
+    if (skipNextPersistRef.current) {
+      skipNextPersistRef.current = false;
+      return;
+    }
+
+    if (!threadModelConfig) return;
+
+    const currentThreadConfig: ThreadModelConfig = {
+      model,
+      modelParams: {
+        effort,
+        webSearch,
+        profile: profile ?? null,
+      },
+    };
+
+    if (isSameThreadModelConfig(threadModelConfig, currentThreadConfig)) {
+      return;
+    }
+
+    threadStoreActions.setThreadModelConfig(threadId, currentThreadConfig);
+
+    void updateThreadModelConfig({
+      threadId,
+      latestModel: currentThreadConfig.model,
+      latestModelParams: currentThreadConfig.modelParams,
+    }).catch((error) => {
+      console.error("[Thread] Failed to persist thread model config", error);
+    });
+  }, [threadId, threadModelConfig, model, effort, webSearch, profile, updateThreadModelConfig]);
 
   useEffect(() => {
     if (data) {

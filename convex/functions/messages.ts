@@ -3,6 +3,7 @@ import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
+import type { MutationCtx } from "../_generated/server";
 import { authenticatedMutation, authenticatedQuery, r2 } from "../components";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
@@ -238,6 +239,18 @@ function getNextVariantIndex(variants: AssistantMessageDoc[]): number {
   }
 
   return maxVariantIndex + 1;
+}
+
+async function patchThreadModelConfig(
+  ctx: MutationCtx,
+  threadId: Id<"threads">,
+  model: string,
+  modelParams: (typeof AISDKModelParams)["type"],
+) {
+  await ctx.db.patch(threadId, {
+    latestModel: model,
+    latestModelParams: modelParams,
+  });
 }
 
 export const getAllMessagesFromThread = authenticatedQuery({
@@ -560,6 +573,15 @@ export const addMessagesToThread = authenticatedMutation({
       activeAssistantMessageId: assistantMessageId,
     });
 
+    if (assistantMessage.metadata) {
+      await patchThreadModelConfig(
+        ctx,
+        args.threadId,
+        assistantMessage.metadata.model.request,
+        assistantMessage.metadata.modelParams,
+      );
+    }
+
     await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
       userId: user.userId,
       threadId: args.threadId,
@@ -601,6 +623,15 @@ export const updateErrorMessage = authenticatedMutation({
       updatedAt: Date.now(),
       status: "complete",
     });
+
+    if (metadata?.model?.request && metadata.modelParams) {
+      await patchThreadModelConfig(
+        ctx,
+        message.threadId,
+        metadata.model.request,
+        metadata.modelParams,
+      );
+    }
   },
 });
 
@@ -647,6 +678,16 @@ export const updateMessageById = authenticatedMutation({
         updatedAt: Date.now(),
         ...(args.updates.status !== undefined ? { status: args.updates.status } : {}),
       });
+
+      const nextMetadata = args.updates.metadata;
+      if (nextMetadata?.model.request && nextMetadata.modelParams) {
+        await patchThreadModelConfig(
+          ctx,
+          message.threadId,
+          nextMetadata.model.request,
+          nextMetadata.modelParams,
+        );
+      }
     }
 
     const becameComplete = message.status !== "complete" && args.updates.status === "complete";
@@ -815,6 +856,8 @@ export const retryChatMessage = authenticatedMutation({
         activeAssistantMessageId: assistantMessageId,
       }),
     ]);
+
+    await patchThreadModelConfig(ctx, args.threadId, args.model, args.modelParams);
 
     return { assistantMessageId, userMessageId: resolvedUserMessageId };
   },

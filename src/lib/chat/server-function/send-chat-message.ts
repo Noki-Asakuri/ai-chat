@@ -13,6 +13,7 @@ import { useConfigStore, useConfigStoreState } from "@/components/provider/confi
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
+import { threadStoreActions } from "@/lib/store/thread-store";
 import { buildAttachmentUrl } from "@/lib/assets/urls";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { fromUUID, toUUID, tryCatch } from "@/lib/utils";
@@ -62,9 +63,19 @@ export function useSendChatMessage() {
     chatStoreActions.resetInput();
 
     if (!threadId) {
-      threadId = await convexClient.mutation(api.functions.threads.createThread, { sessionId });
+      threadId = await convexClient.mutation(api.functions.threads.createThread, {
+        sessionId,
+        latestModel: model,
+        latestModelParams: metadataModelParams,
+      });
       await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(threadId) } });
     }
+
+    const threadModelConfig = {
+      model,
+      modelParams: metadataModelParams,
+    };
+    threadStoreActions.setThreadModelConfig(threadId, threadModelConfig);
 
     const abortController = new AbortController();
     const streamId = crypto.randomUUID();

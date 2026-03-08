@@ -2,7 +2,7 @@
 import { Migrations } from "@convex-dev/migrations";
 
 import { components, internal } from "./_generated/api";
-import type { DataModel, Id } from "./_generated/dataModel";
+import type { DataModel, Doc, Id } from "./_generated/dataModel";
 
 /**
  * Initialize migrations component with DataModel for proper typing.
@@ -68,3 +68,66 @@ export const backfillMessages = migrations.define({
 });
 
 export const runBackfillMessages = migrations.runner([internal.migrations.backfillMessages]);
+
+const DEFAULT_THREAD_MODEL = "google/gemini-3-flash";
+
+function getThreadModelConfigFromMessages(messages: Doc<"messages">[]): {
+  latestModel: string;
+  latestModelParams: NonNullable<Doc<"threads">["latestModelParams"]>;
+} | null {
+  for (const message of messages) {
+    if (message.role !== "assistant") continue;
+
+    const latestModel = message.metadata?.model.request?.trim();
+    if (!latestModel) continue;
+
+    const modelParams = message.metadata?.modelParams;
+    if (!modelParams) continue;
+
+    return {
+      latestModel,
+      latestModelParams: {
+        effort: modelParams.effort,
+        webSearch: modelParams.webSearch,
+        profile: modelParams.profile ?? null,
+      },
+    };
+  }
+
+  return null;
+}
+
+export const backfillThreadModelConfig = migrations.define({
+  table: "threads",
+  migrateOne: async (ctx, thread) => {
+    if (thread.latestModel && thread.latestModelParams) {
+      return;
+    }
+
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_threadId", (q) => q.eq("threadId", thread._id))
+      .order("desc")
+      .collect();
+
+    const configFromMessages = getThreadModelConfigFromMessages(messages);
+
+    if (configFromMessages) {
+      await ctx.db.patch(thread._id, configFromMessages);
+      return;
+    }
+
+    await ctx.db.patch(thread._id, {
+      latestModel: DEFAULT_THREAD_MODEL,
+      latestModelParams: {
+        effort: "medium",
+        webSearch: false,
+        profile: null,
+      },
+    });
+  },
+});
+
+export const runBackfillThreadModelConfig = migrations.runner([
+  internal.migrations.backfillThreadModelConfig,
+]);
