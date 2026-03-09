@@ -1,14 +1,13 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
-import dedent from "dedent";
 import type { Hono } from "hono";
 import { z } from "zod/v4";
 
 import { APICallError, stepCountIs, streamText, UI_MESSAGE_STREAM_HEADERS } from "ai";
 
-import { logger } from "@/lib/axiom/logger";
 import { buildAttachmentUrl } from "@/lib/assets/urls";
+import { logger } from "@/lib/axiom/logger";
 import { createServerConvexClient } from "@/lib/convex/server";
 import { serverUploadFileR2 } from "@/lib/server/file-upload";
 import { registry } from "@/lib/server/model-registry";
@@ -25,6 +24,7 @@ import { tryCatch, tryCatchSync } from "@/lib/utils";
 
 import { handleFileCaching } from "../../handle-file-caching";
 import { getAuthContextFromCookieHeader } from "../auth";
+import { buildSystemInstruction } from "../lib/prompt-builder";
 import { streamContext } from "../resumable-stream";
 import { abortStream, registerStream, removeStream } from "../stream-registry";
 
@@ -373,72 +373,24 @@ export function registerAiChatRoutes(app: Hono): void {
 
       usageReserved = true;
 
-      let systemInstruction = "";
-      const userPreferences = await convexClient.query(
+      const userPreferencesPromise = convexClient.query(
         api.functions.users.getCurrentUserPreferences,
-        {
-          sessionId,
-        },
+        { sessionId },
       );
 
-      if (userPreferences?.name) {
-        systemInstruction += dedent`
-				<user>
-				## User Information:
-				User basic information. Avoid mentioning the user's name during the conversation.
-				Keep it in mind and use it when necessary.
+      const profilePromise = modelParams.profile
+        ? convexClient.query(api.functions.profiles.getProfile, {
+            sessionId,
+            profileId: modelParams.profile,
+          })
+        : null;
 
-				Name: ${userPreferences.name ?? "user"}
-				</user>
-				\n`;
-      }
+      const [userPreferences, profile] = await Promise.all([
+        userPreferencesPromise,
+        profilePromise,
+      ]);
 
-      systemInstruction += dedent`
-			<global>
-			## Global System Instruction:
-			This is the global system instruction. It should be followed unless there is a conflicting instruction in the AI Profile Instruction.
-
-			${userPreferences?.globalSystemInstruction ?? "You are a helpful assistant."}
-			</global>
-		`;
-
-      if (modelParams.profile) {
-        const profile = await convexClient.query(api.functions.profiles.getProfile, {
-          sessionId,
-          profileId: modelParams.profile,
-        });
-
-        const prompt = profile?.systemPrompt ?? "";
-
-        if (prompt && prompt.length > 0) {
-          systemInstruction += dedent`\n
-					<profile>
-					## AI Profile Instruction:
-					User defined instruction. This is the most important instruction. It should take precedence over the global system instruction.
-
-					${prompt}
-					</profile>
-					`;
-        }
-      }
-
-      systemInstruction += dedent`
-			<math>
-			## Math Formatting Instruction:
-			When the user asks a math question, format mathematical expressions using LaTeX delimiters.
-			- Supported inline math delimiters: $...$ and \(...\).
-			- Supported block math delimiters: $$...$$ and \[...\].
-			- Prefer $...$ for inline math and $$...$$ for block math.
-			</math>
-		`;
-
-      systemInstruction += dedent`
-			<code>
-			## Code Block Update Instruction:
-			If the user provides code in a fenced code block and you update that code,
-			you must return the updated code inside a fenced code block.
-			</code>
-		`;
+      const systemInstruction = await buildSystemInstruction(userPreferences, profile);
 
       const startTime = Date.now();
       const activeStreamId = streamId ?? requestId;
@@ -446,7 +398,7 @@ export function registerAiChatRoutes(app: Hono): void {
 
       const result = streamText({
         model: registry(model.id),
-        system: systemInstruction.trim(),
+        system: systemInstruction,
         messages: modelMessages,
         providerOptions,
         tools,
