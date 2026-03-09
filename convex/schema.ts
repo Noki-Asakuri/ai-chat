@@ -298,21 +298,6 @@ export default defineSchema(
       createdAt: v.optional(v.number()),
       updatedAt: v.optional(v.number()),
 
-      // @deprecate
-      customization: v.optional(
-        v.object({
-          name: v.string(),
-          occupation: v.string(),
-          traits: v.array(v.string()),
-          systemInstruction: v.string(),
-          backgroundId: v.nullable(v.string()),
-          disableBlur: v.boolean(),
-          hiddenModels: v.array(v.string()),
-          favoriteModels: v.array(v.string()),
-          showFullCode: v.boolean(),
-        }),
-      ),
-
       preferences: userPreferences,
     }).index("by_userId", ["userId"]),
 
