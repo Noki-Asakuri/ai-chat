@@ -1,5 +1,6 @@
 import "katex/dist/katex.min.css";
 
+import { cjk } from "@streamdown/cjk";
 import { createMathPlugin } from "@streamdown/math";
 import { createMermaidPlugin } from "@streamdown/mermaid";
 
@@ -281,6 +282,7 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
       caret="block"
       isAnimating={isAnimating}
       plugins={{
+        cjk,
         math,
         mermaid,
         renderers: [{ component: CodeBlock, language: supportedLanguages }],
