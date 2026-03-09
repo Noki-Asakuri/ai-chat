@@ -1,7 +1,6 @@
 import { api } from "@/convex/_generated/api";
 
 import { useSessionMutation } from "convex-helpers/react/sessions";
-
 import { useParams } from "@tanstack/react-router";
 
 import { ChevronDownIcon, LayersIcon, StarIcon } from "lucide-react";
@@ -478,10 +477,10 @@ export function ChatModelSelector() {
   function handleChange(model: string) {
     if (isWelcomeRoute) {
       setConfig({ model, defaultModel: model });
-      return;
+    } else {
+      setConfig({ model });
     }
 
-    setConfig({ model });
     void syncThreadModelConfig({ model });
   }
 

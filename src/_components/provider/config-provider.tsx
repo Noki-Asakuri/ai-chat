@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect, useRef } from "react";
 import { useStore } from "zustand";
 
 import {
@@ -15,8 +15,21 @@ type ConfigStoreProviderProps = {
 };
 
 export function ConfigStoreProvider(props: ConfigStoreProviderProps) {
-  const store = createConfigStore(props.initialState);
-  return <ConfigStoreContext.Provider value={store}>{props.children}</ConfigStoreContext.Provider>;
+  const storeRef = useRef<ReturnType<typeof createConfigStore> | null>(null);
+
+  if (!storeRef.current) {
+    storeRef.current = createConfigStore(props.initialState);
+  }
+
+  useEffect(() => {
+    storeRef.current?.getState().setServerState(props.initialState);
+  }, [props.initialState]);
+
+  return (
+    <ConfigStoreContext.Provider value={storeRef.current}>
+      {props.children}
+    </ConfigStoreContext.Provider>
+  );
 }
 
 export function useConfigStore<T>(selector: (state: ConfigStore) => T): T {

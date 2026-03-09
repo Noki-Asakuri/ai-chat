@@ -28,6 +28,7 @@ export type ConfigStore = ConfigStoreData & {
   toggleWrapline: () => void;
   setHiddenModels: (hiddenModels: string[]) => void;
   setFavoriteModels: (favoriteModels: string[]) => void;
+  setServerState: (nextState: Partial<ConfigStoreData>) => void;
 };
 
 export function createConfigStore(initialState: Partial<ConfigStoreData>) {
@@ -51,6 +52,8 @@ export function createConfigStore(initialState: Partial<ConfigStoreData>) {
 
     favoriteModels: [],
     setFavoriteModels: (favoriteModels) => set({ favoriteModels }),
+
+    setServerState: (nextState) => set(() => nextState),
 
     ...initialState,
   }));

@@ -146,14 +146,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           config={{ position: "bottom-right" }}
           plugins={[
             {
-              name: "Tanstack Router",
-              render: <TanStackRouterDevtoolsPanel />,
-              defaultOpen: false,
-            },
-            {
               name: "Tanstack Query",
               render: <ReactQueryDevtoolsPanel />,
               defaultOpen: true,
+            },
+            {
+              name: "Tanstack Router",
+              render: <TanStackRouterDevtoolsPanel />,
+              defaultOpen: false,
             },
           ]}
         />

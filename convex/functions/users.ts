@@ -1,10 +1,9 @@
 import { v } from "convex/values";
 
 import type { Doc } from "../_generated/dataModel";
-import { type QueryCtx } from "../_generated/server";
 
 import { authenticatedMutation, authenticatedQuery } from "../components";
-import { userPreferences } from "../schema";
+import { AISDKModelParams, userPreferences } from "../schema";
 
 const MODEL_PROVIDER_PREFIXES = ["google/", "openai/", "deepseek/"] as const;
 
@@ -106,6 +105,35 @@ export const updateUserModelPreferences = authenticatedMutation({
   },
 });
 
+export const updateUserDefaultModelConfig = authenticatedMutation({
+  args: {
+    defaultModel: v.string(),
+    modelParams: AISDKModelParams,
+  },
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const models = user.preferences.models;
+
+    if (
+      models.defaultModel === args.defaultModel &&
+      models.modelParams.effort === args.modelParams.effort &&
+      models.modelParams.webSearch === args.modelParams.webSearch &&
+      models.modelParams.profile === args.modelParams.profile
+    ) {
+      return;
+    }
+
+    await ctx.db.patch(user._id, {
+      preferences: {
+        ...user.preferences,
+        models: { ...models, defaultModel: args.defaultModel, modelParams: args.modelParams },
+      },
+    });
+  },
+});
+
 export const currentUser = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
@@ -117,11 +145,30 @@ export const currentUser = authenticatedQuery({
 });
 
 export const getCurrentUserPreferences = authenticatedQuery({
-  args: {},
-  handler: async (ctx) => {
+  args: { threadId: v.optional(v.id("threads")) },
+  handler: async (ctx, args) => {
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    return user.preferences;
+    const thread = args.threadId ? await ctx.db.get("threads", args.threadId) : null;
+    if (thread && thread.userId !== user.userId) throw new Error("Not authorized");
+
+    console.log("[Convex] getCurrentUserPreferences", {
+      threadId: args.threadId,
+      thread: thread?._id,
+      latestModel: thread?.latestModel,
+      latestModelParams: thread?.latestModelParams,
+    });
+
+    return {
+      ...user.preferences,
+      models: {
+        ...user.preferences.models,
+        defaultModel: user.preferences.models.defaultModel,
+
+        selectedModel: thread?.latestModel ?? user.preferences.models.defaultModel,
+        selectedModelParams: thread?.latestModelParams ?? user.preferences.models.modelParams,
+      },
+    };
   },
 });

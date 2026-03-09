@@ -1,9 +1,10 @@
 import "streamdown/styles.css";
 
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useParams } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 
@@ -21,6 +22,7 @@ import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/componen
 import { buildImageAssetUrl } from "@/lib/assets/urls";
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
 import { convexSessionQuery } from "@/lib/convex/helpers";
+import { fromUUID } from "@/lib/utils";
 
 const getDefaultOpenSidebar = createIsomorphicFn()
   .server(async function () {
@@ -48,14 +50,20 @@ export const Route = createFileRoute("/_chat_layout")({
     return { user: context.user };
   },
 
-  loader: async ({ context }) => {
+  loader: async ({ context, params: rawParams }) => {
     const { defaultOpenSidebar } = await getDefaultOpenSidebar();
 
-    await context.queryClient.prefetchQuery(
-      convexQuery(api.functions.users.getCurrentUserPreferences, { sessionId: context.sessionId! }),
+    const params = rawParams as { threadId?: string };
+    const threadId = fromUUID<Id<"threads">>(params.threadId);
+
+    const userPreferencesData = await context.queryClient.ensureQueryData(
+      convexQuery(api.functions.users.getCurrentUserPreferences, {
+        sessionId: context.sessionId!,
+        threadId,
+      }),
     );
 
-    return { user: context.user, defaultOpenSidebar };
+    return { user: context.user, defaultOpenSidebar, userPreferencesData };
   },
 
   head: () => ({
@@ -64,20 +72,17 @@ export const Route = createFileRoute("/_chat_layout")({
 });
 
 function RouteComponent() {
-  const { defaultOpenSidebar } = Route.useLoaderData();
-  const { data: userPreferences } = useSuspenseQuery(
-    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
-  );
+  const { defaultOpenSidebar, userPreferencesData } = Route.useLoaderData();
 
   return (
     <SidebarProvider
       id="sidebar-provider"
       defaultOpen={defaultOpenSidebar}
-      data-performance-mode={userPreferences.performanceEnabled ? "true" : "false"}
+      data-performance-mode={userPreferencesData.performanceEnabled ? "true" : "false"}
       className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat"
       style={{
-        backgroundImage: userPreferences.backgroundImage
-          ? `url(${buildImageAssetUrl(userPreferences.backgroundImage)})`
+        backgroundImage: userPreferencesData.backgroundImage
+          ? `url(${buildImageAssetUrl(userPreferencesData.backgroundImage)})`
           : undefined,
       }}
     >
@@ -101,22 +106,43 @@ function RouteComponent() {
           <ThreadTitle />
         </div>
 
-        <ConfigStoreProvider
-          initialState={{
-            hiddenModels: userPreferences.models.hidden,
-            favoriteModels: userPreferences.models.favorite,
-
-            pref: userPreferences.sendPreference,
-            wrapline: userPreferences.code.autoWrap,
-            showFullCode: userPreferences.code.showFullCode,
-          }}
-        >
-          <Outlet />
-          <ThreadProfileSidebar />
-        </ConfigStoreProvider>
+        <ChatLayoutConfig />
       </GlobalDropzone>
 
       <RegisterEventHandlers />
     </SidebarProvider>
+  );
+}
+
+function ChatLayoutConfig() {
+  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
+  const threadId = fromUUID<Id<"threads">>(params?.threadId);
+
+  const { data: userPreferences } = useSuspenseQuery(
+    convexSessionQuery(api.functions.users.getCurrentUserPreferences, { threadId }),
+  );
+
+  return (
+    <ConfigStoreProvider
+      key={threadId ?? "welcome"}
+      initialState={{
+        hiddenModels: userPreferences.models.hidden,
+        favoriteModels: userPreferences.models.favorite,
+
+        pref: userPreferences.sendPreference,
+        wrapline: userPreferences.code.autoWrap,
+        showFullCode: userPreferences.code.showFullCode,
+
+        defaultModel: userPreferences.models.selectedModel,
+
+        effort: userPreferences.models.selectedModelParams.effort,
+        webSearch: userPreferences.models.selectedModelParams.webSearch,
+        profile: userPreferences.models.selectedModelParams.profile,
+        model: userPreferences.models.selectedModel,
+      }}
+    >
+      <Outlet />
+      <ThreadProfileSidebar />
+    </ConfigStoreProvider>
   );
 }

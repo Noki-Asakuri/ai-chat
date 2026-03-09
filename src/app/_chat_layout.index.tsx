@@ -1,9 +1,12 @@
+import { api } from "@/convex/_generated/api";
+
 import { createFileRoute } from "@tanstack/react-router";
+
+import { convexQuery } from "@convex-dev/react-query";
 import { useEffect } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
-import { useConfigStore } from "@/components/provider/config-provider";
 
 import { useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions } from "@/lib/store/messages-store";
@@ -11,20 +14,21 @@ import { messageStoreActions } from "@/lib/store/messages-store";
 export const Route = createFileRoute("/_chat_layout/")({
   component: RouteComponent,
   loader: async ({ context }) => {
-    return { user: context.user! };
+    await context.queryClient.prefetchQuery(
+      convexQuery(api.functions.users.getCurrentUserPreferences, {
+        sessionId: context.sessionId!,
+      }),
+    );
+
+    return { user: context.user };
   },
 });
 
 function RouteComponent() {
-  const defaultModel = useConfigStore((state) => state.defaultModel);
-  const setConfig = useConfigStore((state) => state.setConfig);
-
   useEffect(() => {
     messageStoreActions.clearMessages();
     messageStoreActions.setCurrentThreadId(null);
-
-    setConfig({ model: defaultModel });
-  }, [defaultModel, setConfig]);
+  }, []);
 
   return (
     <>

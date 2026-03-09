@@ -36,7 +36,7 @@ export function useSyncThreadModelConfig() {
     if (!sessionId) return;
 
     const resolvedThreadId = options.threadId ?? fromUUID<Id<"threads">>(params?.threadId);
-    if (!resolvedThreadId) return;
+    const latestModel = options.model ?? model;
 
     const latestModelParams: UpdateThreadModelConfigArgs["latestModelParams"] = {
       effort: options.modelParams?.effort ?? effort,
@@ -47,17 +47,25 @@ export function useSyncThreadModelConfig() {
           : options.modelParams.profile,
     };
 
-    const [, error] = await tryCatch(
-      convexClient.mutation(api.functions.threads.updateThreadModelConfig, {
-        sessionId,
-        threadId: resolvedThreadId,
-        latestModel: options.model ?? model,
-        latestModelParams,
-      }),
-    );
+    const [, error] = resolvedThreadId
+      ? await tryCatch(
+          convexClient.mutation(api.functions.threads.updateThreadModelConfig, {
+            sessionId,
+            threadId: resolvedThreadId,
+            latestModel,
+            latestModelParams,
+          }),
+        )
+      : await tryCatch(
+          convexClient.mutation(api.functions.users.updateUserDefaultModelConfig, {
+            sessionId,
+            defaultModel: latestModel,
+            modelParams: latestModelParams,
+          }),
+        );
 
     if (error) {
-      console.error("[Chat] Failed to sync thread model config", error);
+      console.error("[Chat] Failed to sync model config", error);
     }
   }
 
