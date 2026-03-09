@@ -18,18 +18,17 @@ type CodeBlockBodyProps = ComponentProps<"div"> & {
   virtualPaddingBottomPx?: number;
 };
 
-// Memoize line numbers class string since it's constant
 const LINE_NUMBER_CLASSES = cn(
-  "block",
+  "relative block pl-[var(--sdm-line-gutter)]",
+  "before:absolute before:top-0 before:left-0",
   "before:content-[counter(line)]",
-  "before:inline-block",
   "before:[counter-increment:line]",
-  "before:w-6",
-  "before:mr-4",
-  "before:text-right",
-  "before:text-muted-foreground/50",
-  "before:font-mono",
+  "before:w-[var(--sdm-line-number-width)]",
   "before:select-none",
+  "before:whitespace-nowrap",
+  "before:text-right",
+  "before:font-mono",
+  "before:text-muted-foreground/50",
 );
 
 /**
@@ -106,65 +105,79 @@ export const CodeBlockContent = memo(
       Math.max(boundedStartLineIndex, endLineIndex),
     );
 
-    const renderedRows: React.ReactNode[] = [];
+    const lineNumberGutterWidthCh = String(Math.max(1, boundedEndLineIndex)).length + 1;
+    const renderedRows = useMemo(() => {
+      const rows: React.ReactNode[] = [];
 
-    for (let lineIndex = boundedStartLineIndex; lineIndex < boundedEndLineIndex; lineIndex++) {
-      const row = result.tokens[lineIndex] ?? [];
+      for (let lineIndex = boundedStartLineIndex; lineIndex < boundedEndLineIndex; lineIndex++) {
+        const row = result.tokens[lineIndex] ?? [];
 
-      renderedRows.push(
-        <span className={LINE_NUMBER_CLASSES} key={lineIndex}>
-          {row.length === 0 && <br />}
+        rows.push(
+          <span className={LINE_NUMBER_CLASSES} key={lineIndex}>
+            {row.length === 0 && <br />}
 
-          {row.map((token, tokenIndex) => {
-            // Shiki dual-theme tokens put direct CSS properties (color,
-            // background-color) into htmlStyle alongside CSS custom
-            // properties (--shiki-dark, etc). Direct properties as inline
-            // styles override the Tailwind class-based dark mode approach,
-            // so we redirect them to CSS custom properties instead.
-            const tokenStyle: Record<string, string> = {};
-            let hasBg = Boolean(token.bgColor);
+            {row.map((token, tokenIndex) => {
+              // Shiki dual-theme tokens put direct CSS properties (color,
+              // background-color) into htmlStyle alongside CSS custom
+              // properties (--shiki-dark, etc). Direct properties as inline
+              // styles override the Tailwind class-based dark mode approach,
+              // so we redirect them to CSS custom properties instead.
+              const tokenStyle: Record<string, string> = {};
+              let hasBg = Boolean(token.bgColor);
 
-            if (token.color) {
-              tokenStyle["--sdm-c"] = token.color;
-            }
+              if (token.color) {
+                tokenStyle["--sdm-c"] = token.color;
+              }
 
-            if (token.bgColor) {
-              tokenStyle["--sdm-tbg"] = token.bgColor;
-            }
+              if (token.bgColor) {
+                tokenStyle["--sdm-tbg"] = token.bgColor;
+              }
 
-            if (token.htmlStyle) {
-              for (const [key, value] of Object.entries(token.htmlStyle)) {
-                if (key === "color") {
-                  tokenStyle["--sdm-c"] = value;
-                } else if (key === "background-color") {
-                  tokenStyle["--sdm-tbg"] = value;
-                  hasBg = true;
-                } else {
-                  tokenStyle[key] = value;
+              if (token.htmlStyle) {
+                for (const [key, value] of Object.entries(token.htmlStyle)) {
+                  if (key === "color") {
+                    tokenStyle["--sdm-c"] = value;
+                  } else if (key === "background-color") {
+                    tokenStyle["--sdm-tbg"] = value;
+                    hasBg = true;
+                  } else {
+                    tokenStyle[key] = value;
+                  }
                 }
               }
-            }
 
-            return (
-              <span
-                className={cn(
-                  "text-[var(--sdm-c,inherit)]",
-                  "dark:text-[var(--shiki-dark,var(--sdm-c,inherit))]",
-                  hasBg && "bg-[var(--sdm-tbg)]",
-                  hasBg && "dark:bg-[var(--shiki-dark-bg,var(--sdm-tbg))]",
-                )}
-                // biome-ignore lint/suspicious/noArrayIndexKey: "This is a stable key."
-                key={tokenIndex}
-                style={tokenStyle as CSSProperties}
-                {...token.htmlAttrs}
-              >
-                {token.content}
-              </span>
-            );
-          })}
-        </span>,
-      );
-    }
+              return (
+                <span
+                  className={cn(
+                    "text-[var(--sdm-c,inherit)]",
+                    "dark:text-[var(--shiki-dark,var(--sdm-c,inherit))]",
+                    hasBg && "bg-[var(--sdm-tbg)]",
+                    hasBg && "dark:bg-[var(--shiki-dark-bg,var(--sdm-tbg))]",
+                  )}
+                  // biome-ignore lint/suspicious/noArrayIndexKey: "This is a stable key."
+                  key={tokenIndex}
+                  style={tokenStyle as CSSProperties}
+                  {...token.htmlAttrs}
+                >
+                  {token.content}
+                </span>
+              );
+            })}
+          </span>,
+        );
+      }
+
+      return rows;
+    }, [boundedEndLineIndex, boundedStartLineIndex, result.tokens]);
+
+    const codeStyle = useMemo<CSSProperties>(
+      () => ({
+        counterReset: `line ${boundedStartLineIndex}`,
+        "--sdm-line-number-width": `${lineNumberGutterWidthCh}ch`,
+        "--sdm-line-gutter": `calc(var(--sdm-line-number-width) + 1rem)`,
+      }),
+      [boundedStartLineIndex, lineNumberGutterWidthCh],
+    );
 
     return (
       <div
@@ -178,11 +191,13 @@ export const CodeBlockContent = memo(
             className,
             "bg-[var(--sdm-bg,inherit)]",
             "dark:bg-[var(--shiki-dark-bg,var(--sdm-bg,inherit))]",
-            wrapline ? "w-full wrap-anywhere whitespace-pre-wrap" : "whitespace-pre",
+            wrapline
+              ? "w-full wrap-anywhere whitespace-pre-wrap"
+              : "w-max min-w-full whitespace-pre",
           )}
           style={preStyle}
         >
-          <code style={{ counterReset: `line ${boundedStartLineIndex}` }}>{renderedRows}</code>
+          <code style={codeStyle}>{renderedRows}</code>
         </pre>
       </div>
     );
