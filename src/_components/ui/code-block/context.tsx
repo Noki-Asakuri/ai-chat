@@ -69,14 +69,14 @@ export function CodeBlockProvider({
   children,
 }: CodeBlockProviderProps) {
   const configStore = useConfigStoreState();
-  const { wrapline, defaultShowFullCode } = useConfigStore(
+  const { wrapline, showFullCode } = useConfigStore(
     useShallow((state) => ({
       wrapline: state.wrapline,
-      defaultShowFullCode: state.defaultShowFullCode,
+      showFullCode: state.showFullCode,
     })),
   );
 
-  const [expanded, setExpanded] = useState(defaultShowFullCode);
+  const [expanded, setExpanded] = useState(showFullCode);
   const [containerHeightPx, setContainerHeightPx] = useState<number>(0);
 
   return (

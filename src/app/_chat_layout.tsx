@@ -105,7 +105,10 @@ function RouteComponent() {
           initialState={{
             hiddenModels: userPreferences.models.hidden,
             favoriteModels: userPreferences.models.favorite,
-            defaultShowFullCode: userPreferences.code.showFullCode,
+
+            pref: userPreferences.sendPreference,
+            wrapline: userPreferences.code.autoWrap,
+            showFullCode: userPreferences.code.showFullCode,
           }}
         >
           <Outlet />

@@ -1,7 +1,6 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
 
 import type { ReasoningEffort } from "../types";
 
@@ -17,7 +16,7 @@ type ChatConfig = {
 
 type UserCustomization = {
   wrapline: boolean;
-  defaultShowFullCode: boolean;
+  showFullCode: boolean;
   hiddenModels: string[];
   favoriteModels: string[];
 };
@@ -32,60 +31,27 @@ export type ConfigStore = ConfigStoreData & {
 };
 
 export function createConfigStore(initialState: Partial<ConfigStoreData>) {
-  return create<ConfigStore>()(
-    persist(
-      (set) => ({
-        effort: "medium",
-        webSearch: false,
-        defaultModel: "google/gemini-3-flash",
-        model: "google/gemini-3-flash",
-        profile: null,
-        pref: "enter",
+  return create<ConfigStore>()((set) => ({
+    effort: "medium",
+    webSearch: false,
+    defaultModel: "google/gemini-3-flash",
+    model: "google/gemini-3-flash",
+    profile: null,
+    pref: "enter",
 
-        setConfig: (config) => set((state) => ({ ...state, ...config })),
+    setConfig: (config) => set((state) => ({ ...state, ...config })),
 
-        wrapline: false,
-        toggleWrapline: () => set((state) => ({ wrapline: !state.wrapline })),
+    wrapline: false,
+    toggleWrapline: () => set((state) => ({ wrapline: !state.wrapline })),
 
-        defaultShowFullCode: false,
+    showFullCode: false,
 
-        hiddenModels: [],
-        setHiddenModels: (hiddenModels) => set({ hiddenModels }),
+    hiddenModels: [],
+    setHiddenModels: (hiddenModels) => set({ hiddenModels }),
 
-        favoriteModels: [],
-        setFavoriteModels: (favoriteModels) => set({ favoriteModels }),
+    favoriteModels: [],
+    setFavoriteModels: (favoriteModels) => set({ favoriteModels }),
 
-        ...initialState,
-      }),
-      {
-        name: "local-config-store",
-        storage: createJSONStorage(() => localStorage),
-        partialize: (state) => ({
-          effort: state.effort,
-          webSearch: state.webSearch,
-          model: state.model,
-          defaultModel: state.defaultModel,
-          profile: state.profile,
-          wrapline: state.wrapline,
-          pref: state.pref,
-        }),
-        onRehydrateStorage: () => (state) => {
-          if (!state) return;
-
-          const fallbackDefaultModel =
-            state.defaultModel.trim().length > 0
-              ? state.defaultModel
-              : state.model.trim().length > 0
-                ? state.model
-                : "google/gemini-3-flash";
-
-          const nextModel = state.model.trim().length > 0 ? state.model : fallbackDefaultModel;
-
-          if (state.defaultModel !== fallbackDefaultModel || state.model !== nextModel) {
-            state.setConfig({ defaultModel: fallbackDefaultModel, model: nextModel });
-          }
-        },
-      },
-    ),
-  );
+    ...initialState,
+  }));
 }
