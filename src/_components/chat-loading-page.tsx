@@ -16,14 +16,14 @@ import { ThreadCommand } from "./threads/thread-command";
 import { ChatTextarea } from "./chat-textarea/main-textarea";
 
 export function ChatLoadingPage() {
-  const { backgroundImage, defaultOpenSidebar, disableBlur } = useLoaderData({
+  const { backgroundImage, defaultOpenSidebar, performanceEnabled } = useLoaderData({
     from: "/_chat_layout",
   });
 
   return (
     <SidebarProvider
       id="sidebar-provider"
-      data-disable-blur={disableBlur}
+      data-performance-mode={performanceEnabled ? "true" : "false"}
       style={{ backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined }}
       className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat"
       defaultOpen={defaultOpenSidebar}
@@ -31,7 +31,7 @@ export function ChatLoadingPage() {
       <SidebarSkeleton />
 
       <main data-slot="chat" className="relative inset-0 h-dvh w-screen overflow-hidden">
-        <div className="absolute top-0 z-10 flex h-10 w-full items-center justify-between gap-2 border-x border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar">
+        <div className="absolute top-0 z-10 flex h-10 w-full items-center justify-between gap-2 border-x border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[performance-mode=true]/sidebar-provider:bg-sidebar">
           <div className="flex items-center gap-2">
             <SidebarTrigger />
 
@@ -60,9 +60,9 @@ function SidebarSkeleton() {
   return (
     <Sidebar
       variant="inset"
-      className="bg-sidebar/40 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar"
+      className="bg-sidebar/40 backdrop-blur-md backdrop-saturate-150 group-data-[performance-mode=true]/sidebar-provider:bg-sidebar"
     >
-      <div className="pointer-events-none absolute inset-0 -z-5 group-data-[disable-blur=true]/sidebar-provider:hidden">
+      <div className="pointer-events-none absolute inset-0 -z-5 group-data-[performance-mode=true]/sidebar-provider:hidden">
         <div className="h-1/2 w-full bg-linear-to-b from-sidebar/80 from-5% to-transparent to-80%" />
         <div className="h-1/2 w-full bg-linear-to-t from-sidebar/80 from-5% to-transparent to-80%" />
       </div>
