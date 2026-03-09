@@ -9,6 +9,7 @@ import { ChatEffortSelector, EffortSelector } from "./effort-selector";
 import { ChatModelSelector, ModelSelector } from "./model-selector";
 
 import { tryGetModelData } from "@/lib/chat/models";
+import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
 import { cn } from "@/lib/utils";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
@@ -95,6 +96,7 @@ export function BaseWebSearchButton({
 
 function WebSearchButton() {
   const configStore = useConfigStoreState();
+  const { syncThreadModelConfig } = useSyncThreadModelConfig();
   const config = useConfigStore(
     useShallow((state) => ({ webSearch: state.webSearch, model: state.model })),
   );
@@ -103,7 +105,13 @@ function WebSearchButton() {
     <BaseWebSearchButton
       model={config.model}
       webSearch={config.webSearch}
-      setWebSearch={(webSearch) => configStore.setConfig({ webSearch })}
+      setWebSearch={(webSearch) => {
+        configStore.setConfig({ webSearch });
+        void syncThreadModelConfig({
+          model: config.model,
+          modelParams: { webSearch },
+        });
+      }}
     />
   );
 }

@@ -30,6 +30,7 @@ import {
   tryGetModelData,
   type Provider,
 } from "@/lib/chat/models";
+import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
 import { cn, tryCatch } from "@/lib/utils";
 
 type ModelSelectorProps = {
@@ -469,6 +470,7 @@ function PickerSectionButton({
 export function ChatModelSelector() {
   const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
   const isWelcomeRoute = !params?.threadId;
+  const { syncThreadModelConfig } = useSyncThreadModelConfig();
 
   const storeModel = useConfigStore((state) => state.model);
   const setConfig = useConfigStore((state) => state.setConfig);
@@ -480,6 +482,7 @@ export function ChatModelSelector() {
     }
 
     setConfig({ model });
+    void syncThreadModelConfig({ model });
   }
 
   return (

@@ -7,6 +7,7 @@ import { Button, buttonVariants } from "../ui/button";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 import { tryGetModelData } from "@/lib/chat/models";
+import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
 import type { ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +54,7 @@ export function EffortSelectorBase(props: EffortSelectorProps) {
 
 function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInnerProps) {
   const configStore = useConfigStoreState();
+  const { syncThreadModelConfig } = useSyncThreadModelConfig();
 
   const shouldHideSelector =
     typeof modelData.capabilities.reasoning === "undefined" ||
@@ -60,8 +62,16 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
     modelData.capabilities.reasoning === false;
 
   const handleChange = useEffectEvent((effort: ReasoningEffort) => {
-    if (props.onChange) props.onChange(effort);
-    else configStore.setConfig({ effort });
+    if (props.onChange) {
+      props.onChange(effort);
+      return;
+    }
+
+    configStore.setConfig({ effort });
+    void syncThreadModelConfig({
+      model: props.model,
+      modelParams: { effort },
+    });
   });
 
   // If they don't have customReasoningLevel, we fallback to the only 3 levels.

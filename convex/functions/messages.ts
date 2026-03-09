@@ -914,6 +914,18 @@ export const setActiveAssistantVariant = authenticatedMutation({
       updatedAt: Date.now(),
     });
 
+    const latestModel = assistantMessage.metadata?.model.request?.trim();
+    if (latestModel) {
+      const latestModelParams = assistantMessage.metadata?.modelParams ??
+        thread.latestModelParams ?? {
+          effort: "medium",
+          webSearch: false,
+          profile: null,
+        };
+
+      await patchThreadModelConfig(ctx, args.threadId, latestModel, latestModelParams);
+    }
+
     return { activeAssistantMessageId: args.assistantMessageId };
   },
 });
