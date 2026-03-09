@@ -32,9 +32,16 @@ export function createServerApp(options: { commitSha: string }): ServerApp {
   };
 
   const app = new Hono();
+  const requestLogger = honoLogger();
 
   app.use(requestId());
-  app.use(honoLogger());
+  app.use("*", (ctx, next) => {
+    if (ctx.req.path === "/health") {
+      return next();
+    }
+
+    return requestLogger(ctx, next);
+  });
   app.use(secureHeaders());
 
   // Graceful-drain aware middleware: block new requests during shutdown and track in-flight work
