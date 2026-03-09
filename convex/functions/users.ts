@@ -120,7 +120,7 @@ export const getCurrentUserPreferences = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
     const user = ctx.user;
-    if (!user) return null;
+    if (!user) throw new Error("Not authenticated");
 
     return user.preferences;
   },
