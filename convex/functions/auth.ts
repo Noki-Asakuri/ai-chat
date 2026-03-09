@@ -4,17 +4,17 @@ import { DEFAULT_USER_PREFERENCES } from "./users";
 
 export const { authKitEvent } = authKit.events({
   "user.created": async (ctx, event) => {
+    const firstName = event.data.firstName ?? "user";
+    const lastName = event.data.lastName ?? "";
+
     await ctx.db.insert("users", {
       userId: event.data.id,
 
       emailAddress: event.data.email,
       imageUrl: event.data.profilePictureUrl,
-      username: `${event.data.firstName} ${event.data.lastName}`,
+      username: `${firstName} ${lastName}`,
 
-      preferences: {
-        ...DEFAULT_USER_PREFERENCES,
-        name: event.data.firstName ?? "user",
-      },
+      preferences: { ...DEFAULT_USER_PREFERENCES, name: firstName },
     });
 
     await ctx.db.insert("user_stats", {
