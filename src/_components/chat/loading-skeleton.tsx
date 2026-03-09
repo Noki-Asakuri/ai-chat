@@ -11,27 +11,6 @@ export function LoadingSkeleton() {
           <MessageBubbleSkeleton from="assistant" />
         </div>
       </div>
-
-      <div
-        className="pointer-events-none absolute bottom-2 w-full px-4"
-        data-slot="chat-textarea-skeleton"
-      >
-        <div className="mx-auto max-w-4xl space-y-2">
-          <div className="space-y-2 rounded-md border bg-background/80 p-2.5 backdrop-blur-md backdrop-saturate-150">
-            <Skeleton className="h-20 w-full rounded-md" />
-
-            <div className="flex items-end justify-between border-t pt-2">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-8 w-20" />
-              </div>
-
-              <Skeleton className="h-8 w-20" />
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

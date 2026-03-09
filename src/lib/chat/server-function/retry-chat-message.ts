@@ -9,11 +9,6 @@ import { useConfigStore, useConfigStoreState } from "@/components/provider/confi
 
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
-import {
-  isSameThreadModelConfig,
-  threadStoreActions,
-  useThreadStore,
-} from "@/lib/store/thread-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
 
@@ -100,37 +95,6 @@ export function useRetryChatMessage() {
       ...mergedModelParams,
       profile: configProfile === null ? null : (configProfile ?? mergedModelParams.profile ?? null),
     };
-
-    const previousThreadModelConfig = useThreadStore.getState().threadModelConfigById[threadId];
-    const nextThreadModelConfig = {
-      model,
-      modelParams: mutationModelParams,
-    };
-
-    threadStoreActions.setThreadModelConfig(threadId, nextThreadModelConfig);
-
-    if (
-      previousThreadModelConfig &&
-      isSameThreadModelConfig(previousThreadModelConfig, nextThreadModelConfig)
-    ) {
-      // already persisted by route-level config sync effect
-    } else {
-      const [, persistThreadModelError] = await tryCatch(
-        convexClient.mutation(api.functions.threads.updateThreadModelConfig, {
-          sessionId,
-          threadId,
-          latestModel: model,
-          latestModelParams: mutationModelParams,
-        }),
-      );
-
-      if (persistThreadModelError) {
-        console.error(
-          "[Chat] Failed to persist retry thread model config",
-          persistThreadModelError,
-        );
-      }
-    }
 
     try {
       const retryResult = await convexClient.mutation(api.functions.messages.retryChatMessage, {
