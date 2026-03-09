@@ -97,8 +97,9 @@ function compareAccountThreadRows(
 export const createThread = authenticatedMutation({
   args: {
     title: v.optional(v.string()),
-    latestModel: v.optional(v.string()),
-    latestModelParams: v.optional(AISDKModelParams),
+
+    latestModel: v.string(),
+    latestModelParams: AISDKModelParams,
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
@@ -116,6 +117,7 @@ export const createThread = authenticatedMutation({
       updatedAt: Date.now() + 1,
       groupId: null,
       order: 0,
+
       latestModel: args.latestModel,
       latestModelParams: args.latestModelParams,
     });
