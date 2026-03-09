@@ -1,33 +1,20 @@
 import { api } from "@/convex/_generated/api";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
-
-import { useSessionMutation } from "convex-helpers/react/sessions";
+import type { Id } from "@/convex/_generated/dataModel";
 
 import { convexQuery } from "@convex-dev/react-query";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { Suspense, useEffect, useEffectEvent, useRef, useState } from "react";
-import { useShallow } from "zustand/shallow";
+import { Suspense, useEffect, useEffectEvent } from "react";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { LoadingSkeleton } from "@/components/chat/loading-skeleton";
 import { MessageHistory } from "@/components/message/message-history";
-import { useConfigStore } from "@/components/provider/config-provider";
 
 import { useAutoResumeStream } from "@/lib/chat/server-function/auto-resume-stream";
 import { convexSessionQuery } from "@/lib/convex/helpers";
-import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
-import {
-  isThreadModelConfigValid,
-  isSameThreadModelConfig,
-  threadStoreActions,
-  useThreadStore,
-  type ThreadModelConfig,
-} from "@/lib/store/thread-store";
+import { messageStoreActions } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
 import { fromUUID } from "@/lib/utils";
-
-const THREAD_HISTORY_PAGE_SIZE = 60;
 
 type ChatHistoryPayload = {
   messages: ChatMessage[];
@@ -37,52 +24,13 @@ type ChatHistoryPayload = {
 
 type SyncMode = "replace" | "prepend";
 
-function getLatestMessageModelConfig(messages: ChatMessage[]): ThreadModelConfig | null {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    if (!message?.metadata) continue;
-
-    const next: ThreadModelConfig = {
-      model: message.metadata.model.request,
-      modelParams: {
-        effort: message.metadata.modelParams.effort,
-        webSearch: message.metadata.modelParams.webSearch,
-        profile: message.metadata.modelParams.profile ?? null,
-      },
-    };
-
-    if (!isThreadModelConfigValid(next)) continue;
-    return next;
-  }
-
-  return null;
-}
-
-function getThreadModelConfigFromThreadDoc(
-  thread: Doc<"threads"> | null | undefined,
-): ThreadModelConfig | null {
-  if (!thread?.latestModel || !thread.latestModelParams) return null;
-
-  const next: ThreadModelConfig = {
-    model: thread.latestModel,
-    modelParams: {
-      effort: thread.latestModelParams.effort,
-      webSearch: thread.latestModelParams.webSearch,
-      profile: thread.latestModelParams.profile ?? null,
-    },
-  };
-
-  if (!isThreadModelConfigValid(next)) return null;
-  return next;
-}
-
 export const Route = createFileRoute("/_chat_layout/threads/$threadId")({
   component: ChatComponentPage,
+
   loader: async ({ context, params }) => {
     void context.queryClient.prefetchQuery(
       convexQuery(api.functions.messages.getAllMessagesFromThread, {
         threadId: fromUUID<Id<"threads">>(params.threadId),
-        limit: THREAD_HISTORY_PAGE_SIZE,
         sessionId: context.sessionId,
       }),
     );
@@ -97,67 +45,24 @@ function ChatComponentPage() {
   }, [params.threadId]);
 
   return (
-    <Suspense fallback={<LoadingSkeleton />}>
-      <ChatHistory />
+    <>
+      <Suspense fallback={<LoadingSkeleton />}>
+        <ChatHistory />
+      </Suspense>
+
       <ChatTextarea key="main-chat-textarea" />
-    </Suspense>
+    </>
   );
 }
 
 function ChatHistory() {
   const params = useParams({ from: "/_chat_layout/threads/$threadId" });
   const threadId = fromUUID<Id<"threads">>(params.threadId);
+
   const { autoResumeStream } = useAutoResumeStream();
-  const updateThreadModelConfig = useSessionMutation(api.functions.threads.updateThreadModelConfig);
-  const setConfig = useConfigStore((state) => state.setConfig);
-  const { model, effort, webSearch, profile } = useConfigStore(
-    useShallow((state) => ({
-      model: state.model,
-      effort: state.effort,
-      webSearch: state.webSearch,
-      profile: state.profile,
-    })),
-  );
-  const threadModelConfig = useThreadStore((state) => state.threadModelConfigById[threadId]);
-  const currentThreadConfigRef = useRef<ThreadModelConfig | null>(null);
-  const skipNextPersistRef = useRef(false);
-  const [hasOlderMessages, setHasOlderMessages] = useState(false);
-  const [hasLoadedOlderPages, setHasLoadedOlderPages] = useState(false);
-  const [olderBeforeCreatedAt, setOlderBeforeCreatedAt] = useState<number | null>(null);
-
-  const earliestVisibleMessageCreatedAt = useMessageStore((state) => {
-    const earliestMessageId = state.messageIds[0];
-    if (!earliestMessageId) return null;
-
-    return state.messagesById[earliestMessageId]?.createdAt ?? null;
-  });
 
   const { data, dataUpdatedAt } = useSuspenseQuery({
-    ...convexSessionQuery(api.functions.messages.getAllMessagesFromThread, {
-      threadId,
-      limit: THREAD_HISTORY_PAGE_SIZE,
-    }),
-    retry(failureCount, error) {
-      const ignoreErrors = ["Thread not found", "Not authorized", "Not authenticated"];
-      return ignoreErrors.some((e) => error.message.includes(e)) ? false : failureCount < 3;
-    },
-  });
-
-  const {
-    data: olderData,
-    dataUpdatedAt: olderDataUpdatedAt,
-    isFetching: isLoadingOlderMessages,
-  } = useQuery({
-    ...convexSessionQuery(
-      api.functions.messages.getAllMessagesFromThread,
-      olderBeforeCreatedAt === null
-        ? "skip"
-        : {
-            threadId,
-            limit: THREAD_HISTORY_PAGE_SIZE,
-            beforeCreatedAt: olderBeforeCreatedAt,
-          },
-    ),
+    ...convexSessionQuery(api.functions.messages.getAllMessagesFromThread, { threadId }),
     retry(failureCount, error) {
       const ignoreErrors = ["Thread not found", "Not authorized", "Not authenticated"];
       return ignoreErrors.some((e) => error.message.includes(e)) ? false : failureCount < 3;
@@ -175,9 +80,7 @@ function ChatHistory() {
 
       messageStoreActions.syncMessages(threadId, payload, syncToken, mode);
 
-      if (skipFollowUps) {
-        return;
-      }
+      if (skipFollowUps) return;
 
       const lastMessage = payload.messages[payload.messages.length - 1];
       if (!lastMessage) return;
@@ -199,86 +102,6 @@ function ChatHistory() {
   );
 
   useEffect(() => {
-    currentThreadConfigRef.current = {
-      model,
-      modelParams: {
-        effort,
-        webSearch,
-        profile: profile ?? null,
-      },
-    };
-  }, [model, effort, webSearch, profile]);
-
-  useEffect(() => {
-    if (!threadModelConfig) return;
-
-    const currentThreadConfig = currentThreadConfigRef.current;
-    if (currentThreadConfig && isSameThreadModelConfig(currentThreadConfig, threadModelConfig)) {
-      return;
-    }
-
-    skipNextPersistRef.current = true;
-    setConfig({
-      model: threadModelConfig.model,
-      ...threadModelConfig.modelParams,
-    });
-  }, [threadId, threadModelConfig, setConfig]);
-
-  useEffect(() => {
-    if (threadModelConfig) return;
-
-    const threadModelConfigFromDoc = getThreadModelConfigFromThreadDoc(data.thread);
-    const fallbackModelConfig =
-      threadModelConfigFromDoc ?? getLatestMessageModelConfig(data.messages);
-    if (!fallbackModelConfig) return;
-
-    threadStoreActions.setThreadModelConfig(threadId, fallbackModelConfig);
-
-    const currentThreadConfig = currentThreadConfigRef.current;
-    if (currentThreadConfig && isSameThreadModelConfig(currentThreadConfig, fallbackModelConfig)) {
-      return;
-    }
-
-    skipNextPersistRef.current = true;
-    setConfig({
-      model: fallbackModelConfig.model,
-      ...fallbackModelConfig.modelParams,
-    });
-  }, [threadId, threadModelConfig, data.thread, data.messages, setConfig]);
-
-  useEffect(() => {
-    if (skipNextPersistRef.current) {
-      skipNextPersistRef.current = false;
-      return;
-    }
-
-    if (!threadModelConfig) return;
-
-    const currentThreadConfig: ThreadModelConfig = {
-      model,
-      modelParams: {
-        effort,
-        webSearch,
-        profile: profile ?? null,
-      },
-    };
-
-    if (isSameThreadModelConfig(threadModelConfig, currentThreadConfig)) {
-      return;
-    }
-
-    threadStoreActions.setThreadModelConfig(threadId, currentThreadConfig);
-
-    void updateThreadModelConfig({
-      threadId,
-      latestModel: currentThreadConfig.model,
-      latestModelParams: currentThreadConfig.modelParams,
-    }).catch((error) => {
-      console.error("[Thread] Failed to persist thread model config", error);
-    });
-  }, [threadId, threadModelConfig, model, effort, webSearch, profile, updateThreadModelConfig]);
-
-  useEffect(() => {
     if (data) {
       syncMessage(
         {
@@ -287,49 +110,10 @@ function ChatHistory() {
           variantMessageIdsByUserMessageId: data.variantMessageIdsByUserMessageId,
         },
         dataUpdatedAt,
-        { mode: hasLoadedOlderPages ? "prepend" : "replace" },
+        { mode: "replace" },
       );
-
-      setHasOlderMessages(data.hasOlderMessages);
     }
-  }, [data, dataUpdatedAt, hasLoadedOlderPages]);
+  }, [data, dataUpdatedAt]);
 
-  useEffect(() => {
-    if (!olderData || olderBeforeCreatedAt === null) return;
-
-    syncMessage(
-      {
-        messages: olderData.messages,
-        allMessages: olderData.allMessages,
-        variantMessageIdsByUserMessageId: olderData.variantMessageIdsByUserMessageId,
-      },
-      olderDataUpdatedAt,
-      { mode: "prepend", skipFollowUps: true },
-    );
-
-    setHasOlderMessages(olderData.hasOlderMessages);
-    setHasLoadedOlderPages(true);
-    setOlderBeforeCreatedAt(null);
-  }, [olderData, olderDataUpdatedAt, olderBeforeCreatedAt]);
-
-  useEffect(() => {
-    setOlderBeforeCreatedAt(null);
-    setHasLoadedOlderPages(false);
-    setHasOlderMessages(false);
-  }, [threadId]);
-
-  function handleLoadOlderMessages(): void {
-    if (!hasOlderMessages || isLoadingOlderMessages) return;
-    if (earliestVisibleMessageCreatedAt === null) return;
-
-    setOlderBeforeCreatedAt(earliestVisibleMessageCreatedAt);
-  }
-
-  return (
-    <MessageHistory
-      hasOlderMessages={hasOlderMessages}
-      isLoadingOlderMessages={isLoadingOlderMessages}
-      onLoadOlderMessages={handleLoadOlderMessages}
-    />
-  );
+  return <MessageHistory />;
 }

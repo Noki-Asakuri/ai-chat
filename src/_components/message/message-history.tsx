@@ -1,9 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Loader2Icon } from "lucide-react";
 
 import { Message } from "./message";
-
-import { Button } from "@/components/ui/button";
 
 import {
   consumeStickyResizeAutoScrollSuppression,
@@ -14,16 +11,10 @@ import { useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 
 export function MessageHistory({
-  hasOlderMessages = false,
-  isLoadingOlderMessages = false,
-  onLoadOlderMessages,
   readOnly = false,
   showUserAvatar = true,
   bottomPaddingPx,
 }: {
-  hasOlderMessages?: boolean;
-  isLoadingOlderMessages?: boolean;
-  onLoadOlderMessages?: () => Promise<void> | void;
   readOnly?: boolean;
   showUserAvatar?: boolean;
   bottomPaddingPx?: number;
@@ -102,26 +93,6 @@ export function MessageHistory({
         className="mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 pt-12"
         style={{ paddingBottom: `${resolvedBottomPadding}px` }}
       >
-        {hasOlderMessages && (
-          <div className="flex w-full justify-center">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void onLoadOlderMessages?.()}
-              disabled={isLoadingOlderMessages}
-            >
-              {isLoadingOlderMessages ? (
-                <>
-                  <Loader2Icon className="size-4 animate-spin" />
-                  Loading older messages
-                </>
-              ) : (
-                "Load older messages"
-              )}
-            </Button>
-          </div>
-        )}
-
         <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />
       </div>
     </div>
