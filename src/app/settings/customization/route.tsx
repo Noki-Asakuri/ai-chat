@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 
 import { useSessionMutation } from "convex-helpers/react/sessions";
 
@@ -40,20 +41,22 @@ function getFormFile(key: string, formData: FormData): File | null {
 }
 
 function RouteComponent() {
-  const { data, isPending } = useSuspenseQuery(convexSessionQuery(api.functions.users.currentUser));
-  const updateUserCustomization = useSessionMutation(api.functions.users.updateUserCustomization);
+  const { data, isPending } = useSuspenseQuery(
+    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
+  );
+  const updateUserPreferences = useSessionMutation(api.functions.users.updateUserPreferences);
 
   const { uploadFile, deleteFile } = useStorage();
 
   const [pendingUpdate, startTransition] = useTransition();
 
   const disabled = pendingUpdate || isPending;
-  const existingBackgroundId = data?.customization?.backgroundId ?? null;
+  const existingBackgroundId = data?.backgroundImage ?? null;
 
   async function removeExistingBackground() {
     if (!existingBackgroundId) return;
 
-    await updateUserCustomization({ data: { backgroundId: null } });
+    await updateUserPreferences({ data: { backgroundImage: null } });
     await deleteFile(existingBackgroundId);
   }
 
@@ -63,36 +66,23 @@ function RouteComponent() {
     const formData = new FormData(event.currentTarget);
 
     const name = getFormString("name", formData);
-    const occupation = getFormString("occupation", formData);
-    const traitsRaw = getFormString("traits", formData);
     const systemInstruction = getFormString("system-instruction", formData);
 
     const file = getFormFile("background-image", formData);
 
-    const disableBlur = getFormString("disable-blur", formData) === "on";
-    const showFullCode = getFormString("show-full-code", formData) === "on";
+    const performanceEnabled = getFormString("performance-mode", formData) === "on";
 
-    const traits = traitsRaw
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
+    const showFullCode = getFormString("show-full-code", formData) === "on";
+    const autoWrap = getFormString("auto-wrap", formData) === "on";
 
     startTransition(async function () {
-      const updates: {
-        name: string;
-        occupation: string;
-        traits: string[];
-        systemInstruction: string;
-        backgroundId?: string | null;
-        disableBlur: boolean;
-        showFullCode: boolean;
-      } = {
+      const updates: Partial<Doc<"users">["preferences"]> = {
+        ...data,
+
         name,
-        occupation,
-        traits,
-        systemInstruction,
-        disableBlur,
-        showFullCode,
+        globalSystemInstruction: systemInstruction,
+        performanceEnabled,
+        code: { showFullCode, autoWrap },
       };
 
       if (file && file.size > 0) {
@@ -100,10 +90,10 @@ function RouteComponent() {
           await deleteFile(existingBackgroundId);
         }
 
-        updates.backgroundId = await uploadFile({ file });
+        updates.backgroundImage = await uploadFile({ file });
       }
 
-      toast.promise(updateUserCustomization({ data: updates }), {
+      toast.promise(updateUserPreferences({ data: updates }), {
         loading: "Saving preferences...",
         success: "Preferences saved",
         error: "Failed to save preferences",
@@ -131,38 +121,9 @@ function RouteComponent() {
                   placeholder="Enter your name"
                   className="bg-input/30"
                   disabled={disabled}
-                  defaultValue={data?.customization?.name ?? ""}
+                  defaultValue={data?.name ?? ""}
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="occupation">What do you do?</Label>
-                <ControlledInput
-                  id="occupation"
-                  name="occupation"
-                  autoComplete="off"
-                  placeholder="Engineer, student, etc."
-                  className="bg-input/30"
-                  disabled={disabled}
-                  defaultValue={data?.customization?.occupation ?? ""}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="traits">What traits should AI have?</Label>
-              <ControlledInput
-                id="traits"
-                name="traits"
-                autoComplete="off"
-                placeholder="Friendly, concise, detail-oriented..."
-                className="bg-input/30"
-                disabled={disabled}
-                defaultValue={data?.customization?.traits?.join(", ") ?? ""}
-              />
-              <p className="text-xs text-muted-foreground">
-                Separate traits with commas (e.g., “concise, direct, empathetic”).
-              </p>
             </div>
           </CardContent>
         </Card>
@@ -183,17 +144,15 @@ function RouteComponent() {
               name="system-instruction"
               className="min-h-[150px]"
               disabled={disabled}
-              defaultValue={
-                data?.customization?.systemInstruction ?? "You are a helpful assistant."
-              }
+              defaultValue={data?.globalSystemInstruction ?? "You are a helpful assistant."}
             />
           </CardContent>
         </Card>
 
         <BehaviorOptionsCard
           disabled={disabled}
-          defaultDisableBlur={data?.customization?.disableBlur ?? false}
-          defaultShowFullCode={data?.customization?.showFullCode ?? false}
+          defaultPerformanceEnabled={data?.performanceEnabled ?? false}
+          defaultShowFullCode={data?.code?.showFullCode ?? false}
         />
 
         <BackgroundCard

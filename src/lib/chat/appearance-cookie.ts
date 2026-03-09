@@ -5,17 +5,17 @@ export const LEGACY_DISABLE_BLUR_COOKIE_NAME = "disable-blur";
 type ChatAppearanceCookieValues = {
   chatAppearance: string | undefined;
   backgroundImage: string | undefined;
-  disableBlur: string | undefined;
+  performanceEnabled: string | undefined;
 };
 
 type PartialChatAppearance = {
   backgroundImage?: string;
-  disableBlur?: boolean;
+  performanceEnabled?: boolean;
 };
 
 export type ChatAppearance = {
   backgroundImage: string | undefined;
-  disableBlur: boolean;
+  performanceEnabled: boolean;
 };
 
 export function readChatAppearanceFromCookieValues(
@@ -25,13 +25,13 @@ export function readChatAppearanceFromCookieValues(
   if (parsedAppearance) {
     return {
       backgroundImage: normalizeBackgroundImage(parsedAppearance.backgroundImage),
-      disableBlur: parsedAppearance.disableBlur ?? false,
+      performanceEnabled: parsedAppearance.performanceEnabled ?? false,
     };
   }
 
   return {
     backgroundImage: normalizeBackgroundImage(values.backgroundImage),
-    disableBlur: values.disableBlur === "true",
+    performanceEnabled: values.performanceEnabled === "true",
   };
 }
 
@@ -81,8 +81,8 @@ function parseChatAppearancePayload(rawValue: string): PartialChatAppearance | n
     return null;
   }
 
-  const disableBlur = parsedValue.disableBlur;
-  if (disableBlur !== undefined && typeof disableBlur !== "boolean") {
+  const performanceEnabled = parsedValue.performanceEnabled;
+  if (performanceEnabled !== undefined && typeof performanceEnabled !== "boolean") {
     return null;
   }
 
@@ -92,8 +92,8 @@ function parseChatAppearancePayload(rawValue: string): PartialChatAppearance | n
     appearance.backgroundImage = backgroundImage;
   }
 
-  if (typeof disableBlur === "boolean") {
-    appearance.disableBlur = disableBlur;
+  if (typeof performanceEnabled === "boolean") {
+    appearance.performanceEnabled = performanceEnabled;
   }
 
   return appearance;
@@ -101,7 +101,7 @@ function parseChatAppearancePayload(rawValue: string): PartialChatAppearance | n
 
 function toCookiePayload(appearance: ChatAppearance): PartialChatAppearance {
   const payload: PartialChatAppearance = {
-    disableBlur: appearance.disableBlur,
+    performanceEnabled: appearance.performanceEnabled,
   };
 
   if (appearance.backgroundImage) {

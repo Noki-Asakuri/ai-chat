@@ -18,20 +18,22 @@ export const Route = createFileRoute("/settings/models")({
 });
 
 function RouteComponent() {
-  const { data, isPending } = useSuspenseQuery(convexSessionQuery(api.functions.users.currentUser));
-  const updateCustomization = useSessionMutation(api.functions.users.updateUserCustomization);
-
-  const disabled = isPending;
+  const { data: preferences, isPending: isDisabled } = useSuspenseQuery(
+    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
+  );
+  const updateUserPreferences = useSessionMutation(api.functions.users.updateUserPreferences);
 
   return (
     <div className="space-y-6">
       <ModelsEditor
-        disabled={disabled}
-        initialHiddenModels={data?.customization?.hiddenModels ?? []}
-        initialFavoriteModels={data?.customization?.favoriteModels ?? []}
+        disabled={isDisabled}
+        initialHiddenModels={preferences?.models?.hidden ?? []}
+        initialFavoriteModels={preferences?.models?.favorite ?? []}
         onSaveCustomization={async function onSaveCustomization(customization) {
-          await updateCustomization({
-            data: customization,
+          if (!preferences) return;
+
+          await updateUserPreferences({
+            data: { models: { ...preferences.models, ...customization } },
           });
         }}
       />

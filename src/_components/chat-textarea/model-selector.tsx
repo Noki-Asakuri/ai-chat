@@ -131,7 +131,9 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   const [selectedSection, setSelectedSection] = useState<PickerSectionKey>("all");
   const [isSavingFavorites, setIsSavingFavorites] = useState(false);
 
-  const updateCustomization = useSessionMutation(api.functions.users.updateUserCustomization);
+  const updateUserModelPreferences = useSessionMutation(
+    api.functions.users.updateUserModelPreferences,
+  );
 
   const {
     hiddenModels,
@@ -310,7 +312,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
     setFavoriteModels(next);
     setIsSavingFavorites(true);
 
-    const [, error] = await tryCatch(updateCustomization({ data: { favoriteModels: next } }));
+    const [, error] = await tryCatch(updateUserModelPreferences({ data: { favorite: next } }));
 
     setIsSavingFavorites(false);
 

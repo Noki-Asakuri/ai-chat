@@ -247,7 +247,7 @@ async function patchThreadModelConfig(
   model: string,
   modelParams: (typeof AISDKModelParams)["type"],
 ) {
-  await ctx.db.patch(threadId, {
+  await ctx.db.patch("threads", threadId, {
     latestModel: model,
     latestModelParams: modelParams,
   });

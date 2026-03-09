@@ -1,5 +1,6 @@
 import { authKit } from "../components";
 import { DEFAULT_BASE } from "./usages";
+import { DEFAULT_USER_PREFERENCES } from "./users";
 
 export const { authKitEvent } = authKit.events({
   "user.created": async (ctx, event) => {
@@ -10,16 +11,9 @@ export const { authKitEvent } = authKit.events({
       imageUrl: event.data.profilePictureUrl,
       username: `${event.data.firstName} ${event.data.lastName}`,
 
-      customization: {
-        backgroundId: null,
-        disableBlur: false,
-        hiddenModels: [],
-        favoriteModels: [],
+      preferences: {
+        ...DEFAULT_USER_PREFERENCES,
         name: event.data.firstName ?? "user",
-        occupation: "unknown",
-        showFullCode: false,
-        systemInstruction: "You are a helpful assistant.",
-        traits: [],
       },
     });
 

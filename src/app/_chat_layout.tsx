@@ -2,16 +2,15 @@ import "streamdown/styles.css";
 
 import { api } from "@/convex/_generated/api";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 
 import { PlusIcon } from "lucide-react";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { GlobalDropzone } from "@/components/chat/global-dropzone";
-import { LoadingSkeleton } from "@/components/chat/loading-skeleton";
 import { RegisterEventHandlers } from "@/components/chat/register-event-handlers";
 import { ThreadTitle } from "@/components/chat/top-thread-title";
 import { ConfigStoreProvider } from "@/components/provider/config-provider";
@@ -19,21 +18,21 @@ import { ThreadProfileSidebar } from "@/components/threads/profile/profile-sideb
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
+import { buildImageAssetUrl } from "@/lib/assets/urls";
 import { getSignInUrl } from "@/lib/authkit/serverFunctions";
 import {
   CHAT_APPEARANCE_COOKIE_NAME,
   LEGACY_BACKGROUND_IMAGE_COOKIE_NAME,
   LEGACY_DISABLE_BLUR_COOKIE_NAME,
   readChatAppearanceFromCookieValues,
-  type ChatAppearance,
   writeChatAppearanceCookie,
+  type ChatAppearance,
 } from "@/lib/chat/appearance-cookie";
-import { buildImageAssetUrl } from "@/lib/assets/urls";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 
-type ChatCustomization = {
+type ChatPreferences = {
   backgroundId?: string | null;
-  disableBlur?: boolean;
+  performanceEnabled?: boolean;
 };
 
 type ChatLayoutCookies = ChatAppearance & {
@@ -60,7 +59,7 @@ function resolveBackgroundImage(
 }
 
 function resolveAppearanceFromCustomization(
-  customization: ChatCustomization,
+  customization: ChatPreferences,
   fallbackAppearance: ChatAppearance,
 ): ChatAppearance {
   return {
@@ -68,20 +67,20 @@ function resolveAppearanceFromCustomization(
       customization.backgroundId,
       fallbackAppearance.backgroundImage,
     ),
-    disableBlur: customization.disableBlur ?? fallbackAppearance.disableBlur,
+    performanceEnabled: customization.performanceEnabled ?? fallbackAppearance.performanceEnabled,
   };
 }
 
 function toChatLayoutCookies(values: {
   chatAppearance: string | undefined;
   backgroundImage: string | undefined;
-  disableBlur: string | undefined;
+  performanceEnabled: string | undefined;
   defaultOpenSidebar: string | undefined;
 }): ChatLayoutCookies {
   const appearance = readChatAppearanceFromCookieValues({
     chatAppearance: values.chatAppearance,
     backgroundImage: values.backgroundImage,
-    disableBlur: values.disableBlur,
+    performanceEnabled: values.performanceEnabled,
   });
 
   return {
@@ -95,7 +94,7 @@ const getChatLayoutCookies = createIsomorphicFn()
     return toChatLayoutCookies({
       chatAppearance: getCookie(CHAT_APPEARANCE_COOKIE_NAME),
       backgroundImage: getCookie(LEGACY_BACKGROUND_IMAGE_COOKIE_NAME),
-      disableBlur: getCookie(LEGACY_DISABLE_BLUR_COOKIE_NAME),
+      performanceEnabled: getCookie(LEGACY_DISABLE_BLUR_COOKIE_NAME),
       defaultOpenSidebar: getCookie(SIDEBAR_COOKIE_NAME),
     });
   })
@@ -103,7 +102,7 @@ const getChatLayoutCookies = createIsomorphicFn()
     return toChatLayoutCookies({
       chatAppearance: (await cookieStore.get(CHAT_APPEARANCE_COOKIE_NAME))?.value,
       backgroundImage: (await cookieStore.get(LEGACY_BACKGROUND_IMAGE_COOKIE_NAME))?.value,
-      disableBlur: (await cookieStore.get(LEGACY_DISABLE_BLUR_COOKIE_NAME))?.value,
+      performanceEnabled: (await cookieStore.get(LEGACY_DISABLE_BLUR_COOKIE_NAME))?.value,
       defaultOpenSidebar: (await cookieStore.get(SIDEBAR_COOKIE_NAME))?.value,
     });
   });
@@ -131,13 +130,13 @@ export const Route = createFileRoute("/_chat_layout")({
 });
 
 function RouteComponent() {
-  const { backgroundImage, defaultOpenSidebar, disableBlur } = Route.useLoaderData();
+  const { backgroundImage, defaultOpenSidebar, performanceEnabled } = Route.useLoaderData();
   const [appearance, setAppearance] = useState<ChatAppearance>(() => ({
     backgroundImage,
-    disableBlur,
+    performanceEnabled,
   }));
 
-  const handleCustomizationChange = useCallback((customization: ChatCustomization) => {
+  const handleCustomizationChange = useCallback((customization: ChatPreferences) => {
     setAppearance((currentAppearance) => {
       const nextAppearance = resolveAppearanceFromCustomization(customization, currentAppearance);
       writeChatAppearanceCookie(nextAppearance);
@@ -148,7 +147,7 @@ function RouteComponent() {
   return (
     <SidebarProvider
       id="sidebar-provider"
-      data-disable-blur={appearance.disableBlur}
+      data-performance-mode={appearance.performanceEnabled ? "true" : "false"}
       style={{
         backgroundImage: appearance.backgroundImage
           ? `url(${appearance.backgroundImage})`
@@ -163,7 +162,7 @@ function RouteComponent() {
         data-slot="chat"
         className="relative inset-0 h-dvh w-screen overflow-hidden border-x"
       >
-        <div className="absolute top-0 z-10 flex h-10 w-full max-w-full items-center gap-2 border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-sidebar">
+        <div className="absolute top-0 z-10 flex h-10 w-full max-w-full items-center gap-2 border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[performance-mode=true]/sidebar-provider:bg-sidebar">
           <SidebarTrigger />
 
           <Link
@@ -177,9 +176,7 @@ function RouteComponent() {
           <ThreadTitle />
         </div>
 
-        <Suspense fallback={<LoadingSkeleton />}>
-          <ChatComponentPage onCustomizationChange={handleCustomizationChange} />
-        </Suspense>
+        <ChatComponentPage onCustomizationChange={handleCustomizationChange} />
       </GlobalDropzone>
 
       <RegisterEventHandlers />
@@ -188,28 +185,29 @@ function RouteComponent() {
 }
 
 type ChatComponentPageProps = {
-  onCustomizationChange: (customization: ChatCustomization) => void;
+  onCustomizationChange: (customization: ChatPreferences) => void;
 };
 
 function ChatComponentPage({ onCustomizationChange }: ChatComponentPageProps) {
-  const { data } = useSuspenseQuery(convexSessionQuery(api.functions.users.currentUser));
-  const customization = data?.customization;
+  const { data: preferences } = useQuery(
+    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
+  );
 
   useEffect(() => {
-    if (!customization) return;
+    if (!preferences) return;
 
     onCustomizationChange({
-      backgroundId: customization.backgroundId,
-      disableBlur: customization.disableBlur,
+      backgroundId: preferences.backgroundImage,
+      performanceEnabled: preferences.performanceEnabled,
     });
-  }, [customization, onCustomizationChange]);
+  }, [preferences, onCustomizationChange]);
 
   return (
     <ConfigStoreProvider
       initialState={{
-        hiddenModels: customization?.hiddenModels ?? [],
-        favoriteModels: customization?.favoriteModels ?? [],
-        defaultShowFullCode: customization?.showFullCode,
+        hiddenModels: preferences?.models?.hidden ?? [],
+        favoriteModels: preferences?.models?.favorite ?? [],
+        defaultShowFullCode: preferences?.code?.showFullCode,
       }}
     >
       <Outlet />

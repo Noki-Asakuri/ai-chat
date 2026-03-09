@@ -56,8 +56,8 @@ type ModelEntry = {
 };
 
 type ModelsCustomization = {
-  hiddenModels: string[];
-  favoriteModels: string[];
+  hidden: string[];
+  favorite: string[];
 };
 
 type PersistableModelSet = "hidden" | "favorite";
@@ -296,12 +296,12 @@ export function ModelsEditor(props: ModelsEditorProps) {
     async function persistModelSet(kind: PersistableModelSet, nextSet: Set<string>) {
       const payload = toModelIdsPayload(nextSet, SELECTABLE_MODEL_ID_SET);
       if (kind === "hidden") {
-        const [, error] = await tryCatch(onSaveCustomization({ hiddenModels: payload }));
+        const [, error] = await tryCatch(onSaveCustomization({ hidden: payload }));
         if (error) throw error;
         return;
       }
 
-      const [, error] = await tryCatch(onSaveCustomization({ favoriteModels: payload }));
+      const [, error] = await tryCatch(onSaveCustomization({ favorite: payload }));
       if (error) throw error;
     },
     [onSaveCustomization],

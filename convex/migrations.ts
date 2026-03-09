@@ -2,7 +2,13 @@
 import { Migrations } from "@convex-dev/migrations";
 
 import { components, internal } from "./_generated/api";
-import type { DataModel, Doc, Id } from "./_generated/dataModel";
+import type { DataModel, Doc } from "./_generated/dataModel";
+
+import {
+  DEFAULT_THREAD_MODEL,
+  DEFAULT_USER_PREFERENCES,
+  type UserPreferences,
+} from "./functions/users";
 
 /**
  * Initialize migrations component with DataModel for proper typing.
@@ -15,61 +21,6 @@ export const migrations = new Migrations<DataModel>(components.migrations);
  *   bunx convex run migrations:run '{fn:"migrations:backfillMessages"}'
  */
 export const run = migrations.runner();
-
-export const backfillMessages = migrations.define({
-  table: "messages",
-  migrateOne: async (ctx, data) => {
-    // const updates = data;
-    // const modelParams = data.modelParams;
-    // // Remove deprecated fields from old messages schema.
-    // if (typeof updates.content !== "undefined") updates.content = undefined;
-    // if (typeof updates.reasoning !== "undefined") updates.reasoning = undefined;
-    // if (typeof updates.model !== "undefined") updates.model = undefined;
-    // if (typeof updates.modelParams !== "undefined") updates.modelParams = undefined;
-    // // Update current metadata to newer schema.
-    // if (updates.metadata && typeof updates.metadata.model === "string") {
-    //   updates.metadata.model = { request: updates.metadata.model, response: null };
-    // }
-    // if (updates.metadata) {
-    //   // @ts-expect-error
-    //   updates.metadata.modelParams = {
-    //     effort: modelParams?.effort ?? "medium",
-    //     webSearch: modelParams?.webSearchEnabled ?? false,
-    //     profile: null,
-    //   };
-    // }
-    const updates: {
-      parentUserMessageId?: Id<"messages"> | undefined;
-      activeAssistantMessageId?: Id<"messages"> | undefined;
-      variantIndex?: number | undefined;
-    } = {};
-
-    let shouldPatch = false;
-
-    if (typeof data.parentUserMessageId === "undefined") {
-      updates.parentUserMessageId = undefined;
-      shouldPatch = true;
-    }
-
-    if (typeof data.activeAssistantMessageId === "undefined") {
-      updates.activeAssistantMessageId = undefined;
-      shouldPatch = true;
-    }
-
-    if (typeof data.variantIndex === "undefined") {
-      updates.variantIndex = undefined;
-      shouldPatch = true;
-    }
-
-    if (!shouldPatch) return;
-
-    await ctx.db.patch(data._id, updates);
-  },
-});
-
-export const runBackfillMessages = migrations.runner([internal.migrations.backfillMessages]);
-
-const DEFAULT_THREAD_MODEL = "google/gemini-3-flash";
 
 function getThreadModelConfigFromMessages(messages: Doc<"messages">[]): {
   latestModel: string;
@@ -130,4 +81,52 @@ export const backfillThreadModelConfig = migrations.define({
 
 export const runBackfillThreadModelConfig = migrations.runner([
   internal.migrations.backfillThreadModelConfig,
+]);
+
+function buildPreferencesFromCustomization(user: Doc<"users">): UserPreferences {
+  const customization = user.customization;
+  if (!customization) return DEFAULT_USER_PREFERENCES;
+
+  return {
+    name: customization.name.trim().length > 0 ? customization.name : DEFAULT_USER_PREFERENCES.name,
+    globalSystemInstruction:
+      customization.systemInstruction.trim().length > 0
+        ? customization.systemInstruction
+        : DEFAULT_USER_PREFERENCES.globalSystemInstruction,
+    backgroundImage: customization.backgroundId ?? DEFAULT_USER_PREFERENCES.backgroundImage,
+
+    performanceEnabled: DEFAULT_USER_PREFERENCES.performanceEnabled,
+    sendPreference: DEFAULT_USER_PREFERENCES.sendPreference,
+
+    code: {
+      autoWrap: DEFAULT_USER_PREFERENCES.code.autoWrap,
+      showFullCode: customization.showFullCode,
+    },
+
+    models: {
+      hidden: customization.hiddenModels,
+      favorite: customization.favoriteModels,
+
+      defaultModel: DEFAULT_USER_PREFERENCES.models.defaultModel,
+      modelParams: DEFAULT_USER_PREFERENCES.models.modelParams,
+    },
+  };
+}
+
+export const backfillUserPreferences = migrations.define({
+  table: "users",
+  migrateOne: async (ctx, user) => {
+    if (typeof user.preferences !== "undefined") {
+      return;
+    }
+
+    await ctx.db.patch(user._id, {
+      customization: undefined,
+      preferences: buildPreferencesFromCustomization(user),
+    });
+  },
+});
+
+export const runBackfillUserPreferences = migrations.runner([
+  internal.migrations.backfillUserPreferences,
 ]);

@@ -13,7 +13,7 @@ type LocalConfig = {
 
 export type BehaviorOptionsCardProps = {
   disabled: boolean;
-  defaultDisableBlur: boolean;
+  defaultPerformanceEnabled: boolean;
   defaultShowFullCode: boolean;
 };
 
@@ -170,15 +170,15 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
         <Separator className="-mx-4" />
 
         <ToggleRow
-          id="wrap-long-code-lines"
-          name="wrap-long-code-lines"
+          id="auto-wrap"
+          name="auto-wrap"
           title="Wrap long code lines"
           description="Wrap code blocks instead of scrolling horizontally."
           disabled={props.disabled}
         >
           <Switch
-            id="wrap-long-code-lines"
-            name="wrap-long-code-lines"
+            id="auto-wrap"
+            name="auto-wrap"
             disabled={props.disabled}
             checked={localWrapline}
             onCheckedChange={(checked) => {
@@ -192,18 +192,18 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
         <Separator className="-mx-4" />
 
         <ToggleRow
-          id="disable-blur"
-          name="disable-blur"
-          title="Disable blur"
-          description="Turn off the blur effect on the chat background (can improve readability)."
+          id="performance-mode"
+          name="performance-mode"
+          title="Performance mode"
+          description="Turn on the performance mode (can improve readability)."
           disabled={props.disabled}
         >
           <ControlledSwitch
-            id="disable-blur"
-            name="disable-blur"
+            id="performance-mode"
+            name="performance-mode"
             disabled={props.disabled}
-            defaultChecked={props.defaultDisableBlur}
-            aria-label="Disable blur"
+            defaultChecked={props.defaultPerformanceEnabled}
+            aria-label="Performance mode"
           />
         </ToggleRow>
 

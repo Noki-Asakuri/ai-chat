@@ -374,19 +374,21 @@ export function registerAiChatRoutes(app: Hono): void {
       usageReserved = true;
 
       let systemInstruction = "";
-      const userCustomization = await convexClient.query(api.functions.users.currentUser, {
-        sessionId,
-      });
+      const userPreferences = await convexClient.query(
+        api.functions.users.getCurrentUserPreferences,
+        {
+          sessionId,
+        },
+      );
 
-      if (userCustomization?.customization?.name) {
+      if (userPreferences?.name) {
         systemInstruction += dedent`
 				<user>
 				## User Information:
-				User basic information. Avoid mentioning the user's name or occupation during the conversation.
+				User basic information. Avoid mentioning the user's name during the conversation.
 				Keep it in mind and use it when necessary.
 
-				Name: ${userCustomization.customization.name ?? "user"}
-				Occupation: ${userCustomization.customization.occupation ?? "unknown"}
+				Name: ${userPreferences.name ?? "user"}
 				</user>
 				\n`;
       }
@@ -396,7 +398,7 @@ export function registerAiChatRoutes(app: Hono): void {
 			## Global System Instruction:
 			This is the global system instruction. It should be followed unless there is a conflicting instruction in the AI Profile Instruction.
 
-			${userCustomization?.customization?.systemInstruction ?? "You are a helpful assistant."}
+			${userPreferences?.globalSystemInstruction ?? "You are a helpful assistant."}
 			</global>
 		`;
 
@@ -415,11 +417,6 @@ export function registerAiChatRoutes(app: Hono): void {
 					User defined instruction. This is the most important instruction. It should take precedence over the global system instruction.
 
 					${prompt}
-
-					<traits>
-					## Traits (Optional):
-					You should have these traits: ${userCustomization?.customization?.traits?.join(", ") ?? "None"}.
-					</traits>
 					</profile>
 					`;
         }

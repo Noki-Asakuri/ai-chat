@@ -153,200 +153,234 @@ export const AISDKMetadata = v.object({
   modelParams: AISDKModelParams,
 });
 
-export default defineSchema({
-  groups: defineTable({
-    title: v.string(),
-    order: v.number(),
-    userId: v.string(),
-  }).index("by_userId_order", ["userId", "order"]),
+export const userPreferences = v.object({
+  name: v.string(),
+  globalSystemInstruction: v.string(),
 
-  threads: defineTable({
-    title: v.string(),
-    userId: v.string(),
-    updatedAt: v.number(),
-    pinned: v.boolean(),
-    branchedFrom: v.optional(v.id("threads")),
+  backgroundImage: v.nullable(v.string()),
+  performanceEnabled: v.boolean(),
 
-    latestModel: v.optional(v.string()),
-    latestModelParams: v.optional(AISDKModelParams),
+  sendPreference: v.union(v.literal("enter"), v.literal("ctrlEnter")),
 
-    groupId: v.nullable(v.id("groups")),
-    order: v.number(),
+  code: v.object({
+    autoWrap: v.boolean(),
+    showFullCode: v.boolean(),
+  }),
 
-    status: status,
-  })
-    .index("by_userId", ["userId"])
-    .index("by_userId_updatedAt", ["userId", "updatedAt"])
-    .index("by_userId_groupId_order", ["userId", "groupId", "order"])
-    .index("by_userId_pinned_updatedAt", ["userId", "pinned", "updatedAt"])
-    .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "pinned"] }),
+  models: v.object({
+    hidden: v.array(v.string()),
+    favorite: v.array(v.string()),
 
-  threadShares: defineTable({
-    threadId: v.id("threads"),
-    ownerUserId: v.string(),
-    shareId: v.string(),
-
-    visibility: threadShareVisibility,
-    mode: threadShareMode,
-    allowedEmails: v.array(v.string()),
-    snapshotAt: v.optional(v.number()),
-
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_threadId", ["threadId"])
-    .index("by_shareId", ["shareId"])
-    .index("by_ownerUserId_updatedAt", ["ownerUserId", "updatedAt"]),
-
-  attachments: defineTable({
-    id: v.string(),
-    name: v.string(),
-    size: v.number(),
-    type: v.union(v.literal("image"), v.literal("pdf")),
-    source: v.union(v.literal("assistant"), v.literal("user")),
-    mimeType: v.string(),
-    path: v.string(),
-
-    userId: v.string(),
-    threadId: v.id("threads"),
-  })
-    .index("by_userId", ["userId"])
-    .index("by_userId_threadId", ["userId", "threadId"])
-    .index("by_UUID", ["id"]),
-
-  messages: defineTable({
-    threadId: v.id("threads"),
-    userId: v.string(),
-
-    messageId: v.string(),
-    error: v.optional(v.string()),
-
-    parts: AISDKParts,
-    status: status,
-
-    role: v.union(v.literal("assistant"), v.literal("user")),
-    resumableStreamId: v.optional(v.nullable(v.string())),
-
-    metadata: v.optional(AISDKMetadata),
-    attachments: v.array(v.id("attachments")),
-
-    // Assistant variants are grouped under the user turn they answer.
-    // User turns can point to the currently selected assistant variant.
-    parentUserMessageId: v.optional(v.id("messages")),
-    activeAssistantMessageId: v.optional(v.id("messages")),
-    variantIndex: v.optional(v.number()),
-
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_userId_threadId", ["userId", "threadId"])
-    .index("by_threadId", ["threadId"])
-    .index("by_threadId_parentUserMessageId", ["threadId", "parentUserMessageId"])
-    .index("by_messageId", ["messageId"])
-    .index("by_userId_resumableStreamId", ["userId", "resumableStreamId"]),
-
-  profiles: defineTable({
-    userId: v.string(),
-    name: v.string(),
-    systemPrompt: v.string(),
-    imageKey: v.optional(v.string()),
-
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_userId", ["userId"])
-    .index("by_userId_updatedAt", ["userId", "updatedAt"])
-    .index("by_userId_createdAt", ["userId", "createdAt"])
-    .searchIndex("search_name", { searchField: "name", filterFields: ["userId"] }),
-
-  users: defineTable({
-    userId: v.string(),
-
-    username: v.nullable(v.string()),
-    emailAddress: v.nullable(v.string()),
-    imageUrl: v.nullable(v.string()),
-
-    isBanned: v.optional(v.boolean()),
-
-    createdAt: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
-
-    customization: v.object({
-      name: v.string(),
-      occupation: v.string(),
-      traits: v.array(v.string()),
-      systemInstruction: v.string(),
-      backgroundId: v.nullable(v.string()),
-      disableBlur: v.boolean(),
-      hiddenModels: v.array(v.string()),
-      favoriteModels: v.optional(v.array(v.string())),
-      showFullCode: v.boolean(),
+    defaultModel: v.string(),
+    modelParams: v.object({
+      effort: effort,
+      webSearch: v.boolean(),
+      profile: v.optional(v.nullable(v.id("profiles"))),
     }),
-  }).index("by_userId", ["userId"]),
+  }),
+});
 
-  usages: defineTable({
-    userId: v.string(),
-    used: v.number(),
-    base: v.number(),
-    resetType: v.optional(v.union(v.literal("monthly"), v.literal("daily"))),
+export default defineSchema(
+  {
+    groups: defineTable({
+      title: v.string(),
+      order: v.number(),
+      userId: v.string(),
+    }).index("by_userId_order", ["userId", "order"]),
 
-    // @deprecate, no point of using this anymore
-    resetAt: v.optional(v.number()),
-  }).index("by_userId", ["userId"]),
+    threads: defineTable({
+      title: v.string(),
+      userId: v.string(),
+      updatedAt: v.number(),
+      pinned: v.boolean(),
+      branchedFrom: v.optional(v.id("threads")),
 
-  session: defineTable({
-    userId: v.string(),
-    sessionId: v.string(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_userId", ["userId"])
-    .index("by_sessionId", ["sessionId"]),
+      latestModel: v.string(),
+      latestModelParams: AISDKModelParams,
 
-  user_stats: defineTable({
-    userId: v.string(),
+      groupId: v.nullable(v.id("groups")),
+      order: v.number(),
 
-    stats: v.object({
-      threads: v.number(),
-      messages: v.object({ assistant: v.number(), user: v.number() }),
+      status: status,
+    })
+      .index("by_userId", ["userId"])
+      .index("by_userId_updatedAt", ["userId", "updatedAt"])
+      .index("by_userId_groupId_order", ["userId", "groupId", "order"])
+      .index("by_userId_pinned_updatedAt", ["userId", "pinned", "updatedAt"])
+      .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "pinned"] }),
 
-      /**
-       * Token aggregates derived from assistant message metadata.
-       *
-       * IMPORTANT:
-       * - input tokens are stored as *deduplicated deltas* (see internal stats mutation).
-       * - output/reasoning tokens are stored as reported by the model for that completion.
-       */
-      tokens: v.optional(
+    threadShares: defineTable({
+      threadId: v.id("threads"),
+      ownerUserId: v.string(),
+      shareId: v.string(),
+
+      visibility: threadShareVisibility,
+      mode: threadShareMode,
+
+      allowedEmails: v.array(v.string()),
+      snapshotAt: v.optional(v.number()),
+
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_threadId", ["threadId"])
+      .index("by_shareId", ["shareId"])
+      .index("by_ownerUserId_updatedAt", ["ownerUserId", "updatedAt"]),
+
+    attachments: defineTable({
+      id: v.string(),
+      name: v.string(),
+      size: v.number(),
+      type: v.union(v.literal("image"), v.literal("pdf")),
+      source: v.union(v.literal("assistant"), v.literal("user")),
+      mimeType: v.string(),
+      path: v.string(),
+
+      userId: v.string(),
+      threadId: v.id("threads"),
+    })
+      .index("by_userId", ["userId"])
+      .index("by_userId_threadId", ["userId", "threadId"])
+      .index("by_UUID", ["id"]),
+
+    messages: defineTable({
+      threadId: v.id("threads"),
+      userId: v.string(),
+
+      messageId: v.string(),
+      error: v.optional(v.string()),
+
+      parts: AISDKParts,
+      status: status,
+
+      role: v.union(v.literal("assistant"), v.literal("user")),
+      resumableStreamId: v.optional(v.nullable(v.string())),
+
+      metadata: v.optional(AISDKMetadata),
+      attachments: v.array(v.id("attachments")),
+
+      // Assistant variants are grouped under the user turn they answer.
+      // User turns can point to the currently selected assistant variant.
+      parentUserMessageId: v.optional(v.id("messages")),
+      activeAssistantMessageId: v.optional(v.id("messages")),
+      variantIndex: v.optional(v.number()),
+
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_userId_threadId", ["userId", "threadId"])
+      .index("by_threadId", ["threadId"])
+      .index("by_threadId_parentUserMessageId", ["threadId", "parentUserMessageId"])
+      .index("by_messageId", ["messageId"])
+      .index("by_userId_resumableStreamId", ["userId", "resumableStreamId"]),
+
+    profiles: defineTable({
+      userId: v.string(),
+      name: v.string(),
+      systemPrompt: v.string(),
+      imageKey: v.optional(v.string()),
+
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_userId", ["userId"])
+      .index("by_userId_updatedAt", ["userId", "updatedAt"])
+      .index("by_userId_createdAt", ["userId", "createdAt"])
+      .searchIndex("search_name", { searchField: "name", filterFields: ["userId"] }),
+
+    users: defineTable({
+      userId: v.string(),
+
+      username: v.nullable(v.string()),
+      emailAddress: v.nullable(v.string()),
+      imageUrl: v.nullable(v.string()),
+
+      createdAt: v.optional(v.number()),
+      updatedAt: v.optional(v.number()),
+
+      // @deprecate
+      customization: v.optional(
         v.object({
-          input: v.number(),
-          output: v.number(),
-          reasoning: v.number(),
-          total: v.number(),
+          name: v.string(),
+          occupation: v.string(),
+          traits: v.array(v.string()),
+          systemInstruction: v.string(),
+          backgroundId: v.nullable(v.string()),
+          disableBlur: v.boolean(),
+          hiddenModels: v.array(v.string()),
+          favoriteModels: v.array(v.string()),
+          showFullCode: v.boolean(),
         }),
       ),
 
+      preferences: userPreferences,
+    }).index("by_userId", ["userId"]),
+
+    usages: defineTable({
+      userId: v.string(),
+      used: v.number(),
+      base: v.number(),
+      resetType: v.optional(v.union(v.literal("monthly"), v.literal("daily"))),
+
+      // @deprecate, no point of using this anymore
+      resetAt: v.optional(v.number()),
+    }).index("by_userId", ["userId"]),
+
+    session: defineTable({
+      userId: v.string(),
+      sessionId: v.string(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_userId", ["userId"])
+      .index("by_sessionId", ["sessionId"]),
+
+    user_stats: defineTable({
+      userId: v.string(),
+
+      stats: v.object({
+        threads: v.number(),
+        messages: v.object({ assistant: v.number(), user: v.number() }),
+
+        /**
+         * Token aggregates derived from assistant message metadata.
+         *
+         * IMPORTANT:
+         * - input tokens are stored as *deduplicated deltas* (see internal stats mutation).
+         * - output/reasoning tokens are stored as reported by the model for that completion.
+         */
+        tokens: v.optional(
+          v.object({
+            input: v.number(),
+            output: v.number(),
+            reasoning: v.number(),
+            total: v.number(),
+          }),
+        ),
+
+        /**
+         * Convenience totals for quick UI display.
+         * - user = input token deltas
+         * - assistant = output + reasoning tokens
+         */
+        tokensByRole: v.optional(v.object({ assistant: v.number(), user: v.number() })),
+
+        // Legacy word-based stats (deprecated; kept optional for backward-compatibility with old docs)
+        words: v.optional(v.number()),
+        wordsByRole: v.optional(v.object({ assistant: v.number(), user: v.number() })),
+      }),
+
       /**
-       * Convenience totals for quick UI display.
-       * - user = input token deltas
-       * - assistant = output + reasoning tokens
+       * Ranking aggregates. Values represent total tokens for the bucket.
+       * (Previously message counts.)
        */
-      tokensByRole: v.optional(v.object({ assistant: v.number(), user: v.number() })),
+      modelCounts: v.record(v.string(), v.number()),
+      threadCounts: v.record(v.id("threads"), v.number()),
+      activityCounts: v.record(v.string(), v.number()),
+      aiProfileCounts: v.record(v.string(), v.number()),
 
-      // Legacy word-based stats (deprecated; kept optional for backward-compatibility with old docs)
-      words: v.optional(v.number()),
-      wordsByRole: v.optional(v.object({ assistant: v.number(), user: v.number() })),
-    }),
-
-    /**
-     * Ranking aggregates. Values represent total tokens for the bucket.
-     * (Previously message counts.)
-     */
-    modelCounts: v.record(v.string(), v.number()),
-    threadCounts: v.record(v.id("threads"), v.number()),
-    activityCounts: v.record(v.string(), v.number()),
-    aiProfileCounts: v.record(v.string(), v.number()),
-
-    lastUpdatedAt: v.number(),
-  }).index("by_userId", ["userId"]),
-}, { schemaValidation:false });
+      lastUpdatedAt: v.number(),
+    }).index("by_userId", ["userId"]),
+  },
+  { schemaValidation: false },
+);
