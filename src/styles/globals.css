@@ -241,7 +241,6 @@
   }
 }
 
-.codeblock pre.shiki,
 .custom-scroll,
 #textarea-chat-input {
   scrollbar-gutter: stable both-edges;
@@ -250,27 +249,23 @@
   scrollbar-color: var(--color-ring) transparent;
 }
 
-.codeblock pre.shiki::-webkit-scrollbar,
 .custom-scroll::-webkit-scrollbar,
 #textarea-chat-input::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-.codeblock pre.shiki::-webkit-scrollbar-track,
 .custom-scroll::-webkit-scrollbar-track,
 #textarea-chat-input::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.codeblock pre.shiki::-webkit-scrollbar-thumb,
 .custom-scroll::-webkit-scrollbar-thumb,
 #textarea-chat-input::-webkit-scrollbar-thumb {
   background: var(--color-ring);
   border-radius: 0.5rem;
 }
 
-.codeblock pre.shiki::-webkit-scrollbar-thumb:hover,
 .custom-scroll::-webkit-scrollbar-thumb:hover,
 #textarea-chat-input::-webkit-scrollbar-thumb:hover {
   background: var(--color-ring);
@@ -289,19 +284,6 @@
 
 *::selection {
   @apply bg-accent text-current;
-}
-
-div[data-slot="codeblock"] {
-  pre.shiki {
-    @apply pointer-events-auto h-max min-h-full w-max min-w-full p-3 pr-8;
-    scrollbar-gutter: "stable both-edges";
-  }
-
-  &[data-should-wrap="true"] {
-    pre.shiki {
-      @apply w-full text-wrap wrap-anywhere break-all whitespace-break-spaces;
-    }
-  }
 }
 
 #sidebar-provider[data-disable-blur="true"] .backdrop-blur-md {

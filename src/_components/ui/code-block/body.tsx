@@ -69,6 +69,8 @@ export const CodeBlockContent = memo(
     virtualPaddingBottomPx = 0,
     ...rest
   }: CodeBlockBodyProps) => {
+    const { wrapline } = useCodeBlockContext();
+
     // Use CSS custom properties instead of direct inline styles so that
     // dark-mode Tailwind classes can override without !important.
     // This is necessary because !important syntax differs between Tailwind v3 and v4.
@@ -166,7 +168,7 @@ export const CodeBlockContent = memo(
 
     return (
       <div
-        className={cn(className, "overflow-hidden text-sm")}
+        className={cn(className, "text-sm", wrapline ? "w-full" : "w-max min-w-full")}
         data-language={language}
         data-streamdown="code-block-body"
         {...rest}
@@ -176,6 +178,7 @@ export const CodeBlockContent = memo(
             className,
             "bg-[var(--sdm-bg,inherit)]",
             "dark:bg-[var(--shiki-dark-bg,var(--sdm-bg,inherit))]",
+            wrapline ? "w-full wrap-anywhere whitespace-pre-wrap" : "whitespace-pre",
           )}
           style={preStyle}
         >
@@ -199,7 +202,7 @@ export const CodeBlockContent = memo(
 );
 
 export function CodeBlockBody({ result }: { result: HighlightResult }) {
-  const { language, expanded, totalLines, setExpanded } = useCodeBlockContext();
+  const { language, expanded, totalLines, setExpanded, wrapline } = useCodeBlockContext();
 
   const moreCount = totalLines > LINE_CLAMP ? totalLines - LINE_CLAMP : 0;
   const isCollapsed = !expanded && moreCount > 0;
@@ -213,9 +216,10 @@ export function CodeBlockBody({ result }: { result: HighlightResult }) {
     <div className="relative">
       <div
         className={cn(
-          "px-3 py-2",
-          isCollapsed ? "custom-scroll overflow-auto pb-10" : "overflow-hidden",
+          "custom-scroll px-3 py-2",
+          isCollapsed ? "overflow-auto pb-10" : "overflow-x-auto",
         )}
+        data-should-wrap={wrapline ? "true" : "false"}
         style={{ maxHeight: containerMaxHeight }}
       >
         <CodeBlockContent
