@@ -8,23 +8,44 @@ import {
   XIcon,
 } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "../provider/config-provider";
+import { useConfigStore } from "../provider/config-provider";
 import { ButtonWithTip } from "../ui/button";
 import { Menu, MenuArrow } from "../ui/menu";
 
+import type { SendPreference } from "@/lib/chat/send-preference";
 import { useAbortChatStream } from "@/lib/chat/server-function/abort-chat-stream";
 import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message";
+import { useUpdateSendPreference } from "@/lib/chat/use-update-send-preference";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { chatStoreActions } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
+
+function useHandleSendPreferenceSelection() {
+  const updateSendPreference = useUpdateSendPreference();
+
+  return React.useCallback(
+    function handleSendPreferenceSelection(nextPreference: SendPreference) {
+      void (async function () {
+        const error = await updateSendPreference(nextPreference);
+        if (!error) return;
+
+        toast.error("Failed to save send preference", {
+          description: error.message,
+        });
+      })();
+    },
+    [updateSendPreference],
+  );
+}
 
 export function ChatSendButton() {
   const isMobile = useIsMobile();
 
   const pref = useConfigStore((state) => state.pref);
-  const configStore = useConfigStoreState();
+  const handleSendPreferenceSelection = useHandleSendPreferenceSelection();
 
   const { status, threadId } = useMessageStore(
     useShallow((state) => {
@@ -96,7 +117,7 @@ export function ChatSendButton() {
 
               <Menu.Item
                 className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-                onClick={() => configStore.setConfig({ pref: "enter" })}
+                onClick={() => handleSendPreferenceSelection("enter")}
               >
                 <span className="inline-flex size-4 items-center justify-center">
                   {pref === "enter" ? <CheckIcon className="size-4" /> : null}
@@ -106,7 +127,7 @@ export function ChatSendButton() {
 
               <Menu.Item
                 className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-                onClick={() => configStore.setConfig({ pref: "ctrlEnter" })}
+                onClick={() => handleSendPreferenceSelection("ctrlEnter")}
               >
                 <span className="inline-flex size-4 items-center justify-center">
                   {pref === "ctrlEnter" ? <CheckIcon className="size-4" /> : null}
@@ -128,7 +149,7 @@ export type ChatEditSendButtonProps = {
 
 export function ChatEditSendButton({ isSaving, onSave }: ChatEditSendButtonProps) {
   const pref = useConfigStore((state) => state.pref);
-  const configStore = useConfigStoreState();
+  const handleSendPreferenceSelection = useHandleSendPreferenceSelection();
 
   const [open, setOpen] = React.useState(false);
 
@@ -187,7 +208,7 @@ export function ChatEditSendButton({ isSaving, onSave }: ChatEditSendButtonProps
 
               <Menu.Item
                 className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-                onClick={() => configStore.setConfig({ pref: "enter" })}
+                onClick={() => handleSendPreferenceSelection("enter")}
               >
                 <span className="inline-flex size-4 items-center justify-center">
                   {pref === "enter" ? <CheckIcon className="size-4" /> : null}
@@ -197,7 +218,7 @@ export function ChatEditSendButton({ isSaving, onSave }: ChatEditSendButtonProps
 
               <Menu.Item
                 className="inline-flex w-full cursor-pointer items-center justify-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-                onClick={() => configStore.setConfig({ pref: "ctrlEnter" })}
+                onClick={() => handleSendPreferenceSelection("ctrlEnter")}
               >
                 <span className="inline-flex size-4 items-center justify-center">
                   {pref === "ctrlEnter" ? <CheckIcon className="size-4" /> : null}

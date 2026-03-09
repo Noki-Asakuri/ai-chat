@@ -3,87 +3,26 @@ import { useEffect, useState } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 
-type LocalConfig = {
-  pref: "enter" | "ctrlEnter";
-  wrapline: boolean;
-};
+import type { SendPreference } from "@/lib/chat/send-preference";
 
 export type BehaviorOptionsCardProps = {
   disabled: boolean;
+  defaultAutoWrap: boolean;
   defaultPerformanceEnabled: boolean;
   defaultShowFullCode: boolean;
+  sendPreference: SendPreference;
+  onSendPreferenceChange: (nextPreference: SendPreference) => void;
+  onBehaviorChange: () => void;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function readLocalConfig(): LocalConfig {
-  const defaults: LocalConfig = { pref: "enter", wrapline: false };
-
-  if (typeof window === "undefined") return defaults;
-
-  const raw = localStorage.getItem("local-config-store");
-  if (!raw) return defaults;
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed)) return defaults;
-
-    const stateUnknown = parsed["state"];
-    if (!isRecord(stateUnknown)) return defaults;
-
-    const prefValue = stateUnknown["pref"];
-    const pref = prefValue === "ctrlEnter" ? "ctrlEnter" : "enter";
-
-    const wraplineValue = stateUnknown["wrapline"];
-    const wrapline = typeof wraplineValue === "boolean" ? wraplineValue : defaults.wrapline;
-
-    return { pref, wrapline };
-  } catch {
-    return defaults;
-  }
-}
-
-function patchLocalConfig(patch: Partial<LocalConfig>): void {
-  if (typeof window === "undefined") return;
-
-  const raw = localStorage.getItem("local-config-store");
-  if (!raw) {
-    localStorage.setItem("local-config-store", JSON.stringify({ state: patch, version: 0 }));
-    return;
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed)) {
-      localStorage.setItem("local-config-store", JSON.stringify({ state: patch, version: 0 }));
-      return;
-    }
-
-    const prevStateUnknown = parsed["state"];
-    const prevState = isRecord(prevStateUnknown) ? prevStateUnknown : {};
-
-    const next: Record<string, unknown> = {
-      ...parsed,
-      state: { ...prevState, ...patch },
-    };
-
-    localStorage.setItem("local-config-store", JSON.stringify(next));
-  } catch {
-    localStorage.setItem("local-config-store", JSON.stringify({ state: patch, version: 0 }));
-  }
-}
 
 type ToggleRowProps = {
   id: string;
-  name: string;
   title: string;
   description: string;
-  disabled: boolean;
   children: ReactNode;
 };
 
@@ -100,6 +39,10 @@ function ToggleRow(props: ToggleRowProps) {
       {props.children}
     </div>
   );
+}
+
+function isSendPreference(value: string): value is SendPreference {
+  return value === "enter" || value === "ctrlEnter";
 }
 
 function ControlledSwitch({
@@ -129,14 +72,11 @@ function ControlledSwitch({
 }
 
 export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
-  const [localWrapline, setLocalWrapline] = useState<boolean>(false);
-  const [localSendPref, setLocalSendPref] = useState<LocalConfig["pref"]>("enter");
+  const [autoWrap, setAutoWrap] = useState<boolean>(props.defaultAutoWrap);
 
   useEffect(() => {
-    const config = readLocalConfig();
-    setLocalWrapline(config.wrapline);
-    setLocalSendPref(config.pref);
-  }, []);
+    setAutoWrap(props.defaultAutoWrap);
+  }, [props.defaultAutoWrap]);
 
   return (
     <Card className="rounded-md">
@@ -147,43 +87,56 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
 
       <CardContent className="space-y-0">
         <ToggleRow
-          id="invert-send-newline"
-          name="invert-send-newline"
-          title="Invert send/new line behavior"
-          description="When enabled, use Enter for new lines, and Ctrl/Command + Enter to send messages. When disabled, use Enter to send and Shift + Enter for new lines."
-          disabled={props.disabled}
+          id="send-preference"
+          title="How to send messages"
+          description="Choose the keyboard shortcut used to send a message."
         >
-          <Switch
-            id="invert-send-newline"
-            name="invert-send-newline"
+          <Select
+            value={props.sendPreference}
             disabled={props.disabled}
-            checked={localSendPref === "ctrlEnter"}
-            onCheckedChange={(checked) => {
-              const nextPref: LocalConfig["pref"] = checked ? "ctrlEnter" : "enter";
-              setLocalSendPref(nextPref);
-              patchLocalConfig({ pref: nextPref });
+            onValueChange={(value) => {
+              if (!value || !isSendPreference(value)) return;
+
+              props.onSendPreferenceChange(value);
+              props.onBehaviorChange();
             }}
-            aria-label="Invert send/new line behavior"
-          />
+          >
+            <SelectTrigger id="send-preference" className="w-[240px]" aria-label="Send preference">
+              <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                <span className="truncate">
+                  {props.sendPreference === "ctrlEnter"
+                    ? "Press Ctrl + Enter to send"
+                    : "Press Enter to send"}
+                </span>
+              </div>
+            </SelectTrigger>
+
+            <SelectContent className="bg-card">
+              <SelectItem value="enter">
+                <span>Press Enter to send</span>
+              </SelectItem>
+              <SelectItem value="ctrlEnter">
+                <span>Press Ctrl + Enter to send</span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </ToggleRow>
 
         <Separator className="-mx-4" />
 
         <ToggleRow
           id="auto-wrap"
-          name="auto-wrap"
           title="Wrap long code lines"
           description="Wrap code blocks instead of scrolling horizontally."
-          disabled={props.disabled}
         >
           <Switch
             id="auto-wrap"
             name="auto-wrap"
             disabled={props.disabled}
-            checked={localWrapline}
+            checked={autoWrap}
             onCheckedChange={(checked) => {
-              setLocalWrapline(checked);
-              patchLocalConfig({ wrapline: checked });
+              setAutoWrap(checked);
+              props.onBehaviorChange();
             }}
             aria-label="Wrap long code lines"
           />
@@ -193,16 +146,15 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
 
         <ToggleRow
           id="performance-mode"
-          name="performance-mode"
           title="Performance mode"
           description="Turn on the performance mode (can improve readability)."
-          disabled={props.disabled}
         >
           <ControlledSwitch
             id="performance-mode"
             name="performance-mode"
             disabled={props.disabled}
             defaultChecked={props.defaultPerformanceEnabled}
+            onCheckedChange={() => props.onBehaviorChange()}
             aria-label="Performance mode"
           />
         </ToggleRow>
@@ -211,16 +163,15 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
 
         <ToggleRow
           id="show-full-code"
-          name="show-full-code"
           title="Show full code by default"
           description="Expand code blocks by default instead of clamping them."
-          disabled={props.disabled}
         >
           <ControlledSwitch
             id="show-full-code"
             name="show-full-code"
             disabled={props.disabled}
             defaultChecked={props.defaultShowFullCode}
+            onCheckedChange={() => props.onBehaviorChange()}
             aria-label="Show full code by default"
           />
         </ToggleRow>

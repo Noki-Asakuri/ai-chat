@@ -35,6 +35,11 @@ export function BackgroundCard(props: BackgroundCardProps) {
     };
   }, [backgroundImage]);
 
+  useEffect(() => {
+    if (!props.existingBackgroundId) return;
+    setBackgroundImage(null);
+  }, [props.existingBackgroundId]);
+
   const existingBackgroundUrl = props.existingBackgroundId
     ? buildImageAssetUrl(props.existingBackgroundId)
     : null;
