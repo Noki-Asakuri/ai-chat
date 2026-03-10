@@ -15,6 +15,7 @@ export const env = createEnv({
 
     PROXY_URL: z.string(),
     PROXY_KEY: z.string(),
+    EXA_API_KEY: z.string(),
     REDIS_URL: z.string(),
 
     WORKOS_API_KEY: z.string(),

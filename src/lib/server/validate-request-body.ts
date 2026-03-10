@@ -2,8 +2,9 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { z } from "zod/v4";
 
-import { google, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
+import { type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { openai, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
+import { webSearch } from "@exalabs/ai-sdk";
 import { convertToModelMessages, validateUIMessages, type ToolSet } from "ai";
 
 import { getModelData, resolveModel } from "../chat/models";
@@ -225,6 +226,18 @@ export async function validateRequestBody(body: Record<string, unknown>) {
     }
   }
 
+  if (data.modelParams.webSearch && modelInfo.capabilities.webSearch) {
+    tools.web_search = webSearch({
+      type: "auto",
+      numResults: 10,
+      contents: {
+        text: { maxCharacters: 1500 },
+        livecrawl: "fallback",
+        livecrawlTimeout: 10000,
+      },
+    });
+  }
+
   switch (modelInfo.provider) {
     case "google":
       if (modelInfo.capabilities.generateImage) {
@@ -236,11 +249,6 @@ export async function validateRequestBody(body: Record<string, unknown>) {
           providerOptions.google.imageConfig = { imageSize: "2K" };
         }
       }
-
-      if (data.modelParams.webSearch && modelInfo.capabilities.webSearch) {
-        tools.url_context = google.tools.urlContext({});
-        tools.google_search = google.tools.googleSearch({});
-      }
       break;
 
     case "openai":
@@ -249,10 +257,6 @@ export async function validateRequestBody(body: Record<string, unknown>) {
           outputFormat: "webp",
           quality: "high",
         });
-      }
-
-      if (data.modelParams.webSearch && modelInfo.capabilities.webSearch) {
-        tools.web_search = openai.tools.webSearch({});
       }
       break;
   }

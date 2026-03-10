@@ -3,9 +3,14 @@ import type { UserPreferences } from "@/convex/functions/users";
 
 import dedent from "dedent";
 
+type BuildSystemInstructionOptions = {
+  webSearchEnabled?: boolean;
+};
+
 export async function buildSystemInstruction(
   userPreferences: UserPreferences,
   profile: Doc<"profiles"> | null,
+  options: BuildSystemInstructionOptions = {},
 ) {
   const systemInstruction: string[] = [];
 
@@ -56,6 +61,19 @@ export async function buildSystemInstruction(
 		- Never place a fenced code block inside another fenced code block. If you need to show a fence marker inside code, use an indented example or plain text instead.
 		</code>
 		`);
+
+  if (options.webSearchEnabled) {
+    systemInstruction.push(dedent`
+			<web-search>
+			## Web Search Instruction:
+			- Use one language only for web search in this request. Prefer the same language as the user's latest message unless the user explicitly asks for a different language.
+			- Do not run multilingual web searches for the same intent.
+			- Avoid multiple web search tool calls in the same step because they can return duplicate or overlapping results.
+			- If a previous step already contains enough web search context, do not search again.
+			- Only call web search again when prior results are clearly insufficient, outdated, or not relevant enough to answer reliably.
+			</web-search>
+			`);
+  }
 
   return systemInstruction.join("\n\n").trim();
 }

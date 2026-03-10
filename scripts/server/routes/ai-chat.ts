@@ -385,7 +385,9 @@ export function registerAiChatRoutes(app: Hono): void {
         profilePromise,
       ]);
 
-      const systemInstruction = await buildSystemInstruction(userPreferences, profile);
+      const systemInstruction = await buildSystemInstruction(userPreferences, profile, {
+        webSearchEnabled: Boolean(tools.web_search),
+      });
 
       const metadata: ChatMetadata = {
         model: { request: model.uniqueId, response: null },
