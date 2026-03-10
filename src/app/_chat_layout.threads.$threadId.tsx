@@ -4,11 +4,12 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { convexQuery } from "@convex-dev/react-query";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { useEffect, useEffectEvent } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 import { LoadingSkeleton } from "@/components/chat/loading-skeleton";
 import { MessageHistory } from "@/components/message/message-history";
 
+import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { useAutoResumeStream } from "@/lib/chat/server-function/auto-resume-stream";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { messageStoreActions } from "@/lib/store/messages-store";
@@ -59,6 +60,7 @@ function ChatComponentPage() {
 function ChatHistory() {
   const params = useParams({ from: "/_chat_layout/threads/$threadId" });
   const threadId = fromUUID<Id<"threads">>(params.threadId);
+  const shouldForceScrollToBottomRef = useRef(true);
 
   const { autoResumeStream } = useAutoResumeStream();
 
@@ -103,6 +105,11 @@ function ChatHistory() {
   );
 
   useEffect(() => {
+    shouldForceScrollToBottomRef.current = true;
+    setStickyToBottom(true);
+  }, [threadId]);
+
+  useEffect(() => {
     if (data) {
       syncMessage(
         {
@@ -113,6 +120,14 @@ function ChatHistory() {
         dataUpdatedAt,
         { mode: "replace" },
       );
+
+      if (shouldForceScrollToBottomRef.current) {
+        shouldForceScrollToBottomRef.current = false;
+
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new Event("chat:force-scroll-bottom"));
+        });
+      }
     }
   }, [data, dataUpdatedAt]);
 
