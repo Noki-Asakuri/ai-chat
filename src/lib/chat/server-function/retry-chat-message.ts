@@ -38,6 +38,7 @@ export function useRetryChatMessage() {
   const [id] = useSessionId();
   const convexClient = useConvex();
   const configProfile = useConfigStore((state) => state.profile);
+  const configWebSearch = useConfigStore((state) => state.webSearch);
   const notificationSound = useConfigStore((state) => state.notificationSound);
   const desktopNotification = useConfigStore((state) => state.desktopNotification);
   const configStore = useConfigStoreState();
@@ -91,6 +92,7 @@ export function useRetryChatMessage() {
     const model = options.modelId ?? assistantMessage.metadata!.model.request;
     const mergedModelParams = {
       ...assistantMessage.metadata!.modelParams,
+      webSearch: configWebSearch,
       ...options.modelParams,
     };
 
