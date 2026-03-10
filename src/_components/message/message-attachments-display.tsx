@@ -7,10 +7,12 @@ import { buildAttachmentUrl, buildImageThumbnailUrl, toRawFileUrl } from "@/lib/
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+type ChatFilePart = ChatMessage["parts"][number] & FileUIPart;
+
 type MessageAttachmentsDisplayProps = React.ComponentPropsWithoutRef<"div"> & {
   messageId: string;
   role: ChatMessage["role"];
-  parts: FileUIPart[];
+  parts: ChatFilePart[];
   attachments: ChatMessage["attachments"];
 };
 

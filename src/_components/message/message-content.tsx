@@ -7,15 +7,42 @@ import {
 import { MessageAttachmentsDisplay } from "./message-attachments-display";
 import { StreamDownWrapper } from "./message-markdown";
 import { MessageReasoning } from "./message-reasoning";
+import { MessageStepDivider, MessageToolParts, isToolPart } from "./message-tool-parts";
 
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+type MessagePart = ChatMessage["parts"][number];
+type ChatTextPart = MessagePart & { type: "text"; text: string; state?: "streaming" | "done" };
+type ChatFilePart = MessagePart & {
+  type: "file";
+  mediaType: string;
+  url: string;
+  filename?: string;
+};
+type ChatReasoningPart = MessagePart & {
+  type: "reasoning";
+  text: string;
+  state?: "streaming" | "done";
+};
+
 type MessageContentProps = {
   message: ChatMessage;
   showUserAvatar?: boolean;
 };
+
+function isTextPart(part: MessagePart): part is ChatTextPart {
+  return part.type === "text";
+}
+
+function isFilePart(part: MessagePart): part is ChatFilePart {
+  return part.type === "file";
+}
+
+function isReasoningPart(part: MessagePart): part is ChatReasoningPart {
+  return part.type === "reasoning";
+}
 
 export function MessageContent({ message, showUserAvatar = true }: MessageContentProps) {
   const isMobile = useIsMobile();
@@ -29,13 +56,18 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
     return <MessageError message={error} />;
   }
 
-  const textParts = parts.filter((part) => part.type === "text");
-  const fileParts = parts.filter((part) => part.type === "file");
-  const reasoningParts = parts.filter((part) => part.type === "reasoning");
+  const textParts = parts.filter(isTextPart);
+  const fileParts = parts.filter(isFilePart);
+  const reasoningParts = parts.filter(isReasoningPart);
+  const toolParts = parts.filter(isToolPart);
+  const hasStepStart = parts.some((part) => part.type === "step-start");
 
   const shouldRenderUserAvatar = showUserAvatar && message.role === "user";
   const hasRenderableContent =
-    textParts.length > 0 || fileParts.length > 0 || reasoningParts.length > 0;
+    textParts.length > 0 ||
+    fileParts.length > 0 ||
+    reasoningParts.length > 0 ||
+    toolParts.length > 0;
 
   const shouldRenderMessageBody = textParts.length > 0 || shouldRenderUserAvatar;
   const shouldReserveUserAvatarSpace = shouldRenderUserAvatar && textParts.length > 0;
@@ -66,6 +98,12 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
           )}
         />
 
+        {message.role === "assistant" && hasStepStart && toolParts.length > 0 && (
+          <MessageStepDivider />
+        )}
+
+        {message.role === "assistant" && <MessageToolParts parts={toolParts} />}
+
         {shouldRenderMessageBody && (
           <div
             className={cn("relative flex items-start gap-2", {
@@ -75,7 +113,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
           >
             {textParts.length > 0 && (
               <div
-                className={cn("flex min-w-0 flex-col gap-2", {
+                className={cn("flex min-w-0 flex-col gap-1.5", {
                   "w-full": message.role === "assistant",
                   "max-w-[calc(100%-3.25rem)]": shouldReserveUserAvatarSpace,
                 })}

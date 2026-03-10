@@ -5,8 +5,10 @@ import { Reasoning, ReasoningContent, ReasoningTrigger } from "../ui/ai-elements
 import { tryGetModelData } from "@/lib/chat/models";
 import type { ChatMessage } from "@/lib/types";
 
+type ChatReasoningPart = ChatMessage["parts"][number] & ReasoningUIPart;
+
 type ThinkingToggleProps = {
-  parts: ReasoningUIPart[];
+  parts: ChatReasoningPart[];
   status: ChatMessage["status"];
   metadata: ChatMessage["metadata"];
 };

@@ -4,13 +4,13 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { Hono } from "hono";
 import { z } from "zod/v4";
 
-import { APICallError, stepCountIs, streamText, UI_MESSAGE_STREAM_HEADERS } from "ai";
+import { APICallError, UI_MESSAGE_STREAM_HEADERS } from "ai";
 
 import { buildAttachmentUrl } from "@/lib/assets/urls";
 import { logger } from "@/lib/axiom/logger";
 import { createServerConvexClient } from "@/lib/convex/server";
+import { buildChatAgent } from "@/lib/server/chat-agent";
 import { serverUploadFileR2 } from "@/lib/server/file-upload";
-import { registry } from "@/lib/server/model-registry";
 import { updateTitle } from "@/lib/server/update-title";
 import {
   messageIdSchema as messageIdSchemaZ,
@@ -59,6 +59,7 @@ const abortRequestBodySchema = z.object({
 type AbortRequestBody = z.infer<typeof abortRequestBodySchema>;
 
 type ChatModelParams = NonNullable<ChatMessage["metadata"]>["modelParams"];
+type ChatMetadata = NonNullable<ChatMessage["metadata"]>;
 
 const GENERIC_CHAT_ERROR_MESSAGE =
   "An error has occurred while processing your request. Please try again.";
@@ -108,10 +109,22 @@ function finalizeStreamParts(parts: unknown): unknown {
     const next: Record<string, unknown> = { ...part };
     const type = next["type"];
 
-    if (type === "step-start") continue;
-
     if ((type === "text" || type === "reasoning") && next["state"] === "streaming") {
       next["state"] = "done";
+    }
+
+    if (type === "dynamic-tool") {
+      const state = next["state"];
+      if (state === "input-streaming") {
+        next["state"] = "input-available";
+      }
+    }
+
+    if (typeof type === "string" && (type.startsWith("tool-") || type.startsWith("tools-"))) {
+      const state = next["state"];
+      if (state === "input-streaming") {
+        next["state"] = "input-available";
+      }
     }
 
     const isSourcePart =
@@ -392,116 +405,7 @@ export function registerAiChatRoutes(app: Hono): void {
 
       const systemInstruction = await buildSystemInstruction(userPreferences, profile);
 
-      const startTime = Date.now();
-      const activeStreamId = streamId ?? requestId;
-      const serverAbortController = registerStream(activeStreamId);
-
-      const result = streamText({
-        model: registry(model.id),
-        system: systemInstruction,
-        messages: modelMessages,
-        providerOptions,
-        tools,
-
-        // IMPORTANT: Do not use req.signal here (browser/tab close should NOT cancel the server stream).
-        abortSignal: serverAbortController.signal,
-
-        onAbort: () => {
-          removeStream(activeStreamId);
-          logger.info("[Chat] Stream aborted (server-side)", {
-            userId,
-            threadId,
-            requestId,
-            streamId: activeStreamId,
-          });
-        },
-
-        experimental_telemetry: { isEnabled: false },
-
-        maxRetries: 5,
-        stopWhen: stepCountIs(20),
-
-        experimental_download: (options) => Promise.all(options.map(handleFileCaching)),
-
-        async onError({ error }) {
-          const err = normalizeError(error);
-          let errorMessage = GENERIC_CHAT_ERROR_MESSAGE;
-
-          // Ignore aborts triggered via our server-side abort controller
-          if (err.name === "AbortError" && serverAbortController.signal.aborted) return;
-
-          if (APICallError.isInstance(err)) {
-            errorMessage = PROVIDER_CHAT_ERROR_MESSAGE;
-
-            logger.error("[Chat Error] Provider request failed", {
-              userId,
-              threadId,
-              assistantMessageId,
-              model: model.uniqueId,
-              requestId,
-              message: err.message,
-              name: err.name,
-              stack: err.stack,
-              ...getProviderLogData(err),
-            });
-          } else {
-            logger.error("[Chat Error] Stream request failed", {
-              userId,
-              threadId,
-              assistantMessageId,
-              model: model.uniqueId,
-              requestId,
-              message: err.message,
-              name: err.name,
-              stack: err.stack,
-            });
-          }
-
-          if (usageReserved && !usageRefunded) {
-            const [, refundError] = await tryCatch(
-              convexClient.mutation(api.functions.usages.refundRequest, { amount: 1, sessionId }),
-            );
-
-            if (refundError) {
-              logger.error("[Chat Error] Failed to refund usage", {
-                userId,
-                threadId,
-                assistantMessageId,
-                requestId,
-                message: refundError.message,
-                stack: refundError.stack,
-              });
-            } else {
-              usageRefunded = true;
-            }
-          }
-
-          const [, persistError] = await tryCatch(
-            convexClient.mutation(api.functions.messages.updateErrorMessage, {
-              sessionId,
-              error: errorMessage,
-              messageId: assistantMessageId,
-              metadata: { model: { request: model.uniqueId, response: null }, modelParams },
-            }),
-          );
-
-          if (persistError) {
-            logger.error("[Chat Error] Failed to persist assistant error message", {
-              userId,
-              threadId,
-              assistantMessageId,
-              requestId,
-              message: persistError.message,
-              stack: persistError.stack,
-            });
-            return;
-          }
-
-          errorMessagePersisted = true;
-        },
-      });
-
-      const metadata: ChatMessage["metadata"] = {
+      const metadata: ChatMetadata = {
         model: { request: model.uniqueId, response: null },
         finishReason: null,
         timeToFirstTokenMs: 0,
@@ -510,6 +414,154 @@ export function registerAiChatRoutes(app: Hono): void {
 
         modelParams,
       };
+
+      const startTime = Date.now();
+      const activeStreamId = streamId ?? requestId;
+      const serverAbortController = registerStream(activeStreamId);
+      let streamErrorDetected = false;
+      let streamErrorHandlingStarted = false;
+
+      function getStreamResponseErrorMessage(error: unknown): string {
+        const err = normalizeError(error);
+
+        if (APICallError.isInstance(err)) {
+          return PROVIDER_CHAT_ERROR_MESSAGE;
+        }
+
+        return GENERIC_CHAT_ERROR_MESSAGE;
+      }
+
+      async function persistStreamError(error: unknown): Promise<void> {
+        if (streamErrorHandlingStarted) return;
+        streamErrorHandlingStarted = true;
+
+        const err = normalizeError(error);
+        const errorMessage = getStreamResponseErrorMessage(error);
+
+        if (err.name === "AbortError" && serverAbortController.signal.aborted) return;
+
+        if (APICallError.isInstance(err)) {
+          logger.error("[Chat Error] Provider request failed", {
+            userId,
+            threadId,
+            assistantMessageId,
+            model: model.uniqueId,
+            requestId,
+            message: err.message,
+            name: err.name,
+            stack: err.stack,
+            ...getProviderLogData(err),
+          });
+        } else {
+          logger.error("[Chat Error] Stream request failed", {
+            userId,
+            threadId,
+            assistantMessageId,
+            model: model.uniqueId,
+            requestId,
+            message: err.message,
+            name: err.name,
+            stack: err.stack,
+          });
+        }
+
+        if (usageReserved && !usageRefunded) {
+          const [, refundError] = await tryCatch(
+            convexClient.mutation(api.functions.usages.refundRequest, { amount: 1, sessionId }),
+          );
+
+          if (refundError) {
+            logger.error("[Chat Error] Failed to refund usage", {
+              userId,
+              threadId,
+              assistantMessageId,
+              requestId,
+              message: refundError.message,
+              stack: refundError.stack,
+            });
+          } else {
+            usageRefunded = true;
+          }
+        }
+
+        const [, persistError] = await tryCatch(
+          convexClient.mutation(api.functions.messages.updateErrorMessage, {
+            sessionId,
+            error: errorMessage,
+            messageId: assistantMessageId,
+            metadata: { model: { request: model.uniqueId, response: null }, modelParams },
+          }),
+        );
+
+        if (persistError) {
+          logger.error("[Chat Error] Failed to persist assistant error message", {
+            userId,
+            threadId,
+            assistantMessageId,
+            requestId,
+            message: persistError.message,
+            stack: persistError.stack,
+          });
+          return;
+        }
+
+        errorMessagePersisted = true;
+      }
+
+      const agent = buildChatAgent({
+        modelId: model.id,
+        systemInstruction,
+        providerOptions,
+        tools,
+        experimentalDownload: (options) => Promise.all(options.map(handleFileCaching)),
+      });
+
+      const result = await agent.stream({
+        prompt: modelMessages,
+
+        // IMPORTANT: Do not use req.signal here (browser/tab close should NOT cancel the server stream).
+        abortSignal: serverAbortController.signal,
+
+        async onStepFinish({ finishReason, response, usage }) {
+          if (streamErrorDetected) return;
+
+          if (metadata.timeToFirstTokenMs === 0) {
+            metadata.timeToFirstTokenMs = Date.now() - startTime;
+          }
+
+          metadata.model.response = response.modelId;
+          metadata.finishReason = finishReason;
+          metadata.durations.request = Date.now() - startTime;
+
+          metadata.usages.inputTokens = usage.inputTokens ?? metadata.usages.inputTokens;
+          metadata.usages.outputTokens =
+            usage.outputTokens ??
+            usage.outputTokenDetails?.textTokens ??
+            metadata.usages.outputTokens;
+          metadata.usages.reasoningTokens =
+            usage.reasoningTokens ??
+            usage.outputTokenDetails?.reasoningTokens ??
+            metadata.usages.reasoningTokens;
+        },
+
+        async onFinish({ totalUsage, finishReason, response }) {
+          if (streamErrorDetected) return;
+
+          metadata.durations.request = Date.now() - startTime;
+          metadata.finishReason = finishReason;
+          metadata.model.response = response.modelId;
+
+          metadata.usages.inputTokens = totalUsage.inputTokens ?? metadata.usages.inputTokens;
+          metadata.usages.outputTokens =
+            totalUsage.outputTokens ??
+            totalUsage.outputTokenDetails?.textTokens ??
+            metadata.usages.outputTokens;
+          metadata.usages.reasoningTokens =
+            totalUsage.reasoningTokens ??
+            totalUsage.outputTokenDetails?.reasoningTokens ??
+            metadata.usages.reasoningTokens;
+        },
+      });
 
       void updateTitle({
         messages: modelMessages,
@@ -575,6 +627,16 @@ export function registerAiChatRoutes(app: Hono): void {
               metadata.model.response = part.response.modelId;
               metadata.finishReason = part.finishReason;
               metadata.durations.request = Date.now() - startTime;
+
+              metadata.usages.inputTokens = part.usage.inputTokens ?? metadata.usages.inputTokens;
+              metadata.usages.outputTokens =
+                part.usage.outputTokens ??
+                part.usage.outputTokenDetails?.textTokens ??
+                metadata.usages.outputTokens;
+              metadata.usages.reasoningTokens =
+                part.usage.reasoningTokens ??
+                part.usage.outputTokenDetails?.reasoningTokens ??
+                metadata.usages.reasoningTokens;
               break;
 
             case "finish":
@@ -610,8 +672,23 @@ export function registerAiChatRoutes(app: Hono): void {
             return;
           }
 
+          if (streamErrorDetected) {
+            await persistStreamError(new Error("Chat stream finished with provider error."));
+
+            logger.info("[Chat] Stream finished after error", {
+              userId,
+              threadId,
+              requestId,
+              streamId: activeStreamId,
+            });
+            return;
+          }
+
           const parts = responseMessage.parts as ChatMessage["parts"];
           const fileParts = parts.filter((part) => part.type === "file");
+          const uploadFileParts = fileParts as Array<
+            Extract<ChatMessage["parts"][number], { type: "file" }>
+          >;
 
           const attachmentIds: Array<Id<"attachments">> = [];
           const generatedFiles = (await result.files).map(async (file, index) => {
@@ -628,7 +705,9 @@ export function registerAiChatRoutes(app: Hono): void {
             const url = buildAttachmentUrl(data.filePathname, file.mediaType);
 
             attachmentIds.push(data.attachmentDocId);
-            fileParts[index]!.url = url;
+            const currentPart = uploadFileParts[index];
+            if (!currentPart) return;
+            currentPart.url = url;
           });
 
           await Promise.all(generatedFiles);
@@ -659,6 +738,14 @@ export function registerAiChatRoutes(app: Hono): void {
             updates,
             messageId: assistantMessageId,
           });
+        },
+
+        onError(error) {
+          streamErrorDetected = true;
+          removeStream(activeStreamId);
+
+          void persistStreamError(error);
+          return getStreamResponseErrorMessage(error);
         },
       });
     } catch (error) {

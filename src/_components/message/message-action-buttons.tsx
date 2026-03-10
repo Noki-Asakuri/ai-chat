@@ -40,6 +40,13 @@ import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
 
+function isTextPart(part: ChatMessage["parts"][number]): part is ChatMessage["parts"][number] & {
+  type: "text";
+  text: string;
+} {
+  return part.type === "text";
+}
+
 type MessageActionButtonsProps = {
   isFinished: boolean;
   message: ChatMessage;
@@ -111,7 +118,7 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
   if (import.meta.env.PROD && !isFinished) return null;
 
   const content = message.parts
-    .filter((p) => p.type === "text")
+    .filter(isTextPart)
     .map((p) => p.text)
     .join("\n\n");
 
@@ -224,7 +231,7 @@ function EditButton({ message }: { message: ChatMessage }) {
     chatStoreActions.setEditMessage({
       _id: message._id,
       input: message.parts
-        .filter((p) => p.type === "text")
+        .filter(isTextPart)
         .map((p) => p.text)
         .join("\n\n"),
 
