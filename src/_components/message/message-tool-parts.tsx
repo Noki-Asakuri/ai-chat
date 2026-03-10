@@ -13,13 +13,15 @@ type MessageToolPartsProps = {
   parts: ToolPart[];
 };
 
+const TOOL_SUMMARY_MAX_LENGTH = 96;
+
 function getToolName(part: ToolPart): string {
   if (part.type === "dynamic-tool") return part.toolName;
 
   return part.type.replace(/^(tool-|tools-)/, "");
 }
 
-function stringify(value: unknown): string {
+function stringifyForDetails(value: unknown): string {
   if (typeof value === "string") return value;
 
   try {
@@ -29,10 +31,82 @@ function stringify(value: unknown): string {
   }
 }
 
-function summarize(value: unknown): string {
-  const normalized = stringify(value).replace(/\s+/g, " ").trim();
-  if (normalized.length <= 96) return normalized;
-  return `${normalized.slice(0, 96)}...`;
+function normalizeSummaryText(value: string): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= TOOL_SUMMARY_MAX_LENGTH) return normalized;
+  return `${normalized.slice(0, TOOL_SUMMARY_MAX_LENGTH)}...`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function summarizeInline(value: unknown): string {
+  if (typeof value === "string") {
+    return JSON.stringify(value.length > 24 ? `${value.slice(0, 24)}...` : value);
+  }
+
+  if (typeof value === "number" || typeof value === "boolean" || value === null) {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[Array(${value.length})]`;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return "{...}";
+  }
+
+  return String(value);
+}
+
+function summarizeValue(value: unknown): string {
+  if (typeof value === "string") {
+    return normalizeSummaryText(value);
+  }
+
+  if (typeof value === "number" || typeof value === "boolean" || value === null) {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    const preview = value
+      .slice(0, 3)
+      .map((item) => summarizeInline(item))
+      .join(", ");
+    const suffix = value.length > 3 ? ", ..." : "";
+
+    return normalizeSummaryText(`[${preview}${suffix}]`);
+  }
+
+  if (isRecord(value)) {
+    const preview: string[] = [];
+    let hasMoreEntries = false;
+    let seenEntries = 0;
+
+    for (const key in value) {
+      if (!Object.hasOwn(value, key)) continue;
+
+      seenEntries += 1;
+
+      if (preview.length < 3) {
+        preview.push(`${key}: ${summarizeInline(value[key])}`);
+      }
+
+      if (seenEntries >= 4) {
+        hasMoreEntries = true;
+        break;
+      }
+    }
+
+    if (preview.length === 0) return "{}";
+
+    const suffix = hasMoreEntries ? ", ..." : "";
+    return normalizeSummaryText(`{ ${preview.join(", ")}${suffix} }`);
+  }
+
+  return normalizeSummaryText(String(value));
 }
 
 function ToolStateBadge({ part }: { part: ToolPart }) {
@@ -99,38 +173,55 @@ function MessageToolPart({ part }: { part: ToolPart }) {
     }
   }, [part.state]);
 
-  let detailLabel = "";
-  let detailValue = "";
+  const summaryText = React.useMemo(() => {
+    if (part.state === "input-streaming" || part.state === "input-available") {
+      return summarizeValue(part.input);
+    }
 
-  if (part.state === "input-streaming" || part.state === "input-available") {
-    detailLabel = "Input";
-    detailValue = stringify(part.input);
-  } else if (part.state === "output-available") {
-    detailLabel = "Output";
-    detailValue = stringify(part.output);
-  } else if (part.state === "output-error") {
-    detailLabel = "Error";
-    detailValue = part.errorText;
-  } else if (part.state === "approval-requested") {
-    detailLabel = "Approval";
-    detailValue = "Approval required";
-  } else if (part.state === "output-denied") {
-    detailLabel = "Denied";
-    detailValue = "Tool execution denied";
-  }
+    if (part.state === "output-available") {
+      return summarizeValue(part.output);
+    }
 
-  const summaryText =
-    part.state === "input-streaming" || part.state === "input-available"
-      ? summarize(part.input)
-      : part.state === "output-available"
-        ? summarize(part.output)
-        : part.state === "output-error"
-          ? summarize(part.errorText)
-          : part.state === "approval-requested"
-            ? "Approval required"
-            : part.state === "output-denied"
-              ? "Execution denied"
-              : "";
+    if (part.state === "output-error") {
+      return normalizeSummaryText(part.errorText);
+    }
+
+    if (part.state === "approval-requested") {
+      return "Approval required";
+    }
+
+    if (part.state === "output-denied") {
+      return "Execution denied";
+    }
+
+    return "";
+  }, [part.errorText, part.input, part.output, part.state]);
+
+  const detail = React.useMemo(() => {
+    if (!isOpen) return null;
+
+    if (part.state === "input-streaming" || part.state === "input-available") {
+      return { label: "Input", value: stringifyForDetails(part.input) };
+    }
+
+    if (part.state === "output-available") {
+      return { label: "Output", value: stringifyForDetails(part.output) };
+    }
+
+    if (part.state === "output-error") {
+      return { label: "Error", value: part.errorText };
+    }
+
+    if (part.state === "approval-requested") {
+      return { label: "Approval", value: "Approval required" };
+    }
+
+    if (part.state === "output-denied") {
+      return { label: "Denied", value: "Tool execution denied" };
+    }
+
+    return null;
+  }, [isOpen, part.errorText, part.input, part.output, part.state]);
 
   return (
     <div className="rounded-md border bg-background/80 px-2 py-1.5 backdrop-blur-md backdrop-saturate-150">
@@ -155,13 +246,13 @@ function MessageToolPart({ part }: { part: ToolPart }) {
         <ToolStateBadge part={part} />
       </button>
 
-      {isOpen && detailValue.length > 0 && (
+      {detail && detail.value.length > 0 && (
         <div className="mt-1 rounded bg-background/80 px-2 py-1.5">
           <div className="mb-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
-            {detailLabel}
+            {detail.label}
           </div>
           <pre className="overflow-x-auto text-xs break-words whitespace-pre-wrap text-foreground">
-            {detailValue}
+            {detail.value}
           </pre>
         </div>
       )}
