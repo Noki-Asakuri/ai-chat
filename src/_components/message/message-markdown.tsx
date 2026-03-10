@@ -46,119 +46,165 @@ function normalizeMissingFenceLanguages(text: string): string {
 }
 
 function escapeInvalidMath(text: string): string {
-  const len: number = text.length;
-  let out = "";
+  const len = text.length;
+  const out: string[] = [];
   let i = 0;
   let inFence = false;
   let inInline = false;
+  let backslashRun = 0;
 
-  function isEscaped(index: number): boolean {
-    let backslashes = 0;
-    let j = index - 1;
+  function isDigit(ch: string): boolean {
+    const code = ch.charCodeAt(0);
+    return code >= 48 && code <= 57;
+  }
 
-    while (j >= 0 && text[j] === "\\") {
-      backslashes++;
-      j--;
+  function isInvalidInlineRange(start: number, end: number): boolean {
+    if (start >= end) return true;
+
+    const first = text[start]!;
+    const last = text[end - 1]!;
+
+    if (first === " " || last === " ") return true;
+    if (isDigit(first)) return true;
+
+    for (let k = start; k < end; k++) {
+      if (text[k] === "\n") return true;
     }
-    return backslashes % 2 === 1;
-  }
 
-  function isInvalidInline(content: string): boolean {
-    if (content.length === 0) return true;
-
-    const first = content[0]!;
-    const last = content[content.length - 1]!;
-
-    if (first === " " || last === " ") return true;
-    if (/\d/.test(first)) return true;
-    if (content.includes("\n")) return true;
     return false;
   }
 
-  function isInvalidDisplay(content: string): boolean {
-    if (content.length === 0) return true;
+  function isInvalidDisplayRange(start: number, end: number): boolean {
+    if (start >= end) return true;
 
-    const first = content[0]!;
-    const last = content[content.length - 1]!;
+    const first = text[start]!;
+    const last = text[end - 1]!;
 
     if (first === " " || last === " ") return true;
-    if (/^\d[\s\S]*$/.test(content)) return true;
+    if (isDigit(first)) return true;
+
     return false;
+  }
+
+  function findClosingDollar(start: number, run: number): number {
+    let j = start + run;
+    let localBackslashRun = 0;
+
+    while (j < len) {
+      const ch = text[j]!;
+      const escaped = (localBackslashRun & 1) === 1;
+
+      if (!escaped) {
+        if (ch === "`") {
+          return -1;
+        }
+
+        if (ch === "$") {
+          let currentRun = 1;
+
+          while (j + currentRun < len && text[j + currentRun] === "$") {
+            currentRun++;
+          }
+
+          if (currentRun === run) {
+            return j;
+          }
+
+          j += currentRun;
+          localBackslashRun = 0;
+          continue;
+        }
+      }
+
+      if (ch === "\\") {
+        localBackslashRun++;
+      } else {
+        localBackslashRun = 0;
+      }
+
+      j++;
+    }
+
+    return -1;
   }
 
   while (i < len) {
-    if (!inInline && text.startsWith("```", i) && !isEscaped(i)) {
+    const ch = text[i]!;
+    const escaped = (backslashRun & 1) === 1;
+
+    if (!inInline && !escaped && ch === "`" && text[i + 1] === "`" && text[i + 2] === "`") {
       inFence = !inFence;
-      out += "```";
+      out.push("```");
       i += 3;
+      backslashRun = 0;
       continue;
     }
 
-    if (!inFence && text[i] === "`" && !isEscaped(i)) {
+    if (!inFence && !escaped && ch === "`") {
       inInline = !inInline;
-      out += "`";
+      out.push("`");
       i += 1;
+      backslashRun = 0;
       continue;
     }
 
-    if (!inFence && !inInline && text[i] === "$" && !isEscaped(i)) {
+    // oxlint-disable-next-line no-useless-escape
+    if (!inFence && !inInline && !escaped && ch === "\$") {
       let run = 1;
 
-      while (i + run < len && text[i + run] === "$") run++;
+      // oxlint-disable-next-line no-useless-escape
+      while (i + run < len && text[i + run] === "\$") {
+        run++;
+      }
+
       if (run > 2) {
-        out += text.slice(i, i + run);
+        out.push(text.slice(i, i + run));
         i += run;
+        backslashRun = 0;
         continue;
       }
 
-      const isDisplay = run === 2;
-      let j = i + run;
-      let found = -1;
+      const closing = findClosingDollar(i, run);
 
-      while (j < len) {
-        if (text[j] === "$" && !isEscaped(j)) {
-          let crun = 1;
-          while (j + crun < len && text[j + crun] === "$") crun++;
-          if (crun === run) {
-            found = j;
-            break;
-          }
-          j += crun;
-          continue;
-        }
-        if (!inInline && text.startsWith("```", j) && !isEscaped(j)) {
-          break;
-        }
-        if (text[j] === "`" && !isEscaped(j)) {
-          break;
-        }
-        j++;
-      }
-
-      if (found !== -1) {
-        const content = text.slice(i + run, found);
-        const invalid = isDisplay ? isInvalidDisplay(content) : isInvalidInline(content);
+      if (closing !== -1) {
+        const contentStart = i + run;
+        const contentEnd = closing;
+        const invalid =
+          run === 2
+            ? isInvalidDisplayRange(contentStart, contentEnd)
+            : isInvalidInlineRange(contentStart, contentEnd);
 
         if (invalid) {
-          out += "\\" + "$".repeat(run) + content + "\\" + "$".repeat(run);
+          const delimiter = run === 1 ? "$" : "$$";
+          out.push("\\", delimiter);
+          out.push(text.slice(contentStart, contentEnd));
+          out.push("\\", delimiter);
         } else {
-          out += text.slice(i, found + run);
+          out.push(text.slice(i, closing + run));
         }
 
-        i = found + run;
-        continue;
-      } else {
-        out += text.slice(i, i + run);
-        i += run;
+        i = closing + run;
+        backslashRun = 0;
         continue;
       }
+
+      out.push(text.slice(i, i + run));
+      i += run;
+      backslashRun = 0;
+      continue;
     }
 
-    out += text[i]!;
-    i += 1;
+    out.push(ch);
+    i++;
+
+    if (ch === "\\") {
+      backslashRun++;
+    } else {
+      backslashRun = 0;
+    }
   }
 
-  return out;
+  return out.join("");
 }
 
 type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
