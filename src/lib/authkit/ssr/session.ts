@@ -374,12 +374,12 @@ export async function refreshSession(session: Session, forceRefreshToken: boolea
   return newSession;
 }
 
-export async function terminateSession({ returnTo }: { returnTo?: string } = {}) {
+export async function terminateSession({ returnTo = "/auth/login" }: { returnTo?: string } = {}) {
   const { sessionId } = await withAuth();
   if (sessionId) {
     const href = getWorkOS().userManagement.getLogoutUrl({ sessionId, returnTo });
     return redirect({ href, throw: true, reloadDocument: true });
   }
 
-  return redirect({ to: returnTo ?? "/", throw: true, reloadDocument: true });
+  return redirect({ to: returnTo, throw: true, reloadDocument: true });
 }
