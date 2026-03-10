@@ -4,11 +4,7 @@ import { Migrations } from "@convex-dev/migrations";
 import { components, internal } from "./_generated/api";
 import type { DataModel, Doc } from "./_generated/dataModel";
 
-import {
-  DEFAULT_THREAD_MODEL,
-  DEFAULT_USER_PREFERENCES,
-  type UserPreferences,
-} from "./functions/users";
+import { DEFAULT_THREAD_MODEL, mergeUserPreferences } from "./functions/users";
 
 /**
  * Initialize migrations component with DataModel for proper typing.
@@ -79,6 +75,17 @@ export const backfillThreadModelConfig = migrations.define({
   },
 });
 
+export const backfillUserPreferencesShape = migrations.define({
+  table: "users",
+  migrateOne: async (ctx, user) => {
+    await ctx.db.patch(user._id, { preferences: mergeUserPreferences(user.preferences) });
+  },
+});
+
 export const runBackfillThreadModelConfig = migrations.runner([
   internal.migrations.backfillThreadModelConfig,
+]);
+
+export const runBackfillUserPreferencesShape = migrations.runner([
+  internal.migrations.backfillUserPreferencesShape,
 ]);

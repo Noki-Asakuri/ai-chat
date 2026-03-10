@@ -3,11 +3,49 @@ import { v } from "convex/values";
 import type { Doc } from "../_generated/dataModel";
 
 import { authenticatedMutation, authenticatedQuery } from "../components";
-import { AISDKModelParams, userPreferences } from "../schema";
+import { AISDKModelParams } from "../schema";
 
 const MODEL_PROVIDER_PREFIXES = ["google/", "openai/", "deepseek/"] as const;
 
 export type UserPreferences = Doc<"users">["preferences"];
+export type UserPreferencesPatch = Partial<
+  Omit<UserPreferences, "models" | "notifications" | "code">
+> & {
+  notifications?: Partial<UserPreferences["notifications"]>;
+  code?: Partial<UserPreferences["code"]>;
+  models?: Omit<Partial<UserPreferences["models"]>, "modelParams"> & {
+    modelParams?: Partial<UserPreferences["models"]["modelParams"]>;
+  };
+};
+
+const userPreferencesPatch = v.object({
+  name: v.optional(v.string()),
+  globalSystemInstruction: v.optional(v.string()),
+  backgroundImage: v.optional(v.nullable(v.string())),
+  performanceEnabled: v.optional(v.boolean()),
+  sendPreference: v.optional(v.union(v.literal("enter"), v.literal("ctrlEnter"))),
+  notifications: v.optional(
+    v.object({
+      sound: v.optional(v.boolean()),
+      desktop: v.optional(v.boolean()),
+    }),
+  ),
+  code: v.optional(
+    v.object({
+      autoWrap: v.optional(v.boolean()),
+      showFullCode: v.optional(v.boolean()),
+    }),
+  ),
+  models: v.optional(
+    v.object({
+      hidden: v.optional(v.array(v.string())),
+      favorite: v.optional(v.array(v.string())),
+      defaultModel: v.optional(v.string()),
+      modelParams: v.optional(AISDKModelParams.partial()),
+    }),
+  ),
+});
+
 export const DEFAULT_THREAD_MODEL = "google/gemini-3-flash";
 export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   name: "user",
@@ -36,6 +74,37 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   },
 };
 
+export function mergeUserPreferences(
+  current: UserPreferencesPatch | undefined,
+  updates?: UserPreferencesPatch,
+): UserPreferences {
+  return {
+    ...DEFAULT_USER_PREFERENCES,
+    ...current,
+    ...updates,
+    notifications: {
+      ...DEFAULT_USER_PREFERENCES.notifications,
+      ...current?.notifications,
+      ...updates?.notifications,
+    },
+    code: {
+      ...DEFAULT_USER_PREFERENCES.code,
+      ...current?.code,
+      ...updates?.code,
+    },
+    models: {
+      ...DEFAULT_USER_PREFERENCES.models,
+      ...current?.models,
+      ...updates?.models,
+      modelParams: {
+        ...DEFAULT_USER_PREFERENCES.models.modelParams,
+        ...current?.models?.modelParams,
+        ...updates?.models?.modelParams,
+      },
+    },
+  };
+}
+
 function isValidModelId(modelId: string) {
   for (const prefix of MODEL_PROVIDER_PREFIXES) {
     if (modelId.startsWith(prefix)) {
@@ -63,7 +132,7 @@ function sanitizeModelIds(modelIds: string[]) {
 }
 
 export const updateUserPreferences = authenticatedMutation({
-  args: { data: userPreferences.partial() },
+  args: { data: userPreferencesPatch },
   handler: async (ctx, { data }) => {
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
@@ -79,7 +148,7 @@ export const updateUserPreferences = authenticatedMutation({
     }
 
     await ctx.db.patch(user._id, {
-      preferences: { ...DEFAULT_USER_PREFERENCES, ...user.preferences, ...updates },
+      preferences: mergeUserPreferences(user.preferences, updates),
     });
   },
 });
@@ -107,17 +176,19 @@ export const updateUserModelPreferences = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const updates = structuredClone(user.preferences);
+    const modelUpdates: UserPreferencesPatch["models"] = {};
 
     if (data.hidden !== undefined) {
-      updates.models.hidden = sanitizeModelIds(data.hidden);
+      modelUpdates.hidden = sanitizeModelIds(data.hidden);
     }
 
     if (data.favorite !== undefined) {
-      updates.models.favorite = sanitizeModelIds(data.favorite);
+      modelUpdates.favorite = sanitizeModelIds(data.favorite);
     }
 
-    await ctx.db.patch(user._id, { preferences: { ...user.preferences, models: updates.models } });
+    await ctx.db.patch(user._id, {
+      preferences: mergeUserPreferences(user.preferences, { models: modelUpdates }),
+    });
   },
 });
 
@@ -130,7 +201,8 @@ export const updateUserDefaultModelConfig = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    const models = user.preferences.models;
+    const preferences = mergeUserPreferences(user.preferences);
+    const models = preferences.models;
 
     if (
       models.defaultModel === args.defaultModel &&
@@ -142,16 +214,12 @@ export const updateUserDefaultModelConfig = authenticatedMutation({
     }
 
     await ctx.db.patch(user._id, {
-      preferences: {
-        ...DEFAULT_USER_PREFERENCES,
-        ...user.preferences,
+      preferences: mergeUserPreferences(preferences, {
         models: {
-          ...DEFAULT_USER_PREFERENCES.models,
-          ...models,
           defaultModel: args.defaultModel,
           modelParams: args.modelParams,
         },
-      },
+      }),
     });
   },
 });
@@ -182,15 +250,16 @@ export const getCurrentUserPreferences = authenticatedQuery({
       latestModelParams: thread?.latestModelParams,
     });
 
-    return {
-      ...DEFAULT_USER_PREFERENCES,
-      ...user.preferences,
-      models: {
-        ...user.preferences.models,
-        defaultModel: user.preferences.models.defaultModel,
+    const preferences = mergeUserPreferences(user.preferences);
 
-        selectedModel: thread?.latestModel ?? user.preferences.models.defaultModel,
-        selectedModelParams: thread?.latestModelParams ?? user.preferences.models.modelParams,
+    return {
+      ...preferences,
+      models: {
+        ...preferences.models,
+        defaultModel: preferences.models.defaultModel,
+
+        selectedModel: thread?.latestModel ?? preferences.models.defaultModel,
+        selectedModelParams: thread?.latestModelParams ?? preferences.models.modelParams,
       },
     };
   },
