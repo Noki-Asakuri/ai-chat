@@ -11,6 +11,7 @@ import { useShallow } from "zustand/shallow";
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 
 import { buildAttachmentUrl } from "@/lib/assets/urls";
+import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
@@ -35,14 +36,17 @@ export function useSendChatMessage() {
   const configStore = useConfigStoreState();
 
   const convexClient = useConvex();
-  const { effort, webSearch, model, profile } = useConfigStore(
-    useShallow((state) => ({
-      model: state.model,
-      effort: state.effort,
-      webSearch: state.webSearch,
-      profile: state.profile,
-    })),
-  );
+  const { effort, webSearch, model, profile, notificationSound, desktopNotification } =
+    useConfigStore(
+      useShallow((state) => ({
+        model: state.model,
+        effort: state.effort,
+        webSearch: state.webSearch,
+        profile: state.profile,
+        notificationSound: state.notificationSound,
+        desktopNotification: state.desktopNotification,
+      })),
+    );
 
   async function sendChatRequest() {
     const sessionId = id!;
@@ -174,11 +178,25 @@ export function useSendChatMessage() {
       }
 
       await processStreamResponse(response, assistantMessageId, threadId);
+      emitStreamFeedback({
+        status: "success",
+        threadId,
+        soundEnabled: notificationSound,
+        desktopEnabled: desktopNotification,
+      });
     } catch (error) {
       if (isAbortError(error)) return;
 
       const errorMessage = getClientErrorMessage(error);
       const deprecatedModelError = getDeprecatedModelError(error);
+
+      emitStreamFeedback({
+        status: "error",
+        threadId,
+        soundEnabled: notificationSound,
+        desktopEnabled: desktopNotification,
+        errorMessage,
+      });
 
       if (assistantMessageId) {
         const [, updateError] = await tryCatch(

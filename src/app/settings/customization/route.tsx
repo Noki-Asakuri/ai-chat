@@ -54,6 +54,12 @@ function RouteComponent() {
   const [sendPreference, setSendPreference] = useState<SendPreference>(
     data?.sendPreference ?? "enter",
   );
+  const [notificationSound, setNotificationSound] = useState<boolean>(
+    data?.notifications?.sound ?? true,
+  );
+  const [desktopNotification, setDesktopNotification] = useState<boolean>(
+    data?.notifications?.desktop ?? false,
+  );
   const [backgroundImageId, setBackgroundImageId] = useState<string | null>(
     data?.backgroundImage ?? null,
   );
@@ -67,6 +73,8 @@ function RouteComponent() {
   const hasPendingSaveRef = useRef(false);
   const backgroundIdRef = useRef<string | null>(data?.backgroundImage ?? null);
   const sendPreferenceRef = useRef<SendPreference>(data?.sendPreference ?? "enter");
+  const notificationSoundRef = useRef<boolean>(data?.notifications?.sound ?? true);
+  const desktopNotificationRef = useRef<boolean>(data?.notifications?.desktop ?? false);
   const runAutoSaveRef = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
@@ -78,6 +86,22 @@ function RouteComponent() {
   }, [sendPreference]);
 
   useEffect(() => {
+    setNotificationSound(data?.notifications?.sound ?? true);
+  }, [data?.notifications?.sound]);
+
+  useEffect(() => {
+    notificationSoundRef.current = notificationSound;
+  }, [notificationSound]);
+
+  useEffect(() => {
+    setDesktopNotification(data?.notifications?.desktop ?? false);
+  }, [data?.notifications?.desktop]);
+
+  useEffect(() => {
+    desktopNotificationRef.current = desktopNotification;
+  }, [desktopNotification]);
+
+  useEffect(() => {
     setBackgroundImageId(data?.backgroundImage ?? null);
   }, [data?.backgroundImage]);
 
@@ -87,6 +111,42 @@ function RouteComponent() {
 
   const requestAutoSave = useCallback(() => {
     setSaveRequestCount((count) => count + 1);
+  }, []);
+
+  const updateDesktopNotification = useCallback(async (enabled: boolean): Promise<boolean> => {
+    if (!enabled) {
+      setDesktopNotification(false);
+      return true;
+    }
+
+    if (typeof window === "undefined" || typeof Notification === "undefined") {
+      toast.error("Desktop notifications are not supported in this browser.");
+      setDesktopNotification(false);
+      return false;
+    }
+
+    if (Notification.permission === "granted") {
+      setDesktopNotification(true);
+      return true;
+    }
+
+    if (Notification.permission === "denied") {
+      toast.error("Desktop notifications are blocked", {
+        description: "Allow notifications in your browser settings and try again.",
+      });
+      setDesktopNotification(false);
+      return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      setDesktopNotification(true);
+      return true;
+    }
+
+    toast.error("Desktop notifications were not enabled.");
+    setDesktopNotification(false);
+    return false;
   }, []);
 
   const savePreferencesFromForm = useCallback(async () => {
@@ -115,6 +175,10 @@ function RouteComponent() {
       globalSystemInstruction: systemInstruction,
       performanceEnabled,
       sendPreference: sendPreferenceRef.current,
+      notifications: {
+        sound: notificationSoundRef.current,
+        desktop: desktopNotificationRef.current,
+      },
       code: { showFullCode, autoWrap },
       backgroundImage: uploadedBackgroundId ?? previousBackgroundId,
     };
@@ -261,7 +325,11 @@ function RouteComponent() {
             defaultPerformanceEnabled={data?.performanceEnabled ?? false}
             defaultShowFullCode={data?.code?.showFullCode ?? false}
             sendPreference={sendPreference}
+            notificationSound={notificationSound}
+            desktopNotification={desktopNotification}
             onSendPreferenceChange={setSendPreference}
+            onNotificationSoundChange={(enabled) => setNotificationSound(enabled)}
+            onDesktopNotificationChange={updateDesktopNotification}
             onBehaviorChange={requestAutoSave}
           />
 

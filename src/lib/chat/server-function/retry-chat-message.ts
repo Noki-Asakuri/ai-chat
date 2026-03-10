@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 
+import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
@@ -37,6 +38,8 @@ export function useRetryChatMessage() {
   const [id] = useSessionId();
   const convexClient = useConvex();
   const configProfile = useConfigStore((state) => state.profile);
+  const notificationSound = useConfigStore((state) => state.notificationSound);
+  const desktopNotification = useConfigStore((state) => state.desktopNotification);
   const configStore = useConfigStoreState();
 
   async function retryChatMessage({ userMessageId, ...options }: RetryChatMessage) {
@@ -151,11 +154,25 @@ export function useRetryChatMessage() {
       }
 
       await processStreamResponse(response, nextAssistantMessageId, threadId);
+      emitStreamFeedback({
+        status: "success",
+        threadId,
+        soundEnabled: notificationSound,
+        desktopEnabled: desktopNotification,
+      });
     } catch (error) {
       if (isAbortError(error)) return;
 
       const errorMessage = getClientErrorMessage(error);
       const deprecatedModelError = getDeprecatedModelError(error);
+
+      emitStreamFeedback({
+        status: "error",
+        threadId,
+        soundEnabled: notificationSound,
+        desktopEnabled: desktopNotification,
+        errorMessage,
+      });
 
       const [, updateError] = await tryCatch(
         convexClient.mutation(api.functions.messages.updateErrorMessage, {

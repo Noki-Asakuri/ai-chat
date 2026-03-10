@@ -1,5 +1,5 @@
 import { ExpandIcon, ShrinkIcon, TextIcon, WrapTextIcon } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 
 import { LANGUAGE_DISPLAY_NAME, LINE_CLAMP } from ".";
 import { useCodeBlockContext } from "./context";

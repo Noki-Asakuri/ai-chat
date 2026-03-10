@@ -15,6 +15,10 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   backgroundImage: null,
   performanceEnabled: false,
   sendPreference: "enter",
+  notifications: {
+    sound: true,
+    desktop: false,
+  },
   code: {
     autoWrap: false,
     showFullCode: false,
@@ -176,6 +180,7 @@ export const getCurrentUserPreferences = authenticatedQuery({
     });
 
     return {
+      ...DEFAULT_USER_PREFERENCES,
       ...user.preferences,
       models: {
         ...user.preferences.models,

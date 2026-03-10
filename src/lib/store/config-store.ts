@@ -17,6 +17,8 @@ type ChatConfig = {
 type UserCustomization = {
   wrapline: boolean;
   showFullCode: boolean;
+  notificationSound: boolean;
+  desktopNotification: boolean;
   hiddenModels: string[];
   favoriteModels: string[];
 };
@@ -24,7 +26,11 @@ type UserCustomization = {
 export type ConfigStoreData = ChatConfig & UserCustomization;
 
 export type ConfigStore = ConfigStoreData & {
-  setConfig: (config: Partial<ChatConfig>) => void;
+  setConfig: (
+    config: Partial<
+      ChatConfig & Pick<UserCustomization, "notificationSound" | "desktopNotification">
+    >,
+  ) => void;
   toggleWrapline: () => void;
   setHiddenModels: (hiddenModels: string[]) => void;
   setFavoriteModels: (favoriteModels: string[]) => void;
@@ -46,6 +52,9 @@ export function createConfigStore(initialState: Partial<ConfigStoreData>) {
     toggleWrapline: () => set((state) => ({ wrapline: !state.wrapline })),
 
     showFullCode: false,
+
+    notificationSound: true,
+    desktopNotification: false,
 
     hiddenModels: [],
     setHiddenModels: (hiddenModels) => set({ hiddenModels }),

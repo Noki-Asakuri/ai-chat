@@ -15,7 +15,11 @@ export type BehaviorOptionsCardProps = {
   defaultPerformanceEnabled: boolean;
   defaultShowFullCode: boolean;
   sendPreference: SendPreference;
+  notificationSound: boolean;
+  desktopNotification: boolean;
   onSendPreferenceChange: (nextPreference: SendPreference) => void;
+  onNotificationSoundChange: (enabled: boolean) => void;
+  onDesktopNotificationChange: (enabled: boolean) => Promise<boolean> | boolean;
   onBehaviorChange: () => void;
 };
 
@@ -120,6 +124,49 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
               </SelectItem>
             </SelectContent>
           </Select>
+        </ToggleRow>
+
+        <Separator className="-mx-4" />
+
+        <ToggleRow
+          id="notification-sound"
+          title="Play chat completion sound"
+          description="Play a sound when a response finishes or fails."
+        >
+          <Switch
+            id="notification-sound"
+            disabled={props.disabled}
+            checked={props.notificationSound}
+            onCheckedChange={(checked) => {
+              props.onNotificationSoundChange(checked);
+              props.onBehaviorChange();
+            }}
+            aria-label="Play chat completion sound"
+          />
+        </ToggleRow>
+
+        <Separator className="-mx-4" />
+
+        <ToggleRow
+          id="desktop-notification"
+          title="Desktop notifications"
+          description="Show browser notifications when responses finish or fail in background tabs."
+        >
+          <Switch
+            id="desktop-notification"
+            disabled={props.disabled}
+            checked={props.desktopNotification}
+            onCheckedChange={(checked) => {
+              void Promise.resolve(props.onDesktopNotificationChange(checked)).then(
+                (shouldSave) => {
+                  if (shouldSave) {
+                    props.onBehaviorChange();
+                  }
+                },
+              );
+            }}
+            aria-label="Desktop notifications"
+          />
         </ToggleRow>
 
         <Separator className="-mx-4" />

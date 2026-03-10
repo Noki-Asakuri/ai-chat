@@ -138,6 +138,8 @@ function ChatLayoutConfig() {
         favoriteModels: userPreferences.models.favorite,
 
         pref: userPreferences.sendPreference,
+        notificationSound: userPreferences.notifications?.sound ?? true,
+        desktopNotification: userPreferences.notifications?.desktop ?? false,
         wrapline: userPreferences.code.autoWrap,
         showFullCode: userPreferences.code.showFullCode,
 

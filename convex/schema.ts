@@ -162,6 +162,11 @@ export const userPreferences = v.object({
 
   sendPreference: v.union(v.literal("enter"), v.literal("ctrlEnter")),
 
+  notifications: v.object({
+    sound: v.boolean(),
+    desktop: v.boolean(),
+  }),
+
   code: v.object({
     autoWrap: v.boolean(),
     showFullCode: v.boolean(),

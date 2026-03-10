@@ -101,7 +101,7 @@ export async function processStreamResponse(
   response: Response,
   messageId: Id<"messages">,
   threadId: Id<"threads">,
-) {
+): Promise<void> {
   if (!response.ok) {
     const errorMessage = await readResponseErrorMessage(response);
 

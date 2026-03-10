@@ -4,6 +4,9 @@ import { useParams } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { toast } from "sonner";
 
+import { useConfigStore } from "@/components/provider/config-provider";
+
+import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { processStreamResponse } from "../shared";
 import { getClientErrorMessage, isAbortError, throwIfChatResponseError } from "./chat-errors";
 
@@ -12,6 +15,8 @@ import { fromUUID } from "@/lib/utils";
 
 export function useAutoResumeStream() {
   const params = useParams({ from: "/_chat_layout/threads/$threadId" });
+  const notificationSound = useConfigStore((state) => state.notificationSound);
+  const desktopNotification = useConfigStore((state) => state.desktopNotification);
 
   const autoResumeStream = useCallback(
     async (streamId: string, messageId: Id<"messages">) => {
@@ -41,9 +46,23 @@ export function useAutoResumeStream() {
 
         await throwIfChatResponseError(response);
         await processStreamResponse(response, messageId, threadId);
+        emitStreamFeedback({
+          status: "success",
+          threadId,
+          soundEnabled: notificationSound,
+          desktopEnabled: desktopNotification,
+        });
       } catch (error) {
         cleanupController();
         if (isAbortError(error)) return;
+
+        emitStreamFeedback({
+          status: "error",
+          threadId,
+          soundEnabled: notificationSound,
+          desktopEnabled: desktopNotification,
+          errorMessage: getClientErrorMessage(error),
+        });
 
         toast.error("Failed to resume chat stream", {
           description: getClientErrorMessage(error),
@@ -54,7 +73,7 @@ export function useAutoResumeStream() {
 
       cleanupController();
     },
-    [params.threadId],
+    [desktopNotification, notificationSound, params.threadId],
   );
 
   return { autoResumeStream };
