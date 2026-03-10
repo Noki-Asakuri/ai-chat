@@ -63,9 +63,7 @@ function sanitizeModelIds(modelIds: string[]) {
 }
 
 export const updateUserPreferences = authenticatedMutation({
-  args: {
-    data: userPreferences.partial(),
-  },
+  args: { data: userPreferences.partial() },
   handler: async (ctx, { data }) => {
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
@@ -80,7 +78,9 @@ export const updateUserPreferences = authenticatedMutation({
       updates.models.favorite = sanitizeModelIds(updates.models.favorite);
     }
 
-    await ctx.db.patch(user._id, { preferences: { ...user.preferences, ...updates } });
+    await ctx.db.patch(user._id, {
+      preferences: { ...DEFAULT_USER_PREFERENCES, ...user.preferences, ...updates },
+    });
   },
 });
 
@@ -92,10 +92,7 @@ export const updateCurrentUserImage = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    await ctx.db.patch(user._id, {
-      imageUrl,
-      updatedAt: Date.now(),
-    });
+    await ctx.db.patch(user._id, { imageUrl, updatedAt: Date.now() });
   },
 });
 
@@ -146,8 +143,14 @@ export const updateUserDefaultModelConfig = authenticatedMutation({
 
     await ctx.db.patch(user._id, {
       preferences: {
+        ...DEFAULT_USER_PREFERENCES,
         ...user.preferences,
-        models: { ...models, defaultModel: args.defaultModel, modelParams: args.modelParams },
+        models: {
+          ...DEFAULT_USER_PREFERENCES.models,
+          ...models,
+          defaultModel: args.defaultModel,
+          modelParams: args.modelParams,
+        },
       },
     });
   },
