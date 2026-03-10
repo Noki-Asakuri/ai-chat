@@ -10,6 +10,7 @@ import {
   Outlet,
   Scripts,
   createRootRouteWithContext,
+  useNavigate,
   type AnyRouteMatch,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
@@ -26,7 +27,13 @@ import { Toaster } from "@/components/ui/sonner";
 import { VersionUpdateNotifier } from "@/components/version-update-notifier";
 
 import { getAuth } from "@/lib/authkit/serverFunctions";
+import {
+  CHAT_NAVIGATE_TO_THREAD_EVENT,
+  type NavigateToThreadEventDetail,
+} from "@/lib/chat/notification-navigation";
+import { useWindowEvent } from "@/lib/hooks/use-window-event";
 import { sessionUseCookie } from "@/lib/hooks/use-cookie";
+import { fromUUID, toUUID } from "@/lib/utils";
 
 type RootContext = {
   queryClient: QueryClient;
@@ -116,6 +123,23 @@ export function RootLayout() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const loaderData = Route.useLoaderData();
+  const navigate = useNavigate();
+
+  useWindowEvent<CustomEvent<NavigateToThreadEventDetail>>(
+    CHAT_NAVIGATE_TO_THREAD_EVENT,
+    async function handleNavigateToThread(event) {
+      const detail = event.detail;
+      if (!detail) return;
+
+      const threadId = detail.threadId;
+      if (!threadId) return;
+
+      const currentThreadId = fromUUID(window.location.pathname.split("/")[2]);
+      if (currentThreadId === threadId) return;
+
+      await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(threadId) } });
+    },
+  );
 
   return (
     <html lang="en" className="antialiased">

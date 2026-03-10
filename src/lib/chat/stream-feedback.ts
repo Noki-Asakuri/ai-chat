@@ -1,6 +1,8 @@
 import type { Id } from "@/convex/_generated/dataModel";
 
+import { dispatchNavigateToThreadEvent } from "@/lib/chat/notification-navigation";
 import { useThreadStore } from "@/lib/store/thread-store";
+import { toUUID } from "@/lib/utils";
 
 type StreamFeedbackStatus = "success" | "error";
 
@@ -51,20 +53,42 @@ function getThreadTitle(threadId: Id<"threads">): string {
   return `Thread ${threadId.slice(-6)}`;
 }
 
+function getThreadPath(threadId: Id<"threads">): string {
+  return `/threads/${toUUID(threadId)}`;
+}
+
+function openThread(threadId: Id<"threads">): void {
+  if (typeof window === "undefined") return;
+
+  window.focus();
+  dispatchNavigateToThreadEvent({ threadId, source: "notification" });
+}
+
+function registerNotificationClick(notification: Notification, threadId: Id<"threads">): void {
+  notification.onclick = () => {
+    openThread(threadId);
+    notification.close();
+  };
+}
+
 function showDesktopNotification(
   status: StreamFeedbackStatus,
   threadId: Id<"threads">,
   errorMessage?: string,
 ): void {
   const threadTitle = getThreadTitle(threadId);
+  const threadPath = getThreadPath(threadId);
 
   if (status === "success") {
-    new Notification(threadTitle, {
+    const notification = new Notification(threadTitle, {
       body: "Response finished streaming.",
       icon: "/icon-192.png",
       tag: `chat-stream-success-${threadId}`,
       silent: true,
+      data: { threadPath },
     });
+
+    registerNotificationClick(notification, threadId);
 
     return;
   }
@@ -74,12 +98,15 @@ function showDesktopNotification(
       ? errorMessage
       : "The latest response failed to stream.";
 
-  new Notification(threadTitle, {
+  const notification = new Notification(threadTitle, {
     body: `Response failed: ${body}`,
     icon: "/icon-192.png",
     tag: `chat-stream-error-${threadId}`,
     silent: true,
+    data: { threadPath },
   });
+
+  registerNotificationClick(notification, threadId);
 }
 
 export function emitStreamFeedback(options: StreamFeedbackOptions): void {
