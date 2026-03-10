@@ -1,6 +1,6 @@
 import { code as codePlugin, type HighlightOptions, type HighlightResult } from "@streamdown/code";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
-import type { CustomRendererProps } from "streamdown";
+import { useIsCodeFenceIncomplete, type CustomRendererProps } from "streamdown";
 
 import { Icons } from "../icons";
 
@@ -105,10 +105,14 @@ function HighlightedCodeBlock({ language, code }: HighlightedCodeBlockProps) {
   const totalLines = code.split("\n").length;
   const prevCodeRef = useRef(code);
 
+  const isIncomplete = useIsCodeFenceIncomplete();
+
   const raw: HighlightResult = useMemo(() => splitCodeToHighlightTokens(code), [code]);
   const [result, setResult] = useState<HighlightResult>(raw);
 
   useEffect(() => {
+    if (isIncomplete) return setResult(raw);
+
     const isIncrementalUpdate =
       code.startsWith(prevCodeRef.current) && code.length > prevCodeRef.current.length;
     prevCodeRef.current = code;
@@ -137,7 +141,7 @@ function HighlightedCodeBlock({ language, code }: HighlightedCodeBlockProps) {
     if (!isIncrementalUpdate) {
       setResult(raw);
     }
-  }, [code, language, raw]);
+  }, [code, language, raw, isIncomplete]);
 
   return (
     <CodeBlockProvider code={code} language={language} totalLines={totalLines}>

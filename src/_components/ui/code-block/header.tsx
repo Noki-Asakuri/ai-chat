@@ -1,4 +1,5 @@
 import { ExpandIcon, ShrinkIcon, TextIcon, WrapTextIcon } from "lucide-react";
+import { useCallback, useMemo } from "react";
 
 import { LANGUAGE_DISPLAY_NAME, LINE_CLAMP } from ".";
 import { useCodeBlockContext } from "./context";
@@ -26,14 +27,16 @@ export function CodeBlockHeader() {
   const languageData = LANGUAGE_DISPLAY_NAME[language];
   const Icon = languageData?.icon;
 
-  const shouldStickyHeader = (() => {
+  const calculateShouldStickyHeader = useCallback(() => {
     if (!expanded) return false;
 
     const availableViewportPx = window.innerHeight - textareaHeight - 40;
     if (availableViewportPx <= 0) return false;
 
     return containerHeightPx > availableViewportPx;
-  })();
+  }, [expanded, textareaHeight, containerHeightPx]);
+
+  const shouldStickyHeader = calculateShouldStickyHeader();
 
   return (
     <div
