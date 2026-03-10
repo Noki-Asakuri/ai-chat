@@ -52,8 +52,8 @@ export async function buildSystemInstruction(
   systemInstruction.push(dedent`
 		<code>
 		## Code Block Update Instruction:
-		If the user provides code in a fenced code block and you update that code,
-		you must return the updated code inside a fenced code block.
+		- If the user provides code in a fenced code block and you update that code, you must return the updated code inside a fenced code block.
+		- Never place a fenced code block inside another fenced code block. If you need to show a fence marker inside code, use an indented example or plain text instead.
 		</code>
 		`);
 
