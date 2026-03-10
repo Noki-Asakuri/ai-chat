@@ -12,6 +12,8 @@ import { defaultRemarkPlugins, Streamdown, type StreamdownProps } from "streamdo
 
 import { CodeBlock } from "@/components/ui/code-block";
 
+import { ExternalLinkSafetyModal } from "./external-link-safety-modal";
+
 import type { ChatMessage } from "@/lib/types";
 
 function normalizeMissingFenceLanguages(text: string): string {
@@ -246,6 +248,10 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
     animated: role === "assistant",
     mode: role === "assistant" && isAnimating === true ? "streaming" : "static",
     mermaid: { config: { theme: "dark" } },
+    linkSafety: {
+      enabled: true,
+      renderModal: (modalProps) => <ExternalLinkSafetyModal {...modalProps} />,
+    },
     remarkPlugins: [...Object.values(defaultRemarkPlugins), remarkBreaks],
     ...props,
   };
