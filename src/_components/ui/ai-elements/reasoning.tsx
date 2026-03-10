@@ -10,13 +10,12 @@ import { StreamDownWrapper } from "@/components/message/message-markdown";
 
 import { Shimmer } from "./shimmer";
 
-import { cn, format } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type ReasoningContextValue = {
   isStreaming: boolean;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  duration: number | undefined;
 };
 
 const ReasoningContext = createContext<ReasoningContextValue | null>(null);
@@ -34,11 +33,9 @@ export type ReasoningProps = ComponentProps<typeof Collapsible.Root> & {
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
-  duration?: number;
 };
 
 const AUTO_CLOSE_DELAY = 1000;
-const MS_IN_S = 1000;
 
 export const Reasoning = memo(
   ({
@@ -47,7 +44,6 @@ export const Reasoning = memo(
     open,
     defaultOpen = true,
     onOpenChange,
-    duration: durationProp,
     children,
     ...props
   }: ReasoningProps) => {
@@ -57,25 +53,7 @@ export const Reasoning = memo(
       onChange: onOpenChange,
     });
 
-    const [duration, setDuration] = useControllableState({
-      prop: durationProp,
-      defaultProp: undefined,
-    });
-
     const [hasAutoClosed, setHasAutoClosed] = useState(false);
-    const [startTime, setStartTime] = useState<number | null>(null);
-
-    // Track duration when streaming starts and ends
-    useEffect(() => {
-      if (isStreaming) {
-        if (startTime === null) {
-          setStartTime(Date.now());
-        }
-      } else if (startTime !== null) {
-        setDuration(Math.ceil((Date.now() - startTime) / MS_IN_S));
-        setStartTime(null);
-      }
-    }, [isStreaming, startTime, setDuration]);
 
     // Auto-open when streaming starts, auto-close when streaming ends (once only)
     useEffect(() => {
@@ -95,7 +73,7 @@ export const Reasoning = memo(
     };
 
     return (
-      <ReasoningContext.Provider value={{ isStreaming, isOpen, setIsOpen, duration }}>
+      <ReasoningContext.Provider value={{ isStreaming, isOpen, setIsOpen }}>
         <Collapsible.Root
           className={cn("not-prose group", className)}
           onOpenChange={handleOpenChange}
@@ -110,18 +88,16 @@ export const Reasoning = memo(
 );
 
 export type ReasoningTriggerProps = ComponentProps<typeof Collapsible.Trigger> & {
-  getThinkingMessage?: (isStreaming: boolean, duration?: number) => ReactNode;
+  getThinkingMessage?: (isStreaming: boolean) => ReactNode;
   showArrow?: boolean;
 };
 
-const defaultGetThinkingMessage = (isStreaming: boolean, duration?: number) => {
-  if (isStreaming || duration === 0) {
+const defaultGetThinkingMessage = (isStreaming: boolean) => {
+  if (isStreaming) {
     return <Shimmer duration={1}>Thinking...</Shimmer>;
   }
-  if (duration === undefined) {
-    return <p>Thought for a few seconds</p>;
-  }
-  return <p>Thought for {format.time(duration / 1000)} seconds</p>;
+
+  return <p>Thought process</p>;
 };
 
 export const ReasoningTrigger = memo(
@@ -132,7 +108,7 @@ export const ReasoningTrigger = memo(
     showArrow,
     ...props
   }: ReasoningTriggerProps) => {
-    const { isStreaming, isOpen, duration } = useReasoning();
+    const { isStreaming, isOpen } = useReasoning();
 
     return (
       <Collapsible.Trigger
@@ -145,7 +121,7 @@ export const ReasoningTrigger = memo(
         {children ?? (
           <>
             <BrainIcon className="size-4" />
-            {getThinkingMessage(isStreaming, duration)}
+            {getThinkingMessage(isStreaming)}
 
             {showArrow && (
               <ChevronDownIcon
