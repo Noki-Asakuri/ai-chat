@@ -53,9 +53,11 @@ export function ThreadShareDialog({
   const [localSharePath, setLocalSharePath] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const { data, isFetching } = useQuery({
-    enabled: open,
-    ...convexSessionQuery(api.functions.threadShares.getThreadShareSettings, { threadId }),
+  const { data, isFetching, isPending } = useQuery({
+    ...convexSessionQuery(
+      api.functions.threadShares.getThreadShareSettings,
+      open ? { threadId } : "skip",
+    ),
   });
 
   useEffect(() => {
@@ -80,7 +82,8 @@ export function ThreadShareDialog({
     mode !== (data?.mode ?? "live") ||
     allowedEmailsText.trim() !== (data?.allowedEmailsText ?? "").trim();
 
-  const canSave = !isSaving && !isDisabling && (!data?.shareId || hasChanges);
+  const canSave =
+    !isPending && !isSaving && !isDisabling && data !== undefined && (!data.shareId || hasChanges);
   const hasShare = Boolean(currentPath);
 
   async function handleCopyShareLink() {
