@@ -85,11 +85,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
                     key={`${message._id}-${i}`}
                     className="backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
                   >
-                    <StreamDownWrapper
-                      isAnimating={part.state === "streaming"}
-                      role={message.role}
-                      className={message.role === "user" ? "whitespace-pre-wrap" : undefined}
-                    >
+                    <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>
                       {part.text}
                     </StreamDownWrapper>
                   </MessageContentElement>

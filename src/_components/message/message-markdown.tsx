@@ -4,9 +4,11 @@ import { cjk } from "@streamdown/cjk";
 import { createMathPlugin } from "@streamdown/math";
 import { createMermaidPlugin } from "@streamdown/mermaid";
 
+import remarkBreaks from "remark-breaks";
+
 import { memo, useMemo } from "react";
 import { bundledLanguages } from "shiki";
-import { Streamdown } from "streamdown";
+import { defaultRemarkPlugins, Streamdown, type StreamdownProps } from "streamdown";
 
 import { CodeBlock } from "@/components/ui/code-block";
 
@@ -232,24 +234,23 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
     return escapeInvalidMath(normalized);
   }, [children]);
 
-  return (
-    <Streamdown
-      caret="block"
-      isAnimating={isAnimating}
-      plugins={{
-        cjk,
-        math,
-        mermaid,
-        renderers: [{ component: CodeBlock, language: supportedLanguages }],
-      }}
-      animated={role === "assistant"}
-      mode={role === "assistant" && isAnimating === true ? "streaming" : "static"}
-      mermaid={{ config: { theme: "dark" } }}
-      {...props}
-    >
-      {normalizedChildren}
-    </Streamdown>
-  );
+  const streamdownProps: StreamdownProps = {
+    caret: "block",
+    isAnimating,
+    plugins: {
+      cjk,
+      math,
+      mermaid,
+      renderers: [{ component: CodeBlock, language: supportedLanguages }],
+    },
+    animated: role === "assistant",
+    mode: role === "assistant" && isAnimating === true ? "streaming" : "static",
+    mermaid: { config: { theme: "dark" } },
+    remarkPlugins: [...Object.values(defaultRemarkPlugins), remarkBreaks],
+    ...props,
+  };
+
+  return <Streamdown {...streamdownProps}>{normalizedChildren}</Streamdown>;
 });
 
 StreamDownWrapper.displayName = "StreamDownWrapper";
