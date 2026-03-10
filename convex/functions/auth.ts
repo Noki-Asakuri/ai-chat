@@ -1,4 +1,6 @@
+import type { Doc } from "../_generated/dataModel";
 import { authKit } from "../components";
+
 import { DEFAULT_BASE } from "./usages";
 import { DEFAULT_USER_PREFERENCES } from "./users";
 
@@ -15,9 +17,12 @@ export const { authKitEvent } = authKit.events({
     await ctx.db.insert("users", {
       userId: event.data.id,
 
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+
       emailAddress: event.data.email,
       imageUrl: event.data.profilePictureUrl,
-      username: `${firstName} ${lastName}`,
+      username: `${firstName} ${lastName}`.trim(),
 
       preferences: { ...DEFAULT_USER_PREFERENCES, name: firstName },
     });
@@ -58,14 +63,12 @@ export const { authKitEvent } = authKit.events({
       return;
     }
 
-    const updates: {
-      emailAddress: string | null;
-      username: string;
-      updatedAt: number;
-      imageUrl?: string | null;
-    } = {
+    const firstName = event.data.firstName ?? "user";
+    const lastName = event.data.lastName ?? "";
+
+    const updates: Partial<Doc<"users">> = {
       emailAddress: event.data.email,
-      username: `${event.data.firstName} ${event.data.lastName}`,
+      username: `${firstName} ${lastName}`.trim(),
       updatedAt: Date.now(),
     };
 
