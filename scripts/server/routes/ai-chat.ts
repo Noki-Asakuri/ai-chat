@@ -92,12 +92,12 @@ function getProviderLogData(error: APICallError): Record<string, unknown> {
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 function finalizeStreamParts(parts: unknown): unknown {
   if (!Array.isArray(parts)) return parts;
-
-  function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null;
-  }
 
   const out: Array<unknown> = [];
   for (const part of parts) {
@@ -109,31 +109,13 @@ function finalizeStreamParts(parts: unknown): unknown {
     const next: Record<string, unknown> = { ...part };
     const type = next["type"];
 
-    if ((type === "text" || type === "reasoning") && next["state"] === "streaming") {
-      next["state"] = "done";
-    }
-
-    if (type === "dynamic-tool") {
-      const state = next["state"];
-      if (state === "input-streaming") {
-        next["state"] = "input-available";
-      }
-    }
-
-    if (typeof type === "string" && (type.startsWith("tool-") || type.startsWith("tools-"))) {
-      const state = next["state"];
-      if (state === "input-streaming") {
-        next["state"] = "input-available";
-      }
-    }
-
-    const isSourcePart =
-      type === "source-url" ||
-      type === "source-document" ||
-      (typeof type === "string" && type.startsWith("source-"));
-
-    if ("providerMetadata" in next && !isSourcePart) {
+    if (type === "reasoning") {
       delete next["providerMetadata"];
+
+      const text = next["text"];
+      if (typeof text !== "string" || text.trim().length === 0) {
+        continue;
+      }
     }
 
     out.push(next);
