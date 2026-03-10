@@ -11,9 +11,10 @@ type ThinkingToggleProps = {
   parts: ChatReasoningPart[];
   status: ChatMessage["status"];
   metadata: ChatMessage["metadata"];
+  className?: string;
 };
 
-export function MessageReasoning({ parts, status, metadata }: ThinkingToggleProps) {
+export function MessageReasoning({ parts, metadata, className }: ThinkingToggleProps) {
   if (!metadata) return null;
 
   const modelData = tryGetModelData(metadata.model.request);
@@ -25,14 +26,10 @@ export function MessageReasoning({ parts, status, metadata }: ThinkingToggleProp
   const reasoning = parts.map((p) => p.text).join("\n\n");
   const isReasoningStreaming = parts.some((p) => p.state === "streaming");
 
-  if (metadata.durations.reasoning === 0 && status === "complete") return null;
+  if (reasoning.length === 0) return null;
 
   return (
-    <Reasoning
-      defaultOpen={false}
-      duration={metadata.durations.reasoning}
-      isStreaming={isReasoningStreaming}
-    >
+    <Reasoning className={className} defaultOpen={false} isStreaming={isReasoningStreaming}>
       <ReasoningTrigger
         disabled={reasoning.length === 0}
         showArrow={reasoning.length > 0}

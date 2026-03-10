@@ -7,10 +7,11 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/lib/types";
 
-type ToolPart = ToolUIPart<UITools> | DynamicToolUIPart;
+export type ToolPart = ToolUIPart<UITools> | DynamicToolUIPart;
 
 type MessageToolPartsProps = {
   parts: ToolPart[];
+  className?: string;
 };
 
 const TOOL_SUMMARY_MAX_LENGTH = 96;
@@ -260,11 +261,11 @@ function MessageToolPart({ part }: { part: ToolPart }) {
   );
 }
 
-export function MessageToolParts({ parts }: MessageToolPartsProps) {
+export function MessageToolParts({ parts, className }: MessageToolPartsProps) {
   if (parts.length === 0) return null;
 
   return (
-    <div className="order-1 mb-1.5 flex w-full flex-col gap-1">
+    <div className={cn("flex w-full flex-col gap-1", className)}>
       {parts.map((part, index) => (
         <MessageToolPart key={`${part.toolCallId}-${index}`} part={part} />
       ))}
