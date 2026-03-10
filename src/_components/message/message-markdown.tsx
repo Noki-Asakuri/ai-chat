@@ -45,6 +45,122 @@ function normalizeMissingFenceLanguages(text: string): string {
   return out;
 }
 
+function escapeInvalidMath(text: string): string {
+  const len: number = text.length;
+  let out = "";
+  let i = 0;
+  let inFence = false;
+  let inInline = false;
+
+  function isEscaped(index: number): boolean {
+    let backslashes = 0;
+    let j = index - 1;
+
+    while (j >= 0 && text[j] === "\\") {
+      backslashes++;
+      j--;
+    }
+    return backslashes % 2 === 1;
+  }
+
+  function isInvalidInline(content: string): boolean {
+    if (content.length === 0) return true;
+
+    const first = content[0]!;
+    const last = content[content.length - 1]!;
+
+    if (first === " " || last === " ") return true;
+    if (/\d/.test(first)) return true;
+    if (content.includes("\n")) return true;
+    return false;
+  }
+
+  function isInvalidDisplay(content: string): boolean {
+    if (content.length === 0) return true;
+
+    const first = content[0]!;
+    const last = content[content.length - 1]!;
+
+    if (first === " " || last === " ") return true;
+    if (/^\d[\s\S]*$/.test(content)) return true;
+    return false;
+  }
+
+  while (i < len) {
+    if (!inInline && text.startsWith("```", i) && !isEscaped(i)) {
+      inFence = !inFence;
+      out += "```";
+      i += 3;
+      continue;
+    }
+
+    if (!inFence && text[i] === "`" && !isEscaped(i)) {
+      inInline = !inInline;
+      out += "`";
+      i += 1;
+      continue;
+    }
+
+    if (!inFence && !inInline && text[i] === "$" && !isEscaped(i)) {
+      let run = 1;
+
+      while (i + run < len && text[i + run] === "$") run++;
+      if (run > 2) {
+        out += text.slice(i, i + run);
+        i += run;
+        continue;
+      }
+
+      const isDisplay = run === 2;
+      let j = i + run;
+      let found = -1;
+
+      while (j < len) {
+        if (text[j] === "$" && !isEscaped(j)) {
+          let crun = 1;
+          while (j + crun < len && text[j + crun] === "$") crun++;
+          if (crun === run) {
+            found = j;
+            break;
+          }
+          j += crun;
+          continue;
+        }
+        if (!inInline && text.startsWith("```", j) && !isEscaped(j)) {
+          break;
+        }
+        if (text[j] === "`" && !isEscaped(j)) {
+          break;
+        }
+        j++;
+      }
+
+      if (found !== -1) {
+        const content = text.slice(i + run, found);
+        const invalid = isDisplay ? isInvalidDisplay(content) : isInvalidInline(content);
+
+        if (invalid) {
+          out += "\\" + "$".repeat(run) + content + "\\" + "$".repeat(run);
+        } else {
+          out += text.slice(i, found + run);
+        }
+
+        i = found + run;
+        continue;
+      } else {
+        out += text.slice(i, i + run);
+        i += run;
+        continue;
+      }
+    }
+
+    out += text[i]!;
+    i += 1;
+  }
+
+  return out;
+}
+
 type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
   role: ChatMessage["role"];
   children: string;
@@ -66,7 +182,8 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
   ...props
 }: MarkdownProps) {
   const normalizedChildren = useMemo(() => {
-    return normalizeMissingFenceLanguages(children);
+    const normalized = normalizeMissingFenceLanguages(children);
+    return escapeInvalidMath(normalized);
   }, [children]);
 
   return (
