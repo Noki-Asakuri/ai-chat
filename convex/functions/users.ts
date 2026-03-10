@@ -80,6 +80,21 @@ export const updateUserPreferences = authenticatedMutation({
   },
 });
 
+export const updateCurrentUserImage = authenticatedMutation({
+  args: {
+    imageUrl: v.nullable(v.string()),
+  },
+  handler: async (ctx, { imageUrl }) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+
+    await ctx.db.patch(user._id, {
+      imageUrl,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 export const updateUserModelPreferences = authenticatedMutation({
   args: {
     data: v.object({

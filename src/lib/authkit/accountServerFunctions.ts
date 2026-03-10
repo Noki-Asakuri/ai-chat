@@ -7,7 +7,6 @@ type UpdateAccountProfileInput = {
   firstName: string;
   lastName: string;
   email: string;
-  avatarKey?: string | null;
 };
 
 function cleanFormString(value: string): string {
@@ -62,18 +61,11 @@ export const updateAccountProfile = createServerFn({ method: "POST" })
     const lastName = normalizeEmptyToUndefined(data.lastName);
     const email = cleanFormString(data.email);
 
-    const metadata: Record<string, string | null> = { ...session.user.metadata };
-
-    if (data.avatarKey !== undefined) {
-      metadata.avatarKey = data.avatarKey;
-    }
-
     const updatedUser = await getWorkOS().userManagement.updateUser({
       userId: session.user.id,
       email,
       firstName,
       lastName,
-      metadata,
     });
 
     await saveSession({

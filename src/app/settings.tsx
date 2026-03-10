@@ -1,5 +1,7 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { api } from "@/convex/_generated/api";
 
+import { convexQuery } from "@convex-dev/react-query";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { z } from "zod/v4";
 
 import { SettingsRouteHeader } from "@/components/settings/settings-route-header";
@@ -28,6 +30,12 @@ export const Route = createFileRoute("/settings")({
   },
 
   loader: async ({ context }) => {
+    await context.queryClient.prefetchQuery(
+      convexQuery(api.functions.users.currentUser, {
+        sessionId: context.sessionId!,
+      }),
+    );
+
     return { user: context.user };
   },
   component: AuthLayout,

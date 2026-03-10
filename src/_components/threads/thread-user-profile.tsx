@@ -25,11 +25,13 @@ import { cn } from "@/lib/utils";
 
 export function ThreadUserProfile() {
   const { user } = useLoaderData({ from: "/_chat_layout" });
+  const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
+
   if (!user) return null;
 
   const initials = getUserInitials(user);
   const username = getUserDisplayName(user);
-  const avatarUrl = getUserAvatarUrl(user);
+  const avatarUrl = currentUser?.imageUrl ?? getUserAvatarUrl(user);
 
   return (
     <Menu.Root>

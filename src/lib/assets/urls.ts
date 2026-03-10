@@ -35,6 +35,17 @@ export function isImageAssetUrl(url: string): boolean {
   return url === IMAGE_ASSET_BASE_URL || url.startsWith(`${IMAGE_ASSET_BASE_URL}/`);
 }
 
+export function getImageAssetPathFromUrl(url: string): string | null {
+  const imageAssetPrefix = `${IMAGE_ASSET_BASE_URL}/`;
+
+  if (!url.startsWith(imageAssetPrefix)) {
+    return null;
+  }
+
+  const path = url.slice(imageAssetPrefix.length);
+  return path.length > 0 ? path : null;
+}
+
 export function buildImageThumbnailUrl(url: string, transform: string): string {
   if (!isImageAssetUrl(url)) {
     return url;

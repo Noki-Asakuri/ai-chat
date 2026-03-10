@@ -2,6 +2,11 @@ import { authKit } from "../components";
 import { DEFAULT_BASE } from "./usages";
 import { DEFAULT_USER_PREFERENCES } from "./users";
 
+function isCustomAvatarUrl(imageUrl: string | null, userId: string): boolean {
+  if (!imageUrl) return false;
+  return imageUrl.includes(`/${userId}/avatar/`);
+}
+
 export const { authKitEvent } = authKit.events({
   "user.created": async (ctx, event) => {
     const firstName = event.data.firstName ?? "user";
@@ -53,12 +58,22 @@ export const { authKitEvent } = authKit.events({
       return;
     }
 
-    await ctx.db.patch(user._id, {
+    const updates: {
+      emailAddress: string | null;
+      username: string;
+      updatedAt: number;
+      imageUrl?: string | null;
+    } = {
       emailAddress: event.data.email,
-      imageUrl: event.data.profilePictureUrl,
       username: `${event.data.firstName} ${event.data.lastName}`,
       updatedAt: Date.now(),
-    });
+    };
+
+    if (!isCustomAvatarUrl(user.imageUrl, user.userId)) {
+      updates.imageUrl = event.data.profilePictureUrl;
+    }
+
+    await ctx.db.patch(user._id, updates);
   },
   "user.deleted": async (ctx, event) => {
     const user = await ctx.db

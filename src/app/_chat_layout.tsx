@@ -56,13 +56,20 @@ export const Route = createFileRoute("/_chat_layout")({
     const params = rawParams as { threadId?: string };
     const threadId = fromUUID<Id<"threads">>(params.threadId);
 
-    const userPreferencesData = await context.queryClient.ensureQueryData(
+    const userPreferencesPromise = context.queryClient.ensureQueryData(
       convexQuery(api.functions.users.getCurrentUserPreferences, {
         sessionId: context.sessionId!,
         threadId,
       }),
     );
 
+    const currentUserPromise = context.queryClient.prefetchQuery(
+      convexQuery(api.functions.users.currentUser, {
+        sessionId: context.sessionId!,
+      }),
+    );
+
+    const [userPreferencesData] = await Promise.all([userPreferencesPromise, currentUserPromise]);
     return { user: context.user, defaultOpenSidebar, userPreferencesData };
   },
 

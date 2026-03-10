@@ -1,3 +1,6 @@
+import { api } from "@/convex/_generated/api";
+
+import { useQuery } from "@tanstack/react-query";
 import { Link, useLoaderData, useSearch } from "@tanstack/react-router";
 import { ArrowLeftIcon, LogOutIcon } from "lucide-react";
 
@@ -6,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { getUserAvatarUrl, getUserDisplayName, getUserInitials } from "@/lib/authkit/user";
+import { convexSessionQuery } from "@/lib/convex/helpers";
 
 import { UserUsages } from "./user-usages";
 
@@ -66,10 +70,11 @@ function SignOutButton() {
 
 function UserInfo() {
   const { user } = useLoaderData({ from: "/settings" });
+  const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
 
-  const avatarUrl = getUserAvatarUrl(user);
   const initials = getUserInitials(user);
   const username = getUserDisplayName(user);
+  const avatarUrl = currentUser?.imageUrl ?? getUserAvatarUrl(user);
 
   return (
     <div className="space-y-2">

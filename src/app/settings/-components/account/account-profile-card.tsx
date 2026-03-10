@@ -1,4 +1,8 @@
+import { api } from "@/convex/_generated/api";
+
+import { useQuery } from "@tanstack/react-query";
 import { useLoaderData, useRouter } from "@tanstack/react-router";
+import { useSessionMutation } from "convex-helpers/react/sessions";
 import { useEffect, useRef, useState, useTransition, type SubmitEvent } from "react";
 import { toast } from "sonner";
 
@@ -8,8 +12,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import { buildImageAssetUrl, getImageAssetPathFromUrl } from "@/lib/assets/urls";
 import { updateAccountProfile } from "@/lib/authkit/accountServerFunctions";
 import { getUserAvatarUrl, getUserInitials } from "@/lib/authkit/user";
+import { convexSessionQuery } from "@/lib/convex/helpers";
 import { censorEmail } from "@/lib/email";
 import { useStorage } from "@/lib/hooks/use-storage";
 
@@ -18,16 +24,13 @@ function getFormFile(key: string, formData: FormData): File | null {
   return value instanceof File ? value : null;
 }
 
-function normalizeOptionalMetadataString(value: string | undefined): string | null {
-  if (typeof value !== "string") return null;
-  return value.length > 0 ? value : null;
-}
-
 export function AccountProfileCard() {
   const router = useRouter();
   const { user } = useLoaderData({ from: "/settings" });
+  const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
 
   const { uploadAvatarFile, deleteFile } = useStorage();
+  const updateCurrentUserImage = useSessionMutation(api.functions.users.updateCurrentUserImage);
 
   const [pending, startTransition] = useTransition();
 
@@ -39,9 +42,11 @@ export function AccountProfileCard() {
   const [isEditingEmail, setIsEditingEmail] = useState<boolean>(false);
   const [emailDraft, setEmailDraft] = useState<string>("");
 
-  const existingAvatarKey = normalizeOptionalMetadataString(user.metadata.avatarKey);
+  const existingAvatarKey = currentUser?.imageUrl
+    ? getImageAssetPathFromUrl(currentUser.imageUrl)
+    : null;
 
-  const avatarUrl = avatarPreviewUrl ?? getUserAvatarUrl(user);
+  const avatarUrl = avatarPreviewUrl ?? currentUser?.imageUrl ?? getUserAvatarUrl(user);
   const initials = getUserInitials(user);
 
   useEffect(() => {
@@ -75,8 +80,12 @@ export function AccountProfileCard() {
         }
 
         await updateAccountProfile({
-          data: { firstName, lastName, email, avatarKey },
+          data: { firstName, lastName, email },
         });
+
+        if (avatarKey) {
+          await updateCurrentUserImage({ imageUrl: buildImageAssetUrl(avatarKey) });
+        }
 
         if (avatarKey && existingAvatarKey && existingAvatarKey !== avatarKey) {
           await deleteFile(existingAvatarKey);

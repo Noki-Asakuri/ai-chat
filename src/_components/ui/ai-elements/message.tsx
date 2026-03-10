@@ -1,3 +1,6 @@
+import { api } from "@/convex/_generated/api";
+
+import { useQuery } from "@tanstack/react-query";
 import { useLoaderData } from "@tanstack/react-router";
 import type { UIMessage } from "ai";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -6,6 +9,7 @@ import type { ComponentProps, HTMLAttributes } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../avatar";
 
 import { getUserAvatarUrl } from "@/lib/authkit/user";
+import { convexSessionQuery } from "@/lib/convex/helpers";
 import { cn } from "@/lib/utils";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
@@ -56,7 +60,9 @@ export const MessageContent = ({ children, className, variant, ...props }: Messa
 
 export const MessageAvatar = ({ className, ...props }: ComponentProps<typeof Avatar>) => {
   const { user } = useLoaderData({ from: "/_chat_layout" });
-  const avatarUrl = getUserAvatarUrl(user);
+  const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
+
+  const avatarUrl = currentUser?.imageUrl ?? getUserAvatarUrl(user);
 
   return (
     <Avatar className={cn("size-11 rounded-md ring-1 ring-border", className)} {...props}>
