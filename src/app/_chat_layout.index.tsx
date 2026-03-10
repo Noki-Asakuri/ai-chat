@@ -6,8 +6,6 @@ import { convexQuery } from "@convex-dev/react-query";
 import { useEffect } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
-
 import { useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions } from "@/lib/store/messages-store";
 
@@ -30,12 +28,7 @@ function RouteComponent() {
     messageStoreActions.setCurrentThreadId(null);
   }, []);
 
-  return (
-    <>
-      <WelcomeScreen />
-      <ChatTextarea key="main-chat-textarea" />
-    </>
-  );
+  return <WelcomeScreen />;
 }
 
 export function WelcomeScreen() {

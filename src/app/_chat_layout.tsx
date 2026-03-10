@@ -11,6 +11,7 @@ import { getCookie } from "@tanstack/react-start/server";
 import { convexQuery } from "@convex-dev/react-query";
 import { PlusIcon } from "lucide-react";
 
+import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { GlobalDropzone } from "@/components/chat/global-dropzone";
 import { RegisterEventHandlers } from "@/components/chat/register-event-handlers";
 import { ThreadTitle } from "@/components/chat/top-thread-title";
@@ -149,6 +150,9 @@ function ChatLayoutConfig() {
       }}
     >
       <Outlet />
+
+      <ChatTextarea key="main-chat-textarea" />
+
       <ThreadProfileSidebar />
     </ConfigStoreProvider>
   );

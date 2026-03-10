@@ -4,9 +4,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { convexQuery } from "@convex-dev/react-query";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { Suspense, useEffect, useEffectEvent } from "react";
+import { useEffect, useEffectEvent } from "react";
 
-import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { LoadingSkeleton } from "@/components/chat/loading-skeleton";
 import { MessageHistory } from "@/components/message/message-history";
 
@@ -26,6 +25,7 @@ type SyncMode = "replace" | "prepend";
 
 export const Route = createFileRoute("/_chat_layout/threads/$threadId")({
   component: ChatComponentPage,
+  pendingComponent: LoadingSkeleton,
 
   loader: async ({ context, params }) => {
     const threadId = fromUUID<Id<"threads">>(params.threadId);
@@ -53,15 +53,7 @@ function ChatComponentPage() {
     messageStoreActions.setCurrentThreadId(fromUUID<Id<"threads">>(params.threadId));
   }, [params.threadId]);
 
-  return (
-    <>
-      <Suspense fallback={<LoadingSkeleton />}>
-        <ChatHistory />
-      </Suspense>
-
-      <ChatTextarea key="main-chat-textarea" />
-    </>
-  );
+  return <ChatHistory />;
 }
 
 function ChatHistory() {
