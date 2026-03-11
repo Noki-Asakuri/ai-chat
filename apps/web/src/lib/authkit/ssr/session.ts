@@ -1,12 +1,13 @@
-import { redirect } from "@tanstack/react-router";
-import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server";
 import {
   decryptAuthSession,
   encryptAuthSession,
   getAuthSessionCookieName,
 } from "@ai-chat/auth-session";
+import { redirect } from "@tanstack/react-router";
+import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server";
 
 import { type AccessToken, type AuthenticationResponse } from "@workos-inc/node";
+import { DEFAULT_STORAGE_KEY } from "convex-helpers/react/sessions";
 import { createRemoteJWKSet, decodeJwt, jwtVerify } from "jose";
 
 import { tryCatch } from "@/lib/utils";
@@ -78,6 +79,10 @@ export async function withAuth() {
     entitlements,
   } = decodeJwt<AccessToken>(session.accessToken);
 
+  if (sessionId) {
+    syncConvexSessionCookie(sessionId);
+  }
+
   return {
     sessionId,
     user: session.user,
@@ -102,6 +107,7 @@ export async function saveSession(
 ): Promise<void> {
   const cookieName = getAuthSessionCookieName(getConfig("cookieName"));
   const encryptedSession = await encryptSession(sessionOrResponse);
+  const { sid: sessionId } = decodeJwt<AccessToken>(sessionOrResponse.accessToken);
 
   setCookie(cookieName, encryptedSession, {
     httpOnly: true,
@@ -111,6 +117,22 @@ export async function saveSession(
     priority: "high",
     maxAge: getConfig("cookieMaxAge"),
     domain: import.meta.env.PROD ? "chat.asakuri.me" : "localhost",
+  });
+
+  if (sessionId) {
+    syncConvexSessionCookie(sessionId);
+  }
+}
+
+function syncConvexSessionCookie(sessionId: string): void {
+  if (getCookie(DEFAULT_STORAGE_KEY) === sessionId) return;
+
+  setCookie(DEFAULT_STORAGE_KEY, sessionId, {
+    httpOnly: false,
+    secure: import.meta.env.PROD,
+    sameSite: "lax",
+    path: "/",
+    priority: "high",
   });
 }
 
@@ -213,6 +235,8 @@ export async function updateSession(
       entitlements,
     } = decodeJwt<AccessToken>(session.accessToken);
 
+    appendConvexSessionCookie(newRequestHeaders, sessionId);
+
     return {
       session: {
         sessionId,
@@ -266,6 +290,8 @@ export async function updateSession(
       permissions,
       entitlements,
     } = decodeJwt<AccessToken>(accessToken);
+
+    appendConvexSessionCookie(newRequestHeaders, sessionId);
 
     return {
       session: {
@@ -386,4 +412,16 @@ export async function terminateSession({ returnTo = "/auth/login" }: { returnTo?
   }
 
   return redirect({ to: returnTo, throw: true, reloadDocument: true });
+}
+
+function serializeClientCookie(name: string, value: string): string {
+  const secure = getConfig("redirectUri").startsWith("https:");
+  let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Path=/; sameSite=lax`;
+  if (secure) cookie += "; Secure";
+  return cookie;
+}
+
+function appendConvexSessionCookie(headers: Headers, sessionId: string | undefined): void {
+  if (!sessionId || getCookie(DEFAULT_STORAGE_KEY) === sessionId) return;
+  headers.append("Set-Cookie", serializeClientCookie(DEFAULT_STORAGE_KEY, sessionId));
 }
