@@ -44,6 +44,26 @@ function getThreadModelConfigFromMessages(messages: Doc<"messages">[]): {
   return null;
 }
 
+function finalizeStreamingParts(parts: Doc<"messages">["parts"]): {
+  changed: boolean;
+  parts: Doc<"messages">["parts"];
+} {
+  let changed = false;
+  const nextParts: Array<Doc<"messages">["parts"][number]> = [];
+
+  for (const part of parts) {
+    if ((part.type === "text" || part.type === "reasoning") && part.state === "streaming") {
+      nextParts.push({ ...part, state: "done" });
+      changed = true;
+      continue;
+    }
+
+    nextParts.push(part);
+  }
+
+  return { changed, parts: changed ? nextParts : parts };
+}
+
 export const backfillThreadModelConfig = migrations.define({
   table: "threads",
   migrateOne: async (ctx, thread) => {
@@ -82,10 +102,26 @@ export const backfillUserPreferencesShape = migrations.define({
   },
 });
 
+export const finalizeStreamingMessageParts = migrations.define({
+  table: "messages",
+  migrateOne: async (ctx, message) => {
+    if (!Array.isArray(message.parts)) return;
+
+    const { changed, parts } = finalizeStreamingParts(message.parts);
+    if (!changed) return;
+
+    await ctx.db.patch(message._id, { parts });
+  },
+});
+
 export const runBackfillThreadModelConfig = migrations.runner([
   internal.migrations.backfillThreadModelConfig,
 ]);
 
 export const runBackfillUserPreferencesShape = migrations.runner([
   internal.migrations.backfillUserPreferencesShape,
+]);
+
+export const runFinalizeStreamingMessageParts = migrations.runner([
+  internal.migrations.finalizeStreamingMessageParts,
 ]);

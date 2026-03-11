@@ -109,6 +109,10 @@ function finalizeStreamParts(parts: unknown): unknown {
     const next: Record<string, unknown> = { ...part };
     const type = next["type"];
 
+    if ((type === "text" || type === "reasoning") && next["state"] === "streaming") {
+      next["state"] = "done";
+    }
+
     if (type === "reasoning") {
       delete next["providerMetadata"];
 
