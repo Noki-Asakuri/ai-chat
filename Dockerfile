@@ -3,6 +3,7 @@ WORKDIR /app
 
 COPY bun.lock package.json ./
 COPY apps/server/package.json apps/server/package.json
+COPY apps/web/package.json apps/web/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/auth-session/package.json packages/auth-session/package.json
 COPY packages/backend/package.json packages/backend/package.json
