@@ -38,7 +38,7 @@ export const getSignUpUrl = createServerFn({ method: "GET" })
 export const signOut = createServerFn({ method: "POST" })
   .inputValidator((data?: string) => data)
   .handler(async ({ data: returnTo }) => {
-    const cookieName = getConfig("cookieName") || "wos_session";
+    const cookieName = getConfig("cookieName") || "wos-session";
     deleteCookie(cookieName);
     deleteCookie(DEFAULT_STORAGE_KEY);
 
