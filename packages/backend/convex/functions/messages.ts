@@ -623,15 +623,6 @@ export const updateErrorMessage = authenticatedMutation({
       updatedAt: Date.now(),
       status: "complete",
     });
-
-    if (metadata?.model?.request && metadata.modelParams) {
-      await patchThreadModelConfig(
-        ctx,
-        message.threadId,
-        metadata.model.request,
-        metadata.modelParams,
-      );
-    }
   },
 });
 
@@ -671,24 +662,11 @@ export const updateMessageById = authenticatedMutation({
       message.status === "complete" && message.metadata?.finishReason === "aborted";
     if (isAbortedCompletion && args.updates.status === "streaming") return;
 
-    await ctx.db.patch(args.messageId, { ...args.updates, updatedAt: Date.now() });
-
-    if (message.threadId) {
-      await ctx.db.patch(message.threadId, {
-        updatedAt: Date.now(),
-        ...(args.updates.status !== undefined ? { status: args.updates.status } : {}),
-      });
-
-      const nextMetadata = args.updates.metadata;
-      if (nextMetadata?.model.request && nextMetadata.modelParams) {
-        await patchThreadModelConfig(
-          ctx,
-          message.threadId,
-          nextMetadata.model.request,
-          nextMetadata.modelParams,
-        );
-      }
-    }
+    await ctx.db.patch("messages", args.messageId, { ...args.updates, updatedAt: Date.now() });
+    await ctx.db.patch("threads", message.threadId, {
+      status: args.updates.status,
+      updatedAt: Date.now(),
+    });
 
     const becameComplete = message.status !== "complete" && args.updates.status === "complete";
 
