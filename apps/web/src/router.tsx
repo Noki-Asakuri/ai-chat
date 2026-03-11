@@ -11,15 +11,11 @@ import { StrictMode } from "react";
 import { DefaultCatchBoundary } from "./_components/default-catch-boundary";
 import { DefaultNotFoundBoundary } from "./_components/default-not-found-boundary";
 
-import { env } from "./env";
 import { getConvexReactClient } from "./lib/convex/client";
 
 import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
-  const CONVEX_URL = env.VITE_CONVEX_URL;
-  if (!CONVEX_URL) console.error("missing envar VITE_CONVEX_URL");
-
   const convexClient = getConvexReactClient();
   const convexQueryClient = new ConvexQueryClient(convexClient);
 
@@ -36,10 +32,11 @@ export function getRouter() {
     },
     queryCache: new QueryCache({
       onError: (error) => {
-        if (error.message.includes("Not authenticated")) {
+        if (error.message === "Not authenticated") {
           // Hacky way to force a reset of the session on client because of desync.
-          void cookieStore.delete(DEFAULT_STORAGE_KEY);
-          window.location.reload();
+          cookieStore.delete(DEFAULT_STORAGE_KEY).finally(() => {
+            window.location.reload();
+          });
         }
       },
     }),
@@ -62,6 +59,7 @@ export function getRouter() {
   });
 
   setupRouterSsrQueryIntegration({ router, queryClient });
+
   return router;
 }
 

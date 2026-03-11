@@ -86,7 +86,7 @@
     "sharp": "^0.34.5",
     "tailwindcss": "^4.2.1",
     "typescript": "catalog:tooling",
-    "vite": "npm:rolldown-vite@7.3.1",
+    "vite": "^8.0.0-beta.18",
     "vite-tsconfig-paths": "^6.1.1"
   },
   "scripts": {

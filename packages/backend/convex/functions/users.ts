@@ -243,13 +243,6 @@ export const getCurrentUserPreferences = authenticatedQuery({
     const thread = args.threadId ? await ctx.db.get("threads", args.threadId) : null;
     if (thread && thread.userId !== user.userId) throw new Error("Not authorized");
 
-    console.log("[Convex] getCurrentUserPreferences", {
-      threadId: args.threadId,
-      thread: thread?._id,
-      latestModel: thread?.latestModel,
-      latestModelParams: thread?.latestModelParams,
-    });
-
     const preferences = mergeUserPreferences(user.preferences);
 
     return {

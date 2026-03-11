@@ -15,7 +15,7 @@ export default defineConfig({
   },
   server: { port: 3000 },
   plugins: [
-    devtools(),
+    devtools({ consolePiping: { levels: ["log"] } }),
     nitro({ compatibilityDate: "latest" }),
     tsconfigPaths(),
     tanstackStart({ srcDirectory: "src", router: { routesDirectory: "app" } }),
