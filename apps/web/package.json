@@ -1,0 +1,18 @@
+{
+  "name": "@ai-chat/web",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ai-chat/auth-session": "workspace:*",
+    "@ai-chat/shared": "workspace:*"
+  },
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite build && vite preview",
+    "start": "node --env-file=../../.env .output/server/index.mjs",
+    "lint": "oxlint --type-aware .",
+    "lint:fix": "oxlint --type-aware --fix .",
+    "typecheck": "bunx tsgo --noEmit -p tsconfig.json"
+  }
+}

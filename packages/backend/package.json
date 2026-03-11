@@ -1,0 +1,16 @@
+{
+  "name": "@ai-chat/backend",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ai-chat/shared": "workspace:*",
+    "convex": "^1.32.0"
+  },
+  "scripts": {
+    "dev": "bunx convex dev --typecheck disable",
+    "deploy": "bunx convex deploy",
+    "lint": "oxlint --type-aware .",
+    "lint:fix": "oxlint --type-aware --fix .",
+    "typecheck": "bunx tsgo --noEmit -p tsconfig.json"
+  }
+}

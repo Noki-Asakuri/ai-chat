@@ -1,0 +1,13 @@
+{
+  "name": "@ai-chat/auth-session",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint --type-aware .",
+    "lint:fix": "oxlint --type-aware --fix .",
+    "typecheck": "bunx tsgo --noEmit -p tsconfig.json"
+  }
+}

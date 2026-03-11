@@ -1,37 +1,10 @@
 {
-  "compilerOptions": {
-    /* Base Options: */
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "target": "es2022",
-    "allowJs": true,
-    "resolveJsonModule": true,
-    "moduleDetection": "force",
-    "isolatedModules": true,
-    "verbatimModuleSyntax": false,
-    "types": ["vite/client"],
-
-    /* Strictness */
-    "strict": true,
-    "strictNullChecks": true,
-    "noUncheckedIndexedAccess": true,
-    "checkJs": true,
-
-    /* Bundled projects */
-    "lib": ["dom", "dom.iterable", "ES2022"],
-    "noEmit": true,
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "jsx": "react-jsx",
-    "incremental": true,
-
-    /* Path Aliases */
-    "paths": {
-      "@/convex/*": ["./convex/*"],
-      "@/components/*": ["./src/_components/*"],
-      "@/*": ["./src/*"]
-    }
-  },
-  "exclude": ["node_modules", "public", "convex"],
-  "include": ["src", "scripts", "src/vite-env.d.ts"]
+  "files": [],
+  "references": [
+    { "path": "./apps/web" },
+    { "path": "./apps/server" },
+    { "path": "./packages/shared" },
+    { "path": "./packages/backend" },
+    { "path": "./packages/auth-session" }
+  ]
 }

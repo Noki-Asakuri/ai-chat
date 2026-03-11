@@ -7,5 +7,5 @@
   "bracketSpacing": true,
   "bracketSameLine": false,
   "plugins": ["@prettier/plugin-oxc", "prettier-plugin-tailwindcss"],
-  "tailwindStylesheet": "./src/styles/globals.css"
+  "tailwindStylesheet": "./apps/web/src/styles/globals.css"
 }

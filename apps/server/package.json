@@ -1,0 +1,19 @@
+{
+  "name": "@ai-chat/server",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ai-chat/auth-session": "workspace:*",
+    "@ai-chat/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "lint": "oxlint --type-aware .",
+    "lint:fix": "oxlint --type-aware --fix .",
+    "typecheck": "bunx tsgo --noEmit -p tsconfig.json"
+  }
+}

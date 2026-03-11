@@ -1,0 +1,19 @@
+{
+  "name": "@ai-chat/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./chat/metadata": "./src/chat/metadata.ts",
+    "./chat/request": "./src/chat/request.ts",
+    "./chat/errors": "./src/chat/errors.ts",
+    "./chat/validate-request-body": "./src/chat/validate-request-body.ts",
+    "./chat/models": "./src/chat/models/index.ts",
+    "./assets/urls": "./src/assets/urls.ts",
+    "./utils/async": "./src/utils/async.ts"
+  },
+  "scripts": {
+    "lint": "oxlint --type-aware .",
+    "lint:fix": "oxlint --type-aware --fix .",
+    "typecheck": "bunx tsgo --noEmit -p tsconfig.json"
+  }
+}
