@@ -4,10 +4,10 @@ import { logger as honoLogger } from "hono/logger";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 
-import { env } from "@/env";
-import { logger } from "@/lib/axiom/logger";
+import { env } from "./env";
 
 import { registerAiChatRoutes } from "./routes/ai-chat";
+import { logger } from "./lib/logger";
 
 type ServerState = {
   serverStartedAt: number;

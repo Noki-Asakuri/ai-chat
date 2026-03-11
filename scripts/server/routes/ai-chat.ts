@@ -6,12 +6,6 @@ import { z } from "zod/v4";
 
 import { APICallError, UI_MESSAGE_STREAM_HEADERS } from "ai";
 
-import { buildAttachmentUrl } from "@/lib/assets/urls";
-import { logger } from "@/lib/axiom/logger";
-import { createServerConvexClient } from "@/lib/convex/server";
-import { buildChatAgent } from "@/lib/server/chat-agent";
-import { serverUploadFileR2 } from "@/lib/server/file-upload";
-import { updateTitle } from "@/lib/server/update-title";
 import {
   messageIdSchema as messageIdSchemaZ,
   profileIdSchema,
@@ -25,6 +19,12 @@ import { tryCatch, tryCatchSync } from "@/lib/utils";
 import { handleFileCaching } from "../../handle-file-caching";
 import { getAuthContextFromCookieHeader } from "../auth";
 import { buildSystemInstruction } from "../lib/prompt-builder";
+import { buildAttachmentUrl } from "../lib/assets-urls";
+import { buildChatAgent } from "../lib/chat-agent";
+import { createServerConvexClient } from "../lib/convex-client";
+import { serverUploadFileR2 } from "../lib/file-upload";
+import { logger } from "../lib/logger";
+import { updateTitle } from "../lib/update-title";
 import { streamContext } from "../resumable-stream";
 import { abortStream, registerStream, removeStream } from "../stream-registry";
 

@@ -99,7 +99,12 @@ bun install
 
 ### Environment variables
 
-This project validates env vars in `src/env.js`. You’ll need both server and client variables.
+This project has two env validation entry points:
+
+- `src/env.js` for the fullstack app (web + SSR/server).
+- `scripts/server/env.ts` for the dedicated API server (`scripts/server.ts`).
+
+#### Fullstack app env (`src/env.js`)
 
 Server-side:
 
@@ -120,6 +125,30 @@ Client-side (must be prefixed with `VITE_`):
 - `VITE_AXIOM_TOKEN`
 - `VITE_AXIOM_DATASET`
 - `VITE_API_ENDPOINT` (base URL for the Hono server; see below)
+- `VITE_PUBLIC_ASSET_BASE_URL`
+- `VITE_RAW_FILE_BASE_URL`
+
+#### Dedicated API server env (`scripts/server/env.ts`)
+
+Required for `bun dev:server` and `bun start:server`:
+
+- `NODE_ENV` (`development` or `production`)
+- `PROXY_URL`
+- `PROXY_KEY`
+- `EXA_API_KEY`
+- `REDIS_URL`
+- `WORKOS_API_KEY`
+- `WORKOS_CLIENT_ID`
+- `WORKOS_REDIRECT_URI`
+- `WORKOS_COOKIE_PASSWORD`
+- `VITE_CONVEX_URL`
+- `VITE_AXIOM_TOKEN`
+- `VITE_AXIOM_DATASET`
+- `VITE_PUBLIC_ASSET_BASE_URL`
+- `VITE_RAW_FILE_BASE_URL`
+
+The dedicated API server does not import `src/env.js`, so it no longer requires
+fullstack-only env validation.
 
 ### Run (dev)
 

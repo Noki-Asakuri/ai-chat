@@ -3,7 +3,7 @@ import { networkInterfaces } from "node:os";
 import { createServerApp } from "./server/app";
 import { getCommitSha } from "./server/commit-sha";
 
-import { env } from "@/env";
+import { env } from "./server/env";
 
 const ANSI = {
   reset: "\u001b[0m",

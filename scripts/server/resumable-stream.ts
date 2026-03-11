@@ -1,7 +1,7 @@
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 
 import { tryCatch } from "@/lib/utils";
-import { env } from "@/env";
+import { env } from "./env";
 
 import { redisPublisher, redisSubscriber } from "./redis";
 

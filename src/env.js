@@ -11,12 +11,8 @@ export const env = createEnv({
   server: {
     NODE_ENV: z.enum(["development", "production"]).default("development"),
 
-    CONVEX_DEPLOYMENT: z.string(),
-
     PROXY_URL: z.string(),
     PROXY_KEY: z.string(),
-    EXA_API_KEY: z.string(),
-    REDIS_URL: z.string(),
 
     WORKOS_API_KEY: z.string(),
     WORKOS_CLIENT_ID: z.string(),

@@ -2,10 +2,10 @@ import type { Experimental_DownloadFunction } from "ai";
 
 import { cacheRedis } from "./server/redis";
 
-import { logger } from "@/lib/axiom/logger";
 import { tryCatch } from "@/lib/utils";
 
-import { env } from "@/env";
+import { env } from "./server/env";
+import { logger } from "./server/lib/logger";
 
 type InputType = Parameters<Experimental_DownloadFunction>[0][number];
 type OutputType = Awaited<ReturnType<Experimental_DownloadFunction>>[number];
