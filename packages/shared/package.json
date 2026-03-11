@@ -11,9 +11,22 @@
     "./assets/urls": "./src/assets/urls.ts",
     "./utils/async": "./src/utils/async.ts"
   },
+  "dependencies": {
+    "@ai-sdk/google": "catalog:shared",
+    "@ai-sdk/openai": "catalog:shared",
+    "@exalabs/ai-sdk": "^1.0.5",
+    "ai": "catalog:shared",
+    "zod": "catalog:shared"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "catalog:tooling",
+    "oxlint": "catalog:tooling",
+    "oxlint-tsgolint": "catalog:tooling",
+    "typescript": "catalog:tooling"
+  },
   "scripts": {
-    "lint": "oxlint --type-aware .",
-    "lint:fix": "oxlint --type-aware --fix .",
-    "typecheck": "bunx tsgo --noEmit -p tsconfig.json"
+    "lint": "oxlint --config ../../.oxlintrc.json --type-aware .",
+    "lint:fix": "oxlint --config ../../.oxlintrc.json --type-aware --fix .",
+    "typecheck": "tsgo --noEmit"
   }
 }

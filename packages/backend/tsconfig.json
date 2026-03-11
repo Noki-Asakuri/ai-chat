@@ -7,5 +7,5 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": ["./**/*"],
-  "exclude": ["./convex/_generated"]
+  "exclude": ["./convex/_generated", "node_modules"]
 }
