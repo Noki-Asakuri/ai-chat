@@ -34,13 +34,18 @@ function playSound(path: string): void {
   });
 }
 
+function isPageInactive(): boolean {
+  if (typeof document === "undefined") return false;
+
+  return document.hidden || !document.hasFocus();
+}
+
 function shouldShowDesktopNotification(desktopEnabled: boolean): boolean {
   if (!desktopEnabled) return false;
-  if (typeof document === "undefined") return false;
   if (typeof Notification === "undefined") return false;
   if (Notification.permission !== "granted") return false;
 
-  return document.hidden;
+  return isPageInactive();
 }
 
 function getThreadTitle(threadId: Id<"threads">): string {
@@ -110,7 +115,7 @@ function showDesktopNotification(
 }
 
 export function emitStreamFeedback(options: StreamFeedbackOptions): void {
-  if (options.soundEnabled) {
+  if (options.soundEnabled && isPageInactive()) {
     const soundPath = getSoundPath(options.status);
     playSound(soundPath);
   }
