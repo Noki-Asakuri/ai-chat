@@ -11,8 +11,6 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 USER bun
 
-RUN git config --global --add safe.directory /app
-
 COPY . .
 
 EXPOSE 3001

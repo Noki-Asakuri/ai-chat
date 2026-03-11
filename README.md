@@ -99,12 +99,13 @@ bun install
 
 ### Environment variables
 
-This project has two env validation entry points:
+This monorepo has two app env validation entry points and one shared Convex package:
 
-- `src/env.js` for the fullstack app (web + SSR/server).
-- `scripts/server/env.ts` for the dedicated API server (`scripts/server.ts`).
+- `apps/web/src/env.js` for the fullstack web app.
+- `apps/server/src/env.ts` for the dedicated AI API server.
+- `packages/backend` for Convex functions and generated types.
 
-#### Fullstack app env (`src/env.js`)
+#### Web app env (`apps/web/src/env.js`)
 
 Server-side:
 
@@ -128,7 +129,7 @@ Client-side (must be prefixed with `VITE_`):
 - `VITE_PUBLIC_ASSET_BASE_URL`
 - `VITE_RAW_FILE_BASE_URL`
 
-#### Dedicated API server env (`scripts/server/env.ts`)
+#### Dedicated API server env (`apps/server/src/env.ts`)
 
 Required for `bun dev:server` and `bun start:server`:
 
@@ -141,13 +142,15 @@ Required for `bun dev:server` and `bun start:server`:
 - `WORKOS_CLIENT_ID`
 - `WORKOS_REDIRECT_URI`
 - `WORKOS_COOKIE_PASSWORD`
-- `VITE_CONVEX_URL`
-- `VITE_AXIOM_TOKEN`
-- `VITE_AXIOM_DATASET`
-- `VITE_PUBLIC_ASSET_BASE_URL`
-- `VITE_RAW_FILE_BASE_URL`
+- `WORKOS_COOKIE_NAME` (optional, defaults to `wos-session`)
+- `WEB_APP_ORIGIN` (used for CORS, e.g. `http://localhost:3000`)
+- `CONVEX_URL`
+- `AXIOM_TOKEN`
+- `AXIOM_DATASET`
+- `PUBLIC_ASSET_BASE_URL`
+- `RAW_FILE_BASE_URL`
 
-The dedicated API server does not import `src/env.js`, so it no longer requires
+The dedicated API server does not import `apps/web/src/env.js`, so it no longer requires
 fullstack-only env validation.
 
 ### Run (dev)
@@ -155,13 +158,19 @@ fullstack-only env validation.
 1. Start the web app (port `3000`):
 
 ```bash
-bun dev
+bun dev:web
 ```
 
 2. Start the AI API server (port `3001`):
 
 ```bash
 bun dev:server
+```
+
+3. Start Convex from the shared package:
+
+```bash
+bun dev:convex
 ```
 
 In development, set:
@@ -177,20 +186,19 @@ The current implementation assumes:
 - Image CDN: `https://ik.imagekit.io/gmethsnvl/ai-chat`
 - Hono server listens on `PORT` (defaults to `3001`) and exposes `/api/ai/chat`.
 
-CORS for `/api/*` is configured to allow:
-
-- `http://localhost:3000` in development
-- `https://chat.asakuri.me` in production
+CORS for `/api/*` is configured from `WEB_APP_ORIGIN`.
 
 ## Scripts
 
-From `package.json`:
+From the workspace root `package.json`:
 
-- `bun dev` — start Vite dev server
-- `bun build` — build
-- `bun preview` — build and preview
-- `bun dev:server` — run the Hono API server in watch mode
-- `bun check` — run lint + typecheck
+- `bun dev` — alias for `bun dev:web`
+- `bun dev:web` — start the TanStack/Vite web app
+- `bun dev:server` — run the dedicated Bun/Hono AI API server
+- `bun dev:convex` — run Convex from `packages/backend`
+- `bun build` — build the web app
+- `bun preview` — preview the web app build
+- `bun check` — run workspace lint + typecheck
 - `bun lint` / `bun lint:fix`
 - `bun typecheck`
 

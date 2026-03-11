@@ -1,0 +1,23 @@
+{
+  "name": "@ai-chat/auth-session",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@workos-inc/node": "catalog:shared",
+    "iron-session": "^8.0.4"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "catalog:tooling",
+    "oxlint": "catalog:tooling",
+    "oxlint-tsgolint": "catalog:tooling",
+    "typescript": "catalog:tooling"
+  },
+  "scripts": {
+    "lint": "oxlint --config ../../.oxlintrc.json --type-aware .",
+    "lint:fix": "oxlint --config ../../.oxlintrc.json --type-aware --fix .",
+    "typecheck": "tsgo --noEmit"
+  }
+}

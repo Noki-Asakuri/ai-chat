@@ -1,0 +1,32 @@
+{
+  "name": "@ai-chat/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./chat/metadata": "./src/chat/metadata.ts",
+    "./chat/request": "./src/chat/request.ts",
+    "./chat/errors": "./src/chat/errors.ts",
+    "./chat/validate-request-body": "./src/chat/validate-request-body.ts",
+    "./chat/models": "./src/chat/models/index.ts",
+    "./assets/urls": "./src/assets/urls.ts",
+    "./utils/async": "./src/utils/async.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "catalog:shared",
+    "@ai-sdk/openai": "catalog:shared",
+    "@exalabs/ai-sdk": "^1.0.5",
+    "ai": "catalog:shared",
+    "zod": "catalog:shared"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "catalog:tooling",
+    "oxlint": "catalog:tooling",
+    "oxlint-tsgolint": "catalog:tooling",
+    "typescript": "catalog:tooling"
+  },
+  "scripts": {
+    "lint": "oxlint --config ../../.oxlintrc.json --type-aware .",
+    "lint:fix": "oxlint --config ../../.oxlintrc.json --type-aware --fix .",
+    "typecheck": "tsgo --noEmit"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "@ai-chat/server",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ai-chat/backend": "workspace:*",
+    "@ai-chat/auth-session": "workspace:*",
+    "@ai-chat/shared": "workspace:*",
+    "@ai-sdk/deepseek": "catalog:shared",
+    "@ai-sdk/devtools": "catalog:shared",
+    "@ai-sdk/google": "catalog:shared",
+    "@ai-sdk/openai": "catalog:shared",
+    "@axiomhq/js": "catalog:shared",
+    "@axiomhq/logging": "catalog:shared",
+    "@t3-oss/env-core": "catalog:shared",
+    "@workos-inc/node": "catalog:shared",
+    "ai": "catalog:shared",
+    "convex": "catalog:backend",
+    "dedent": "catalog:shared",
+    "hono": "^4.12.5",
+    "ioredis": "^5.10.0",
+    "jose": "catalog:shared",
+    "resumable-stream": "2.2.10",
+    "zod": "catalog:shared"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:tooling",
+    "@typescript/native-preview": "catalog:tooling",
+    "oxlint": "catalog:tooling",
+    "oxlint-tsgolint": "catalog:tooling",
+    "typescript": "catalog:tooling"
+  },
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "lint": "oxlint --config ../../.oxlintrc.json --type-aware .",
+    "lint:fix": "oxlint --config ../../.oxlintrc.json --type-aware --fix .",
+    "typecheck": "tsgo --noEmit"
+  }
+}

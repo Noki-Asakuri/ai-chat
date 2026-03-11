@@ -1,0 +1,28 @@
+{
+  "name": "@ai-chat/backend",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ai-chat/shared": "workspace:*",
+    "@convex-dev/action-retrier": "^0.3.0",
+    "@convex-dev/crons": "^0.2.0",
+    "@convex-dev/migrations": "^0.3.1",
+    "@convex-dev/r2": "^0.9.1",
+    "@convex-dev/workos-authkit": "^0.1.6",
+    "convex": "catalog:backend",
+    "convex-helpers": "catalog:backend"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "catalog:tooling",
+    "oxlint": "catalog:tooling",
+    "oxlint-tsgolint": "catalog:tooling",
+    "typescript": "catalog:tooling"
+  },
+  "scripts": {
+    "dev": "convex dev --typecheck disable",
+    "deploy": "convex deploy",
+    "lint": "oxlint --config ../../.oxlintrc.json --type-aware .",
+    "lint:fix": "oxlint --config ../../.oxlintrc.json --type-aware --fix .",
+    "typecheck": "tsgo --noEmit"
+  }
+}
