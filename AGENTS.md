@@ -12,6 +12,7 @@ This part is for agents to know what is the most important thing to do.
 4. For any non-trivial work (3+ distinct steps), create a `todowrite` list before doing any work, then keep it updated.
 5. Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user. If you want to verify something, ask the user first before doing it.
 6. NEVER run any eval to execute any code. Which is very dangerous and can cause irreversible damage. Including 'bun -e' or 'bun --eval' or 'bun tsc --eval'.
+7. When in planning mode, avoid asking questions one by one. Group your questions together and ask in a single message.
 
 ### Docs lookup
 
