@@ -20,7 +20,7 @@ import type * as functions_statistics from "../functions/statistics.js";
 import type * as functions_threadShares from "../functions/threadShares.js";
 import type * as functions_threads from "../functions/threads.js";
 import type * as functions_usages from "../functions/usages.js";
-import type * as functions_userStats from "../functions/userStats.js";
+import type * as functions_user_stats from "../functions/user_stats.js";
 import type * as functions_users from "../functions/users.js";
 import type * as http from "../http.js";
 import type * as migrations from "../migrations.js";
@@ -44,7 +44,7 @@ declare const fullApi: ApiFromModules<{
   "functions/threadShares": typeof functions_threadShares;
   "functions/threads": typeof functions_threads;
   "functions/usages": typeof functions_usages;
-  "functions/userStats": typeof functions_userStats;
+  "functions/user_stats": typeof functions_user_stats;
   "functions/users": typeof functions_users;
   http: typeof http;
   migrations: typeof migrations;

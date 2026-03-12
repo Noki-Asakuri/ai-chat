@@ -1,9 +1,10 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
+import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
-import { internal } from "../_generated/api";
+
 import { authenticatedMutation, authenticatedQuery } from "../components";
 import { AISDKModelParams, status } from "../schema";
 
@@ -105,7 +106,7 @@ export const createThread = authenticatedMutation({
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
 
-    await ctx.runMutation(internal.functions.userStats.incrementThreads, {
+    await ctx.runMutation(internal.functions.user_stats.incrementThreads, {
       userId: user.userId,
     });
 
@@ -188,7 +189,6 @@ export const branchThread = authenticatedMutation({
       latestModelParams: thread.latestModelParams,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for (const { _id, _creationTime, ...message } of messages) {
       await ctx.db.insert("messages", {
         ...message,

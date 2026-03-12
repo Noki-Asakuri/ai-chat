@@ -2,6 +2,7 @@ import type { Doc } from "../_generated/dataModel";
 import { authKit } from "../components";
 
 import { DEFAULT_BASE } from "./usages";
+import { DEFAULT_USER_STATS } from "./user_stats";
 import { DEFAULT_USER_PREFERENCES } from "./users";
 
 function isCustomAvatarUrl(imageUrl: string | null, userId: string): boolean {
@@ -28,16 +29,8 @@ export const { authKitEvent } = authKit.events({
     });
 
     await ctx.db.insert("user_stats", {
+      ...DEFAULT_USER_STATS,
       userId: event.data.id,
-      stats: {
-        threads: 0,
-        messages: { assistant: 0, user: 0 },
-        tokens: { input: 0, output: 0, reasoning: 0, total: 0 },
-        tokensByRole: { assistant: 0, user: 0 },
-      },
-      activityCounts: {},
-      modelRequestCounts: {},
-      aiProfileRequestCounts: {},
       lastUpdatedAt: Date.now(),
     });
 

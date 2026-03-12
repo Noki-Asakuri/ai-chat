@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 import { api, internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import { action, internalMutation, type MutationCtx } from "../_generated/server";
+import { action, internalMutation, internalQuery, type MutationCtx } from "../_generated/server";
 import { authenticatedMutation, authenticatedQuery, r2 } from "../components";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
@@ -254,25 +254,26 @@ async function patchThreadModelConfig(
 }
 
 type AssistantCompletionTrackingPayload = {
-  messageId: Id<"messages">;
   userId: string;
   modelUniqueId: string;
+  messageId: Id<"messages">;
+  profileId?: Id<"profiles">;
+
   inputTokens: number;
   outputTokens: number;
   reasoningTokens: number;
-  previousInputTokens: number;
-  profileId?: Id<"profiles">;
 };
 
 const assistantCompletionTrackingPayloadValidator = v.object({
-  messageId: v.id("messages"),
   userId: v.string(),
+
   modelUniqueId: v.string(),
+  messageId: v.id("messages"),
+  profileId: v.optional(v.id("profiles")),
+
   inputTokens: v.number(),
   outputTokens: v.number(),
   reasoningTokens: v.number(),
-  previousInputTokens: v.number(),
-  profileId: v.optional(v.id("profiles")),
 });
 
 export const getAllMessagesFromThread = authenticatedQuery({
@@ -575,6 +576,7 @@ export const addMessagesToThread = authenticatedMutation({
     const userMessageId = await ctx.db.insert("messages", {
       ...shared,
       ...userMessage,
+
       activeAssistantMessageId: undefined,
       parentUserMessageId: undefined,
       variantIndex: undefined,
@@ -604,7 +606,7 @@ export const addMessagesToThread = authenticatedMutation({
       );
     }
 
-    await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
+    await ctx.runMutation(internal.functions.user_stats.incrementOnUserMessage, {
       userId: user.userId,
       threadId: args.threadId,
       createdAt: now,
@@ -665,31 +667,15 @@ export const getAssistantCompletionTrackingPayloadById = authenticatedQuery({
     if (!metadata) return null;
     if (metadata.finishReason === "aborted") return null;
 
-    let previousInputTokens = 0;
-    const previousMessages = ctx.db
-      .query("messages")
-      .withIndex("by_threadId", (q) =>
-        q.eq("threadId", message.threadId).lte("_creationTime", message._creationTime),
-      )
-      .order("desc");
-
-    for await (const previousMessage of previousMessages) {
-      if (previousMessage._id === message._id) continue;
-      if (previousMessage.role !== "assistant") continue;
-      if (previousMessage.status !== "complete") continue;
-
-      previousInputTokens = previousMessage.metadata?.usages?.inputTokens ?? 0;
-      break;
-    }
-
     const payload: AssistantCompletionTrackingPayload = {
       messageId: message._id,
       userId: message.userId,
       modelUniqueId: metadata.model.request ?? "",
+
       inputTokens: metadata.usages.inputTokens ?? 0,
       outputTokens: metadata.usages.outputTokens ?? 0,
       reasoningTokens: metadata.usages.reasoningTokens ?? 0,
-      previousInputTokens,
+
       ...(metadata.modelParams.profile ? { profileId: metadata.modelParams.profile } : {}),
     };
 
@@ -698,9 +684,7 @@ export const getAssistantCompletionTrackingPayloadById = authenticatedQuery({
 });
 
 export const applyAssistantCompletionTracking = internalMutation({
-  args: {
-    tracking: assistantCompletionTrackingPayloadValidator,
-  },
+  args: { tracking: assistantCompletionTrackingPayloadValidator },
   returns: v.null(),
   handler: async (ctx, args) => {
     const message = await ctx.db.get("messages", args.tracking.messageId);
@@ -709,14 +693,14 @@ export const applyAssistantCompletionTracking = internalMutation({
     const trackedAt = message.statsTrackedAt ?? 0;
     if (trackedAt > 0) return null;
 
-    await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
+    await ctx.runMutation(internal.functions.user_stats.incrementOnAssistantComplete, {
       userId: args.tracking.userId,
       modelUniqueId: args.tracking.modelUniqueId,
       ...(args.tracking.profileId ? { profileId: args.tracking.profileId } : {}),
+
       inputTokens: args.tracking.inputTokens,
       outputTokens: args.tracking.outputTokens,
       reasoningTokens: args.tracking.reasoningTokens,
-      previousInputTokens: args.tracking.previousInputTokens,
     });
 
     await ctx.db.patch(args.tracking.messageId, {
@@ -1265,17 +1249,13 @@ export const deleteMessageAndBelow = authenticatedMutation({
   },
 });
 
-// export const backfillMessageUsageStats = internalMutation({
-//   args: { messageId: v.id("messages") },
-//   handler: async (ctx, args) => {
-//     const message = await ctx.db.get(args.messageId);
-//     if (!message || !message.metadata) return;
-
-//     const reasoningTokens = message.metadata?.usages.reasoningTokens ?? 0;
-//     const outputTokens = message.metadata?.usages.outputTokens ?? 0;
-
-//     await ctx.db.patch(message._id, {
-//       metadata: { ...message.metadata, usages: { inputTokens: 0, outputTokens, reasoningTokens } },
-//     });
-//   },
-// });
+export const queryMessagesWithCursor = internalQuery({
+  args: { cursor: v.nullable(v.string()), userId: v.string() },
+  handler: async (ctx, args) => {
+    return ctx.db
+      .query("messages")
+      .withIndex("by_userId_threadId", (q) => q.eq("userId", args.userId))
+      .order("asc")
+      .paginate({ numItems: 100, cursor: args.cursor });
+  },
+});

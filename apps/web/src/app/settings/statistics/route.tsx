@@ -69,12 +69,22 @@ function StatisticsPage() {
     convexSessionQuery(api.functions.statistics.getStatistics, { year: selectedYear }),
   );
 
-  const { stats, modelRank, activity, aiProfileRank } = statistics.data!;
-  const totalMessages = stats.messages.user + stats.messages.assistant;
+  const {
+    threadsCount,
+    userMessagesCount,
+    assistantMessagesCount,
+    inputTokens,
+    outputTokens,
+    reasoningTokens,
+    modelRank,
+    activity,
+    aiProfileRank,
+  } = statistics.data;
+  const totalMessages = userMessagesCount + assistantMessagesCount;
 
-  const tokensTotal = stats.tokens?.total ?? 0;
-  const userTokens = stats.tokensByRole?.user ?? 0;
-  const assistantTokens = stats.tokensByRole?.assistant ?? 0;
+  const tokensTotal = inputTokens + outputTokens + reasoningTokens;
+  const userTokens = inputTokens;
+  const assistantTokens = outputTokens + reasoningTokens;
 
   const availableYears = getAvailableYears(activity);
   const selectedYearActivity = activity.filter(
@@ -120,7 +130,7 @@ function StatisticsPage() {
           </CardHeader>
 
           <CardContent>
-            <div className="text-3xl font-bold">{format.number(stats.threads)}</div>
+            <div className="text-3xl font-bold">{format.number(threadsCount)}</div>
             <div className="mt-1 text-xs text-muted-foreground">
               Total messages: {format.number(totalMessages)}
             </div>
@@ -133,7 +143,7 @@ function StatisticsPage() {
           </CardHeader>
 
           <CardContent>
-            <div className="text-3xl font-bold">{format.number(stats.messages.assistant)}</div>
+            <div className="text-3xl font-bold">{format.number(assistantMessagesCount)}</div>
             <div className="mt-1 text-xs text-muted-foreground">
               Output + reasoning: {format.number(assistantTokens)} tokens
             </div>
@@ -146,9 +156,9 @@ function StatisticsPage() {
           </CardHeader>
 
           <CardContent>
-            <div className="text-3xl font-bold">{format.number(stats.messages.user)}</div>
+            <div className="text-3xl font-bold">{format.number(userMessagesCount)}</div>
             <div className="mt-1 text-xs text-muted-foreground">
-              Input (deduped): {format.number(userTokens)} tokens
+              Input: {format.number(userTokens)} tokens
             </div>
           </CardContent>
         </Card>
