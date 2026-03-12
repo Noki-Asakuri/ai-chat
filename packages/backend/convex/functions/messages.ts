@@ -1,9 +1,9 @@
 import { getAll } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
 
-import { internal } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import type { MutationCtx } from "../_generated/server";
+import { action, internalMutation, type MutationCtx } from "../_generated/server";
 import { authenticatedMutation, authenticatedQuery, r2 } from "../components";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
@@ -252,6 +252,28 @@ async function patchThreadModelConfig(
     latestModelParams: modelParams,
   });
 }
+
+type AssistantCompletionTrackingPayload = {
+  messageId: Id<"messages">;
+  userId: string;
+  modelUniqueId: string;
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  previousInputTokens: number;
+  profileId?: Id<"profiles">;
+};
+
+const assistantCompletionTrackingPayloadValidator = v.object({
+  messageId: v.id("messages"),
+  userId: v.string(),
+  modelUniqueId: v.string(),
+  inputTokens: v.number(),
+  outputTokens: v.number(),
+  reasoningTokens: v.number(),
+  previousInputTokens: v.number(),
+  profileId: v.optional(v.id("profiles")),
+});
 
 export const getAllMessagesFromThread = authenticatedQuery({
   args: {
@@ -626,6 +648,108 @@ export const updateErrorMessage = authenticatedMutation({
   },
 });
 
+export const getAssistantCompletionTrackingPayloadById = authenticatedQuery({
+  args: { messageId: v.id("messages") },
+  returns: v.union(assistantCompletionTrackingPayloadValidator, v.null()),
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const message = await ctx.db.get("messages", args.messageId);
+    if (!message) return null;
+    if (message.userId !== user.userId) throw new Error("User not authorized");
+    if (message.role !== "assistant") return null;
+    if (message.status !== "complete") return null;
+
+    const metadata = message.metadata;
+    if (!metadata) return null;
+    if (metadata.finishReason === "aborted") return null;
+
+    let previousInputTokens = 0;
+    const previousMessages = ctx.db
+      .query("messages")
+      .withIndex("by_threadId", (q) =>
+        q.eq("threadId", message.threadId).lte("_creationTime", message._creationTime),
+      )
+      .order("desc");
+
+    for await (const previousMessage of previousMessages) {
+      if (previousMessage._id === message._id) continue;
+      if (previousMessage.role !== "assistant") continue;
+      if (previousMessage.status !== "complete") continue;
+
+      previousInputTokens = previousMessage.metadata?.usages?.inputTokens ?? 0;
+      break;
+    }
+
+    const payload: AssistantCompletionTrackingPayload = {
+      messageId: message._id,
+      userId: message.userId,
+      modelUniqueId: metadata.model.request ?? "",
+      inputTokens: metadata.usages.inputTokens ?? 0,
+      outputTokens: metadata.usages.outputTokens ?? 0,
+      reasoningTokens: metadata.usages.reasoningTokens ?? 0,
+      previousInputTokens,
+      ...(metadata.modelParams.profile ? { profileId: metadata.modelParams.profile } : {}),
+    };
+
+    return payload;
+  },
+});
+
+export const applyAssistantCompletionTracking = internalMutation({
+  args: {
+    tracking: assistantCompletionTrackingPayloadValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get("messages", args.tracking.messageId);
+    if (!message) return null;
+
+    const trackedAt = message.statsTrackedAt ?? 0;
+    if (trackedAt > 0) return null;
+
+    await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
+      userId: args.tracking.userId,
+      modelUniqueId: args.tracking.modelUniqueId,
+      ...(args.tracking.profileId ? { profileId: args.tracking.profileId } : {}),
+      inputTokens: args.tracking.inputTokens,
+      outputTokens: args.tracking.outputTokens,
+      reasoningTokens: args.tracking.reasoningTokens,
+      previousInputTokens: args.tracking.previousInputTokens,
+    });
+
+    await ctx.db.patch(args.tracking.messageId, {
+      statsTrackedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+export const trackFinishedMessageById = action({
+  args: { messageId: v.id("messages"), sessionId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const tracking: AssistantCompletionTrackingPayload | null = await ctx.runQuery(
+      api.functions.messages.getAssistantCompletionTrackingPayloadById,
+      {
+        messageId: args.messageId,
+        sessionId: args.sessionId,
+      },
+    );
+
+    if (!tracking) return null;
+
+    await ctx.runMutation(internal.functions.messages.applyAssistantCompletionTracking, {
+      tracking,
+    });
+
+    return null;
+  },
+});
+
 export const updateMessageById = authenticatedMutation({
   args: {
     messageId: v.id("messages"),
@@ -662,64 +786,58 @@ export const updateMessageById = authenticatedMutation({
       message.status === "complete" && message.metadata?.finishReason === "aborted";
     if (isAbortedCompletion && args.updates.status === "streaming") return;
 
+    if (args.updates.status === "complete") {
+      throw new Error("Use updateFinishedMessageById for completed messages");
+    }
+
     await ctx.db.patch("messages", args.messageId, { ...args.updates, updatedAt: Date.now() });
     await ctx.db.patch("threads", message.threadId, {
       status: args.updates.status,
       updatedAt: Date.now(),
     });
+  },
+});
 
-    const becameComplete = message.status !== "complete" && args.updates.status === "complete";
+export const updateFinishedMessageById = authenticatedMutation({
+  args: {
+    messageId: v.id("messages"),
+    updates: v
+      .object({
+        status: v.literal("complete"),
+        resumableStreamId: v.nullable(v.string()),
+        parts: v.any(),
+        metadata: AISDKMetadata,
+        attachments: v.array(v.id("attachments")),
+      })
+      .partial(),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    if (!user) throw new Error("Not authenticated");
 
-    if (message.role === "assistant" && becameComplete) {
-      const threadId = message.threadId;
-      if (!threadId) return;
+    const message = await ctx.db.get("messages", args.messageId);
+    if (!message) throw new Error("Message not found");
+    if (message.userId !== user.userId) throw new Error("User not authorized");
+    if (message.status === "error") return false;
+    if (message.status === "complete") return false;
 
-      const metadata = args.updates.metadata ?? message.metadata;
-      if (!metadata) return;
+    await ctx.db.patch("messages", args.messageId, {
+      ...args.updates,
+      statsTrackedAt: undefined,
+      updatedAt: Date.now(),
+    });
 
-      const modelUniqueId = metadata.model.request ?? "";
-      const profileId = metadata.modelParams.profile ?? null;
+    await ctx.db.patch("threads", message.threadId, {
+      status: "complete",
+      updatedAt: Date.now(),
+    });
 
-      const currentInputTokens = metadata.usages.inputTokens ?? 0;
-      const outputTokens = metadata.usages.outputTokens ?? 0;
-      const reasoningTokens = metadata.usages.reasoningTokens ?? 0;
+    if (message.role !== "assistant") return false;
 
-      // Find the previous *complete assistant* message in this thread to dedupe cumulative prompt tokens.
-      // `metadata.usages.inputTokens` is cumulative for the full prompt, so:
-      // inputDelta = max(0, currentInputTokens - previousCompletionInputTokens)
-      // This prevents double counting as the conversation grows.
-      let prevInputTokens = 0;
-
-      const prevMessages = ctx.db
-        .query("messages")
-        .withIndex("by_threadId", (q) =>
-          q.eq("threadId", threadId).lte("_creationTime", message._creationTime),
-        )
-        .order("desc");
-
-      for await (const m of prevMessages) {
-        if (m._id === message._id) continue;
-        if (m.role !== "assistant") continue;
-        if (m.status !== "complete") continue;
-
-        prevInputTokens = m.metadata?.usages?.inputTokens ?? 0;
-        break;
-      }
-
-      await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
-        userId: user.userId,
-        threadId,
-        createdAt: message.createdAt,
-
-        modelUniqueId,
-        ...(profileId ? { profileId } : {}),
-
-        inputTokens: currentInputTokens,
-        outputTokens,
-        reasoningTokens,
-        previousInputTokens: prevInputTokens,
-      });
-    }
+    const metadata = args.updates.metadata ?? message.metadata;
+    if (!metadata) return false;
+    return metadata.finishReason !== "aborted";
   },
 });
 

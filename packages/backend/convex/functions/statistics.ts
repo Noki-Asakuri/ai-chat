@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 
-import type { Doc, Id } from "../_generated/dataModel";
 import { authenticatedQuery } from "../components";
 
 export const getStatistics = authenticatedQuery({
@@ -26,18 +25,8 @@ export const getStatistics = authenticatedQuery({
           user: v.number(),
         }),
       ),
-
-      // Legacy word-based stats (deprecated)
-      words: v.optional(v.number()),
-      wordsByRole: v.optional(
-        v.object({
-          assistant: v.number(),
-          user: v.number(),
-        }),
-      ),
     }),
     modelRank: v.array(v.object({ name: v.string(), value: v.number() })),
-    threadRank: v.array(v.object({ id: v.id("threads"), name: v.string(), value: v.number() })),
     activity: v.array(v.object({ day: v.string(), value: v.number() })),
     aiProfileRank: v.array(v.object({ name: v.string(), value: v.number() })),
   }),
@@ -84,15 +73,10 @@ export const getStatistics = authenticatedQuery({
         messages: { assistant: number; user: number };
         tokens: { input: number; output: number; reasoning: number; total: number };
         tokensByRole: { assistant: number; user: number };
-
-        // legacy (deprecated)
-        words: number;
-        wordsByRole: { assistant: number; user: number };
       };
-      modelCounts: Record<string, number>;
-      threadCounts: Record<Id<"threads">, number>;
       activityCounts: Record<string, number>;
-      aiProfileCounts: Record<string, number>;
+      modelRequestCounts: Record<string, number>;
+      aiProfileRequestCounts: Record<string, number>;
     };
 
     // Defaults when no stats exist yet
@@ -102,16 +86,22 @@ export const getStatistics = authenticatedQuery({
         messages: { assistant: 0, user: 0 },
         tokens: { input: 0, output: 0, reasoning: 0, total: 0 },
         tokensByRole: { assistant: 0, user: 0 },
-
-        // legacy (deprecated)
-        words: 0,
-        wordsByRole: { assistant: 0, user: 0 },
       },
-      modelCounts: {},
-      threadCounts: {},
       activityCounts: {},
-      aiProfileCounts: {},
+      modelRequestCounts: {},
+      aiProfileRequestCounts: {},
     };
+
+    function readCountRecord(value: unknown): Record<string, number> {
+      if (!isRecord(value)) return {};
+
+      const result: Record<string, number> = {};
+      for (const [key, count] of Object.entries(value)) {
+        result[key] = readNumber(count);
+      }
+
+      return result;
+    }
 
     const s: StatsResponse = (() => {
       if (!statsDoc) return defaults;
@@ -128,46 +118,20 @@ export const getStatistics = authenticatedQuery({
 
           tokens: readTokenTotals(statsRecord["tokens"]),
           tokensByRole: readRoleTotals(statsRecord["tokensByRole"]),
-
-          // legacy (deprecated)
-          words: readNumber(statsRecord["words"]),
-          wordsByRole: readRoleTotals(statsRecord["wordsByRole"]),
         },
-        modelCounts: statsDoc.modelCounts,
-        threadCounts: statsDoc.threadCounts,
-        activityCounts: statsDoc.activityCounts,
-        aiProfileCounts: statsDoc.aiProfileCounts,
+        activityCounts: readCountRecord(statsDoc.activityCounts),
+        modelRequestCounts: readCountRecord(statsDoc.modelRequestCounts),
+        aiProfileRequestCounts: readCountRecord(statsDoc.aiProfileRequestCounts),
       };
     })();
 
-    // modelRank from pre-aggregated counts
-    const modelRank = Object.entries(s.modelCounts)
+    const modelRank = Object.entries(s.modelRequestCounts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
-    // threadRank: resolve titles (avoid `Id` casts by using real thread docs as the source of truth)
-    const threadEntries = Object.entries(s.threadCounts).sort((a, b) => b[1] - a[1]);
-
-    const threads = await ctx.db
-      .query("threads")
-      .withIndex("by_userId", (q) => q.eq("userId", user.userId))
-      .collect();
-
-    const threadById: Record<string, Doc<"threads">> = {};
-    for (const t of threads) {
-      threadById[t._id] = t;
-    }
-
-    const threadRank = threadEntries
-      .map(([threadId, value]) => {
-        const t = threadById[threadId];
-        if (!t) return null;
-        return { id: t._id, name: t.title ?? "Unknown", value };
-      })
-      .filter((x): x is { id: Id<"threads">; name: string; value: number } => x !== null);
-
-    // Activity: stored user message counts by day (already deduped and cheap to fetch).
-    const activity = Object.entries(s.activityCounts).map(([day, value]) => ({ day, value }));
+    const activity = Object.entries(s.activityCounts)
+      .map(([day, value]) => ({ day, value }))
+      .sort((a, b) => a.day.localeCompare(b.day));
 
     // aiProfileRank: map ids to names for current user
     const profiles = await ctx.db
@@ -178,17 +142,20 @@ export const getStatistics = authenticatedQuery({
     const idToName: Record<string, string> = {};
     for (const p of profiles) idToName[p._id] = p.name;
 
-    const aiProfileRank = Object.entries(s.aiProfileCounts)
-      .map(([key, value]) => {
-        const name = key === "null" ? "No profile" : (idToName[key] ?? "Unknown profile");
-        return { name, value };
+    const aiProfileRank = Object.entries(s.aiProfileRequestCounts)
+      .flatMap(([key, value]) => {
+        if (key === "null") return [{ name: "No profile", value }];
+
+        const name = idToName[key];
+        if (!name) return [];
+
+        return [{ name, value }];
       })
       .sort((a, b) => b.value - a.value);
 
     return {
       stats: s.stats,
       modelRank,
-      threadRank,
       activity,
       aiProfileRank,
     };

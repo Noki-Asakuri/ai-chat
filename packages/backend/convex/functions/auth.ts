@@ -34,14 +34,10 @@ export const { authKitEvent } = authKit.events({
         messages: { assistant: 0, user: 0 },
         tokens: { input: 0, output: 0, reasoning: 0, total: 0 },
         tokensByRole: { assistant: 0, user: 0 },
-
-        words: 0,
-        wordsByRole: { assistant: 0, user: 0 },
       },
-      modelCounts: {},
-      threadCounts: {},
       activityCounts: {},
-      aiProfileCounts: {},
+      modelRequestCounts: {},
+      aiProfileRequestCounts: {},
       lastUpdatedAt: Date.now(),
     });
 

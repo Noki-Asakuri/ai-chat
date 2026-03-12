@@ -409,6 +409,7 @@ export default defineSchema(
 
       metadata: v.optional(AISDKMetadata),
       attachments: v.array(v.id("attachments")),
+      statsTrackedAt: v.optional(v.number()),
 
       // Assistant variants are grouped under the user turn they answer.
       // User turns can point to the currently selected assistant variant.
@@ -500,20 +501,10 @@ export default defineSchema(
          * - assistant = output + reasoning tokens
          */
         tokensByRole: v.optional(v.object({ assistant: v.number(), user: v.number() })),
-
-        // Legacy word-based stats (deprecated; kept optional for backward-compatibility with old docs)
-        words: v.optional(v.number()),
-        wordsByRole: v.optional(v.object({ assistant: v.number(), user: v.number() })),
       }),
-
-      /**
-       * Ranking aggregates. Values represent total tokens for the bucket.
-       * (Previously message counts.)
-       */
-      modelCounts: v.record(v.string(), v.number()),
-      threadCounts: v.record(v.id("threads"), v.number()),
       activityCounts: v.record(v.string(), v.number()),
-      aiProfileCounts: v.record(v.string(), v.number()),
+      modelRequestCounts: v.record(v.string(), v.number()),
+      aiProfileRequestCounts: v.record(v.string(), v.number()),
 
       lastUpdatedAt: v.number(),
     }).index("by_userId", ["userId"]),

@@ -221,9 +221,10 @@ export function registerAiChatRoutes(app: Hono): void {
 
     const convexClient = createServerConvexClient();
 
-    type Updates = (typeof api.functions.messages.updateMessageById)["_args"]["updates"];
+    type FinishedUpdates =
+      (typeof api.functions.messages.updateFinishedMessageById)["_args"]["updates"];
 
-    const updates: Updates = {
+    const updates: FinishedUpdates = {
       parts: finalizeStreamParts(body.parts),
       status: "complete",
       resumableStreamId: null,
@@ -233,11 +234,21 @@ export function registerAiChatRoutes(app: Hono): void {
       updates.metadata = { ...body.metadata, finishReason: "aborted" };
     }
 
-    await convexClient.mutation(api.functions.messages.updateMessageById, {
-      sessionId: auth.sessionId,
-      messageId: body.assistantMessageId,
-      updates,
-    });
+    const shouldTrack = await convexClient.mutation(
+      api.functions.messages.updateFinishedMessageById,
+      {
+        sessionId: auth.sessionId,
+        messageId: body.assistantMessageId,
+        updates,
+      },
+    );
+
+    if (shouldTrack) {
+      void convexClient.action(api.functions.messages.trackFinishedMessageById, {
+        sessionId: auth.sessionId,
+        messageId: body.assistantMessageId,
+      });
+    }
 
     logger.info("[Chat] Abort requested", {
       userId: auth.userId,
@@ -632,11 +643,27 @@ export function registerAiChatRoutes(app: Hono): void {
           if (isAborted) {
             // Fallback: preferred path is POST /api/ai/chat/abort (persist partial output),
             // but keep this as a safety net.
-            await convexClient.mutation(api.functions.messages.updateMessageById, {
-              sessionId,
-              messageId: assistantMessageId,
-              updates: { resumableStreamId: null, status: "complete" },
-            });
+            const shouldTrack = await convexClient.mutation(
+              api.functions.messages.updateFinishedMessageById,
+              {
+                sessionId,
+                messageId: assistantMessageId,
+                updates: {
+                  attachments: [],
+                  metadata,
+                  parts: [],
+                  resumableStreamId: null,
+                  status: "complete",
+                },
+              },
+            );
+
+            if (shouldTrack) {
+              void convexClient.action(api.functions.messages.trackFinishedMessageById, {
+                sessionId,
+                messageId: assistantMessageId,
+              });
+            }
 
             logger.info("[Chat] Request finished as aborted", {
               userId,
@@ -687,8 +714,9 @@ export function registerAiChatRoutes(app: Hono): void {
 
           await Promise.all(generatedFiles);
 
-          type Updates = (typeof api.functions.messages.updateMessageById)["_args"]["updates"];
-          const updates: Updates = {
+          type FinishedUpdates =
+            (typeof api.functions.messages.updateFinishedMessageById)["_args"]["updates"];
+          const updates: FinishedUpdates = {
             parts: finalizeStreamParts(parts) as ChatMessage["parts"],
             metadata,
             resumableStreamId: null,
@@ -708,11 +736,21 @@ export function registerAiChatRoutes(app: Hono): void {
             streamId: activeStreamId,
           });
 
-          await convexClient.mutation(api.functions.messages.updateMessageById, {
-            sessionId,
-            updates,
-            messageId: assistantMessageId,
-          });
+          const shouldTrack = await convexClient.mutation(
+            api.functions.messages.updateFinishedMessageById,
+            {
+              sessionId,
+              updates,
+              messageId: assistantMessageId,
+            },
+          );
+
+          if (shouldTrack) {
+            void convexClient.action(api.functions.messages.trackFinishedMessageById, {
+              sessionId,
+              messageId: assistantMessageId,
+            });
+          }
         },
 
         onError(error) {

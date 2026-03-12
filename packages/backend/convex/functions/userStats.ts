@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { tryGetModelData } from "@ai-chat/shared/chat/models";
 
-import { type Doc, type Id } from "../_generated/dataModel";
+import type { Doc } from "../_generated/dataModel";
 import { internalMutation, type MutationCtx } from "../_generated/server";
 
 function dayKey(ts: number): string {
@@ -53,15 +53,10 @@ async function getOrCreate(ctx: MutationCtx, userId: string): Promise<Doc<"user_
       messages: { assistant: 0, user: 0 },
       tokens: { input: 0, output: 0, reasoning: 0, total: 0 },
       tokensByRole: { assistant: 0, user: 0 },
-
-      // legacy fields (deprecated)
-      words: 0,
-      wordsByRole: { assistant: 0, user: 0 },
     },
-    modelCounts: {},
-    threadCounts: {},
     activityCounts: {},
-    aiProfileCounts: {},
+    modelRequestCounts: {},
+    aiProfileRequestCounts: {},
     lastUpdatedAt: now,
   });
 
@@ -127,9 +122,6 @@ export const incrementOnUserMessage = internalMutation({
 export const incrementOnAssistantComplete = internalMutation({
   args: {
     userId: v.string(),
-    threadId: v.id("threads"),
-    createdAt: v.number(),
-
     modelUniqueId: v.string(),
     profileId: v.optional(v.id("profiles")),
 
@@ -178,22 +170,20 @@ export const incrementOnAssistantComplete = internalMutation({
       tokensByRole: nextTokensByRole,
     };
 
-    const threadCounts: Record<Id<"threads">, number> = { ...doc.threadCounts };
-    threadCounts[args.threadId] = (threadCounts[args.threadId] ?? 0) + added.total;
-
-    const modelCounts: Record<string, number> = { ...doc.modelCounts };
     const normalizedModelId = tryGetModelData(args.modelUniqueId)?.id ?? args.modelUniqueId;
-    modelCounts[normalizedModelId] = (modelCounts[normalizedModelId] ?? 0) + added.total;
 
-    const aiProfileCounts: Record<string, number> = { ...doc.aiProfileCounts };
     const aiKey = args.profileId ?? "null";
-    aiProfileCounts[aiKey] = (aiProfileCounts[aiKey] ?? 0) + added.total;
+
+    const modelRequestCounts: Record<string, number> = { ...doc.modelRequestCounts };
+    modelRequestCounts[normalizedModelId] = (modelRequestCounts[normalizedModelId] ?? 0) + 1;
+
+    const aiProfileRequestCounts: Record<string, number> = { ...doc.aiProfileRequestCounts };
+    aiProfileRequestCounts[aiKey] = (aiProfileRequestCounts[aiKey] ?? 0) + 1;
 
     await ctx.db.patch(doc._id, {
       stats,
-      threadCounts,
-      modelCounts,
-      aiProfileCounts,
+      modelRequestCounts,
+      aiProfileRequestCounts,
       lastUpdatedAt: Date.now(),
     });
 

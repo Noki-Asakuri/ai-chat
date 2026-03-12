@@ -31,8 +31,7 @@ const SETTINGS_HEADERS: Array<{ prefix: string; data: SettingsHeaderData }> = [
     prefix: "/settings/statistics",
     data: {
       title: "Statistics",
-      description:
-        "View your chat statistics and activity. Counts are tracked in tokens (not words).",
+      description: "View your chat activity, request usage, and token totals.",
     },
   },
   {
