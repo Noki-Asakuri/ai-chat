@@ -4,19 +4,12 @@ import type { Provider } from "@/lib/chat/models";
 import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { type ComponentType, useState } from "react";
-import { Cell, Pie, PieChart } from "recharts";
+import { useState } from "react";
+import { Cell, Pie, PieChart, type TooltipProps } from "recharts";
 
 import { Icons } from "@/components/ui/icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
 import {
   Select,
   SelectContent,
@@ -43,16 +36,38 @@ type RankItem = {
   provider?: Provider;
 };
 
-const PIE_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
+type PieChartItem = RankItem & {
+  color: string;
+  percentage: number;
+};
+
+const percentageFormat = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+function getColorForName(name: string): string {
+  let hash = 0;
+  for (const char of name) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 360;
+  }
+
+  const hue = hash;
+  const saturation = 68 + (hash % 10);
+  const lightness = 54 + (hash % 8);
+  return `hsl(${hue} ${saturation}% ${lightness}%)`;
+}
 
 function StatisticsPage() {
-  const statistics = useSuspenseQuery(convexSessionQuery(api.functions.statistics.getStatistics));
+  const currentYear = new Date().getUTCFullYear();
+  const [selectedYearValue, setSelectedYearValue] = useState(String(currentYear));
+  const selectedYear = Number.isFinite(Number(selectedYearValue))
+    ? Number(selectedYearValue)
+    : currentYear;
+
+  const statistics = useSuspenseQuery(
+    convexSessionQuery(api.functions.statistics.getStatistics, { year: selectedYear }),
+  );
 
   const { stats, modelRank, activity, aiProfileRank } = statistics.data!;
   const totalMessages = stats.messages.user + stats.messages.assistant;
@@ -62,11 +77,6 @@ function StatisticsPage() {
   const assistantTokens = stats.tokensByRole?.assistant ?? 0;
 
   const availableYears = getAvailableYears(activity);
-  const defaultYear = availableYears[0] ?? new Date().getFullYear();
-  const [selectedYearValue, setSelectedYearValue] = useState(String(defaultYear));
-  const selectedYear = availableYears.includes(Number(selectedYearValue))
-    ? Number(selectedYearValue)
-    : defaultYear;
   const selectedYearActivity = activity.filter(
     (point) => getYearFromDay(point.day) === selectedYear,
   );
@@ -233,7 +243,7 @@ function StatisticsPage() {
 
 function getYearFromDay(day: string): number {
   const year = Number(day.slice(0, 4));
-  return Number.isFinite(year) ? year : new Date().getFullYear();
+  return Number.isFinite(year) ? year : new Date().getUTCFullYear();
 }
 
 function getAvailableYears(activity: Array<{ day: string; value: number }>): number[] {
@@ -242,7 +252,7 @@ function getAvailableYears(activity: Array<{ day: string; value: number }>): num
     years.add(getYearFromDay(point.day));
   }
 
-  if (years.size === 0) years.add(new Date().getFullYear());
+  years.add(new Date().getUTCFullYear());
   return Array.from(years).sort((a, b) => b - a);
 }
 
@@ -265,7 +275,8 @@ function RankPieChart(props: {
   data: Array<RankItem>;
   emptyText: string;
 }) {
-  const chartConfig = createPieChartConfig(props.data, props.valueLabel);
+  const chartData = createPieChartData(props.data);
+  const chartConfig = createPieChartConfig(chartData, props.valueLabel);
 
   return (
     <Card className="rounded-md">
@@ -274,89 +285,133 @@ function RankPieChart(props: {
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {props.data.length === 0 ? (
+        {chartData.length === 0 ? (
           <div className="text-sm text-muted-foreground">{props.emptyText}</div>
         ) : (
-          <ChartContainer config={chartConfig} className="aspect-auto h-72 w-full">
-            <PieChart>
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    nameKey="name"
-                    formatter={(value, name, _item, _index, payload) => (
-                      <div className="flex w-full items-center justify-between gap-3">
-                        <span className="flex items-center gap-2 text-muted-foreground">
-                          {hasProvider(payload) && payload.provider ? (
-                            <Icons.provider
-                              provider={payload.provider}
-                              className="size-3.5 shrink-0"
-                            />
-                          ) : null}
-                          <span>{name}</span>
-                        </span>
-                        <span className="font-mono font-medium text-foreground tabular-nums">
-                          {format.number(Number(value))} {props.valueLabel}
-                        </span>
-                      </div>
-                    )}
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center">
+            <ChartContainer config={chartConfig} className="aspect-auto h-72 w-full">
+              <PieChart>
+                <ChartTooltip content={<PieTooltipContent valueLabel={props.valueLabel} />} />
+                <Pie data={chartData} dataKey="value" nameKey="name" outerRadius={122}>
+                  {chartData.map((item) => (
+                    <Cell key={item.name} fill={item.color} stroke="var(--card)" strokeWidth={2} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ChartContainer>
+
+            <div className="space-y-3">
+              {chartData.map((item) => (
+                <div key={item.name} className="flex items-center gap-2 text-sm">
+                  <div
+                    className="size-3 shrink-0 rounded-full"
+                    style={{ backgroundColor: item.color }}
                   />
-                }
-              />
-              <Pie
-                data={props.data}
-                dataKey="value"
-                nameKey="name"
-                innerRadius={70}
-                outerRadius={105}
-              >
-                {props.data.map((item, index) => (
-                  <Cell key={item.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                ))}
-              </Pie>
-              <ChartLegend content={<ChartLegendContent nameKey="name" className="flex-wrap" />} />
-            </PieChart>
-          </ChartContainer>
+                  {item.provider ? (
+                    <Icons.provider provider={item.provider} className="size-3.5 shrink-0" />
+                  ) : null}
+                  <span className="min-w-0 text-muted-foreground">
+                    {item.name} ({format.number(item.value)} req -{" "}
+                    {percentageFormat.format(item.percentage)}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>
   );
 }
 
-function createPieChartConfig(data: Array<RankItem>, valueLabel: string): ChartConfig {
+function createPieChartData(data: Array<RankItem>): Array<PieChartItem> {
+  let total = 0;
+  for (const item of data) {
+    total += item.value;
+  }
+
+  const chartData: Array<PieChartItem> = [];
+  for (const item of data) {
+    chartData.push({
+      ...item,
+      color: getColorForName(item.name),
+      percentage: total === 0 ? 0 : (item.value / total) * 100,
+    });
+  }
+
+  return chartData;
+}
+
+function PieTooltipContent(
+  props: TooltipProps<number, string> & {
+    valueLabel: string;
+  },
+) {
+  if (!props.active || !props.payload?.length) return null;
+
+  const payload = props.payload[0]?.payload;
+  if (!isPieChartItem(payload)) return null;
+
+  return (
+    <Card className="rounded-md border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
+      <CardContent className="flex min-w-[12rem] items-center justify-between gap-3 p-0">
+        <span className="flex items-center gap-2 text-muted-foreground">
+          <div
+            className="size-3 shrink-0 rounded-full"
+            style={{ backgroundColor: payload.color }}
+          />
+          {payload.provider ? (
+            <Icons.provider provider={payload.provider} className="size-3.5 shrink-0" />
+          ) : null}
+          <span>{payload.name}</span>
+        </span>
+        <span className="font-mono font-medium text-foreground tabular-nums">
+          {format.number(payload.value)} req - {percentageFormat.format(payload.percentage)}%
+        </span>
+      </CardContent>
+    </Card>
+  );
+}
+
+function createPieChartConfig(data: Array<PieChartItem>, valueLabel: string): ChartConfig {
   const config: ChartConfig = {
     value: {
       label: valueLabel,
-      color: PIE_COLORS[0],
+      color: getColorForName(valueLabel),
     },
   };
 
-  for (const [index, item] of data.entries()) {
+  for (const item of data) {
     config[item.name] = {
       label: item.name,
-      color: PIE_COLORS[index % PIE_COLORS.length],
-      ...(getProviderIcon(item.provider) ? { icon: getProviderIcon(item.provider) } : {}),
+      color: item.color,
     };
   }
 
   return config;
 }
 
-function getProviderIcon(provider?: Provider): ComponentType | undefined {
-  if (!provider) return undefined;
-
-  return function ProviderIcon() {
-    return <Icons.provider provider={provider} className="size-3.5 shrink-0" />;
-  };
-}
-
-function hasProvider(value: unknown): value is { provider?: Provider } {
+function isPieChartItem(value: unknown): value is PieChartItem {
   if (typeof value !== "object" || value === null) return false;
-  if (!("provider" in value)) return false;
+  if (
+    !("name" in value) ||
+    !("value" in value) ||
+    !("color" in value) ||
+    !("percentage" in value)
+  ) {
+    return false;
+  }
+  if (typeof value.name !== "string") return false;
+  if (typeof value.value !== "number") return false;
+  if (typeof value.color !== "string") return false;
+  if (typeof value.percentage !== "number") return false;
+
+  const provider = "provider" in value ? value.provider : undefined;
 
   return (
-    value.provider === undefined ||
-    value.provider === "google" ||
-    value.provider === "openai" ||
-    value.provider === "deepseek"
+    provider === undefined ||
+    provider === "google" ||
+    provider === "openai" ||
+    provider === "deepseek"
   );
 }

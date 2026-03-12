@@ -1,9 +1,12 @@
 import { v } from "convex/values";
+import { tryGetModelData } from "@ai-chat/shared/chat/models";
 
 import { authenticatedQuery } from "../components";
 
 export const getStatistics = authenticatedQuery({
-  args: {},
+  args: {
+    year: v.optional(v.number()),
+  },
   returns: v.object({
     stats: v.object({
       threads: v.number(),
@@ -30,9 +33,14 @@ export const getStatistics = authenticatedQuery({
     activity: v.array(v.object({ day: v.string(), value: v.number() })),
     aiProfileRank: v.array(v.object({ name: v.string(), value: v.number() })),
   }),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");
+
+    const now = new Date();
+    const selectedYear = args.year ?? now.getUTCFullYear();
+    const startOfYear = Date.UTC(selectedYear, 0, 1);
+    const startOfNextYear = Date.UTC(selectedYear + 1, 0, 1);
 
     const statsDoc =
       (await ctx.db
@@ -125,7 +133,36 @@ export const getStatistics = authenticatedQuery({
       };
     })();
 
-    const modelRank = Object.entries(s.modelRequestCounts)
+    const yearMessages = await ctx.db
+      .query("messages")
+      .withIndex("by_userId_createdAt", (q) =>
+        q.eq("userId", user.userId).gte("createdAt", startOfYear).lt("createdAt", startOfNextYear),
+      )
+      .collect();
+
+    const yearModelRequestCounts: Record<string, number> = {};
+    const yearProfileRequestCounts: Record<string, number> = {};
+
+    for (const message of yearMessages) {
+      if (message.role !== "assistant") continue;
+      if (message.status !== "complete") continue;
+
+      const metadata = message.metadata;
+      if (!metadata) continue;
+      if (metadata.finishReason === "aborted") continue;
+
+      const modelUniqueId = metadata.model.request.trim();
+      if (modelUniqueId.length > 0) {
+        const normalizedModelId = tryGetModelData(modelUniqueId)?.id ?? modelUniqueId;
+        yearModelRequestCounts[normalizedModelId] =
+          (yearModelRequestCounts[normalizedModelId] ?? 0) + 1;
+      }
+
+      const aiProfileKey = metadata.modelParams.profile ?? "null";
+      yearProfileRequestCounts[aiProfileKey] = (yearProfileRequestCounts[aiProfileKey] ?? 0) + 1;
+    }
+
+    const modelRank = Object.entries(yearModelRequestCounts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
@@ -142,7 +179,7 @@ export const getStatistics = authenticatedQuery({
     const idToName: Record<string, string> = {};
     for (const p of profiles) idToName[p._id] = p.name;
 
-    const aiProfileRank = Object.entries(s.aiProfileRequestCounts)
+    const aiProfileRank = Object.entries(yearProfileRequestCounts)
       .flatMap(([key, value]) => {
         if (key === "null") return [{ name: "No profile", value }];
 

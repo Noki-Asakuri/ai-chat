@@ -421,6 +421,7 @@ export default defineSchema(
       updatedAt: v.number(),
     })
       .index("by_userId_threadId", ["userId", "threadId"])
+      .index("by_userId_createdAt", ["userId", "createdAt"])
       .index("by_threadId", ["threadId"])
       .index("by_threadId_parentUserMessageId", ["threadId", "parentUserMessageId"])
       .index("by_messageId", ["messageId"])
