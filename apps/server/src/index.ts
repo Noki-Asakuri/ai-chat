@@ -83,9 +83,9 @@ function printStartupBanner(options: {
   }
 }
 
-export default {
+Bun.serve({
   port: PORT,
   fetch: app.fetch,
   idleTimeout: 0,
   development: process.env.NODE_ENV === "development",
-};
+});
