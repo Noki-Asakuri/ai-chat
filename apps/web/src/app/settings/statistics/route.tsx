@@ -113,6 +113,16 @@ function StatisticsPage() {
     profileChartData.push({ name: item.name, value: item.value });
   }
 
+  const assistantTokenChartData = createBreakdownChartData([
+    { name: "Output tokens", value: outputTokens },
+    { name: "Reasoning tokens", value: reasoningTokens },
+  ]);
+
+  const messageRoleChartData = createBreakdownChartData([
+    { name: "User messages", value: userMessagesCount },
+    { name: "AI messages", value: assistantMessagesCount },
+  ]);
+
   const startOfYear = `${selectedYear}-01-01`;
   const endOfYear = `${selectedYear}-12-31`;
 
@@ -234,6 +244,20 @@ function StatisticsPage() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <RankPieChart
+          title="Assistant token breakdown"
+          valueLabel="Tokens"
+          data={assistantTokenChartData}
+          emptyText="No assistant token usage yet."
+        />
+
+        <RankPieChart
+          title="Message role breakdown"
+          valueLabel="Messages"
+          data={messageRoleChartData}
+          emptyText="No messages tracked yet."
+        />
+
+        <RankPieChart
           title="Model request usage"
           valueLabel="Requests"
           data={modelChartData}
@@ -321,7 +345,7 @@ function RankPieChart(props: {
                     <Icons.provider provider={item.provider} className="size-3.5 shrink-0" />
                   ) : null}
                   <span className="min-w-0 text-muted-foreground">
-                    {item.name} ({format.number(item.value)} req -{" "}
+                    {item.name} ({format.number(item.value)} {props.valueLabel.toLowerCase()} -{" "}
                     {percentageFormat.format(item.percentage)}%)
                   </span>
                 </div>
@@ -376,11 +400,23 @@ function PieTooltipContent(
           <span>{payload.name}</span>
         </span>
         <span className="font-mono font-medium text-foreground tabular-nums">
-          {format.number(payload.value)} req - {percentageFormat.format(payload.percentage)}%
+          {format.number(payload.value)} {props.valueLabel.toLowerCase()} -{" "}
+          {percentageFormat.format(payload.percentage)}%
         </span>
       </CardContent>
     </Card>
   );
+}
+
+function createBreakdownChartData(data: Array<RankItem>): Array<RankItem> {
+  const chartData: Array<RankItem> = [];
+
+  for (const item of data) {
+    if (item.value <= 0) continue;
+    chartData.push(item);
+  }
+
+  return chartData;
 }
 
 function createPieChartConfig(data: Array<PieChartItem>, valueLabel: string): ChartConfig {
