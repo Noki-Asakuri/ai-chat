@@ -4,7 +4,7 @@ export const CHAT_NAVIGATE_TO_THREAD_EVENT = "chat:navigate-to-thread";
 
 export type NavigateToThreadEventDetail = {
   threadId: Id<"threads">;
-  source: "notification";
+  source: "notification" | "toast";
 };
 
 export function dispatchNavigateToThreadEvent(detail: NavigateToThreadEventDetail): void {

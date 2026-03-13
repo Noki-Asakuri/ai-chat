@@ -1,6 +1,8 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
+import { showStreamFeedbackToast } from "@/components/toasts/stream-feedback-toast";
 import { dispatchNavigateToThreadEvent } from "@/lib/chat/notification-navigation";
+import { useMessageStore } from "@/lib/store/messages-store";
 import { useThreadStore } from "@/lib/store/thread-store";
 import { toUUID } from "@/lib/utils";
 
@@ -40,6 +42,11 @@ function isPageInactive(): boolean {
   return document.hidden || !document.hasFocus();
 }
 
+function isViewingDifferentThread(threadId: Id<"threads">): boolean {
+  const currentThreadId = useMessageStore.getState().currentThreadId;
+  return currentThreadId !== threadId;
+}
+
 function shouldShowDesktopNotification(desktopEnabled: boolean): boolean {
   if (!desktopEnabled) return false;
   if (typeof Notification === "undefined") return false;
@@ -62,18 +69,48 @@ function getThreadPath(threadId: Id<"threads">): string {
   return `/threads/${toUUID(threadId)}`;
 }
 
-function openThread(threadId: Id<"threads">): void {
+function openThread(threadId: Id<"threads">, source: "notification" | "toast"): void {
   if (typeof window === "undefined") return;
 
   window.focus();
-  dispatchNavigateToThreadEvent({ threadId, source: "notification" });
+  dispatchNavigateToThreadEvent({ threadId, source });
 }
 
 function registerNotificationClick(notification: Notification, threadId: Id<"threads">): void {
   notification.onclick = () => {
-    openThread(threadId);
+    openThread(threadId, "notification");
     notification.close();
   };
+}
+
+function getStreamFeedbackDescription(status: StreamFeedbackStatus, errorMessage?: string): string {
+  if (status === "success") {
+    return "The latest reply finished streaming while you were in another thread.";
+  }
+
+  if (typeof errorMessage === "string" && errorMessage.trim().length > 0) {
+    return errorMessage;
+  }
+
+  return "The latest reply could not finish streaming.";
+}
+
+function showInAppToast(
+  status: StreamFeedbackStatus,
+  threadId: Id<"threads">,
+  errorMessage?: string,
+): void {
+  const threadTitle = getThreadTitle(threadId);
+
+  showStreamFeedbackToast({
+    status,
+    threadId,
+    threadTitle,
+    description: getStreamFeedbackDescription(status, errorMessage),
+    onOpenThread: () => {
+      openThread(threadId, "toast");
+    },
+  });
 }
 
 function showDesktopNotification(
@@ -83,10 +120,11 @@ function showDesktopNotification(
 ): void {
   const threadTitle = getThreadTitle(threadId);
   const threadPath = getThreadPath(threadId);
+  const body = getStreamFeedbackDescription(status, errorMessage);
 
   if (status === "success") {
     const notification = new Notification(threadTitle, {
-      body: "Response finished streaming.",
+      body,
       icon: "/icon-192.png",
       tag: `chat-stream-success-${threadId}`,
       silent: true,
@@ -98,13 +136,8 @@ function showDesktopNotification(
     return;
   }
 
-  const body =
-    typeof errorMessage === "string" && errorMessage.trim().length > 0
-      ? errorMessage
-      : "The latest response failed to stream.";
-
   const notification = new Notification(threadTitle, {
-    body: `Response failed: ${body}`,
+    body,
     icon: "/icon-192.png",
     tag: `chat-stream-error-${threadId}`,
     silent: true,
@@ -115,9 +148,16 @@ function showDesktopNotification(
 }
 
 export function emitStreamFeedback(options: StreamFeedbackOptions): void {
-  if (options.soundEnabled && isPageInactive()) {
+  const pageInactive = isPageInactive();
+
+  if (options.soundEnabled && pageInactive) {
     const soundPath = getSoundPath(options.status);
     playSound(soundPath);
+  }
+
+  if (!pageInactive && isViewingDifferentThread(options.threadId)) {
+    showInAppToast(options.status, options.threadId, options.errorMessage);
+    return;
   }
 
   if (!shouldShowDesktopNotification(options.desktopEnabled)) return;
