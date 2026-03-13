@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_chat_layout/")({
   loader: async ({ context }) => {
     await context.queryClient.prefetchQuery(
       convexQuery(api.functions.users.getCurrentUserPreferences, {
-        sessionId: context.sessionId!,
+        sessionId: context.sessionId,
       }),
     );
 

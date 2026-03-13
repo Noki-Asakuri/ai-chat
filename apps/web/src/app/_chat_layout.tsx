@@ -2,6 +2,7 @@ import "streamdown/styles.css";
 
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import type { UserPreferences } from "@ai-chat/backend/convex/functions/users";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, redirect, useParams } from "@tanstack/react-router";
@@ -57,20 +58,36 @@ export const Route = createFileRoute("/_chat_layout")({
     const params = rawParams as { threadId?: string };
     const threadId = fromUUID<Id<"threads">>(params.threadId);
 
-    const userPreferencesPromise = context.queryClient.ensureQueryData(
-      convexQuery(api.functions.users.getCurrentUserPreferences, {
-        sessionId: context.sessionId!,
-        threadId,
-      }),
+    const promises: Promise<unknown>[] = [];
+
+    promises.push(
+      context.queryClient.ensureQueryData(
+        convexQuery(api.functions.users.getCurrentUserPreferences, {
+          sessionId: context.sessionId,
+          threadId,
+        }),
+      ),
     );
 
-    const currentUserPromise = context.queryClient.prefetchQuery(
-      convexQuery(api.functions.users.currentUser, {
-        sessionId: context.sessionId!,
-      }),
+    promises.push(
+      context.queryClient.ensureQueryData(
+        convexQuery(api.functions.users.currentUser, {
+          sessionId: context.sessionId,
+        }),
+      ),
     );
 
-    const [userPreferencesData] = await Promise.all([userPreferencesPromise, currentUserPromise]);
+    if (threadId) {
+      promises.push(
+        context.queryClient.ensureQueryData(
+          convexQuery(api.functions.users.getCurrentUserPreferences, {
+            sessionId: context.sessionId,
+          }),
+        ),
+      );
+    }
+
+    const [userPreferencesData] = (await Promise.all(promises)) as [UserPreferences];
     return { user: context.user, defaultOpenSidebar, userPreferencesData };
   },
 
