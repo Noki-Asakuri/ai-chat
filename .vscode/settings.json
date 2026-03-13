@@ -18,12 +18,12 @@
     "*.css": "tailwindcss"
   },
   "oxc.enable": true,
-  "typescript.experimental.useTsgo": true,
-  "typescript.preferences.autoImportFileExcludePatterns": ["lucide-react"],
-  "typescript.preferences.autoImportSpecifierExcludeRegexes": [
+  "js/ts.experimental.useTsgo": true,
+  "js/ts.tsdk.path": "node_modules\\typescript\\lib",
+  "js/ts.preferences.autoImportFileExcludePatterns": ["lucide-react"],
+  "js/ts.preferences.autoImportSpecifierExcludeRegexes": [
     "@radix-ui",
     "radix-ui",
     "^lucide-react/dist/lucide-react.suffixed$"
-  ],
-  "typescript.tsdk": "node_modules\\typescript\\lib"
+  ]
 }
