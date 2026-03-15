@@ -1,5 +1,9 @@
+import { api } from "@ai-chat/backend/convex/_generated/api";
+
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
+import { convexQuery } from "@convex-dev/react-query";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 
@@ -16,6 +20,7 @@ import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import { threadStoreActions } from "@/lib/store/thread-store";
 import type { UserAttachment } from "@/lib/types";
+import { useSessionId } from "@/lib/hooks/use-session";
 
 const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
@@ -38,7 +43,9 @@ function getStatusAndThreadId() {
 }
 
 export function RegisterEventHandlers() {
+  const sessionId = useSessionId();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { abortChatStream } = useAbortChatStream();
 
   // Handle global paste events
@@ -203,8 +210,13 @@ export function RegisterEventHandlers() {
 
     if (eventKey === NEW_THREAD_KEYBOARD_SHORTCUT && event.shiftKey && metaKey) {
       event.preventDefault();
-      await navigate({ to: "/" });
+      await queryClient.ensureQueryData(
+        convexQuery(api.functions.users.getCurrentUserPreferences, {
+          sessionId,
+        }),
+      );
 
+      await navigate({ to: "/" });
       return;
     }
   });
