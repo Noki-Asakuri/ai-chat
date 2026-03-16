@@ -1,5 +1,6 @@
 import type { FileUIPart } from "ai";
-import { BotIcon, FileTextIcon } from "lucide-react";
+import { BotIcon, FileTextIcon, ImageOffIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { extractNameFromUrl, ImageLightboxProvider, ImageLightboxTrigger } from "../image-lightbox";
 
@@ -8,6 +9,7 @@ import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type ChatFilePart = ChatMessage["parts"][number] & FileUIPart;
+type AttachmentImageLoadState = "loading" | "loaded" | "error";
 
 type MessageAttachmentsDisplayProps = React.ComponentPropsWithoutRef<"div"> & {
   messageId: string;
@@ -91,15 +93,9 @@ export function MessageAttachmentsDisplay({
                   key={`${messageId}-attachment-${index}`}
                   className="size-40 overflow-hidden rounded-md"
                 >
-                  <img
+                  <AttachmentImageThumbnail
                     src={thumbnailUrl}
-                    alt={extractNameFromUrl(part.url)}
-                    className="aspect-square size-full object-cover object-center"
-                    loading="lazy"
-                    decoding="async"
-                    fetchPriority="low"
-                    width={MESSAGE_ATTACHMENT_SIZE_PX}
-                    height={MESSAGE_ATTACHMENT_SIZE_PX}
+                    alt={extractNameFromUrl(part.url) ?? "Attachment image"}
                   />
                 </div>
               );
@@ -108,15 +104,9 @@ export function MessageAttachmentsDisplay({
             return (
               <ImageLightboxTrigger index={imageIndex} key={`${messageId}-attachment-${index}`}>
                 <div className="size-40 overflow-hidden rounded-md">
-                  <img
+                  <AttachmentImageThumbnail
                     src={thumbnailUrl}
-                    alt={extractNameFromUrl(part.url)}
-                    className="aspect-square size-full object-cover object-center"
-                    loading="lazy"
-                    decoding="async"
-                    fetchPriority="low"
-                    width={MESSAGE_ATTACHMENT_SIZE_PX}
-                    height={MESSAGE_ATTACHMENT_SIZE_PX}
+                    alt={extractNameFromUrl(part.url) ?? "Attachment image"}
                   />
                 </div>
               </ImageLightboxTrigger>
@@ -124,6 +114,51 @@ export function MessageAttachmentsDisplay({
           })}
         </ImageLightboxProvider>
       </div>
+    </div>
+  );
+}
+
+type AttachmentImageThumbnailProps = {
+  src: string;
+  alt: string;
+};
+
+function AttachmentImageThumbnail({ src, alt }: AttachmentImageThumbnailProps) {
+  const [loadState, setLoadState] = useState<AttachmentImageLoadState>("loading");
+
+  useEffect(() => {
+    setLoadState("loading");
+  }, [src]);
+
+  const showPlaceholder = loadState !== "loaded";
+
+  return (
+    <div className="relative size-full overflow-hidden">
+      {showPlaceholder && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted">
+          {loadState === "error" ? (
+            <ImageOffIcon className="size-5 text-muted-foreground" aria-hidden="true" />
+          ) : (
+            <div className="size-full animate-pulse bg-muted" aria-hidden="true" />
+          )}
+        </div>
+      )}
+
+      <img
+        src={src}
+        alt={alt}
+        className={cn(
+          "aspect-square size-full object-cover object-center transition-opacity duration-200",
+          loadState === "loaded" ? "opacity-100" : "opacity-0",
+        )}
+        loading="lazy"
+        decoding="async"
+        fetchPriority="low"
+        width={MESSAGE_ATTACHMENT_SIZE_PX}
+        height={MESSAGE_ATTACHMENT_SIZE_PX}
+        onLoad={() => setLoadState("loaded")}
+        onError={() => setLoadState("error")}
+      />
     </div>
   );
 }
