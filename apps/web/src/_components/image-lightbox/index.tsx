@@ -308,12 +308,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
             </div>
           </div>
 
-          <div
-            className={cn(
-              "pointer-events-none relative flex min-h-0 flex-1 items-center justify-center px-6",
-              hasMultipleImages && "pb-4",
-            )}
-          >
+          <div className="pointer-events-none relative flex min-h-0 flex-1 items-center justify-center px-6">
             {hasMultipleImages && (
               <Button
                 aria-label="Previous image"
@@ -325,7 +320,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
             )}
 
             <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center self-stretch">
-              <div className="pointer-events-auto flex max-w-full flex-col items-center gap-3">
+              <div className="pointer-events-auto flex max-w-full items-center justify-center">
                 <div className="relative flex items-center justify-center">
                   <AnimatePresence initial={false} custom={navigationDirection} mode="wait">
                     <motion.div
@@ -391,15 +386,6 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
                     </motion.div>
                   </AnimatePresence>
                 </div>
-
-                <div className="relative z-10 flex shrink-0 flex-col items-center rounded-lg bg-black/55 px-3 py-2 text-center text-white backdrop-blur-sm">
-                  <div className="text-xs text-white/70">{imagePositionLabel}</div>
-                  <div className="max-w-[80vw] truncate text-sm font-medium">
-                    {active.name ?? "Untitled"}
-                  </div>
-
-                  {meta ? <div className="text-xs text-white/70">{meta}</div> : null}
-                </div>
               </div>
             </div>
 
@@ -414,47 +400,58 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
             )}
           </div>
 
-          {hasMultipleImages && (
-            <div className="pointer-events-none shrink-0 px-4 pb-4">
-              <div
-                ref={thumbsRef}
-                aria-label="Image thumbnails"
-                className="pointer-events-auto mx-auto w-fit max-w-full overflow-x-auto rounded-lg bg-black/60 p-2 backdrop-blur"
-              >
-                <div className="flex w-max items-center gap-2">
-                  {images.map((img, i) => {
-                    const isActive = i === activeIndex;
-                    const src = img.thumbnailSrc ?? img.src;
-
-                    return (
-                      <button
-                        key={`${src}-${i}`}
-                        type="button"
-                        data-index={i}
-                        onClick={onThumbClick}
-                        aria-current={isActive ? "true" : undefined}
-                        aria-pressed={isActive}
-                        className={cn(
-                          "h-14 w-14 shrink-0 overflow-hidden rounded-md ring-1 ring-white/10 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                          isActive ? "scale-110 ring-white/40" : "hover:scale-105",
-                        )}
-                        aria-label={img.name ? `View ${img.name}` : `View image ${i + 1}`}
-                      >
-                        <img
-                          src={src}
-                          alt={img.alt ?? img.name ?? `Thumbnail ${i + 1}`}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                          decoding="async"
-                          draggable={false}
-                        />
-                      </button>
-                    );
-                  })}
+          <div className="pointer-events-none shrink-0 px-4 pb-4">
+            <div className="pointer-events-auto mx-auto flex w-fit max-w-full flex-col items-center gap-2">
+              <div className="relative z-10 flex shrink-0 flex-col items-center rounded-lg bg-black/55 px-3 py-2 text-center text-white backdrop-blur-sm">
+                <div className="text-xs text-white/70">{imagePositionLabel}</div>
+                <div className="max-w-[80vw] truncate text-sm font-medium">
+                  {active.name ?? "Untitled"}
                 </div>
+
+                {meta ? <div className="text-xs text-white/70">{meta}</div> : null}
               </div>
+
+              {hasMultipleImages && (
+                <div
+                  ref={thumbsRef}
+                  aria-label="Image thumbnails"
+                  className="w-fit max-w-full overflow-x-auto rounded-lg bg-black/60 p-2 backdrop-blur"
+                >
+                  <div className="flex w-max items-center gap-2">
+                    {images.map((img, i) => {
+                      const isActive = i === activeIndex;
+                      const src = img.thumbnailSrc ?? img.src;
+
+                      return (
+                        <button
+                          key={`${src}-${i}`}
+                          type="button"
+                          data-index={i}
+                          onClick={onThumbClick}
+                          aria-current={isActive ? "true" : undefined}
+                          aria-pressed={isActive}
+                          className={cn(
+                            "h-14 w-14 shrink-0 overflow-hidden rounded-md ring-1 ring-white/10 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                            isActive ? "scale-110 ring-white/40" : "hover:scale-105",
+                          )}
+                          aria-label={img.name ? `View ${img.name}` : `View image ${i + 1}`}
+                        >
+                          <img
+                            src={src}
+                            alt={img.alt ?? img.name ?? `Thumbnail ${i + 1}`}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                            draggable={false}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </Dialog.Popup>
     </Dialog.Portal>
