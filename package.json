@@ -9,7 +9,7 @@
   ],
   "catalogs": {
     "backend": {
-      "convex": "^1.32.0",
+      "convex": "^1.33.1",
       "convex-helpers": "^0.1.114"
     },
     "shared": {
@@ -20,7 +20,7 @@
       "@axiomhq/js": "^1.4.0",
       "@axiomhq/logging": "^0.2.0",
       "@t3-oss/env-core": "^0.13.10",
-      "@workos-inc/node": "^8.8.0",
+      "@workos-inc/node": "^8.9.0",
       "ai": "^6.0.116",
       "dedent": "^1.7.2",
       "jose": "^6.1.3",
@@ -28,9 +28,9 @@
     },
     "tooling": {
       "@types/bun": "1.3.10",
-      "@typescript/native-preview": "^7.0.0-dev.20260312.1",
-      "oxlint": "^1.55.0",
-      "oxlint-tsgolint": "^0.16.0",
+      "@typescript/native-preview": "^7.0.0-dev.20260316.1",
+      "oxlint": "^1.56.0",
+      "oxlint-tsgolint": "^0.17.0",
       "typescript": "^5.9.3"
     }
   },

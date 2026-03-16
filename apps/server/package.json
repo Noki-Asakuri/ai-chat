@@ -17,7 +17,7 @@
     "ai": "catalog:shared",
     "convex": "catalog:backend",
     "dedent": "catalog:shared",
-    "hono": "^4.12.5",
+    "hono": "^4.12.8",
     "ioredis": "^5.10.0",
     "jose": "catalog:shared",
     "resumable-stream": "2.2.10",
