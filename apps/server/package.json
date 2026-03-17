@@ -20,7 +20,7 @@
     "hono": "^4.12.8",
     "ioredis": "^5.10.0",
     "jose": "catalog:shared",
-    "resumable-stream": "2.2.10",
+    "resumable-stream": "2.2.12",
     "zod": "catalog:shared"
   },
   "devDependencies": {

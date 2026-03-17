@@ -14,7 +14,7 @@
   "dependencies": {
     "@ai-sdk/google": "catalog:shared",
     "@ai-sdk/openai": "catalog:shared",
-    "@exalabs/ai-sdk": "^1.0.5",
+    "@exalabs/ai-sdk": "^2.0.0",
     "ai": "catalog:shared",
     "zod": "catalog:shared"
   },
