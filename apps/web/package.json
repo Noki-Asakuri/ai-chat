@@ -91,7 +91,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "preview": "vite build && vite preview",
+    "preview": "vite preview",
     "start": "node --env-file=./.env .output/server/index.mjs",
     "lint": "oxlint --config ../../.oxlintrc.json --type-aware .",
     "lint:fix": "oxlint --config ../../.oxlintrc.json --type-aware --fix .",

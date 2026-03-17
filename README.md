@@ -155,19 +155,28 @@ fullstack-only env validation.
 
 ### Run (dev)
 
-1. Start the web app (port `3000`):
+You can run the full development stack with one command, or start each service
+individually.
+
+1. Start the web app, AI API server, and Convex together:
+
+```bash
+bun dev
+```
+
+2. To run services individually, start the web app (port `3000`):
 
 ```bash
 bun dev:web
 ```
 
-2. Start the AI API server (port `3001`):
+3. Start the AI API server (port `3001`):
 
 ```bash
 bun dev:server
 ```
 
-3. Start Convex from the shared package:
+4. Start Convex from the shared package:
 
 ```bash
 bun dev:convex
@@ -192,15 +201,16 @@ CORS for `/api/*` is configured from `WEB_APP_ORIGIN`.
 
 From the workspace root `package.json`:
 
-- `bun dev` — alias for `bun dev:web`
+- `bun dev` — start all workspace `dev` tasks through Turbo (`web`, `server`, and `backend`)
 - `bun dev:web` — start the TanStack/Vite web app
 - `bun dev:server` — run the dedicated Bun/Hono AI API server
 - `bun dev:convex` — run Convex from `packages/backend`
-- `bun build` — build the web app
-- `bun preview` — preview the web app build
+- `bun build` — run Turbo's `build` pipeline for the workspace
+- `bun start` — run Turbo's `start` pipeline after the required build step
+- `bun preview` — run Turbo's `preview` pipeline for the web app after the required build step
 - `bun check` — run workspace lint + typecheck
-- `bun lint` / `bun lint:fix`
-- `bun typecheck`
+- `bun lint` / `bun typecheck` — run Turbo's workspace pipelines
+- `bun lint:fix` — run each workspace's lint fixer directly with Bun
 
 ## License
 
