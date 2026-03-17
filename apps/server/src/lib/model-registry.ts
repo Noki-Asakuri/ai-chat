@@ -50,6 +50,8 @@ const openai = customProvider({
 
     "gpt-5.4": baseOpenai.languageModel("gpt-5.4"),
     "gpt-5.4-pro": baseOpenai.languageModel("gpt-5.4-pro"),
+    "gpt-5.4-mini": baseOpenai.languageModel("gpt-5.4-mini"),
+    "gpt-5.4-nano": baseOpenai.languageModel("gpt-5.4-nano"),
   },
 });
 

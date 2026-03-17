@@ -257,7 +257,29 @@ export const openai: Record<ModelIdKey, ModelData> = {
       webSearch: true,
       reasoning: true,
       vision: true,
-      customReasoningLevel: ["low", "medium", "high", "xhigh"],
+      customReasoningLevel: ["none", "low", "medium", "high", "xhigh"],
+    },
+  },
+  "openai/gpt-5.4-mini": {
+    display: { name: "GPT 5.4 Mini" },
+    id: "openai/gpt-5.4-mini",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+      customReasoningLevel: ["none", "low", "medium", "high", "xhigh"],
+    },
+  },
+  "openai/gpt-5.4-nano": {
+    display: { name: "GPT 5.4 Nano" },
+    id: "openai/gpt-5.4-nano",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+      customReasoningLevel: ["none", "low", "medium", "high", "xhigh"],
     },
   },
 };
