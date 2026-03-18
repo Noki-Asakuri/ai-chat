@@ -2,6 +2,25 @@
 
 Agentic coding guide for this repository. This guide is for agents to know what is the most important thing to do.
 
+<!-- intent-skills:start -->
+
+# Skill mappings - when working in these areas, load the linked skill file into context.
+
+skills:
+
+- task: "working on React Start app setup, document shell, or route generation"
+  load: "/home/asakuri/code/ai-chat/apps/web/node_modules/@tanstack/react-start/skills/react-start/SKILL.md"
+- task: "working on auth redirects and protected chat layouts"
+  load: "/home/asakuri/code/ai-chat/node_modules/.bun/@tanstack+router-core@1.167.4/node_modules/@tanstack/router-core/skills/router-core/auth-and-guards/SKILL.md"
+- task: "working on route loaders, preloading, or query-backed navigation"
+  load: "/home/asakuri/code/ai-chat/node_modules/.bun/@tanstack+router-core@1.167.4/node_modules/@tanstack/router-core/skills/router-core/data-loading/SKILL.md"
+- task: "working on TanStack Start server functions, cookies, or request handling"
+  load: "/home/asakuri/code/ai-chat/node_modules/.bun/@tanstack+start-client-core@1.166.12/node_modules/@tanstack/start-client-core/skills/start-core/server-functions/SKILL.md"
+- task: "working on Vite devtools setup in apps/web"
+  load: "/home/asakuri/code/ai-chat/apps/web/node_modules/@tanstack/devtools-vite/skills/devtools-vite-plugin/SKILL.md"
+
+<!-- intent-skills:end -->
+
 ## General
 
 This part is for agents to know what is the most important thing to do.
@@ -9,9 +28,9 @@ This part is for agents to know what is the most important thing to do.
 1. Use bun (`bun` or `bunx`) for everything.
 2. Always use sub-agents in planning or building, same apply to skills when working with code and docs.
 3. Follow the user's instructions exactly. If you are not sure, ask the user for confirmation.
-4. For any non-trivial work (3+ distinct steps), create a `todowrite` list before doing any work, then keep it updated.
-5. Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user. If you want to verify something, ask the user first before doing it.
-6. NEVER run any eval to execute any code. Which is very dangerous and can cause irreversible damage. Including 'bun -e' or 'bun --eval' or 'bun tsc --eval'.
+4. Recommend to create to-do list for keeping progress and make sure all the tasks are done.
+5. Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
+6. Never run any scripts in terminal or bash, especially eval or any scripts that are not listed in the "Scripts" section below.
 7. When in planning mode, avoid asking questions one by one. Group your questions together and ask in a single message.
 
 ### Docs lookup
