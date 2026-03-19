@@ -52,6 +52,8 @@ const openai = customProvider({
 
     "gpt-5.4": baseOpenai.languageModel("gpt-5.4"),
     "gpt-5.4-pro": baseOpenai.languageModel("gpt-5.4-pro"),
+    "gpt-5.4-mini": baseOpenai.languageModel("gpt-5.4-mini"),
+    "gpt-5.4-nano": baseOpenai.languageModel("gpt-5.4-nano"),
   },
 });
 
@@ -71,6 +73,7 @@ const google = customProvider({
 
     "gemini-3-pro": baseGoogle.languageModel("gemini-3-pro-preview"),
     "gemini-3.1-pro": baseGoogle.languageModel("gemini-3.1-pro-preview"),
+    "gemini-3.1-flash-image": baseGoogle.languageModel("gemini-3.1-flash-image-preview"),
     "gemini-3-pro-image": baseGoogle.languageModel("gemini-3-pro-image-preview"),
   },
 });

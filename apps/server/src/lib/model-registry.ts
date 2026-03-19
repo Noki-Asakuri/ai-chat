@@ -71,6 +71,7 @@ const google = customProvider({
 
     "gemini-3-pro": baseGoogle.languageModel("gemini-3-pro-preview"),
     "gemini-3.1-pro": baseGoogle.languageModel("gemini-3.1-pro-preview"),
+    "gemini-3.1-flash-image": baseGoogle.languageModel("gemini-3.1-flash-image-preview"),
     "gemini-3-pro-image": baseGoogle.languageModel("gemini-3-pro-image-preview"),
   },
 });

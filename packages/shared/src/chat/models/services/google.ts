@@ -113,6 +113,18 @@ export const google: Record<ModelIdKey, ModelData> = {
       customReasoningLevel: ["low", "medium", "high"],
     },
   },
+  "google/gemini-3.1-flash-image": {
+    display: { name: "Gemini 3.1 Flash (Image)", unique: "Gemini 3.1 Flash (Image)" },
+    id: "google/gemini-3.1-flash-image",
+    altModelIds: ["google/gemini-3.1-flash-image-preview"],
+    provider: "google",
+    capabilities: {
+      vision: true,
+      webSearch: true,
+      reasoning: true,
+      generateImage: true,
+    },
+  },
   "google/gemini-3-pro-image": {
     display: { name: "Gemini 3 Pro (Image)", unique: "Gemini 3 Pro (Image)" },
     id: "google/gemini-3-pro-image",
@@ -121,6 +133,7 @@ export const google: Record<ModelIdKey, ModelData> = {
     capabilities: {
       vision: true,
       webSearch: true,
+      reasoning: true,
       generateImage: true,
     },
   },
