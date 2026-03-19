@@ -8,10 +8,13 @@
     "./chat/errors": "./src/chat/errors.ts",
     "./chat/validate-request-body": "./src/chat/validate-request-body.ts",
     "./chat/models": "./src/chat/models/index.ts",
+    "./chat/models/runtime-registry": "./src/chat/models/runtime-registry.ts",
     "./assets/urls": "./src/assets/urls.ts",
     "./utils/async": "./src/utils/async.ts"
   },
   "dependencies": {
+    "@ai-sdk/deepseek": "catalog:shared",
+    "@ai-sdk/devtools": "catalog:shared",
     "@ai-sdk/google": "catalog:shared",
     "@ai-sdk/openai": "catalog:shared",
     "@exalabs/ai-sdk": "^2.0.0",
