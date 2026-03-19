@@ -32,7 +32,7 @@ type CreateMessage =
 export function useSendChatMessage() {
   const navigate = useNavigate();
   const [id] = useSessionId();
-  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const configStore = useConfigStoreState();
 
   const convexClient = useConvex();

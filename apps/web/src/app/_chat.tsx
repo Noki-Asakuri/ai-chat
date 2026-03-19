@@ -38,7 +38,7 @@ const getDefaultOpenSidebar = createIsomorphicFn()
     return { defaultOpenSidebar: defaultOpenSidebar?.value === "true" };
   });
 
-export const Route = createFileRoute("/_chat_layout")({
+export const Route = createFileRoute("/_chat")({
   component: RouteComponent,
 
   beforeLoad: async ({ context, location }) => {
@@ -140,7 +140,7 @@ function RouteComponent() {
 }
 
 function ChatLayoutConfig() {
-  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const threadId = fromUUID<Id<"threads">>(params?.threadId);
 
   const { data: userPreferences } = useSuspenseQuery(

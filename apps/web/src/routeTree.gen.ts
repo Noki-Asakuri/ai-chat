@@ -10,8 +10,8 @@
 
 import { Route as rootRouteImport } from './app/__root'
 import { Route as SettingsRouteImport } from './app/settings'
-import { Route as Chat_layoutRouteImport } from './app/_chat_layout'
-import { Route as Chat_layoutIndexRouteImport } from './app/_chat_layout.index'
+import { Route as ChatRouteImport } from './app/_chat'
+import { Route as ChatIndexRouteImport } from './app/_chat.index'
 import { Route as ShareShareIdRouteImport } from './app/share.$shareId'
 import { Route as SettingsThreadsRouteImport } from './app/settings/threads'
 import { Route as SettingsAccountRouteImport } from './app/settings/account'
@@ -22,23 +22,23 @@ import { Route as SettingsProfilesRouteRouteImport } from './app/settings/profil
 import { Route as SettingsModelsRouteRouteImport } from './app/settings/models/route'
 import { Route as SettingsCustomizationRouteRouteImport } from './app/settings/customization/route'
 import { Route as SettingsAttachmentsRouteRouteImport } from './app/settings/attachments/route'
-import { Route as Chat_layoutThreadsRouteRouteImport } from './app/_chat_layout.threads.route'
+import { Route as ChatThreadsRouteRouteImport } from './app/_chat.threads.route'
 import { Route as ApiAuthCallbackRouteImport } from './app/api/auth/callback'
-import { Route as Chat_layoutThreadsThreadIdRouteImport } from './app/_chat_layout.threads.$threadId'
+import { Route as ChatThreadsThreadIdRouteImport } from './app/_chat.threads.$threadId'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Chat_layoutRoute = Chat_layoutRouteImport.update({
-  id: '/_chat_layout',
+const ChatRoute = ChatRouteImport.update({
+  id: '/_chat',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Chat_layoutIndexRoute = Chat_layoutIndexRouteImport.update({
+const ChatIndexRoute = ChatIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => Chat_layoutRoute,
+  getParentRoute: () => ChatRoute,
 } as any)
 const ShareShareIdRoute = ShareShareIdRouteImport.update({
   id: '/share/$shareId',
@@ -92,27 +92,26 @@ const SettingsAttachmentsRouteRoute =
     path: '/attachments',
     getParentRoute: () => SettingsRoute,
   } as any)
-const Chat_layoutThreadsRouteRoute = Chat_layoutThreadsRouteRouteImport.update({
+const ChatThreadsRouteRoute = ChatThreadsRouteRouteImport.update({
   id: '/threads',
   path: '/threads',
-  getParentRoute: () => Chat_layoutRoute,
+  getParentRoute: () => ChatRoute,
 } as any)
 const ApiAuthCallbackRoute = ApiAuthCallbackRouteImport.update({
   id: '/api/auth/callback',
   path: '/api/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Chat_layoutThreadsThreadIdRoute =
-  Chat_layoutThreadsThreadIdRouteImport.update({
-    id: '/$threadId',
-    path: '/$threadId',
-    getParentRoute: () => Chat_layoutThreadsRouteRoute,
-  } as any)
+const ChatThreadsThreadIdRoute = ChatThreadsThreadIdRouteImport.update({
+  id: '/$threadId',
+  path: '/$threadId',
+  getParentRoute: () => ChatThreadsRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof Chat_layoutIndexRoute
+  '/': typeof ChatIndexRoute
   '/settings': typeof SettingsRouteWithChildren
-  '/threads': typeof Chat_layoutThreadsRouteRouteWithChildren
+  '/threads': typeof ChatThreadsRouteRouteWithChildren
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
   '/settings/customization': typeof SettingsCustomizationRouteRoute
   '/settings/models': typeof SettingsModelsRouteRoute
@@ -123,12 +122,12 @@ export interface FileRoutesByFullPath {
   '/settings/account': typeof SettingsAccountRoute
   '/settings/threads': typeof SettingsThreadsRoute
   '/share/$shareId': typeof ShareShareIdRoute
-  '/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
+  '/threads/$threadId': typeof ChatThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/settings': typeof SettingsRouteWithChildren
-  '/threads': typeof Chat_layoutThreadsRouteRouteWithChildren
+  '/threads': typeof ChatThreadsRouteRouteWithChildren
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
   '/settings/customization': typeof SettingsCustomizationRouteRoute
   '/settings/models': typeof SettingsModelsRouteRoute
@@ -139,15 +138,15 @@ export interface FileRoutesByTo {
   '/settings/account': typeof SettingsAccountRoute
   '/settings/threads': typeof SettingsThreadsRoute
   '/share/$shareId': typeof ShareShareIdRoute
-  '/': typeof Chat_layoutIndexRoute
-  '/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
+  '/': typeof ChatIndexRoute
+  '/threads/$threadId': typeof ChatThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/_chat_layout': typeof Chat_layoutRouteWithChildren
+  '/_chat': typeof ChatRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
-  '/_chat_layout/threads': typeof Chat_layoutThreadsRouteRouteWithChildren
+  '/_chat/threads': typeof ChatThreadsRouteRouteWithChildren
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
   '/settings/customization': typeof SettingsCustomizationRouteRoute
   '/settings/models': typeof SettingsModelsRouteRoute
@@ -158,8 +157,8 @@ export interface FileRoutesById {
   '/settings/account': typeof SettingsAccountRoute
   '/settings/threads': typeof SettingsThreadsRoute
   '/share/$shareId': typeof ShareShareIdRoute
-  '/_chat_layout/': typeof Chat_layoutIndexRoute
-  '/_chat_layout/threads/$threadId': typeof Chat_layoutThreadsThreadIdRoute
+  '/_chat/': typeof ChatIndexRoute
+  '/_chat/threads/$threadId': typeof ChatThreadsThreadIdRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
 }
 export interface FileRouteTypes {
@@ -199,9 +198,9 @@ export interface FileRouteTypes {
     | '/api/auth/callback'
   id:
     | '__root__'
-    | '/_chat_layout'
+    | '/_chat'
     | '/settings'
-    | '/_chat_layout/threads'
+    | '/_chat/threads'
     | '/settings/attachments'
     | '/settings/customization'
     | '/settings/models'
@@ -212,13 +211,13 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/threads'
     | '/share/$shareId'
-    | '/_chat_layout/'
-    | '/_chat_layout/threads/$threadId'
+    | '/_chat/'
+    | '/_chat/threads/$threadId'
     | '/api/auth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  Chat_layoutRoute: typeof Chat_layoutRouteWithChildren
+  ChatRoute: typeof ChatRouteWithChildren
   SettingsRoute: typeof SettingsRouteWithChildren
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLogoutRoute: typeof AuthLogoutRoute
@@ -235,19 +234,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_chat_layout': {
-      id: '/_chat_layout'
+    '/_chat': {
+      id: '/_chat'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof Chat_layoutRouteImport
+      preLoaderRoute: typeof ChatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_chat_layout/': {
-      id: '/_chat_layout/'
+    '/_chat/': {
+      id: '/_chat/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof Chat_layoutIndexRouteImport
-      parentRoute: typeof Chat_layoutRoute
+      preLoaderRoute: typeof ChatIndexRouteImport
+      parentRoute: typeof ChatRoute
     }
     '/share/$shareId': {
       id: '/share/$shareId'
@@ -319,12 +318,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAttachmentsRouteRouteImport
       parentRoute: typeof SettingsRoute
     }
-    '/_chat_layout/threads': {
-      id: '/_chat_layout/threads'
+    '/_chat/threads': {
+      id: '/_chat/threads'
       path: '/threads'
       fullPath: '/threads'
-      preLoaderRoute: typeof Chat_layoutThreadsRouteRouteImport
-      parentRoute: typeof Chat_layoutRoute
+      preLoaderRoute: typeof ChatThreadsRouteRouteImport
+      parentRoute: typeof ChatRoute
     }
     '/api/auth/callback': {
       id: '/api/auth/callback'
@@ -333,43 +332,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_chat_layout/threads/$threadId': {
-      id: '/_chat_layout/threads/$threadId'
+    '/_chat/threads/$threadId': {
+      id: '/_chat/threads/$threadId'
       path: '/$threadId'
       fullPath: '/threads/$threadId'
-      preLoaderRoute: typeof Chat_layoutThreadsThreadIdRouteImport
-      parentRoute: typeof Chat_layoutThreadsRouteRoute
+      preLoaderRoute: typeof ChatThreadsThreadIdRouteImport
+      parentRoute: typeof ChatThreadsRouteRoute
     }
   }
 }
 
-interface Chat_layoutThreadsRouteRouteChildren {
-  Chat_layoutThreadsThreadIdRoute: typeof Chat_layoutThreadsThreadIdRoute
+interface ChatThreadsRouteRouteChildren {
+  ChatThreadsThreadIdRoute: typeof ChatThreadsThreadIdRoute
 }
 
-const Chat_layoutThreadsRouteRouteChildren: Chat_layoutThreadsRouteRouteChildren =
-  {
-    Chat_layoutThreadsThreadIdRoute: Chat_layoutThreadsThreadIdRoute,
-  }
-
-const Chat_layoutThreadsRouteRouteWithChildren =
-  Chat_layoutThreadsRouteRoute._addFileChildren(
-    Chat_layoutThreadsRouteRouteChildren,
-  )
-
-interface Chat_layoutRouteChildren {
-  Chat_layoutThreadsRouteRoute: typeof Chat_layoutThreadsRouteRouteWithChildren
-  Chat_layoutIndexRoute: typeof Chat_layoutIndexRoute
+const ChatThreadsRouteRouteChildren: ChatThreadsRouteRouteChildren = {
+  ChatThreadsThreadIdRoute: ChatThreadsThreadIdRoute,
 }
 
-const Chat_layoutRouteChildren: Chat_layoutRouteChildren = {
-  Chat_layoutThreadsRouteRoute: Chat_layoutThreadsRouteRouteWithChildren,
-  Chat_layoutIndexRoute: Chat_layoutIndexRoute,
+const ChatThreadsRouteRouteWithChildren =
+  ChatThreadsRouteRoute._addFileChildren(ChatThreadsRouteRouteChildren)
+
+interface ChatRouteChildren {
+  ChatThreadsRouteRoute: typeof ChatThreadsRouteRouteWithChildren
+  ChatIndexRoute: typeof ChatIndexRoute
 }
 
-const Chat_layoutRouteWithChildren = Chat_layoutRoute._addFileChildren(
-  Chat_layoutRouteChildren,
-)
+const ChatRouteChildren: ChatRouteChildren = {
+  ChatThreadsRouteRoute: ChatThreadsRouteRouteWithChildren,
+  ChatIndexRoute: ChatIndexRoute,
+}
+
+const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren)
 
 interface SettingsRouteChildren {
   SettingsAttachmentsRouteRoute: typeof SettingsAttachmentsRouteRoute
@@ -396,7 +390,7 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
-  Chat_layoutRoute: Chat_layoutRouteWithChildren,
+  ChatRoute: ChatRouteWithChildren,
   SettingsRoute: SettingsRouteWithChildren,
   AuthLoginRoute: AuthLoginRoute,
   AuthLogoutRoute: AuthLogoutRoute,

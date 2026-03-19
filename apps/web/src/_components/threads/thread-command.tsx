@@ -61,7 +61,7 @@ function PinThread() {
   const [sessionId] = useSessionId();
 
   const defaultThreads = useThreadStore((state) => state.groupedThreads.threads);
-  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
   const thread = defaultThreads.find((thread) => thread._id === fromUUID(params?.threadId));
   if (!params?.threadId) return null;

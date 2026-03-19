@@ -59,7 +59,7 @@ export const MessageContent = ({ children, className, variant, ...props }: Messa
 );
 
 export const MessageAvatar = ({ className, ...props }: ComponentProps<typeof Avatar>) => {
-  const { user } = useLoaderData({ from: "/_chat_layout" });
+  const { user } = useLoaderData({ from: "/_chat" });
   const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
 
   const avatarUrl = currentUser?.imageUrl ?? getUserAvatarUrl(user);

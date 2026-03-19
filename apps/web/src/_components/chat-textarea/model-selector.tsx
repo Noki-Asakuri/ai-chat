@@ -467,7 +467,7 @@ function PickerSectionButton({
 }
 
 export function ChatModelSelector() {
-  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const isWelcomeRoute = !params?.threadId;
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
 

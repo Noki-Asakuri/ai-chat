@@ -14,7 +14,7 @@ import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store
 import { fromUUID } from "@/lib/utils";
 
 export function useAutoResumeStream() {
-  const params = useParams({ from: "/_chat_layout/threads/$threadId" });
+  const params = useParams({ from: "/_chat/threads/$threadId" });
   const notificationSound = useConfigStore((state) => state.notificationSound);
   const desktopNotification = useConfigStore((state) => state.desktopNotification);
 

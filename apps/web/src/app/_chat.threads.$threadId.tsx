@@ -24,7 +24,7 @@ type ChatHistoryPayload = {
 
 type SyncMode = "replace" | "prepend";
 
-export const Route = createFileRoute("/_chat_layout/threads/$threadId")({
+export const Route = createFileRoute("/_chat/threads/$threadId")({
   component: ChatComponentPage,
   pendingComponent: LoadingSkeleton,
 
@@ -58,7 +58,7 @@ function ChatComponentPage() {
 }
 
 function ChatHistory() {
-  const params = useParams({ from: "/_chat_layout/threads/$threadId" });
+  const params = useParams({ from: "/_chat/threads/$threadId" });
   const threadId = fromUUID<Id<"threads">>(params.threadId);
   const shouldForceScrollToBottomRef = useRef(true);
 

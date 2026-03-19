@@ -21,7 +21,7 @@ type SyncThreadModelConfigOptions = {
 export function useSyncThreadModelConfig() {
   const [sessionId] = useSessionId();
   const convexClient = useConvex();
-  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
   const { model, effort, webSearch, profile } = useConfigStore(
     useShallow((state) => ({

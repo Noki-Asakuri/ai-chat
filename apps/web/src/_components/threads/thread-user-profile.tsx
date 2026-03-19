@@ -24,7 +24,7 @@ import { convexSessionQuery } from "@/lib/convex/helpers";
 import { cn } from "@/lib/utils";
 
 export function ThreadUserProfile() {
-  const { user } = useLoaderData({ from: "/_chat_layout" });
+  const { user } = useLoaderData({ from: "/_chat" });
   const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
 
   if (!user) return null;
@@ -114,7 +114,7 @@ type UserMenuSettingItemProps = ComponentProps<typeof Menu.Item> & {
 };
 
 function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSettingItemProps) {
-  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
   return (
     <Menu.Item

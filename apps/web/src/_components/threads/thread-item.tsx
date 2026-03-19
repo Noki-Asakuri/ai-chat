@@ -44,7 +44,7 @@ type ThreadItemProps = {
 };
 
 export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
-  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: thread._id,
     disabled,

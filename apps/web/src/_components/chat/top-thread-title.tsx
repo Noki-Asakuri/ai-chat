@@ -22,7 +22,7 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
   const [sessionId] = useSessionId();
   const [shareOpen, setShareOpen] = useState(false);
 
-  const params = useParams({ from: "/_chat_layout/threads/$threadId", shouldThrow: false });
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const threadId = fromUUID<Id<"threads">>(params?.threadId);
 
   const { data, isFetching } = useQuery({
