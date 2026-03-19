@@ -31,10 +31,10 @@ export function getRouter() {
       },
     },
     queryCache: new QueryCache({
-      onError: (error) => {
+      onError: async (error) => {
         if (error.message === "Not authenticated") {
           // Hacky way to force a reset of the session on client because of desync.
-          cookieStore.delete(DEFAULT_STORAGE_KEY).finally(() => {
+          await cookieStore.delete(DEFAULT_STORAGE_KEY).finally(() => {
             window.location.reload();
           });
         }
