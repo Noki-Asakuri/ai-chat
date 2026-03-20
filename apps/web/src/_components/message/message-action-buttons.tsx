@@ -1,7 +1,7 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { useSessionMutation } from "convex-helpers/react/sessions";
+import { useMutation } from "convex/react";
 import {
   BugPlayIcon,
   ChevronLeftIcon,
@@ -34,8 +34,8 @@ import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { MessageRetryMenu } from "./message-retry-menu";
 
-import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
 import { suppressStickyResizeAutoScroll } from "@/lib/chat/scroll-stickiness";
+import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
@@ -259,11 +259,13 @@ function EditButton({ message }: { message: ChatMessage }) {
 }
 
 function DeleteButton({ message }: { message: ChatMessage }) {
-  const deleteMessageAndBelow = useSessionMutation(api.functions.messages.deleteMessageAndBelow);
+  const [pending, startTransition] = React.useTransition();
+
   const [open, setOpen] = React.useState(false);
   const [deleteAttachments, setDeleteAttachments] = React.useState(false);
   const [deleteScope, setDeleteScope] = React.useState<DeleteScope>("turnAndBelow");
-  const [pending, startTransition] = React.useTransition();
+
+  const deleteMessageAndBelow = useMutation(api.functions.messages.deleteMessageAndBelow);
 
   const {
     threadId,
@@ -608,7 +610,7 @@ function DeleteButton({ message }: { message: ChatMessage }) {
 }
 
 function VariantPager({ message }: { message: ChatMessage }) {
-  const setActiveVariant = useSessionMutation(api.functions.messages.setActiveAssistantVariant);
+  const setActiveVariant = useMutation(api.functions.messages.setActiveAssistantVariant);
   const [pendingDirection, setPendingDirection] = React.useState<"prev" | "next" | null>(null);
 
   const { threadId, userMessageId, variants, activeVariantIndex, isStreaming } = useMessageStore(

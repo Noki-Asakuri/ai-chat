@@ -2,7 +2,8 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { useQuery } from "@tanstack/react-query";
 import { useLoaderData, useRouter } from "@tanstack/react-router";
-import { useSessionMutation } from "convex-helpers/react/sessions";
+
+import { useMutation } from "convex/react";
 import { useEffect, useRef, useState, useTransition, type SubmitEvent } from "react";
 import { toast } from "sonner";
 
@@ -30,7 +31,7 @@ export function AccountProfileCard() {
   const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
 
   const { uploadAvatarFile, deleteFile } = useStorage();
-  const updateCurrentUserImage = useSessionMutation(api.functions.users.updateCurrentUserImage);
+  const updateCurrentUserImage = useMutation(api.functions.users.updateCurrentUserImage);
 
   const [pending, startTransition] = useTransition();
 

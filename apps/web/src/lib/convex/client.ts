@@ -7,7 +7,11 @@ let convexReactClientSingleton: ConvexReactClient | undefined = undefined;
 
 export const getConvexReactClient = cache(() => {
   const url = env.VITE_CONVEX_URL;
-  convexReactClientSingleton ??= new ConvexReactClient(url);
+  convexReactClientSingleton ??= new ConvexReactClient(url, {
+    verbose: true,
+    expectAuth: true,
+    authRefreshTokenLeewaySeconds: 30,
+  });
 
   return convexReactClientSingleton;
 });

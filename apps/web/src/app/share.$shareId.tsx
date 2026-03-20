@@ -1,16 +1,17 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
-import { convexQuery } from "@convex-dev/react-query";
+
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+
+import { convexQuery } from "@convex-dev/react-query";
+import { getSignInUrl } from "@workos/authkit-tanstack-react-start";
 import { makeFunctionReference } from "convex/server";
-import { useSessionId } from "convex-helpers/react/sessions";
 import { HomeIcon, Loader2Icon, LockIcon } from "lucide-react";
 import { useEffect, useMemo } from "react";
 
 import { MessageHistory } from "@/components/message/message-history";
 import { Button } from "@/components/ui/button";
 
-import { getSignInUrl } from "@/lib/authkit/serverFunctions";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 
 type SharedQueryResult = (typeof api.functions.threadShares.getSharedThread)["_returnType"];
@@ -39,13 +40,10 @@ export const Route = createFileRoute("/share/$shareId")({
 
 function SharedThreadPage() {
   const params = Route.useParams();
-  const [sessionId] = useSessionId();
 
   const { data, error, refetch, isFetching } = useQuery({
-    ...convexQuery(getSharedThreadRef, {
-      shareId: params.shareId,
-      sessionId,
-    }),
+    ...convexQuery(getSharedThreadRef, { shareId: params.shareId }),
+
     retry(failureCount, requestError) {
       const message = requestError.message;
       const noRetryErrors = ["Share access denied", "Shared thread not found"];

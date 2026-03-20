@@ -1,7 +1,7 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { useNavigate } from "@tanstack/react-router";
-import { useSessionMutation } from "convex-helpers/react/sessions";
+import { useMutation } from "convex/react";
 import { Loader2Icon, Trash2Icon, TriangleAlertIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 
@@ -39,7 +39,7 @@ export function ThreadDeleteDialog({
   const navigate = useNavigate();
   const [pending, startTransition] = useTransition();
 
-  const deleteThread = useSessionMutation(api.functions.threads.deleteThread);
+  const deleteThread = useMutation(api.functions.threads.deleteThread);
 
   const [checked, setChecked] = useState(false);
 

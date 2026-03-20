@@ -1,7 +1,6 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { useSessionId } from "convex-helpers/react/sessions";
 import { useConvex } from "convex/react";
 import { toast } from "sonner";
 
@@ -31,9 +30,8 @@ type CreateMessage =
 
 export function useSendChatMessage() {
   const navigate = useNavigate();
-  const [id] = useSessionId();
-  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const configStore = useConfigStoreState();
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
   const convexClient = useConvex();
   const { effort, webSearch, model, profile, notificationSound, desktopNotification } =
@@ -49,7 +47,6 @@ export function useSendChatMessage() {
     );
 
   async function sendChatRequest() {
-    const sessionId = id!;
     let threadId: Id<"threads"> | null = fromUUID<Id<"threads">>(params?.threadId) ?? null;
     const { input, attachments } = useChatStore.getState();
     const metadataModelParams = { effort, webSearch, profile: profile ?? null };
@@ -67,7 +64,6 @@ export function useSendChatMessage() {
 
     if (!threadId) {
       threadId = await convexClient.mutation(api.functions.threads.createThread, {
-        sessionId,
         latestModel: model,
         latestModelParams: metadataModelParams,
       });
@@ -104,7 +100,6 @@ export function useSendChatMessage() {
     };
 
     assistantMessageId = await convexClient.mutation(api.functions.messages.addMessagesToThread, {
-      sessionId,
       threadId,
       messages: [userMessage, assistantMessage],
     });
@@ -122,7 +117,7 @@ export function useSendChatMessage() {
     });
 
     const messages = convertToUIChatMessages(messagesHistory);
-    const uploadedAttachments = await uploadUserAttachment(attachments, threadId, sessionId);
+    const uploadedAttachments = await uploadUserAttachment(attachments, threadId);
 
     messages.push({
       role: "user",
@@ -144,7 +139,6 @@ export function useSendChatMessage() {
         messageId: userMessage.messageId,
         parts: userMessageParts as ChatMessage["parts"],
         attachmentIds,
-        sessionId,
       });
     }
 
@@ -201,7 +195,6 @@ export function useSendChatMessage() {
       if (assistantMessageId) {
         const [, updateError] = await tryCatch(
           convexClient.mutation(api.functions.messages.updateErrorMessage, {
-            sessionId,
             messageId: assistantMessageId,
             error: errorMessage,
             metadata: {

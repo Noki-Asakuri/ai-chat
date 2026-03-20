@@ -713,15 +713,12 @@ export const applyAssistantCompletionTracking = internalMutation({
 });
 
 export const trackFinishedMessageById = action({
-  args: { messageId: v.id("messages"), sessionId: v.string() },
+  args: { messageId: v.id("messages") },
   returns: v.null(),
   handler: async (ctx, args) => {
     const tracking: AssistantCompletionTrackingPayload | null = await ctx.runQuery(
       api.functions.messages.getAssistantCompletionTrackingPayloadById,
-      {
-        messageId: args.messageId,
-        sessionId: args.sessionId,
-      },
+      { messageId: args.messageId },
     );
 
     if (!tracking) return null;

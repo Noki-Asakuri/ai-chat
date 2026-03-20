@@ -33,15 +33,11 @@ export type ProfilesDialogControllerHandle = {
 export const ProfilesDialogController = forwardRef<
   ProfilesDialogControllerHandle,
   {
-    sessionId: string | null | undefined;
     createProfile: (args: CreateProfileArgs) => Promise<unknown>;
     updateProfile: (args: UpdateProfileArgs) => Promise<unknown>;
     onAfterSubmit: () => void;
   }
->(function ProfilesDialogController(
-  { sessionId, createProfile, updateProfile, onAfterSubmit },
-  ref,
-) {
+>(function ProfilesDialogController({ createProfile, updateProfile, onAfterSubmit }, ref) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ProfileEditSeed | null>(null);
 
@@ -96,7 +92,7 @@ export const ProfilesDialogController = forwardRef<
         if (!name.trim() || !systemPrompt.trim()) return;
 
         setIsSubmitting(true);
-        const uploadInput = file && sessionId ? { file, sessionId } : null;
+        const uploadInput = file ? { file } : null;
 
         if (file && !uploadInput) {
           console.error("[AI Profiles] submit error:", new Error("Not authenticated"));
@@ -106,7 +102,7 @@ export const ProfilesDialogController = forwardRef<
 
         const uploadImage = uploadInput
           ? function uploadImage() {
-              return uploadAiProfileImage(uploadInput.file, uploadInput.sessionId);
+              return uploadAiProfileImage(uploadInput.file);
             }
           : function uploadImage() {
               return Promise.resolve(undefined);
@@ -142,7 +138,7 @@ export const ProfilesDialogController = forwardRef<
         setIsSubmitting(false);
       })();
     },
-    [createProfile, editing, file, name, onAfterSubmit, sessionId, systemPrompt, updateProfile],
+    [createProfile, editing, file, name, onAfterSubmit, systemPrompt, updateProfile],
   );
 
   return (

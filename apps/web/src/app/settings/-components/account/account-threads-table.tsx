@@ -1,7 +1,7 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { useSessionMutation } from "convex-helpers/react/sessions";
+import { useMutation } from "convex/react";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -139,7 +139,7 @@ type BulkDeleteDialogProps = {
 };
 
 function BulkDeleteDialog({ open, onOpenChange, threadIds, threadCount }: BulkDeleteDialogProps) {
-  const deleteThread = useSessionMutation(api.functions.threads.deleteThread);
+  const deleteThread = useMutation(api.functions.threads.deleteThread);
   const [checked, setChecked] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -489,7 +489,7 @@ export function AccountThreadsTable() {
     [pageIndex],
   );
 
-  const pinThread = useSessionMutation(api.functions.threads.pinThread);
+  const pinThread = useMutation(api.functions.threads.pinThread);
   const [, startTransition] = useTransition();
 
   const selectedCount = selected.size;

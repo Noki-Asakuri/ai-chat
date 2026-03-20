@@ -4,9 +4,8 @@ import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { useQuery } from "@tanstack/react-query";
 import { ClientOnly, Link } from "@tanstack/react-router";
 
-import { useSessionMutation } from "convex-helpers/react/sessions";
-
 import { Dialog } from "@base-ui/react/dialog";
+import { useMutation } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -68,7 +67,7 @@ function CreateGroupButton() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
 
-  const createGroup = useSessionMutation(api.functions.groups.createGroup);
+  const createGroup = useMutation(api.functions.groups.createGroup);
 
   async function onCreate(): Promise<void> {
     const trimmedTitle = title.trim();
@@ -190,10 +189,10 @@ type ThreadListProps = {
 };
 
 function ThreadList({ data }: ThreadListProps) {
-  const removeGroupId = useSessionMutation(api.functions.groups.removeGroupId);
-  const moveThreadToGroup = useSessionMutation(api.functions.groups.moveThreadToGroup);
-  const reorderThread = useSessionMutation(api.functions.groups.reorderThreadWithinGroup);
-  const moveGroupToIndex = useSessionMutation(api.functions.groups.moveGroupToIndex);
+  const removeGroupId = useMutation(api.functions.groups.removeGroupId);
+  const moveThreadToGroup = useMutation(api.functions.groups.moveThreadToGroup);
+  const reorderThread = useMutation(api.functions.groups.reorderThreadWithinGroup);
+  const moveGroupToIndex = useMutation(api.functions.groups.moveGroupToIndex);
 
   // Optimistic local state for grouped threads while dragging
   const snapshotRef = useRef<GroupThreads | null>(null);

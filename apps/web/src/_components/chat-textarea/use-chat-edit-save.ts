@@ -3,9 +3,9 @@ import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { useSessionId } from "convex-helpers/react/sessions";
 import * as React from "react";
 
+import { buildAttachmentUrl } from "@/lib/assets/urls";
 import { useRetryChatMessage } from "@/lib/chat/server-function/retry-chat-message";
 import { uploadUserAttachment } from "@/lib/chat/shared";
-import { buildAttachmentUrl } from "@/lib/assets/urls";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
@@ -24,7 +24,7 @@ export function useChatEditSave() {
     if (!editMessage || !sessionId || !threadId) return;
 
     startSaving(async () => {
-      const uploaded = await uploadUserAttachment(editMessage.attachments, threadId, sessionId);
+      const uploaded = await uploadUserAttachment(editMessage.attachments, threadId);
 
       const attachmentById = new Map<Id<"attachments">, Doc<"attachments">>();
       for (const attachment of editMessage.currentAttachments) {

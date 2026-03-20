@@ -1,9 +1,9 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { useQuery } from "@tanstack/react-query";
 import { Dialog } from "@base-ui/react/dialog";
-import { useSessionMutation } from "convex-helpers/react/sessions";
+import { useQuery } from "@tanstack/react-query";
+import { useMutation } from "convex/react";
 import {
   CopyCheckIcon,
   CopyIcon,
@@ -42,8 +42,8 @@ export function ThreadShareDialog({
   open,
   onOpenChange,
 }: ThreadShareDialogProps) {
-  const upsertThreadShare = useSessionMutation(api.functions.threadShares.upsertThreadShare);
-  const disableThreadShare = useSessionMutation(api.functions.threadShares.disableThreadShare);
+  const upsertThreadShare = useMutation(api.functions.threadShares.upsertThreadShare);
+  const disableThreadShare = useMutation(api.functions.threadShares.disableThreadShare);
   const [isSaving, startSaving] = useTransition();
   const [isDisabling, startDisabling] = useTransition();
 

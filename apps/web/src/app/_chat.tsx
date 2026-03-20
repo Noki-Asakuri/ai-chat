@@ -10,6 +10,7 @@ import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 
 import { convexQuery } from "@convex-dev/react-query";
+import { getSignInUrl } from "@workos/authkit-tanstack-react-start";
 import { PlusIcon } from "lucide-react";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
@@ -22,7 +23,6 @@ import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 import { buildImageAssetUrl } from "@/lib/assets/urls";
-import { getSignInUrl } from "@/lib/authkit/serverFunctions";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { fromUUID } from "@/lib/utils";
 
@@ -49,7 +49,7 @@ export const Route = createFileRoute("/_chat")({
       throw redirect({ href });
     }
 
-    return { user: context.user };
+    return { user: context.user, sessionId: context.sessionId };
   },
 
   loader: async ({ context, params: rawParams }) => {
@@ -62,27 +62,18 @@ export const Route = createFileRoute("/_chat")({
 
     promises.push(
       context.queryClient.ensureQueryData(
-        convexQuery(api.functions.users.getCurrentUserPreferences, {
-          sessionId: context.sessionId,
-          threadId,
-        }),
+        convexQuery(api.functions.users.getCurrentUserPreferences, { threadId }),
       ),
     );
 
     promises.push(
-      context.queryClient.ensureQueryData(
-        convexQuery(api.functions.users.currentUser, {
-          sessionId: context.sessionId,
-        }),
-      ),
+      context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser)),
     );
 
     if (threadId) {
       promises.push(
         context.queryClient.ensureQueryData(
-          convexQuery(api.functions.users.getCurrentUserPreferences, {
-            sessionId: context.sessionId,
-          }),
+          convexQuery(api.functions.users.getCurrentUserPreferences),
         ),
       );
     }

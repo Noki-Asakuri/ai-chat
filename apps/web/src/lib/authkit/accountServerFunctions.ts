@@ -1,7 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-
-import { getSessionFromCookie, saveSession, withAuth } from "./ssr/session";
-import { getWorkOS } from "./ssr/workos";
+import { getAuth, getAuthkit } from "@workos/authkit-tanstack-react-start";
 
 type UpdateAccountProfileInput = {
   firstName: string;
@@ -52,27 +50,19 @@ function getErrorDetails(error: unknown): {
 export const updateAccountProfile = createServerFn({ method: "POST" })
   .inputValidator((data: UpdateAccountProfileInput) => data)
   .handler(async ({ data }) => {
-    const session = await getSessionFromCookie();
-    if (!session?.user) {
-      throw new Error("Not authenticated");
-    }
+    const auth = await getAuth();
+    if (!auth?.user) throw new Error("Not authenticated");
 
     const firstName = normalizeEmptyToUndefined(data.firstName);
     const lastName = normalizeEmptyToUndefined(data.lastName);
     const email = cleanFormString(data.email);
 
-    const updatedUser = await getWorkOS().userManagement.updateUser({
-      userId: session.user.id,
+    const authKit = await getAuthkit();
+    const updatedUser = await authKit.getWorkOS().userManagement.updateUser({
+      userId: auth.user.id,
       email,
       firstName,
       lastName,
-    });
-
-    await saveSession({
-      accessToken: session.accessToken,
-      refreshToken: session.refreshToken,
-      user: updatedUser,
-      impersonator: session.impersonator,
     });
 
     return { user: updatedUser };
@@ -106,15 +96,16 @@ export const listAccountSessions = createServerFn({ method: "GET" }).handler(asy
   let currentSessionId: string | null = null;
 
   try {
-    const { user, sessionId } = await withAuth();
-    if (!user) {
-      throw new Error("Not authenticated");
-    }
+    const auth = await getAuth();
+    if (!auth.user) throw new Error("Not authenticated");
 
-    currentUserId = user.id;
-    currentSessionId = sessionId ?? null;
+    currentUserId = auth.user.id;
+    currentSessionId = auth.sessionId ?? null;
 
-    const sessions = await getWorkOS().userManagement.listSessions(user.id, { limit: 50 });
+    const authKit = await getAuthkit();
+    const sessions = await authKit
+      .getWorkOS()
+      .userManagement.listSessions(auth.user.id, { limit: 50 });
 
     const data: Array<AccountSession> = [];
     for (const session of sessions.data) {
@@ -159,15 +150,18 @@ type RevokeAccountSessionInput = {
 export const revokeAccountSession = createServerFn({ method: "POST" })
   .inputValidator((data: RevokeAccountSessionInput) => data)
   .handler(async ({ data }) => {
-    const { sessionId: currentSessionId, user } = await withAuth();
-    if (!user || !currentSessionId) {
+    const auth = await getAuth();
+
+    if (!auth.user) {
       throw new Error("Not authenticated");
     }
 
-    if (data.sessionId === currentSessionId) {
+    if (data.sessionId === auth.sessionId) {
       throw new Error("Cannot revoke the current session");
     }
 
-    await getWorkOS().userManagement.revokeSession({ sessionId: data.sessionId });
+    const authKit = await getAuthkit();
+    await authKit.getWorkOS().userManagement.revokeSession({ sessionId: data.sessionId });
+
     return { ok: true };
   });

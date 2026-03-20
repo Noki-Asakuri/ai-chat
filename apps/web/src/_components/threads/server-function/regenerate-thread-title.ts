@@ -2,9 +2,9 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { createServerFn } from "@tanstack/react-start";
+import { getAuth } from "@workos/authkit-tanstack-react-start";
 import { convertToModelMessages } from "ai";
 
-import { withAuth } from "@/lib/authkit/ssr/session";
 import { createServerConvexClient } from "@/lib/convex/server";
 import { updateTitle } from "@/lib/server/update-title";
 import type { UIChatMessage } from "@/lib/types";
@@ -14,14 +14,13 @@ export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
   .inputValidator((data: { threadId: Id<"threads"> }) => data)
   .handler(async ({ data }) => {
     try {
-      const { user, sessionId } = await withAuth();
+      const { user } = await getAuth();
       if (!user) return { error: "Not authenticated" };
 
       const serverConvexClient = createServerConvexClient();
 
       const { title } = await serverConvexClient.query(api.functions.threads.getThreadTitle, {
         threadId: data.threadId,
-        sessionId,
       });
 
       // Either user is not logged in or thread doesn't belong to user.
@@ -29,7 +28,6 @@ export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
 
       // Optimistically mark the title as regenerating on the server.
       await serverConvexClient.mutation(api.functions.threads.updateThreadTitle, {
-        sessionId,
         threadId: data.threadId,
         title: "Regenerating...",
       });
@@ -37,7 +35,6 @@ export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
       const [result, error] = await tryCatch(
         serverConvexClient.query(api.functions.messages.getAllMessagesWithoutAttachments, {
           threadId: data.threadId,
-          sessionId,
         }),
       );
 
@@ -51,7 +48,7 @@ export const regenerateThreadTitleServerFn = createServerFn({ method: "GET" })
         { role: "user", parts: firstUser.parts as UIChatMessage["parts"] },
       ]);
 
-      await updateTitle({ threadId: data.threadId, messages, serverConvexClient, sessionId });
+      await updateTitle({ threadId: data.threadId, messages, serverConvexClient });
 
       return { status: "ok" };
     } catch (err) {

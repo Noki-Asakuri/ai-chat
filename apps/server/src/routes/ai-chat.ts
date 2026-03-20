@@ -136,7 +136,7 @@ export function registerAiChatRoutes(app: Hono): void {
     }
 
     const cookieHeader = ctx.req.header("Cookie");
-    let auth: { userId: string; sessionId: string } | null = null;
+    let auth: { userId: string; accessToken: string } | null = null;
 
     try {
       auth = await getAuthContextFromCookieHeader({ cookieHeader });
@@ -152,10 +152,9 @@ export function registerAiChatRoutes(app: Hono): void {
       return Response.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
     }
 
-    const convexClient = createServerConvexClient();
+    const convexClient = createServerConvexClient(auth.accessToken);
 
     const canResume = await convexClient.query(api.functions.messages.canResumeStream, {
-      sessionId: auth.sessionId,
       streamId,
     });
 
@@ -189,7 +188,7 @@ export function registerAiChatRoutes(app: Hono): void {
   app.post("/api/ai/chat/abort", async (ctx) => {
     const requestId = ctx.get("requestId");
     const cookieHeader = ctx.req.header("Cookie");
-    let auth: { userId: string; sessionId: string } | null = null;
+    let auth: { userId: string; accessToken: string } | null = null;
 
     try {
       auth = await getAuthContextFromCookieHeader({ cookieHeader });
@@ -219,7 +218,7 @@ export function registerAiChatRoutes(app: Hono): void {
     const aborted = abortStream(body.streamId);
     removeStream(body.streamId);
 
-    const convexClient = createServerConvexClient();
+    const convexClient = createServerConvexClient(auth.accessToken);
 
     type FinishedUpdates =
       (typeof api.functions.messages.updateFinishedMessageById)["_args"]["updates"];
@@ -236,16 +235,11 @@ export function registerAiChatRoutes(app: Hono): void {
 
     const shouldTrack = await convexClient.mutation(
       api.functions.messages.updateFinishedMessageById,
-      {
-        sessionId: auth.sessionId,
-        messageId: body.assistantMessageId,
-        updates,
-      },
+      { messageId: body.assistantMessageId, updates },
     );
 
     if (shouldTrack) {
       void convexClient.action(api.functions.messages.trackFinishedMessageById, {
-        sessionId: auth.sessionId,
         messageId: body.assistantMessageId,
       });
     }
@@ -268,7 +262,7 @@ export function registerAiChatRoutes(app: Hono): void {
     const requestId = ctx.get("requestId");
     const cookieHeader = req.header("Cookie");
 
-    let auth: { userId: string; sessionId: string } | null = null;
+    let auth: { userId: string; accessToken: string } | null = null;
 
     try {
       auth = await getAuthContextFromCookieHeader({ cookieHeader });
@@ -277,11 +271,12 @@ export function registerAiChatRoutes(app: Hono): void {
       return Response.json({ error: { message: "Error: Unauthenticated!" } }, { status: 401 });
     }
 
-    const { userId, sessionId } = auth;
+    const { userId } = auth;
 
     logger.info("[Chat] Chat request received", { userId, requestId });
 
-    const convexClient = createServerConvexClient();
+    const convexClient = createServerConvexClient(auth.accessToken);
+
     let assistantMessageIdForError: Id<"messages"> | null = null;
     let threadIdForError: Id<"threads"> | null = null;
     let modelUniqueIdForError: string | null = null;
@@ -342,14 +337,12 @@ export function registerAiChatRoutes(app: Hono): void {
       // Enforce per-user usage limit before processing the request
       const usage = await convexClient.mutation(api.functions.usages.checkAndIncrement, {
         amount: 1,
-        sessionId,
       });
 
       if (!usage.allowed) {
         const type = usage.resetType === "daily" ? "Daily" : "Monthly";
 
         await convexClient.mutation(api.functions.messages.updateErrorMessage, {
-          sessionId,
           messageId: assistantMessageId,
           error: `${type} message limit reached (${usage.used}/${usage.base}).`,
           metadata: { model: { request: model.uniqueId, response: null }, modelParams },
@@ -372,14 +365,11 @@ export function registerAiChatRoutes(app: Hono): void {
 
       const userPreferencesPromise = convexClient.query(
         api.functions.users.getCurrentUserPreferences,
-        { sessionId },
+        {},
       );
 
       const profilePromise = modelParams.profile
-        ? convexClient.query(api.functions.profiles.getProfile, {
-            sessionId,
-            profileId: modelParams.profile,
-          })
+        ? convexClient.query(api.functions.profiles.getProfile, { profileId: modelParams.profile })
         : null;
 
       const [userPreferences, profile] = await Promise.all([
@@ -453,7 +443,7 @@ export function registerAiChatRoutes(app: Hono): void {
 
         if (usageReserved && !usageRefunded) {
           const [, refundError] = await tryCatch(
-            convexClient.mutation(api.functions.usages.refundRequest, { amount: 1, sessionId }),
+            convexClient.mutation(api.functions.usages.refundRequest, { amount: 1 }),
           );
 
           if (refundError) {
@@ -472,7 +462,6 @@ export function registerAiChatRoutes(app: Hono): void {
 
         const [, persistError] = await tryCatch(
           convexClient.mutation(api.functions.messages.updateErrorMessage, {
-            sessionId,
             error: errorMessage,
             messageId: assistantMessageId,
             metadata: { model: { request: model.uniqueId, response: null }, modelParams },
@@ -553,7 +542,6 @@ export function registerAiChatRoutes(app: Hono): void {
         messages: modelMessages,
         threadId,
         serverConvexClient: convexClient,
-        sessionId,
       });
 
       let reasoningStartTime = 0;
@@ -576,7 +564,6 @@ export function registerAiChatRoutes(app: Hono): void {
           await Promise.all([
             streamContext.createNewResumableStream(activeStreamId, () => stream),
             convexClient.mutation(api.functions.messages.updateMessageById, {
-              sessionId,
               messageId: assistantMessageId,
               updates: { status: "streaming", resumableStreamId: activeStreamId, metadata },
             }),
@@ -646,7 +633,6 @@ export function registerAiChatRoutes(app: Hono): void {
             const shouldTrack = await convexClient.mutation(
               api.functions.messages.updateFinishedMessageById,
               {
-                sessionId,
                 messageId: assistantMessageId,
                 updates: {
                   attachments: [],
@@ -660,7 +646,6 @@ export function registerAiChatRoutes(app: Hono): void {
 
             if (shouldTrack) {
               void convexClient.action(api.functions.messages.trackFinishedMessageById, {
-                sessionId,
                 messageId: assistantMessageId,
               });
             }
@@ -696,7 +681,6 @@ export function registerAiChatRoutes(app: Hono): void {
           const generatedFiles = (await result.files).map(async (file, index) => {
             const data = await serverUploadFileR2({
               threadId,
-              sessionId,
               buffer: file.uint8Array,
               mediaType: file.mediaType,
               serverConvexClient: convexClient,
@@ -739,7 +723,6 @@ export function registerAiChatRoutes(app: Hono): void {
           const shouldTrack = await convexClient.mutation(
             api.functions.messages.updateFinishedMessageById,
             {
-              sessionId,
               updates,
               messageId: assistantMessageId,
             },
@@ -747,7 +730,6 @@ export function registerAiChatRoutes(app: Hono): void {
 
           if (shouldTrack) {
             void convexClient.action(api.functions.messages.trackFinishedMessageById, {
-              sessionId,
               messageId: assistantMessageId,
             });
           }
@@ -775,7 +757,7 @@ export function registerAiChatRoutes(app: Hono): void {
 
       if (usageReserved && !usageRefunded) {
         const [, refundError] = await tryCatch(
-          convexClient.mutation(api.functions.usages.refundRequest, { amount: 1, sessionId }),
+          convexClient.mutation(api.functions.usages.refundRequest, { amount: 1 }),
         );
 
         if (refundError) {
@@ -800,7 +782,6 @@ export function registerAiChatRoutes(app: Hono): void {
       ) {
         const [, persistError] = await tryCatch(
           convexClient.mutation(api.functions.messages.updateErrorMessage, {
-            sessionId,
             messageId: assistantMessageIdForError,
             error: GENERIC_CHAT_ERROR_MESSAGE,
             metadata: {

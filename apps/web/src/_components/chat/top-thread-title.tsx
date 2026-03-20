@@ -3,14 +3,13 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
-import { useSessionId } from "convex-helpers/react/sessions";
 import { PinIcon, PinOffIcon, Share2Icon } from "lucide-react";
 import { useState } from "react";
 
+import { Skeleton } from "@/components/ui/skeleton";
 import { ThreadShareDialog } from "../threads/thread-share-dialog";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 
 import { getConvexReactClient } from "@/lib/convex/client";
 import { convexSessionQuery } from "@/lib/convex/helpers";
@@ -19,7 +18,6 @@ import { fromUUID } from "@/lib/utils";
 const convexClient = getConvexReactClient();
 
 export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
-  const [sessionId] = useSessionId();
   const [shareOpen, setShareOpen] = useState(false);
 
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
@@ -38,12 +36,11 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
   const threadData = data;
 
   function toggleThreadPin() {
-    if (!threadId || !sessionId) return;
+    if (!threadId) return;
 
     void convexClient.mutation(api.functions.threads.pinThread, {
       threadId,
       pinned: !threadData.pinned,
-      sessionId,
     });
   }
 

@@ -1,13 +1,11 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { useSessionMutation } from "convex-helpers/react/sessions";
-
-import { useDebounce } from "@uidotdev/usehooks";
-
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
+import { useDebounce } from "@uidotdev/usehooks";
+import { useMutation } from "convex/react";
 import type { ComponentPropsWithoutRef } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -48,7 +46,7 @@ function RouteComponent() {
     convexSessionQuery(api.functions.users.getCurrentUserPreferences),
   );
 
-  const updateUserPreferences = useSessionMutation(api.functions.users.updateUserPreferences);
+  const updateUserPreferences = useMutation(api.functions.users.updateUserPreferences);
   const { uploadFile, deleteFile } = useStorage();
 
   const [sendPreference, setSendPreference] = useState<SendPreference>(

@@ -31,7 +31,6 @@ import { ThreadDeleteDialog } from "./thread-delete-dialog";
 import { ThreadShareDialog } from "./thread-share-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
-import { useSessionId } from "@/lib/hooks/use-session";
 import type { Thread } from "@/lib/types";
 import { cn, toUUID } from "@/lib/utils";
 
@@ -131,8 +130,6 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const sessionId = useSessionId();
-
   const regenerateThreadTitle = useServerFn(regenerateThreadTitleServerFn);
 
   function toggleThreadPin() {
@@ -140,7 +137,6 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
     void convexClient.mutation(api.functions.threads.pinThread, {
       threadId: thread._id,
       pinned: !thread.pinned,
-      sessionId,
     });
   }
 
@@ -155,7 +151,6 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
     console.debug("[Thread] Update title", { threadId: thread._id, title });
     startSaving(async () => {
       await convexClient.mutation(api.functions.threads.updateThreadTitle, {
-        sessionId,
         threadId: thread._id,
         title,
       });

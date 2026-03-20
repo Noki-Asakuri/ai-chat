@@ -2,7 +2,6 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useParams } from "@tanstack/react-router";
-import { useSessionId } from "convex-helpers/react/sessions";
 import { useConvex } from "convex/react";
 import { useShallow } from "zustand/shallow";
 
@@ -19,7 +18,6 @@ type SyncThreadModelConfigOptions = {
 };
 
 export function useSyncThreadModelConfig() {
-  const [sessionId] = useSessionId();
   const convexClient = useConvex();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
@@ -33,8 +31,6 @@ export function useSyncThreadModelConfig() {
   );
 
   async function syncThreadModelConfig(options: SyncThreadModelConfigOptions = {}) {
-    if (!sessionId) return;
-
     const resolvedThreadId = options.threadId ?? fromUUID<Id<"threads">>(params?.threadId);
     const latestModel = options.model ?? model;
 
@@ -50,7 +46,6 @@ export function useSyncThreadModelConfig() {
     const [, error] = resolvedThreadId
       ? await tryCatch(
           convexClient.mutation(api.functions.threads.updateThreadModelConfig, {
-            sessionId,
             threadId: resolvedThreadId,
             latestModel,
             latestModelParams,
@@ -58,7 +53,6 @@ export function useSyncThreadModelConfig() {
         )
       : await tryCatch(
           convexClient.mutation(api.functions.users.updateUserDefaultModelConfig, {
-            sessionId,
             defaultModel: latestModel,
             modelParams: latestModelParams,
           }),

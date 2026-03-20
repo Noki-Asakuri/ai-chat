@@ -1,19 +1,13 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
-import { useSessionId } from "convex-helpers/react/sessions";
-
 import { getConvexReactClient } from "../convex/client";
 import { tryCatch } from "../utils";
 
 const convexClient = getConvexReactClient();
 
 export function useStorage() {
-  const [sessionId] = useSessionId() as readonly [string, () => void, Promise<string>];
-
   async function uploadFile({ file }: { file: File }) {
-    const { url, key } = await convexClient.mutation(api.functions.files.generateUserUploadUrl, {
-      sessionId,
-    });
+    const { url, key } = await convexClient.mutation(api.functions.files.generateUserUploadUrl);
 
     const [, error] = await tryCatch(async () => {
       const result = await fetch(url, {
@@ -34,10 +28,7 @@ export function useStorage() {
   async function uploadAvatarFile({ file }: { file: File }) {
     const { url, key } = await convexClient.mutation(
       api.functions.files.generateUserAvatarUploadUrl,
-      {
-        sessionId,
-        mimeType: file.type,
-      },
+      { mimeType: file.type },
     );
 
     const [, error] = await tryCatch(async () => {
@@ -57,7 +48,7 @@ export function useStorage() {
   }
 
   async function deleteFile(key: string) {
-    await convexClient.mutation(api.functions.files.deleteFile, { key, sessionId });
+    await convexClient.mutation(api.functions.files.deleteFile, { key });
   }
 
   return { uploadFile, uploadAvatarFile, deleteFile };

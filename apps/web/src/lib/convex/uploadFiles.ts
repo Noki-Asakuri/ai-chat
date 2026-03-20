@@ -9,7 +9,7 @@ const convexClient = getConvexReactClient();
 
 export async function uploadFileToR2(
   file: File,
-  data: { threadId: Id<"threads">; fileId: string; sessionId: string },
+  data: { threadId: Id<"threads">; fileId: string },
 ) {
   const { url, key: filePath } = await convexClient.mutation(
     api.functions.files.generateAttachmentUploadUrl,
@@ -36,10 +36,9 @@ export async function uploadFileToR2(
  * Upload an AI Profile image to R2 via a pre-signed URL.
  * Returns the R2 key that should be saved on the profile (imageKey).
  */
-export async function uploadAiProfileImage(file: File, sessionId: string) {
+export async function uploadAiProfileImage(file: File) {
   const { url, key } = await convexClient.mutation(
     api.functions.profiles.generateAiProfileUploadUrl,
-    { sessionId },
   );
 
   const [, error] = await tryCatch(async () => {

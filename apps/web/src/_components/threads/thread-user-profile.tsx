@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 
 export function ThreadUserProfile() {
   const { user } = useLoaderData({ from: "/_chat" });
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
 
   if (!user) return null;
@@ -32,6 +33,8 @@ export function ThreadUserProfile() {
   const initials = getUserInitials(user);
   const username = getUserDisplayName(user);
   const avatarUrl = currentUser?.imageUrl ?? getUserAvatarUrl(user);
+
+  const rt = params?.threadId ? `/threads/${params.threadId}` : "/";
 
   return (
     <Menu.Root>
@@ -97,7 +100,7 @@ export function ThreadUserProfile() {
             <Menu.Item
               nativeButton={false}
               className="flex w-full cursor-pointer items-center justify-start gap-1.5 rounded-md px-1.5 py-1 text-sm text-destructive transition-colors hover:bg-destructive/20"
-              render={<Link preload={false} to="/auth/logout" />}
+              render={<Link to="/auth/logout" search={{ rt }} />}
             >
               <LogOutIcon className="size-5" />
               Logout

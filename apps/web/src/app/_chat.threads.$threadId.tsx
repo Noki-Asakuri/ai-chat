@@ -32,17 +32,11 @@ export const Route = createFileRoute("/_chat/threads/$threadId")({
     const threadId = fromUUID<Id<"threads">>(params.threadId);
 
     await context.queryClient.prefetchQuery(
-      convexQuery(api.functions.users.getCurrentUserPreferences, {
-        sessionId: context.sessionId!,
-        threadId,
-      }),
+      convexQuery(api.functions.users.getCurrentUserPreferences, { threadId }),
     );
 
     void context.queryClient.prefetchQuery(
-      convexQuery(api.functions.messages.getAllMessagesFromThread, {
-        threadId: fromUUID<Id<"threads">>(params.threadId),
-        sessionId: context.sessionId,
-      }),
+      convexQuery(api.functions.messages.getAllMessagesFromThread, { threadId }),
     );
   },
 });

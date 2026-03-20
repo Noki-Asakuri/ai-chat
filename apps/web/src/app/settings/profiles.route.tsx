@@ -1,11 +1,10 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
+import { useMutation } from "convex/react";
 import { PlusIcon, SearchIcon } from "lucide-react";
 import { memo, useCallback, useRef } from "react";
 import { z } from "zod";
-
-import { useSessionId, useSessionMutation } from "convex-helpers/react/sessions";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -151,8 +150,6 @@ function ProfilesList({
 }
 
 function AiProfilesPage() {
-  const [sessionId] = useSessionId();
-
   const searchParams = Route.useSearch();
   const navigate = Route.useNavigate();
 
@@ -165,9 +162,9 @@ function AiProfilesPage() {
   });
   const profiles = (data ?? []) as Array<ProfileListItem>;
 
-  const createProfile = useSessionMutation(api.functions.profiles.createProfile);
-  const updateProfile = useSessionMutation(api.functions.profiles.updateProfile);
-  const deleteProfile = useSessionMutation(api.functions.profiles.deleteProfile);
+  const createProfile = useMutation(api.functions.profiles.createProfile);
+  const updateProfile = useMutation(api.functions.profiles.updateProfile);
+  const deleteProfile = useMutation(api.functions.profiles.deleteProfile);
 
   const dialogRef = useRef<ProfilesDialogControllerHandle | null>(null);
 
@@ -240,7 +237,6 @@ function AiProfilesPage() {
 
       <ProfilesDialogController
         ref={dialogRef}
-        sessionId={sessionId}
         createProfile={createProfile}
         updateProfile={updateProfile}
         onAfterSubmit={() => void refetch()}

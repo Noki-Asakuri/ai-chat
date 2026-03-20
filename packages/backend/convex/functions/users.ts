@@ -154,9 +154,7 @@ export const updateUserPreferences = authenticatedMutation({
 });
 
 export const updateCurrentUserImage = authenticatedMutation({
-  args: {
-    imageUrl: v.nullable(v.string()),
-  },
+  args: { imageUrl: v.nullable(v.string()) },
   handler: async (ctx, { imageUrl }) => {
     const user = ctx.user;
     if (!user) throw new Error("Not authenticated");

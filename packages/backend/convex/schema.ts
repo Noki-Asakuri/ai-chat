@@ -459,9 +459,6 @@ export default defineSchema(
       used: v.number(),
       base: v.number(),
       resetType: v.optional(v.union(v.literal("monthly"), v.literal("daily"))),
-
-      // @deprecate, no point of using this anymore
-      resetAt: v.optional(v.number()),
     }).index("by_userId", ["userId"]),
 
     session: defineTable({

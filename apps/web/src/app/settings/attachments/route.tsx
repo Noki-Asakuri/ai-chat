@@ -1,11 +1,10 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { useSessionMutation } from "convex-helpers/react/sessions";
-
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
+import { useMutation } from "convex/react";
 import {
   ArrowDownAZIcon,
   ArrowDownNarrowWideIcon,
@@ -15,10 +14,10 @@ import {
   CalendarArrowDownIcon,
   CalendarArrowUpIcon,
   CheckIcon,
-  ChevronsLeftIcon,
-  ChevronsRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
   FileTextIcon,
   ImageIcon,
   LayersIcon,
@@ -217,7 +216,7 @@ function getVisiblePageNumbers(currentPage: number, totalPages: number): Array<n
 }
 
 function AttachmentsPage() {
-  const deleteAttachments = useSessionMutation(api.functions.attachments.deleteAttachments);
+  const deleteAttachments = useMutation(api.functions.attachments.deleteAttachments);
 
   const [searchText, setSearchText] = useState<string>("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
@@ -844,7 +843,7 @@ function DeleteAttachmentDialog({
   name,
 }: DeleteAttachmentDialogProps) {
   const [pending, startTransition] = useTransition();
-  const deleteAttachment = useSessionMutation(api.functions.attachments.deleteAttachment);
+  const deleteAttachment = useMutation(api.functions.attachments.deleteAttachment);
 
   function onDelete() {
     if (!attachmentId) return;

@@ -1,6 +1,6 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
-import { useSessionMutation } from "convex-helpers/react/sessions";
+import { useMutation } from "convex/react";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -21,7 +21,7 @@ function RouteComponent() {
   const { data: preferences, isPending: isDisabled } = useSuspenseQuery(
     convexSessionQuery(api.functions.users.getCurrentUserPreferences),
   );
-  const updateUserPreferences = useSessionMutation(api.functions.users.updateUserPreferences);
+  const updateUserPreferences = useMutation(api.functions.users.updateUserPreferences);
 
   return (
     <div className="space-y-6">

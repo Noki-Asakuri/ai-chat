@@ -148,7 +148,6 @@ type UploadedAttachment = {
 export function uploadUserAttachment(
   attachments: UserAttachment[],
   threadId: Id<"threads">,
-  sessionId: string,
 ): Promise<UploadedAttachment[]> {
   const uploadPromises: Promise<UploadedAttachment>[] = [];
   const convexClient = getConvexReactClient();
@@ -164,17 +163,12 @@ export function uploadUserAttachment(
         size: attachment.file.size,
         mimeType: attachment.file.type,
         threadId: threadId,
-        sessionId: sessionId,
         source: "user",
         type: attachment.type,
       },
     );
 
-    const uploadFilePromise = uploadFileToR2(attachment.file, {
-      fileId: attachment.id,
-      threadId,
-      sessionId,
-    });
+    const uploadFilePromise = uploadFileToR2(attachment.file, { fileId: attachment.id, threadId });
 
     const [{ docId }, filePath] = await Promise.all([createAttachmentPromise, uploadFilePromise]);
     return { attachmentId: docId, path: filePath, mediaType: attachment.file.type };

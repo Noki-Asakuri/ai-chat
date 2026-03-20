@@ -1,7 +1,7 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLoaderData, useSearch } from "@tanstack/react-router";
+import { Link, useLoaderData, useLocation, useSearch } from "@tanstack/react-router";
 import { ArrowLeftIcon, LogOutIcon } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -55,12 +55,14 @@ function ReturnToChatButton() {
 }
 
 function SignOutButton() {
+  const location = useLocation();
+
   return (
     <Button
       variant="destructive"
       className="mt-auto w-full"
       nativeButton={false}
-      render={<Link to="/auth/logout" />}
+      render={<Link to="/auth/logout" search={{ rt: location.pathname }} />}
     >
       <LogOutIcon />
       Sign out

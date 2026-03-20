@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+import { tryCatch } from "@ai-chat/shared/utils/async";
+
 import appCss from "@/styles/globals.css?url";
 
 import { TanStackDevtools } from "@tanstack/react-devtools";
@@ -16,7 +18,15 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
 import { type ConvexQueryClient } from "@convex-dev/react-query";
+import { getAuth } from "@workos/authkit-tanstack-react-start";
+import {
+  AuthKitProvider,
+  useAccessToken,
+  useAuth,
+} from "@workos/authkit-tanstack-react-start/client";
 import { SessionProvider } from "convex-helpers/react/sessions";
+import { ConvexProviderWithAuth } from "convex/react";
+import { useCallback, useMemo } from "react";
 
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -26,13 +36,13 @@ import { DefaultNotFoundBoundary } from "@/components/default-not-found-boundary
 import { Toaster } from "@/components/ui/sonner";
 import { VersionUpdateNotifier } from "@/components/version-update-notifier";
 
-import { getAuth } from "@/lib/authkit/serverFunctions";
 import {
   CHAT_NAVIGATE_TO_THREAD_EVENT,
   type NavigateToThreadEventDetail,
 } from "@/lib/chat/notification-navigation";
-import { useWindowEvent } from "@/lib/hooks/use-window-event";
+import { getConvexReactClient } from "@/lib/convex/client";
 import { sessionUseCookie } from "@/lib/hooks/use-cookie";
+import { useWindowEvent } from "@/lib/hooks/use-window-event";
 import { fromUUID, toUUID } from "@/lib/utils";
 
 type RootContext = {
@@ -101,8 +111,10 @@ export const Route = createRootRouteWithContext<RootContext>()({
     };
   },
   beforeLoad: async () => {
-    const { user, sessionId } = await getAuth();
-    return { user, sessionId };
+    const auth = await getAuth();
+    if (!auth.user) return { user: undefined, sessionId: undefined };
+
+    return { user: auth.user, sessionId: auth.sessionId };
   },
   loader: async ({ context }) => {
     return { user: context.user, sessionId: context.sessionId };
@@ -121,9 +133,11 @@ export function RootLayout() {
   );
 }
 
+const convex = getConvexReactClient();
+
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const loaderData = Route.useLoaderData();
   const navigate = useNavigate();
+  const loaderData = Route.useLoaderData();
 
   useWindowEvent<CustomEvent<NavigateToThreadEventDetail>>(
     CHAT_NAVIGATE_TO_THREAD_EVENT,
@@ -148,12 +162,17 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
 
       <body className="dark isolate max-h-svh overflow-hidden font-sans">
-        <SessionProvider
-          useStorage={sessionUseCookie}
-          idGenerator={() => loaderData.sessionId ?? ""}
+        <AuthKitProvider
+          initialAuth={
+            loaderData.user && loaderData.sessionId
+              ? { user: loaderData.user, sessionId: loaderData.sessionId }
+              : { user: null }
+          }
         >
-          {children}
-        </SessionProvider>
+          <ConvexProviderWithAuth client={convex} useAuth={useAuthFromWorkOS}>
+            <SessionProvider useStorage={sessionUseCookie}>{children}</SessionProvider>
+          </ConvexProviderWithAuth>
+        </AuthKitProvider>
 
         <Scripts />
         <Toaster />
@@ -183,5 +202,29 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         />
       </body>
     </html>
+  );
+}
+
+function useAuthFromWorkOS() {
+  const { user, loading } = useAuth();
+  const { getAccessToken, refresh } = useAccessToken();
+
+  const fetchAccessToken = useCallback(
+    async function ({ forceRefreshToken }: { forceRefreshToken: boolean }) {
+      console.log("[Auth] Fetching access token");
+      if (forceRefreshToken) {
+        console.log("[Auth] Forcing refresh token");
+        await refresh();
+      }
+
+      const [token] = await tryCatch(getAccessToken());
+      return token ?? null;
+    },
+    [getAccessToken, refresh],
+  );
+
+  return useMemo(
+    () => ({ isLoading: loading, isAuthenticated: !!user, fetchAccessToken }),
+    [loading, user, fetchAccessToken],
   );
 }

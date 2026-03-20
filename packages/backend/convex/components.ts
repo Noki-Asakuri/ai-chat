@@ -19,20 +19,14 @@ export const authKit = new AuthKit<DataModel>(components.workOSAuthKit, {
 });
 
 export const authenticatedQuery = customQuery(query, {
-  args: { sessionId: v.optional(v.string()) },
-  input: async (ctx, { sessionId }) => {
-    if (!sessionId) return { ctx: { ...ctx, user: null }, args: {} };
-
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
-      .unique();
-
-    if (!session) return { ctx: { ...ctx, user: null }, args: {} };
+  args: {},
+  input: async (ctx) => {
+    const userFromAuthKit = await ctx.auth.getUserIdentity();
+    if (!userFromAuthKit) return { ctx: { ...ctx, user: null }, args: {} };
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_userId", (q) => q.eq("userId", session.userId))
+      .withIndex("by_userId", (q) => q.eq("userId", userFromAuthKit.subject))
       .unique();
 
     return { ctx: { ...ctx, user }, args: {} };
@@ -40,20 +34,14 @@ export const authenticatedQuery = customQuery(query, {
 });
 
 export const authenticatedMutation = customMutation(mutation, {
-  args: { sessionId: v.string() },
-  input: async (ctx, { sessionId }) => {
-    if (!sessionId) return { ctx: { ...ctx, user: null }, args: {} };
-
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
-      .unique();
-
-    if (!session) return { ctx: { ...ctx, user: null }, args: {} };
+  args: {},
+  input: async (ctx) => {
+    const userFromAuthKit = await ctx.auth.getUserIdentity();
+    if (!userFromAuthKit) return { ctx: { ...ctx, user: null }, args: {} };
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_userId", (q) => q.eq("userId", session.userId))
+      .withIndex("by_userId", (q) => q.eq("userId", userFromAuthKit.subject))
       .unique();
 
     return { ctx: { ...ctx, user }, args: {} };

@@ -1,17 +1,14 @@
-import { decodeJwt } from "jose";
 import {
   decryptAuthSession,
   getAuthSessionCookieName,
   readCookieFromHeader,
 } from "@ai-chat/auth-session";
 
-import type { AccessToken } from "@workos-inc/node";
-
 import { env } from "./env";
 
 export type ServerAuthContext = {
   userId: string;
-  sessionId: string;
+  accessToken: string;
 };
 
 export async function getAuthContextFromCookieHeader(options: {
@@ -22,13 +19,11 @@ export async function getAuthContextFromCookieHeader(options: {
 
   const wosSession = await decryptAuthSession(wosSessionEncrypted, env.WORKOS_COOKIE_PASSWORD);
   const userId = wosSession.user.id;
+  const accessToken = wosSession.accessToken;
 
-  const decoded = decodeJwt<AccessToken>(wosSession.accessToken);
-  const sessionId = decoded.sid;
-
-  if (!userId || !sessionId) {
+  if (!userId || !accessToken) {
     throw new Error("Unauthenticated");
   }
 
-  return { userId, sessionId };
+  return { userId, accessToken };
 }

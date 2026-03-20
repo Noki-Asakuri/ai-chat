@@ -20,7 +20,6 @@ import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import { threadStoreActions } from "@/lib/store/thread-store";
 import type { UserAttachment } from "@/lib/types";
-import { useSessionId } from "@/lib/hooks/use-session";
 
 const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
@@ -43,7 +42,6 @@ function getStatusAndThreadId() {
 }
 
 export function RegisterEventHandlers() {
-  const sessionId = useSessionId();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { abortChatStream } = useAbortChatStream();
@@ -210,11 +208,7 @@ export function RegisterEventHandlers() {
 
     if (eventKey === NEW_THREAD_KEYBOARD_SHORTCUT && event.shiftKey && metaKey) {
       event.preventDefault();
-      await queryClient.ensureQueryData(
-        convexQuery(api.functions.users.getCurrentUserPreferences, {
-          sessionId,
-        }),
-      );
+      await queryClient.ensureQueryData(convexQuery(api.functions.users.getCurrentUserPreferences));
 
       await navigate({ to: "/" });
       return;

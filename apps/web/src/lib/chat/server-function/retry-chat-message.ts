@@ -1,14 +1,13 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { useSessionId } from "convex-helpers/react/sessions";
 import { useConvex } from "convex/react";
 import { toast } from "sonner";
 
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 
-import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
+import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
@@ -35,7 +34,6 @@ type RetryChatMessage = {
 };
 
 export function useRetryChatMessage() {
-  const [id] = useSessionId();
   const convexClient = useConvex();
   const configProfile = useConfigStore((state) => state.profile);
   const configWebSearch = useConfigStore((state) => state.webSearch);
@@ -44,7 +42,6 @@ export function useRetryChatMessage() {
   const configStore = useConfigStoreState();
 
   async function retryChatMessage({ userMessageId, ...options }: RetryChatMessage) {
-    const sessionId = id!;
     const messageState = useMessageStore.getState();
 
     const threadId = messageState.currentThreadId;
@@ -103,7 +100,6 @@ export function useRetryChatMessage() {
 
     try {
       const retryResult = await convexClient.mutation(api.functions.messages.retryChatMessage, {
-        sessionId,
         threadId,
         assistantMessageId,
 
@@ -178,7 +174,6 @@ export function useRetryChatMessage() {
 
       const [, updateError] = await tryCatch(
         convexClient.mutation(api.functions.messages.updateErrorMessage, {
-          sessionId,
           messageId: errorTargetMessageId,
           error: errorMessage,
           metadata: {

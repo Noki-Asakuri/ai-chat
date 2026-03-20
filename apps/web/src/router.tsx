@@ -3,8 +3,9 @@ import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 
 import { ConvexQueryClient } from "@convex-dev/react-query";
+import { getAuth } from "@workos/authkit-tanstack-react-start";
 import { DEFAULT_STORAGE_KEY } from "convex-helpers/react/sessions";
-import { ConvexProvider } from "convex/react";
+import { type ConvexReactClient } from "convex/react";
 
 import { StrictMode } from "react";
 
@@ -15,9 +16,11 @@ import { getConvexReactClient } from "./lib/convex/client";
 
 import { routeTree } from "./routeTree.gen";
 
+const convexClient = getConvexReactClient();
+
 export function getRouter() {
-  const convexClient = getConvexReactClient();
   const convexQueryClient = new ConvexQueryClient(convexClient);
+  ensureAuthSSRConvexClient(convexClient, convexQueryClient);
 
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -51,20 +54,36 @@ export function getRouter() {
     defaultErrorComponent: DefaultCatchBoundary,
     defaultNotFoundComponent: DefaultNotFoundBoundary,
 
-    Wrap: ({ children }) => (
-      <StrictMode>
-        <ConvexProvider client={convexClient}>{children}</ConvexProvider>
-      </StrictMode>
-    ),
+    Wrap: ({ children }) => <StrictMode>{children}</StrictMode>,
   });
 
   setupRouterSsrQueryIntegration({ router, queryClient });
-
   return router;
 }
 
 declare module "@tanstack/react-router" {
   interface Register {
     router: ReturnType<typeof getRouter>;
+  }
+}
+
+async function ensureAuthSSRConvexClient(
+  convexClient: ConvexReactClient,
+  convexQueryClient: ConvexQueryClient,
+) {
+  const isServer = import.meta.env.SSR;
+  if (!isServer) return;
+
+  console.log("[Server] Setting up auth for server");
+
+  convexClient.setAuth(async function () {
+    const auth = await getAuth();
+    if (!auth.user) return null;
+    return auth.accessToken;
+  });
+
+  const auth = await getAuth();
+  if (auth.user) {
+    convexQueryClient.serverHttpClient?.setAuth(auth.accessToken);
   }
 }

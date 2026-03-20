@@ -12,12 +12,10 @@ export async function updateTitle({
   messages,
   threadId,
   serverConvexClient,
-  sessionId,
 }: {
   threadId: Id<"threads">;
   messages: ModelMessage[];
   serverConvexClient: ServerConvexClient;
-  sessionId: string;
 }) {
   if (messages.length > 1 || !messages[0] || !threadId) return;
   console.debug("[Server] Updating thread title", threadId);
@@ -57,7 +55,6 @@ export async function updateTitle({
 
   await serverConvexClient.mutation(api.functions.threads.updateThreadTitle, {
     threadId,
-    sessionId,
     title: text.trim(),
   });
 }

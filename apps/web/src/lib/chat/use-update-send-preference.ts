@@ -1,18 +1,17 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
-import { useSessionMutation } from "convex-helpers/react/sessions";
-
+import { useMutation } from "convex/react";
 import { useCallback, useContext } from "react";
 
 import { ConfigStoreContext } from "@/components/provider/config-provider";
 
-import type { SendPreference } from "./send-preference";
-
 import { tryCatch } from "@/lib/utils";
+
+import type { SendPreference } from "./send-preference";
 
 export function useUpdateSendPreference() {
   const configStore = useContext(ConfigStoreContext);
-  const updateUserPreferences = useSessionMutation(api.functions.users.updateUserPreferences);
+  const updateUserPreferences = useMutation(api.functions.users.updateUserPreferences);
 
   return useCallback(
     async function updateSendPreference(nextPreference: SendPreference): Promise<Error | null> {

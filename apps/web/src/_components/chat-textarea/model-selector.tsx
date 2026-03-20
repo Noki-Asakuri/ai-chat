@@ -1,7 +1,7 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
-import { useSessionMutation } from "convex-helpers/react/sessions";
 import { useParams } from "@tanstack/react-router";
+import { useMutation } from "convex/react";
 
 import { ChevronDownIcon, LayersIcon, StarIcon } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -131,9 +131,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   const [selectedSection, setSelectedSection] = useState<PickerSectionKey>("all");
   const [isSavingFavorites, setIsSavingFavorites] = useState(false);
 
-  const updateUserModelPreferences = useSessionMutation(
-    api.functions.users.updateUserModelPreferences,
-  );
+  const updateUserModelPreferences = useMutation(api.functions.users.updateUserModelPreferences);
 
   const {
     hiddenModels,
