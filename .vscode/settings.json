@@ -18,8 +18,8 @@
     "*.css": "tailwindcss"
   },
   "oxc.enable": true,
-  "js/ts.experimental.useTsgo": true,
-  "js/ts.tsdk.path": "node_modules\\typescript\\lib",
+  "js/ts.experimental.useTsgo": false,
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
   "js/ts.preferences.autoImportFileExcludePatterns": ["lucide-react"],
   "js/ts.preferences.autoImportSpecifierExcludeRegexes": [
     "@radix-ui",
