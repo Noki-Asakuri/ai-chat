@@ -17,7 +17,7 @@ import type { ChatMessage } from "@/lib/types";
 export type ToolPart = ToolUIPart<UITools> | DynamicToolUIPart;
 
 type MessageToolPartsProps = {
-  parts: ToolPart[];
+  parts?: ToolPart[] | null;
   className?: string;
 };
 
@@ -431,7 +431,7 @@ function MessageToolPart({ part }: { part: ToolPart }) {
     }
 
     if (part.state === "output-error") {
-      return normalizeSummaryText(part.errorText);
+      return normalizeSummaryText(part.errorText ?? "Tool execution failed");
     }
 
     if (part.state === "approval-requested") {
@@ -458,7 +458,7 @@ function MessageToolPart({ part }: { part: ToolPart }) {
     }
 
     if (part.state === "output-error") {
-      return { label: "Error", value: part.errorText };
+      return { label: "Error", value: part.errorText ?? "Tool execution failed" };
     }
 
     if (part.state === "approval-requested") {
@@ -471,6 +471,8 @@ function MessageToolPart({ part }: { part: ToolPart }) {
 
     return null;
   }, [isOpen, part.errorText, part.input, part.output, part.state, webSearchOutput]);
+
+  const detailValue = detail?.value ?? "";
 
   return (
     <div className="rounded-md border bg-background/80 px-2 py-1.5 backdrop-blur-md backdrop-saturate-150">
@@ -503,13 +505,13 @@ function MessageToolPart({ part }: { part: ToolPart }) {
 
       {isOpen && webSearchOutput && <WebSearchOutputView output={webSearchOutput} />}
 
-      {detail && detail.value.length > 0 && (
+      {detail && detailValue.length > 0 && (
         <div className="mt-1 rounded bg-background/80 px-2 py-1.5">
           <div className="mb-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
             {detail.label}
           </div>
           <pre className="overflow-x-auto text-xs break-words whitespace-pre-wrap text-foreground">
-            {detail.value}
+            {detailValue}
           </pre>
         </div>
       )}
@@ -518,11 +520,13 @@ function MessageToolPart({ part }: { part: ToolPart }) {
 }
 
 export function MessageToolParts({ parts, className }: MessageToolPartsProps) {
-  if (parts.length === 0) return null;
+  const toolParts = parts ?? [];
+
+  if (toolParts.length === 0) return null;
 
   return (
     <div className={cn("flex w-full flex-col gap-1", className)}>
-      {parts.map((part, index) => (
+      {toolParts.map((part, index) => (
         <MessageToolPart key={`${part.toolCallId}-${index}`} part={part} />
       ))}
     </div>
