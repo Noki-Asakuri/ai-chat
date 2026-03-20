@@ -10,28 +10,15 @@ export type Session = {
   impersonator?: Impersonator;
 };
 
-export function getAuthSessionCookieName(cookieName?: string | null): string {
-  return cookieName && cookieName.length > 0 ? cookieName : DEFAULT_AUTH_SESSION_COOKIE_NAME;
-}
-
-export async function decryptAuthSession(
-  encryptedSession: string,
-  cookiePassword: string,
-): Promise<Session> {
+export async function decryptAuthSession(encryptedSession: string, cookiePassword: string) {
   return unsealData<Session>(encryptedSession, { password: cookiePassword });
 }
 
-export async function encryptAuthSession(
-  session: Session,
-  cookiePassword: string,
-): Promise<string> {
+export async function encryptAuthSession(session: Session, cookiePassword: string) {
   return sealData(session, { password: cookiePassword, ttl: 0 });
 }
 
-export function readCookieFromHeader(
-  cookieHeader: string | undefined,
-  cookieName: string,
-): string | null {
+export function readCookieFromHeader(cookieHeader: string | undefined, cookieName: string) {
   if (!cookieHeader) return null;
 
   const cookieEntries = cookieHeader.split(";");

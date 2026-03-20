@@ -17,6 +17,7 @@ export const env = createEnv({
     WORKOS_API_KEY: z.string(),
     WORKOS_CLIENT_ID: z.string(),
     WORKOS_REDIRECT_URI: z.string(),
+    WORKOS_COOKIE_DOMAIN: z.string(),
     WORKOS_COOKIE_PASSWORD: z.string(),
   },
 

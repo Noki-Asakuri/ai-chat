@@ -14,9 +14,8 @@ export const env = createEnv({
 
     WORKOS_API_KEY: z.string(),
     WORKOS_CLIENT_ID: z.string(),
-    WORKOS_REDIRECT_URI: z.string(),
     WORKOS_COOKIE_PASSWORD: z.string(),
-    WORKOS_COOKIE_NAME: z.string().optional(),
+
     WEB_APP_ORIGIN: z.string().default("http://localhost:3000"),
 
     AXIOM_TOKEN: z.string(),

@@ -19,7 +19,5 @@ export const terminateSession = createServerFn({ method: "POST" })
     deleteCookie(DEFAULT_AUTH_SESSION_COOKIE_NAME);
 
     console.log("[Auth] Terminated session", { sessionId, returnTo, logoutUrl });
-    await fetch(logoutUrl, { credentials: "include", cache: "no-store" });
-
-    throw redirect({ to: returnTo, throw: true, reloadDocument: true });
+    throw redirect({ href: logoutUrl, throw: true, reloadDocument: true });
   });
