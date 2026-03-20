@@ -10,7 +10,7 @@
   ],
   "catalogs": {
     "backend": {
-      "convex": "^1.33.1",
+      "convex": "^1.34.0",
       "convex-helpers": "^0.1.114"
     },
     "shared": {
@@ -29,9 +29,9 @@
     },
     "tooling": {
       "@types/bun": "1.3.11",
-      "@typescript/native-preview": "^7.0.0-dev.20260319.1",
+      "@typescript/native-preview": "^7.0.0-dev.20260320.1",
       "oxlint": "^1.56.0",
-      "oxlint-tsgolint": "^0.17.0",
+      "oxlint-tsgolint": "^0.17.1",
       "typescript": "^5.9.3"
     }
   },
@@ -63,7 +63,7 @@
     "oxlint-tsgolint": "catalog:tooling",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "turbo": "^2.8.19",
+    "turbo": "^2.8.20",
     "typescript": "catalog:tooling"
   },
   "trustedDependencies": []

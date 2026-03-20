@@ -26,12 +26,11 @@ skills:
 This part is for agents to know what is the most important thing to do.
 
 1. Use bun (`bun` or `bunx`) for everything.
-2. Always use sub-agents in planning or building, same apply to skills when working with code and docs.
-3. Follow the user's instructions exactly. If you are not sure, ask the user for confirmation.
-4. Recommend to create to-do list for keeping progress and make sure all the tasks are done.
-5. Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
-6. Never run any scripts in terminal or bash, especially eval or any scripts that are not listed in the "Scripts" section below.
-7. When in planning mode, avoid asking questions one by one. Group your questions together and ask in a single message.
+2. Follow the user's instructions exactly. If you are not sure, ask the user for confirmation.
+3. Recommend to create to-do list for keeping progress and make sure all the tasks are done.
+4. Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
+5. Never run any scripts in terminal or bash, especially eval or any scripts that are not listed in the "Scripts" section below.
+6. When in planning mode, avoid asking questions one by one. Group your questions together and ask in a single message.
 
 ### Docs lookup
 
@@ -51,25 +50,12 @@ Do not make any changes to the `components.json` file.
 ## Scripts
 
 This repo uses Bun for install and run scripts. But only use scripts that you're allowed to run or asked to run.
-Anything else are forbidden to run by the agent. Same as manually run with `bunx`.
+Any other scripts are forbidden to run by the agent. Same as manually run with `bunx`.
 
 These scripts are needed to be run everytime you finished the task.
 
 - `bun check`: Run lint, format and typecheck.
   - Run this at the end of every task. Ensure no errors before finishing a task.
-
-These scripts are not needed, prefer to not use them and use `bun check` instead.
-
-- `bun typecheck`: Typecheck the codebase.
-- `bun lint` and `bun lint:fix`: Lint the codebase.
-- `bun format:check` and `bun format:write`: Format the codebase.
-
-These scripts must not be run by the agent under any circumstances.
-
-- `bun dev` and `bun dev:server` and `bun dev:convex`: Start up a development server for the web/API/Convex with watch mode.
-- `bun start` and `bun start:server`: Start up a production server for the web app and API.
-- `bun preview`: Build and preview the codebase.
-- `bun build`: Build the codebase.
 
 ## TypeScript conventions
 
@@ -77,10 +63,6 @@ TypeScript are meant to be strict, predictable and type-safe.
 It's forbidden to use `any` or casting `as`, instead use type narrowing.
 
 If the type checking failing due to unrelated change not related to the task, ignore and do not fix it. Only fix the type checking if it's related to the task.
-
-### Convex
-
-This project uses Convex for database. After updating anything inside `convex/` folder, make sure to run `bun check` to ensure the type generation is correct. But do not run any codegen scripts, just tell the user to update the generated types after the task is done.
 
 ### React
 
@@ -93,3 +75,13 @@ Comment are for clarifying complex logic or workarounds, not for describing what
 - IMPORTANT: do not add useless comments.
 - Prefer self-explanatory code via naming and structure over comments.
 - Only add comments when they clarify a race condition (for example, `setTimeout`), a long-term TODO, or a confusing behavior that even a senior engineer won't immediately infer.
+
+<!-- convex-ai-start -->
+
+## Convex
+
+This project uses [Convex](https://convex.dev) as its backend.
+
+When working on Convex code, **always read `packages/backend/convex/_generated/ai/guidelines.md` first** for important guidelines on how to correctly use Convex APIs and patterns. The file contains rules that override what you may have learned about Convex from training data.
+
+<!-- convex-ai-end -->

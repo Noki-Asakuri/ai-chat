@@ -18,7 +18,7 @@
     "convex": "catalog:backend",
     "dedent": "catalog:shared",
     "hono": "^4.12.8",
-    "ioredis": "^5.10.0",
+    "ioredis": "^5.10.1",
     "jose": "catalog:shared",
     "resumable-stream": "2.2.12",
     "zod": "catalog:shared"
