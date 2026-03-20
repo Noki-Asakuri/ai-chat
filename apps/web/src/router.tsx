@@ -24,25 +24,8 @@ export function getRouter() {
 
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: {
-        queryKeyHashFn: convexQueryClient.hashFn(),
-        queryFn: convexQueryClient.queryFn(),
-        retry(failureCount, error) {
-          const ignoreErrors = ["Not authenticated", "Not authorized"];
-          return ignoreErrors.some((e) => error.message.includes(e)) ? false : failureCount < 3;
-        },
-      },
+      queries: { queryKeyHashFn: convexQueryClient.hashFn(), queryFn: convexQueryClient.queryFn() },
     },
-    queryCache: new QueryCache({
-      onError: async (error) => {
-        if (error.message === "Not authenticated") {
-          // Hacky way to force a reset of the session on client because of desync.
-          await cookieStore.delete(DEFAULT_STORAGE_KEY).finally(() => {
-            window.location.reload();
-          });
-        }
-      },
-    }),
   });
   convexQueryClient.connect(queryClient);
 
