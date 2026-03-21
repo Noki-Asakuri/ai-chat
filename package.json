@@ -66,5 +66,8 @@
     "turbo": "^2.8.20",
     "typescript": "catalog:tooling"
   },
-  "trustedDependencies": []
+  "trustedDependencies": [],
+  "patchedDependencies": {
+    "@workos/authkit-tanstack-react-start@0.5.0": "patches/@workos%2Fauthkit-tanstack-react-start@0.5.0.patch"
+  }
 }
