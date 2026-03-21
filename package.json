@@ -21,6 +21,7 @@
       "@axiomhq/js": "^1.4.0",
       "@axiomhq/logging": "^0.2.0",
       "@t3-oss/env-core": "^0.13.10",
+      "@workos/authkit-session": "^0.3.4",
       "@workos-inc/node": "^8.9.0",
       "ai": "^6.0.116",
       "dedent": "^1.7.2",

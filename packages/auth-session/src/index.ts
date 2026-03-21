@@ -1,5 +1,5 @@
 import type { Impersonator, User } from "@workos-inc/node";
-import { sealData, unsealData } from "iron-session";
+import { sessionEncryption } from "@workos/authkit-session";
 
 export const DEFAULT_AUTH_SESSION_COOKIE_NAME = "wos-session";
 
@@ -11,11 +11,7 @@ export type Session = {
 };
 
 export async function decryptAuthSession(encryptedSession: string, cookiePassword: string) {
-  return unsealData<Session>(encryptedSession, { password: cookiePassword });
-}
-
-export async function encryptAuthSession(session: Session, cookiePassword: string) {
-  return sealData(session, { password: cookiePassword, ttl: 0 });
+  return sessionEncryption.unsealData<Session>(encryptedSession, { password: cookiePassword });
 }
 
 export function readCookieFromHeader(cookieHeader: string | undefined, cookieName: string) {
