@@ -211,10 +211,12 @@ function useAuthFromWorkOS() {
 
   const fetchAccessToken = useCallback(
     async function ({ forceRefreshToken }: { forceRefreshToken: boolean }) {
-      console.log("[Auth] Fetching access token");
+      console.debug("[Auth] Fetching access token");
+
       if (forceRefreshToken) {
-        console.log("[Auth] Forcing refresh token");
-        await refresh();
+        console.debug("[Auth] Forcing refresh token");
+        const token = await refresh();
+        return token ?? null;
       }
 
       const [token] = await tryCatch(getAccessToken());
