@@ -57,6 +57,7 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
   };
 
   const isStreaming = thread.status === "streaming" || thread.status === "pending";
+  const isRecentlyCreated = thread._creationTime > Date.now() - 1000 * 60 * 60 * 24 * 2;
 
   return (
     <div
@@ -76,6 +77,9 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
       )}
     >
       <Link
+        preload={isRecentlyCreated || thread.pinned ? "viewport" : "intent"}
+        preloadDelay={100}
+        preloadIntentProximity={60}
         title={thread.title}
         to="/threads/$threadId"
         params={{ threadId: toUUID(thread._id) }}
