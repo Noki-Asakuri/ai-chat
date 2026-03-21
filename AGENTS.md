@@ -31,6 +31,7 @@ This part is for agents to know what is the most important thing to do.
 4. Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
 5. Never run any scripts in terminal or bash, especially eval or any scripts that are not listed in the "Scripts" section below.
 6. When in planning mode, avoid asking questions one by one. Group your questions together and ask in a single message.
+7. When reviewing git diff, avoid reading bun.lock file, it really long and not important.
 
 ### Docs lookup
 
