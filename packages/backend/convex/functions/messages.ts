@@ -12,9 +12,6 @@ type UserMessageDoc = MessageDoc & { role: "user" };
 type AssistantMessageDoc = MessageDoc & { role: "assistant" };
 type DeleteScope = "turnAndBelow" | "assistantVariantOnly";
 
-const DEFAULT_THREAD_MESSAGES_PAGE_SIZE = 60;
-const MAX_THREAD_MESSAGES_PAGE_SIZE = 200;
-
 type ThreadMessageGraph = {
   messagesById: Record<Id<"messages">, MessageDoc>;
 
@@ -279,8 +276,6 @@ const assistantCompletionTrackingPayloadValidator = v.object({
 export const getAllMessagesFromThread = authenticatedQuery({
   args: {
     threadId: v.id("threads"),
-    limit: v.optional(v.number()),
-    beforeCreatedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
@@ -300,60 +295,16 @@ export const getAllMessagesFromThread = authenticatedQuery({
       .order("asc")
       .collect();
 
-    const safeLimit = Math.max(
-      1,
-      Math.min(
-        MAX_THREAD_MESSAGES_PAGE_SIZE,
-        Math.floor(args.limit ?? DEFAULT_THREAD_MESSAGES_PAGE_SIZE),
-      ),
-    );
-    const beforeCreatedAt = args.beforeCreatedAt;
-
     type MessageWithAttachments = Omit<Doc<"messages">, "attachments"> & {
       attachments: Doc<"attachments">[];
     };
 
-    const messagesById: Record<Id<"messages">, MessageDoc> = {};
-    for (const message of messages) {
-      messagesById[message._id] = message;
-    }
-
     const graph = buildThreadMessageGraph(messages);
 
     const canonicalMessageIds = graph.canonicalMessageIds;
-    let endExclusive = canonicalMessageIds.length;
-
-    if (beforeCreatedAt !== undefined) {
-      for (let i = canonicalMessageIds.length - 1; i >= 0; i -= 1) {
-        const messageId = canonicalMessageIds[i];
-        if (!messageId) continue;
-
-        const candidate = messagesById[messageId];
-        if (!candidate) continue;
-
-        if (candidate.createdAt < beforeCreatedAt) {
-          endExclusive = i + 1;
-          break;
-        }
-
-        endExclusive = i;
-      }
-    }
-
-    const startInclusive = Math.max(0, endExclusive - safeLimit);
-    let adjustedStartInclusive = startInclusive;
-
-    const firstSliceMessageId = canonicalMessageIds[adjustedStartInclusive];
-    const firstSliceMessage = firstSliceMessageId ? graph.messagesById[firstSliceMessageId] : null;
-
-    if (firstSliceMessage?.role === "assistant" && adjustedStartInclusive > 0) {
-      adjustedStartInclusive -= 1;
-    }
-
-    const canonicalSliceIds = canonicalMessageIds.slice(adjustedStartInclusive, endExclusive);
 
     const sliceUserMessageIds = new Set<Id<"messages">>();
-    for (const messageId of canonicalSliceIds) {
+    for (const messageId of canonicalMessageIds) {
       const message = graph.messagesById[messageId];
       if (!message) continue;
 
@@ -368,7 +319,7 @@ export const getAllMessagesFromThread = authenticatedQuery({
       }
     }
 
-    const visibleMessageIds = new Set<Id<"messages">>(canonicalSliceIds);
+    const visibleMessageIds = new Set<Id<"messages">>(canonicalMessageIds);
     for (const userMessageId of sliceUserMessageIds) {
       visibleMessageIds.add(userMessageId);
 
@@ -426,7 +377,7 @@ export const getAllMessagesFromThread = authenticatedQuery({
     }
 
     const canonicalMessages: MessageWithAttachments[] = [];
-    for (const messageId of canonicalSliceIds) {
+    for (const messageId of canonicalMessageIds) {
       const message = hydratedVisibleMessagesById[messageId];
       if (!message) continue;
       canonicalMessages.push(message);
@@ -450,7 +401,6 @@ export const getAllMessagesFromThread = authenticatedQuery({
       allMessages,
       thread,
       variantMessageIdsByUserMessageId,
-      hasOlderMessages: adjustedStartInclusive > 0,
     };
   },
 });
@@ -464,7 +414,7 @@ export const getAllMessagesWithoutAttachments = authenticatedQuery({
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_userId_threadId", (q) =>
-        q.eq("userId", user.userId).eq("threadId", args.threadId!),
+        q.eq("userId", user.userId).eq("threadId", args.threadId),
       )
       .order("asc")
       .collect();
