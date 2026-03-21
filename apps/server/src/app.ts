@@ -4,10 +4,10 @@ import { logger as honoLogger } from "hono/logger";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 
+import { authenticate } from "./auth";
 import { env } from "./env";
-
-import { registerAiChatRoutes } from "./routes/ai-chat";
 import { logger } from "./lib/logger";
+import { handleAbortChat, handlePostChat, handleResumeChat } from "./routes/ai-chat";
 
 type ServerState = {
   serverStartedAt: number;
@@ -99,7 +99,9 @@ export function createServerApp(options: { commitSha: string }): ServerApp {
   // Health check route for Docker/K8s
   app.get("/health", (ctx) => ctx.text("OK"));
 
-  registerAiChatRoutes(app);
+  app.get("/api/ai/chat", authenticate, handleResumeChat);
+  app.post("/api/ai/chat", authenticate, handlePostChat);
+  app.post("/api/ai/chat/abort", authenticate, handleAbortChat);
 
   process.on("unhandledRejection", (reason) => {
     logger.error("[Server] Unhandled Rejection", { reason });
