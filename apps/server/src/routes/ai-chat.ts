@@ -132,7 +132,7 @@ export async function handleResumeChat(ctx: Context): Promise<Response> {
     return Response.json({ error: { message: "Error: Missing streamId!" } }, { status: 400 });
   }
 
-  const convexClient = createServerConvexClient(auth.accessToken);
+  const convexClient = createServerConvexClient({ getAccessToken: auth.getAccessToken });
 
   const canResume = await convexClient.query(api.functions.messages.canResumeStream, {
     streamId,
@@ -181,7 +181,7 @@ export async function handleAbortChat(ctx: Context): Promise<Response> {
   const aborted = abortStream(body.streamId);
   removeStream(body.streamId);
 
-  const convexClient = createServerConvexClient(auth.accessToken);
+  const convexClient = createServerConvexClient({ getAccessToken: auth.getAccessToken });
 
   type FinishedUpdates =
     (typeof api.functions.messages.updateFinishedMessageById)["_args"]["updates"];
@@ -230,7 +230,7 @@ export async function handlePostChat(ctx: Context): Promise<Response> {
 
   logger.info("[Chat] Chat request received", { userId, requestId });
 
-  const convexClient = createServerConvexClient(auth.accessToken);
+  const convexClient = createServerConvexClient({ getAccessToken: auth.getAccessToken });
 
   let assistantMessageIdForError: Id<"messages"> | null = null;
   let threadIdForError: Id<"threads"> | null = null;

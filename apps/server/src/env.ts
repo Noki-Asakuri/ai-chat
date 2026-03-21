@@ -14,7 +14,12 @@ export const env = createEnv({
 
     WORKOS_API_KEY: z.string(),
     WORKOS_CLIENT_ID: z.string(),
-    WORKOS_COOKIE_PASSWORD: z.string(),
+
+    WORKOS_COOKIE_NAME: z.string().optional(),
+    WORKOS_COOKIE_PASSWORD: z.string().min(32),
+    WORKOS_COOKIE_DOMAIN: z.string().optional(),
+    WORKOS_COOKIE_MAX_AGE: z.coerce.number().int().positive().optional(),
+    WORKOS_COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).optional(),
 
     WEB_APP_ORIGIN: z.string().default("http://localhost:3000"),
 
