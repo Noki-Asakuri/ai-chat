@@ -3,7 +3,6 @@ import { R2 } from "@convex-dev/r2";
 import { AuthKit, type AuthFunctions } from "@convex-dev/workos-authkit";
 
 import { customMutation, customQuery } from "convex-helpers/server/customFunctions";
-import { v } from "convex/values";
 
 import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";

@@ -1,10 +1,9 @@
-import { QueryCache, QueryClient } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 
 import { ConvexQueryClient } from "@convex-dev/react-query";
 import { getAuth } from "@workos/authkit-tanstack-react-start";
-import { DEFAULT_STORAGE_KEY } from "convex-helpers/react/sessions";
 import { type ConvexReactClient } from "convex/react";
 
 import { StrictMode } from "react";
@@ -18,9 +17,9 @@ import { routeTree } from "./routeTree.gen";
 
 const convexClient = getConvexReactClient();
 
-export function getRouter() {
+export async function getRouter() {
   const convexQueryClient = new ConvexQueryClient(convexClient);
-  ensureAuthSSRConvexClient(convexClient, convexQueryClient);
+  await ensureAuthSSRConvexClient(convexClient, convexQueryClient);
 
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -46,7 +45,7 @@ export function getRouter() {
 
 declare module "@tanstack/react-router" {
   interface Register {
-    router: ReturnType<typeof getRouter>;
+    router: Awaited<ReturnType<typeof getRouter>>;
   }
 }
 

@@ -193,7 +193,6 @@ export function createChatRequestValidator<
     }
 
     if (data.modelParams.webSearch && modelInfo.capabilities.webSearch) {
-      // @ts-expect-error Bun workspace issue
       tools.web_search = webSearch({
         type: "auto",
         numResults: 10,
