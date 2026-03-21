@@ -21,6 +21,7 @@ import { Skeleton } from "../ui/skeleton";
 
 import { getUserAvatarUrl, getUserDisplayName, getUserInitials } from "@/lib/authkit/user";
 import { convexSessionQuery } from "@/lib/convex/helpers";
+import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
 import { cn } from "@/lib/utils";
 
 export function ThreadUserProfile() {
@@ -118,6 +119,7 @@ type UserMenuSettingItemProps = ComponentProps<typeof Menu.Item> & {
 
 function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSettingItemProps) {
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
+  const rt = params?.threadId ? `/threads/${params.threadId}` : "/";
 
   return (
     <Menu.Item
@@ -126,7 +128,14 @@ function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSe
         className,
       )}
       {...props}
-      render={<Link preload={false} to={href} search={{ rt: params?.threadId }} />}
+      render={
+        <Link
+          preload={false}
+          to={href}
+          search={{ rt: params?.threadId }}
+          viewTransition={getNavigationViewTransition(rt, href)}
+        />
+      }
     >
       {children}
     </Menu.Item>

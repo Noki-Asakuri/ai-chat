@@ -11,6 +11,8 @@ import {
 
 import { Tabs, TabsList, TabTrigger } from "@/components/ui/tabs";
 
+import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
+
 const paths = [
   {
     name: "Account",
@@ -60,7 +62,13 @@ export function UserNavbar() {
     >
       <TabsList className="w-full py-1">
         {paths.map(({ path, name, icon: Icon }) => {
-          const renderProp = <Link to={path} search={search} />;
+          const renderProp = (
+            <Link
+              to={path}
+              search={search}
+              viewTransition={getNavigationViewTransition(pathname, path)}
+            />
+          );
 
           return (
             <TabTrigger

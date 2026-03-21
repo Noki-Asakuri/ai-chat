@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { getUserAvatarUrl, getUserDisplayName, getUserInitials } from "@/lib/authkit/user";
 import { convexSessionQuery } from "@/lib/convex/helpers";
+import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
 
 import { UserUsages } from "./user-usages";
 
@@ -35,6 +36,8 @@ export function SettingsSidebar() {
 
 function ReturnToChatButton() {
   const searchParams = useSearch({ from: "/settings" });
+  const location = useLocation();
+  const to = searchParams.rt ? "/threads/$threadId" : "/";
 
   return (
     <Button
@@ -43,8 +46,9 @@ function ReturnToChatButton() {
       className="mt-1 h-9 w-full"
       render={
         <Link
-          to={searchParams.rt ? "/threads/$threadId" : "/"}
+          to={to}
           params={{ threadId: searchParams.rt }}
+          viewTransition={getNavigationViewTransition(location.pathname, searchParams.rt ? `/threads/${searchParams.rt}` : "/")}
         />
       }
     >

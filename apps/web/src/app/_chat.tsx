@@ -12,6 +12,7 @@ import { getCookie } from "@tanstack/react-start/server";
 import { convexQuery } from "@convex-dev/react-query";
 import { getSignInUrl } from "@workos/authkit-tanstack-react-start";
 import { PlusIcon } from "lucide-react";
+import { Suspense } from "react";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { GlobalDropzone } from "@/components/chat/global-dropzone";
@@ -159,7 +160,15 @@ function ChatLayoutConfig() {
         model: userPreferences.models.selectedModel,
       }}
     >
-      <Outlet />
+      <div
+        data-route-transition-scope="chat-content"
+        className="min-h-0 min-w-0 flex-1 bg-background"
+        style={{ viewTransitionName: "chat-content" }}
+      >
+        <Suspense>
+          <Outlet />
+        </Suspense>
+      </div>
 
       <ChatTextarea key="main-chat-textarea" />
 

@@ -44,7 +44,14 @@ function AuthLayout() {
 
           <div className="custom-scroll isolate z-10 flex min-h-0 w-full max-w-full min-w-0 flex-1 flex-col gap-1 overflow-visible pr-3 lg:overflow-y-auto [&>div:not(:first-child)]:pl-1">
             <SettingsRouteHeader />
-            <Outlet />
+
+            <div
+              data-route-transition-scope="settings-content"
+              className="flex min-h-0 min-w-0 flex-1 flex-col"
+              style={{ viewTransitionName: "settings-content" }}
+            >
+              <Outlet />
+            </div>
           </div>
         </div>
       </div>

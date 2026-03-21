@@ -43,6 +43,7 @@ import {
 import { getConvexReactClient } from "@/lib/convex/client";
 import { sessionUseCookie } from "@/lib/hooks/use-cookie";
 import { useWindowEvent } from "@/lib/hooks/use-window-event";
+import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
 import { fromUUID, toUUID } from "@/lib/utils";
 
 type RootContext = {
@@ -151,7 +152,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       const currentThreadId = fromUUID(window.location.pathname.split("/")[2]);
       if (currentThreadId === threadId) return;
 
-      await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(threadId) } });
+      await navigate({
+        to: "/threads/$threadId",
+        params: { threadId: toUUID(threadId) },
+        viewTransition: getNavigationViewTransition(
+          window.location.pathname,
+          `/threads/${toUUID(threadId)}`,
+        ),
+      });
     },
   );
 
