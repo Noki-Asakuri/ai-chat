@@ -21,12 +21,14 @@ export const authenticatedQuery = customQuery(query, {
   args: {},
   input: async (ctx) => {
     const userFromAuthKit = await ctx.auth.getUserIdentity();
-    if (!userFromAuthKit) return { ctx: { ...ctx, user: null }, args: {} };
+    if (!userFromAuthKit) throw new Error("Not authenticated");
 
     const user = await ctx.db
       .query("users")
       .withIndex("by_userId", (q) => q.eq("userId", userFromAuthKit.subject))
       .unique();
+
+    if (!user) throw new Error("User not found");
 
     return { ctx: { ...ctx, user }, args: {} };
   },
@@ -36,12 +38,14 @@ export const authenticatedMutation = customMutation(mutation, {
   args: {},
   input: async (ctx) => {
     const userFromAuthKit = await ctx.auth.getUserIdentity();
-    if (!userFromAuthKit) return { ctx: { ...ctx, user: null }, args: {} };
+    if (!userFromAuthKit) throw new Error("Not authenticated");
 
     const user = await ctx.db
       .query("users")
       .withIndex("by_userId", (q) => q.eq("userId", userFromAuthKit.subject))
       .unique();
+
+    if (!user) throw new Error("User not found");
 
     return { ctx: { ...ctx, user }, args: {} };
   },

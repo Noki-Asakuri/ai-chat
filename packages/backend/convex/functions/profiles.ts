@@ -27,7 +27,6 @@ export const listProfilesWithQuery = authenticatedQuery({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const term = (args.search ?? "").trim();
 
@@ -113,7 +112,6 @@ export const listProfiles = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const docs = await ctx.db
       .query("profiles")
@@ -131,7 +129,6 @@ export const getProfile = authenticatedQuery({
   args: { profileId: v.optional(v.id("profiles")) },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     if (!args.profileId) return null;
 
@@ -154,7 +151,6 @@ export const createProfile = authenticatedMutation({
   returns: v.id("profiles"),
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const now = Date.now();
     const id = await ctx.db.insert("profiles", {
@@ -182,7 +178,6 @@ export const updateProfile = authenticatedMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const doc = await ctx.db.get("profiles", args.profileId);
     if (!doc) throw new Error("Profile not found");
@@ -222,7 +217,6 @@ export const deleteProfile = authenticatedMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const doc = await ctx.db.get("profiles", args.profileId);
     if (!doc) throw new Error("Profile not found");
@@ -251,7 +245,6 @@ export const generateAiProfileUploadUrl = authenticatedMutation({
   returns: v.object({ url: v.string(), key: v.string() }),
   handler: async (ctx) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const key = `${user.userId}/profiles/${crypto.randomUUID()}`;
     // r2.generateUploadUrl returns { url, key }

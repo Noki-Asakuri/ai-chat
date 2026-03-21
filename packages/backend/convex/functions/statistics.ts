@@ -48,7 +48,6 @@ export const getStatistics = authenticatedQuery({
   }),
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const now = new Date();
     const selectedYear = args.year ?? now.getUTCFullYear();

@@ -25,7 +25,6 @@ export const generateAttachmentUploadUrl = authenticatedMutation({
   args: { threadId: v.id("threads"), fileId: v.string(), mimeType: v.string() },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -46,7 +45,6 @@ export const generateUserUploadUrl = authenticatedMutation({
   args: {},
   handler: async (ctx) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const key = `${user.userId}/customization/${crypto.randomUUID()}`;
     return r2.generateUploadUrl(key);
@@ -57,7 +55,6 @@ export const generateUserAvatarUploadUrl = authenticatedMutation({
   args: { mimeType: v.string() },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const allowedMimeTypes: Array<string> = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     if (!allowedMimeTypes.includes(args.mimeType)) {
@@ -75,7 +72,6 @@ export const deleteFile = authenticatedMutation({
   args: { key: v.string() },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     if (!args.key.startsWith(`${user.userId}/`)) {
       throw new Error("Not authorized");

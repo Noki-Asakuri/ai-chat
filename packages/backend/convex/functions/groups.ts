@@ -10,7 +10,6 @@ export const listGroups = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const groupsPromise = ctx.db
       .query("groups")
@@ -57,7 +56,6 @@ export const createGroup = authenticatedMutation({
   args: { title: v.string() },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const last = await ctx.db
       .query("groups")
@@ -85,7 +83,6 @@ export const deleteGroup = authenticatedMutation({
   args: { groupId: v.id("groups") },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const group = await ctx.db.get("groups", args.groupId);
     if (!group) throw new Error("Group not found");
@@ -118,7 +115,6 @@ export const updateGroupTitle = authenticatedMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const group = await ctx.db.get("groups", args.groupId);
     if (!group) throw new Error("Group not found");
@@ -136,7 +132,6 @@ export const reorderThreadWithinGroup = authenticatedMutation({
   args: { threadId: v.id("threads"), toIndex: v.number() },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -170,7 +165,6 @@ export const removeGroupId = authenticatedMutation({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -207,7 +201,6 @@ export const moveThreadToGroup = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -270,7 +263,6 @@ export const moveGroupToIndex = authenticatedMutation({
   args: { groupId: v.id("groups"), toIndex: v.number() },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const group = await ctx.db.get("groups", args.groupId);
     if (!group) throw new Error("Group not found");

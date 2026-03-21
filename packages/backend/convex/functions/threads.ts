@@ -104,7 +104,6 @@ export const createThread = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     await ctx.runMutation(internal.functions.user_stats.incrementThreads, {
       userId: user.userId,
@@ -133,7 +132,6 @@ export const updateThreadModelConfig = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -159,7 +157,6 @@ export const branchThread = authenticatedMutation({
   args: { threadId: v.id("threads"), assistantMessageId: v.id("messages") },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -213,7 +210,6 @@ export const getAllThreads = authenticatedQuery({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) return [];
 
     const limit = args.limit ?? 200;
 
@@ -297,7 +293,6 @@ export const listAccountThreads = authenticatedQuery({
   }),
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
     const userId = user.userId;
 
     const search = (args.query ?? "").trim();
@@ -377,7 +372,6 @@ export const getThreadTitle = authenticatedQuery({
   args: { threadId: v.optional(v.id("threads")) },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     if (!args.threadId) return { title: null, pinned: false, isShared: false };
 
@@ -398,7 +392,6 @@ export const updateThreadTitle = authenticatedMutation({
   args: { threadId: v.id("threads"), title: v.string() },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -412,7 +405,6 @@ export const deleteThread = authenticatedMutation({
   args: { threadId: v.id("threads"), deleteAttachments: v.boolean() },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -449,7 +441,6 @@ export const pinThread = authenticatedMutation({
   args: { threadId: v.id("threads"), pinned: v.boolean() },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");

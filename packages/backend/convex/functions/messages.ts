@@ -279,8 +279,6 @@ export const getAllMessagesFromThread = authenticatedQuery({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-
-    if (!user) throw new Error("Not authenticated");
     if (!args.threadId) throw new Error("Thread not found");
 
     const thread = await ctx.db.get("threads", args.threadId);
@@ -409,7 +407,6 @@ export const getAllMessagesWithoutAttachments = authenticatedQuery({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const messages = await ctx.db
       .query("messages")
@@ -436,7 +433,6 @@ export const canResumeStream = authenticatedQuery({
   args: { streamId: v.string() },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const message = await ctx.db
       .query("messages")
@@ -457,7 +453,6 @@ export const addAttachmentsToMessage = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const message = await ctx.db
       .query("messages")
@@ -492,7 +487,6 @@ export const addMessagesToThread = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -574,7 +568,6 @@ export const updateErrorMessage = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const message = await ctx.db.get("messages", args.messageId);
     if (!message) throw new Error("Message not found");
@@ -605,7 +598,6 @@ export const getAssistantCompletionTrackingPayloadById = authenticatedQuery({
   returns: v.union(assistantCompletionTrackingPayloadValidator, v.null()),
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const message = await ctx.db.get("messages", args.messageId);
     if (!message) return null;
@@ -697,7 +689,6 @@ export const updateMessageById = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const message = await ctx.db.get("messages", args.messageId);
     console.log("Updating message by Id", {
@@ -745,7 +736,6 @@ export const updateFinishedMessageById = authenticatedMutation({
   returns: v.boolean(),
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const message = await ctx.db.get("messages", args.messageId);
     if (!message) throw new Error("Message not found");
@@ -790,7 +780,6 @@ export const retryChatMessage = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -915,7 +904,6 @@ export const setActiveAssistantVariant = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -983,7 +971,6 @@ export const deleteMessageAndBelow = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const deleteScope: DeleteScope = args.deleteScope ?? "turnAndBelow";
 

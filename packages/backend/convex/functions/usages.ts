@@ -13,7 +13,6 @@ export const getUserUsages = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
     const user = ctx.user;
-    if (!user) return null;
 
     return await ctx.db
       .query("usages")
@@ -36,7 +35,6 @@ export const checkAndIncrement = authenticatedMutation({
   }),
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const usage = await ctx.db
       .query("usages")
@@ -68,7 +66,6 @@ export const refundRequest = authenticatedMutation({
   args: { amount: v.number() },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const usage = await ctx.db
       .query("usages")

@@ -289,7 +289,6 @@ export const getThreadShareSettings = authenticatedQuery({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -313,7 +312,6 @@ export const upsertThreadShare = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -399,7 +397,6 @@ export const disableThreadShare = authenticatedMutation({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");

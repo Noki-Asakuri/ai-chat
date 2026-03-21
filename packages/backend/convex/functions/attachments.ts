@@ -50,7 +50,6 @@ export const createAttachment = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const ext = args.mimeType.split("/")[1];
     const path = `${user.userId}/${args.threadId}/${args.id}.${ext}`;
@@ -68,7 +67,6 @@ export const getAllAttachments = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const attachments = await ctx.db
       .query("attachments")
@@ -130,7 +128,6 @@ export const listAttachmentsPage = authenticatedQuery({
   }),
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const safePageSize = Math.max(1, Math.min(60, Math.floor(args.pageSize)));
     const requestedPage = Math.max(1, Math.floor(args.page));
@@ -207,7 +204,6 @@ export const deleteAttachment = authenticatedMutation({
   args: { attachmentId: v.id("attachments") },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const attachment = await ctx.db.get("attachments", args.attachmentId);
     if (!attachment) throw new Error("Attachment not found");
@@ -246,7 +242,6 @@ export const deleteAttachments = authenticatedMutation({
   args: { attachmentIds: v.array(v.id("attachments")) },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
     if (args.attachmentIds.length === 0) return;
 
     // Load and validate all attachments

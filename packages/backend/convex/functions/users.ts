@@ -135,8 +135,6 @@ export const updateUserPreferences = authenticatedMutation({
   args: { data: userPreferencesPatch },
   handler: async (ctx, { data }) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
-
     const updates = structuredClone(data);
 
     if (updates.models?.hidden !== undefined) {
@@ -157,8 +155,6 @@ export const updateCurrentUserImage = authenticatedMutation({
   args: { imageUrl: v.nullable(v.string()) },
   handler: async (ctx, { imageUrl }) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
-
     await ctx.db.patch(user._id, { imageUrl, updatedAt: Date.now() });
   },
 });
@@ -172,8 +168,6 @@ export const updateUserModelPreferences = authenticatedMutation({
   },
   handler: async (ctx, { data }) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
-
     const modelUpdates: UserPreferencesPatch["models"] = {};
 
     if (data.hidden !== undefined) {
@@ -197,7 +191,6 @@ export const updateUserDefaultModelConfig = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const preferences = mergeUserPreferences(user.preferences);
     const models = preferences.models;
@@ -225,10 +218,7 @@ export const updateUserDefaultModelConfig = authenticatedMutation({
 export const currentUser = authenticatedQuery({
   args: {},
   handler: async (ctx) => {
-    const user = ctx.user;
-    if (!user) return null;
-
-    return user;
+    return ctx.user;
   },
 });
 
@@ -236,7 +226,6 @@ export const getCurrentUserPreferences = authenticatedQuery({
   args: { threadId: v.optional(v.id("threads")) },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!user) throw new Error("Not authenticated");
 
     const thread = args.threadId ? await ctx.db.get("threads", args.threadId) : null;
     if (thread && thread.userId !== user.userId) throw new Error("Not authorized");
