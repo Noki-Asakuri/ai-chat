@@ -1,7 +1,7 @@
-diff --git a/dist/server/storage.js b/dist/server/storage.js
+diff --git a/node_modules/@workos/authkit-tanstack-react-start/dist/server/storage.js b/node_modules/@workos/authkit-tanstack-react-start/dist/server/storage.js
 index ef19c1398b9c5010e82b869c90530723adc2a024..4014207eb44d595445fb80cdae4f396966dded4e 100644
---- a/dist/server/storage.js
-+++ b/dist/server/storage.js
+--- a/node_modules/@workos/authkit-tanstack-react-start/dist/server/storage.js
++++ b/node_modules/@workos/authkit-tanstack-react-start/dist/server/storage.js
 @@ -1,6 +1,12 @@
  import { CookieSessionStorage } from '@workos/authkit-session';
  import { getAuthKitContextOrNull } from './context.js';

@@ -7,7 +7,7 @@ COPY packages packages
 COPY tsconfig.base.json ./
 COPY tsconfig.json ./
 
-RUN bun install --frozen-lockfile --production
+RUN bun install --frozen-lockfile --production --ignore-scripts
 
 # Install curl, git, and CA certificates (Ubuntu/Debian)
 USER root
