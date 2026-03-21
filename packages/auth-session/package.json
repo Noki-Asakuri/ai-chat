@@ -7,7 +7,8 @@
   },
   "dependencies": {
     "@workos/authkit-session": "catalog:shared",
-    "@workos-inc/node": "catalog:shared"
+    "@workos-inc/node": "catalog:shared",
+    "jose": "catalog:shared"
   },
   "devDependencies": {
     "@typescript/native-preview": "catalog:tooling",

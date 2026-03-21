@@ -145,6 +145,7 @@
       "dependencies": {
         "@workos-inc/node": "catalog:shared",
         "@workos/authkit-session": "catalog:shared",
+        "jose": "catalog:shared",
       },
       "devDependencies": {
         "@typescript/native-preview": "catalog:tooling",
