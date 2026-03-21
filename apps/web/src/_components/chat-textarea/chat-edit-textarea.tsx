@@ -13,6 +13,7 @@ import {
   setStickyToBottom,
   updateStickyToBottomFromScroll,
 } from "@/lib/chat/scroll-stickiness";
+import { focusTextareaByIdAtEnd } from "@/lib/chat/focus-textarea";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
 const EDITOR_VIEWPORT_MARGIN_PX = 16;
@@ -49,10 +50,7 @@ function syncEditorIntoView(editorElement: HTMLDivElement): void {
     updateStickyToBottomFromScroll(scrollArea);
   }
 
-  const textarea = document.getElementById("textarea-user-message-edit");
-  if (textarea instanceof HTMLTextAreaElement) {
-    textarea.focus({ preventScroll: true });
-  }
+  focusTextareaByIdAtEnd("textarea-user-message-edit");
 }
 
 export function ChatEditTextarea() {

@@ -14,6 +14,7 @@ import {
   scrollToBottomIfStickyRaf,
   setStickyToBottom,
 } from "@/lib/chat/scroll-stickiness";
+import { focusTextareaByIdAtEnd } from "@/lib/chat/focus-textarea";
 import { useAbortChatStream } from "@/lib/chat/server-function/abort-chat-stream";
 import { useWindowEvent } from "@/lib/hooks/use-window-event";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
@@ -120,19 +121,18 @@ export function RegisterEventHandlers() {
     const isEditMessage = getIsEditMessage();
     const { status, threadId } = getStatusAndThreadId();
 
+    const shouldFocusTextarea =
+      target.tagName !== "TEXTAREA" && target.tagName !== "INPUT" && !target.isContentEditable;
+
     if (
       !event.ctrlKey &&
       !event.metaKey &&
       !event.altKey &&
       event.key.length === 1 &&
-      target.tagName !== "INPUT" &&
-      target.tagName !== "TEXTAREA" &&
-      !target.isContentEditable
+      shouldFocusTextarea
     ) {
-      const textareId = isEditMessage ? "textarea-user-message-edit" : "textarea-chat-input";
-      const chatInput = document.getElementById(textareId);
-
-      if (chatInput) chatInput.focus();
+      const textareaId = isEditMessage ? "textarea-user-message-edit" : "textarea-chat-input";
+      focusTextareaByIdAtEnd(textareaId);
     }
 
     if (event.key === "Escape") {
@@ -149,8 +149,7 @@ export function RegisterEventHandlers() {
           scrollToBottom(scrollArea, "smooth");
         }
 
-        const chatInput = document.getElementById("textarea-chat-input");
-        if (chatInput) chatInput.focus();
+        focusTextareaByIdAtEnd("textarea-chat-input");
 
         return;
       }
@@ -173,8 +172,7 @@ export function RegisterEventHandlers() {
         scrollToBottom(scrollArea, "smooth");
       }
 
-      const chatInput = document.getElementById("textarea-chat-input");
-      if (chatInput) chatInput.focus();
+      focusTextareaByIdAtEnd("textarea-chat-input");
 
       return;
     }
@@ -197,10 +195,8 @@ export function RegisterEventHandlers() {
 
       // Re-focus the textarea after closing the model selector
       if (btn?.dataset.popupOpen === "") {
-        const textareId = isEditMessage ? "textarea-user-message-edit" : "textarea-chat-input";
-        const textarea = document.getElementById(textareId) as HTMLTextAreaElement | null;
-
-        textarea?.focus();
+        const textareaId = isEditMessage ? "textarea-user-message-edit" : "textarea-chat-input";
+        focusTextareaByIdAtEnd(textareaId);
       }
 
       return;
