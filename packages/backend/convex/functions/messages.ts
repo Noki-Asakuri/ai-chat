@@ -891,40 +891,57 @@ export const retryChatMessage = authenticatedMutation({
       await ctx.db.delete(message._id);
     }
 
-    const variants = graph.assistantsByUserId[resolvedUserMessageId] ?? [];
-    const variantIndex = getNextVariantIndex(variants);
     const now = Date.now();
+    const nextMetadata = {
+      durations: { request: 0, reasoning: 0, text: 0 },
+      usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+      timeToFirstTokenMs: 0,
+      finishReason: null,
 
-    const assistantMessageId = await ctx.db.insert("messages", {
-      threadId: args.threadId,
-      userId: user.userId,
+      modelParams: args.modelParams,
+      model: { request: args.model, response: null },
+    };
 
-      messageId: crypto.randomUUID(),
-      status: "pending",
-      parts: [],
-      attachments: [],
+    const shouldReuseErrorMessage = targetAssistantMessage.status === "error";
+    let assistantMessageId = targetAssistantMessage._id;
 
-      role: "assistant",
-      resumableStreamId: null,
-      error: undefined,
+    if (shouldReuseErrorMessage) {
+      await ctx.db.patch(targetAssistantMessage._id, {
+        status: "pending",
+        parts: [],
+        attachments: [],
+        resumableStreamId: null,
+        error: undefined,
+        updatedAt: now,
+        metadata: nextMetadata,
+      });
+    } else {
+      const variants = graph.assistantsByUserId[resolvedUserMessageId] ?? [];
+      const variantIndex = getNextVariantIndex(variants);
 
-      parentUserMessageId: resolvedUserMessageId,
-      variantIndex,
-      activeAssistantMessageId: undefined,
+      assistantMessageId = await ctx.db.insert("messages", {
+        threadId: args.threadId,
+        userId: user.userId,
 
-      createdAt: now,
-      updatedAt: now,
+        messageId: crypto.randomUUID(),
+        status: "pending",
+        parts: [],
+        attachments: [],
 
-      metadata: {
-        durations: { request: 0, reasoning: 0, text: 0 },
-        usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
-        timeToFirstTokenMs: 0,
-        finishReason: null,
+        role: "assistant",
+        resumableStreamId: null,
+        error: undefined,
 
-        modelParams: args.modelParams,
-        model: { request: args.model, response: null },
-      },
-    });
+        parentUserMessageId: resolvedUserMessageId,
+        variantIndex,
+        activeAssistantMessageId: undefined,
+
+        createdAt: now,
+        updatedAt: now,
+
+        metadata: nextMetadata,
+      });
+    }
 
     await Promise.all([
       ctx.db.patch("threads", args.threadId, { status: "pending", updatedAt: now }),

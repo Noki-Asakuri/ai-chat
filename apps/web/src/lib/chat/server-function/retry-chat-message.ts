@@ -97,6 +97,14 @@ export function useRetryChatMessage() {
       ...mergedModelParams,
       profile: configProfile === null ? null : (configProfile ?? mergedModelParams.profile ?? null),
     };
+    const retryMetadata = {
+      durations: { request: 0, reasoning: 0, text: 0 },
+      usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+      timeToFirstTokenMs: 0,
+      finishReason: null,
+      modelParams: mutationModelParams,
+      model: { request: model, response: null },
+    };
 
     try {
       const retryResult = await convexClient.mutation(api.functions.messages.retryChatMessage, {
@@ -110,6 +118,12 @@ export function useRetryChatMessage() {
 
       const nextAssistantMessageId = retryResult.assistantMessageId;
       errorTargetMessageId = nextAssistantMessageId;
+
+      messageStoreActions.resetAssistantMessageForRetry(
+        threadId,
+        nextAssistantMessageId,
+        retryMetadata,
+      );
 
       messageStoreActions.setController(threadId, {
         controller: abortController,

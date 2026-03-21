@@ -94,6 +94,12 @@ export type MessagesStore = {
     metadata?: ChatMessage["metadata"],
   ) => void;
 
+  resetAssistantMessageForRetry: (
+    threadId: Id<"threads">,
+    id: Id<"messages">,
+    metadata?: ChatMessage["metadata"],
+  ) => void;
+
   /**
    * Mark a message as aborted locally (used for immediate UI feedback).
    * Also normalizes any streaming parts to `state: "done"` so the UI won't think it's still streaming.
@@ -656,6 +662,36 @@ export const useMessageStore = create<MessagesStore>()(
 
           msg.parts = parts;
           if (metadata) msg.metadata = metadata;
+
+          const prev = thread.localMetaById[id];
+          const nextRevision = (prev?.localRevision ?? 0) + 1;
+
+          thread.localMetaById[id] = {
+            localRevision: nextRevision,
+            localUpdatedAt: Date.now(),
+          };
+
+          if (state.currentThreadId === threadId) {
+            updateCurrentViewFromThread(state, threadId);
+          }
+        });
+      },
+
+      resetAssistantMessageForRetry: function resetAssistantMessageForRetry(threadId, id, metadata) {
+        set(function update(state) {
+          const thread = ensureThreadStateInDraft(state, threadId);
+          const msg = thread.messagesById[id];
+          if (!msg || msg.role !== "assistant") return;
+
+          msg.parts = [];
+          msg.status = "pending";
+          msg.error = undefined;
+          msg.resumableStreamId = null;
+          msg.updatedAt = Date.now();
+
+          if (metadata) {
+            msg.metadata = metadata;
+          }
 
           const prev = thread.localMetaById[id];
           const nextRevision = (prev?.localRevision ?? 0) + 1;
