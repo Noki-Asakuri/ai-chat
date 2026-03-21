@@ -6,7 +6,6 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useEffect, useEffectEvent, useRef } from "react";
 
-import { LoadingSkeleton } from "@/components/chat/loading-skeleton";
 import { MessageHistory } from "@/components/message/message-history";
 
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
@@ -26,7 +25,6 @@ type SyncMode = "replace" | "prepend";
 
 export const Route = createFileRoute("/_chat/threads/$threadId")({
   component: ChatComponentPage,
-  pendingComponent: LoadingSkeleton,
 
   loader: async ({ context, params }) => {
     const threadId = fromUUID<Id<"threads">>(params.threadId);
@@ -125,5 +123,5 @@ function ChatHistory() {
     }
   }, [data, dataUpdatedAt]);
 
-  return <MessageHistory />;
+  return <MessageHistory animateOnMount animationKey={params.threadId} />;
 }
