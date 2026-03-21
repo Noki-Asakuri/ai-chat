@@ -306,3 +306,17 @@
 [data-sonner-toaster] {
   @apply font-sans!;
 }
+
+.chat-markdown {
+  --chat-markdown-inline-padding: 1rem;
+}
+
+.chat-markdown :is(ul, ol) {
+  list-style-position: outside;
+  padding-inline-start: 1.5rem;
+}
+
+.chat-markdown > :is(ul, ol) {
+  margin-inline-start: calc(var(--chat-markdown-inline-padding) * -1);
+  padding-inline-start: calc(var(--chat-markdown-inline-padding) + 1.5rem);
+}

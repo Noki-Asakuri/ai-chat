@@ -15,6 +15,7 @@ import { CodeBlock } from "@/components/ui/code-block";
 import { ExternalLinkSafetyModal } from "./external-link-safety-modal";
 
 import type { ChatMessage } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 function normalizeMissingFenceLanguages(text: string): string {
   const parts = text.split(/(\r?\n)/);
@@ -229,6 +230,7 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
   role,
   children,
   isAnimating,
+  className,
   ...props
 }: MarkdownProps) {
   const normalizedChildren = useMemo(() => {
@@ -252,6 +254,7 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
       enabled: true,
       renderModal: (modalProps) => <ExternalLinkSafetyModal {...modalProps} />,
     },
+    className: cn("chat-markdown", className),
     remarkPlugins: [...Object.values(defaultRemarkPlugins), remarkBreaks],
     ...props,
   };
