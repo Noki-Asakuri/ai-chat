@@ -318,8 +318,7 @@
   backdrop-filter: none;
 }
 
-::view-transition-group(settings-content),
-::view-transition-group(chat-content) {
+::view-transition-group(settings-content) {
   animation-duration: 260ms;
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -338,14 +337,6 @@ html:active-view-transition-type(settings-backward)::view-transition-old(setting
 
 html:active-view-transition-type(settings-backward)::view-transition-new(settings-content) {
   animation: settings-slide-in-left 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-html:active-view-transition-type(chat-enter)::view-transition-old(chat-content) {
-  animation: chat-content-fade-out 180ms ease-out;
-}
-
-html:active-view-transition-type(chat-enter)::view-transition-new(chat-content) {
-  animation: chat-content-fade-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes settings-slide-in-right {
@@ -396,40 +387,13 @@ html:active-view-transition-type(chat-enter)::view-transition-new(chat-content) 
   }
 }
 
-@keyframes chat-content-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.97);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes chat-content-fade-out {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  to {
-    opacity: 0;
-    transform: scale(0.99);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(settings-content),
-  ::view-transition-group(chat-content),
   ::view-transition-group(root),
   ::view-transition-old(root),
   ::view-transition-new(root),
   ::view-transition-old(settings-content),
-  ::view-transition-new(settings-content),
-  ::view-transition-old(chat-content),
-  ::view-transition-new(chat-content) {
+  ::view-transition-new(settings-content) {
     animation: none !important;
   }
 }

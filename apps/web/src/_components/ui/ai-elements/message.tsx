@@ -27,27 +27,24 @@ export const Message = ({ className, from, ...props }: MessageProps) => (
   />
 );
 
-const messageContentVariants = cva(
-  "is-user:dark min-w-0 flex flex-col gap-2 rounded-md border p-2",
-  {
-    variants: {
-      variant: {
-        contained: [
-          "max-w-full px-4 py-3",
-          "group-[.is-user]:border-sidebar-border/70 group-[.is-user]:bg-card/75 group-[.is-user]:text-foreground",
-          "group-[.is-assistant]:bg-background/80 group-[.is-assistant]:text-foreground",
-        ],
-        flat: [
-          "group-[.is-user]:max-w-[80%] group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground",
-          "group-[.is-assistant]:text-foreground",
-        ],
-      },
-    },
-    defaultVariants: {
-      variant: "contained",
+const messageContentVariants = cva("min-w-0 flex flex-col gap-2 rounded-md border p-2", {
+  variants: {
+    variant: {
+      contained: [
+        "max-w-full px-4 py-3 text-foreground",
+        "group-[.is-user]:border-sidebar-border/70 group-[.is-user]:bg-card/75",
+        "group-[.is-assistant]:bg-background/75",
+      ],
+      flat: [
+        "group-[.is-user]:max-w-[80%] group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground",
+        "group-[.is-assistant]:text-foreground",
+      ],
     },
   },
-);
+  defaultVariants: {
+    variant: "contained",
+  },
+});
 
 export type MessageContentProps = HTMLAttributes<HTMLDivElement> &
   VariantProps<typeof messageContentVariants>;

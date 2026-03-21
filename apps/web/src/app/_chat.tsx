@@ -160,11 +160,7 @@ function ChatLayoutConfig() {
         model: userPreferences.models.selectedModel,
       }}
     >
-      <div
-        data-route-transition-scope="chat-content"
-        className="min-h-0 min-w-0 flex-1 bg-background"
-        style={{ viewTransitionName: "chat-content" }}
-      >
+      <div className="min-h-0 min-w-0 flex-1 bg-background">
         <Suspense>
           <Outlet />
         </Suspense>
