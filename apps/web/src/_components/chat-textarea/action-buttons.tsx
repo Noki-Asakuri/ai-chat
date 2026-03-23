@@ -98,7 +98,7 @@ function WebSearchButton() {
   const configStore = useConfigStoreState();
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
   const config = useConfigStore(
-    useShallow((state) => ({ webSearch: state.webSearch, model: state.model })),
+    useShallow((state) => ({ webSearch: state.modelParams.webSearch, model: state.model })),
   );
 
   return (
@@ -106,7 +106,8 @@ function WebSearchButton() {
       model={config.model}
       webSearch={config.webSearch}
       setWebSearch={(webSearch) => {
-        configStore.setConfig({ webSearch });
+        configStore.setModelParams({ webSearch });
+
         void syncThreadModelConfig({
           model: config.model,
           modelParams: { webSearch },

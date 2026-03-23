@@ -232,14 +232,20 @@ export const getCurrentUserPreferences = authenticatedQuery({
 
     const preferences = mergeUserPreferences(user.preferences);
 
+    const selectedModel = thread?.latestModel ?? preferences.models.defaultModel;
+    const selectedModelParams = {
+      ...(thread?.latestModelParams ?? preferences.models.modelParams),
+      profile: thread?.latestModelParams?.profile ?? preferences.models.modelParams.profile ?? null,
+    };
+
     return {
       ...preferences,
       models: {
         ...preferences.models,
-        defaultModel: preferences.models.defaultModel,
 
-        selectedModel: thread?.latestModel ?? preferences.models.defaultModel,
-        selectedModelParams: thread?.latestModelParams ?? preferences.models.modelParams,
+        selectedModel,
+        selectedModelParams,
+        defaultModel: preferences.models.defaultModel,
       },
     };
   },

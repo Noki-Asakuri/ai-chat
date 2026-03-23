@@ -34,23 +34,19 @@ export function useSendChatMessage() {
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
   const convexClient = useConvex();
-  const { effort, webSearch, model, profile, notificationSound, desktopNotification } =
-    useConfigStore(
-      useShallow((state) => ({
-        model: state.model,
-        effort: state.effort,
-        webSearch: state.webSearch,
-        profile: state.profile,
-        notificationSound: state.notificationSound,
-        desktopNotification: state.desktopNotification,
-      })),
-    );
+  const { modelParams, model, notificationSound, desktopNotification } = useConfigStore(
+    useShallow((state) => ({
+      model: state.model,
+      modelParams: state.modelParams,
+      notificationSound: state.notificationSound,
+      desktopNotification: state.desktopNotification,
+    })),
+  );
 
   async function sendChatRequest() {
     let threadId: Id<"threads"> | null = fromUUID<Id<"threads">>(params?.threadId) ?? null;
-    const { input, attachments } = useChatStore.getState();
-    const metadataModelParams = { effort, webSearch, profile: profile ?? null };
 
+    const { input, attachments } = useChatStore.getState();
     const messageState = useMessageStore.getState();
 
     const messagesHistory = messageState.messageIds
@@ -65,7 +61,7 @@ export function useSendChatMessage() {
     if (!threadId) {
       threadId = await convexClient.mutation(api.functions.threads.createThread, {
         latestModel: model,
-        latestModelParams: metadataModelParams,
+        latestModelParams: modelParams,
       });
 
       await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(threadId) } });
@@ -95,7 +91,7 @@ export function useSendChatMessage() {
         timeToFirstTokenMs: 0,
         usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
         durations: { request: 0, reasoning: 0, text: 0 },
-        modelParams: metadataModelParams,
+        modelParams: modelParams,
       },
     };
 
@@ -149,7 +145,7 @@ export function useSendChatMessage() {
         streamId,
         messages,
         assistantMessageId,
-        modelParams: metadataModelParams,
+        modelParams: modelParams,
       };
 
       const response = await fetch(new URL("/api/ai/chat", import.meta.env.VITE_API_ENDPOINT), {
@@ -199,7 +195,7 @@ export function useSendChatMessage() {
             error: errorMessage,
             metadata: {
               model: { request: model, response: null },
-              modelParams: metadataModelParams,
+              modelParams: modelParams,
             },
           }),
         );

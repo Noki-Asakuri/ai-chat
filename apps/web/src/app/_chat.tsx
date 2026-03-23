@@ -147,17 +147,15 @@ function ChatLayoutConfig() {
         favoriteModels: userPreferences.models.favorite,
 
         pref: userPreferences.sendPreference,
-        notificationSound: userPreferences.notifications?.sound ?? true,
-        desktopNotification: userPreferences.notifications?.desktop ?? false,
+        notificationSound: userPreferences.notifications.sound,
+        desktopNotification: userPreferences.notifications.desktop,
+
         wrapline: userPreferences.code.autoWrap,
         showFullCode: userPreferences.code.showFullCode,
 
-        defaultModel: userPreferences.models.selectedModel,
-
-        effort: userPreferences.models.selectedModelParams.effort,
-        webSearch: userPreferences.models.selectedModelParams.webSearch,
-        profile: userPreferences.models.selectedModelParams.profile,
         model: userPreferences.models.selectedModel,
+        defaultModel: userPreferences.models.selectedModel,
+        modelParams: userPreferences.models.selectedModelParams,
       }}
     >
       <div className="min-h-0 min-w-0 flex-1 bg-background">

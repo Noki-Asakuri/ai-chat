@@ -21,12 +21,10 @@ export function useSyncThreadModelConfig() {
   const convexClient = useConvex();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
-  const { model, effort, webSearch, profile } = useConfigStore(
+  const { model, modelParams } = useConfigStore(
     useShallow((state) => ({
       model: state.model,
-      effort: state.effort,
-      webSearch: state.webSearch,
-      profile: state.profile,
+      modelParams: state.modelParams,
     })),
   );
 
@@ -35,11 +33,11 @@ export function useSyncThreadModelConfig() {
     const latestModel = options.model ?? model;
 
     const latestModelParams: UpdateThreadModelConfigArgs["latestModelParams"] = {
-      effort: options.modelParams?.effort ?? effort,
-      webSearch: options.modelParams?.webSearch ?? webSearch,
+      ...modelParams,
+      ...options.modelParams,
       profile:
         options.modelParams?.profile === undefined
-          ? (profile ?? null)
+          ? modelParams.profile
           : options.modelParams.profile,
     };
 

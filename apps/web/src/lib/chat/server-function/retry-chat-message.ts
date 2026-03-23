@@ -3,6 +3,7 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useConvex } from "convex/react";
 import { toast } from "sonner";
+import { useShallow } from "zustand/shallow";
 
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 
@@ -35,11 +36,15 @@ type RetryChatMessage = {
 
 export function useRetryChatMessage() {
   const convexClient = useConvex();
-  const configProfile = useConfigStore((state) => state.profile);
-  const configWebSearch = useConfigStore((state) => state.webSearch);
-  const notificationSound = useConfigStore((state) => state.notificationSound);
-  const desktopNotification = useConfigStore((state) => state.desktopNotification);
+
   const configStore = useConfigStoreState();
+  const { modelParams, notificationSound, desktopNotification } = useConfigStore(
+    useShallow((state) => ({
+      modelParams: state.modelParams,
+      notificationSound: state.notificationSound,
+      desktopNotification: state.desktopNotification,
+    })),
+  );
 
   async function retryChatMessage({ userMessageId, ...options }: RetryChatMessage) {
     const messageState = useMessageStore.getState();
@@ -89,14 +94,18 @@ export function useRetryChatMessage() {
     const model = options.modelId ?? assistantMessage.metadata!.model.request;
     const mergedModelParams = {
       ...assistantMessage.metadata!.modelParams,
-      webSearch: configWebSearch,
+      webSearch: modelParams.webSearch,
       ...options.modelParams,
     };
 
     const mutationModelParams = {
       ...mergedModelParams,
-      profile: configProfile === null ? null : (configProfile ?? mergedModelParams.profile ?? null),
+      profile:
+        modelParams.profile === null
+          ? null
+          : (modelParams.profile ?? mergedModelParams.profile ?? null),
     };
+
     const retryMetadata = {
       durations: { request: 0, reasoning: 0, text: 0 },
       usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },

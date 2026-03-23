@@ -7,18 +7,22 @@ import type { ReasoningEffort } from "../types";
 type ChatConfig = {
   model: string;
   defaultModel: string;
-  effort: ReasoningEffort;
-  webSearch: boolean;
-  profile?: Id<"profiles"> | null;
+  modelParams: {
+    effort: ReasoningEffort;
+    webSearch: boolean;
+    profile: Id<"profiles"> | null;
+  };
 
   pref: "enter" | "ctrlEnter";
+
+  notificationSound: boolean;
+  desktopNotification: boolean;
 };
 
 type UserCustomization = {
   wrapline: boolean;
   showFullCode: boolean;
-  notificationSound: boolean;
-  desktopNotification: boolean;
+
   hiddenModels: string[];
   favoriteModels: string[];
 };
@@ -26,12 +30,11 @@ type UserCustomization = {
 export type ConfigStoreData = ChatConfig & UserCustomization;
 
 export type ConfigStore = ConfigStoreData & {
-  setConfig: (
-    config: Partial<
-      ChatConfig & Pick<UserCustomization, "notificationSound" | "desktopNotification">
-    >,
-  ) => void;
   toggleWrapline: () => void;
+
+  setConfig: (config: Partial<ChatConfig>) => void;
+  setModelParams: (modelParams: Partial<ChatConfig["modelParams"]>) => void;
+
   setHiddenModels: (hiddenModels: string[]) => void;
   setFavoriteModels: (favoriteModels: string[]) => void;
   setServerState: (nextState: Partial<ConfigStoreData>) => void;
@@ -39,14 +42,15 @@ export type ConfigStore = ConfigStoreData & {
 
 export function createConfigStore(initialState: Partial<ConfigStoreData>) {
   return create<ConfigStore>()((set) => ({
-    effort: "medium",
-    webSearch: false,
-    defaultModel: "google/gemini-3-flash",
     model: "google/gemini-3-flash",
-    profile: null,
+    defaultModel: "google/gemini-3-flash",
+    modelParams: { effort: "medium", webSearch: false, profile: null },
+
     pref: "enter",
 
     setConfig: (config) => set((state) => ({ ...state, ...config })),
+    setModelParams: (modelParams) =>
+      set((state) => ({ modelParams: { ...state.modelParams, ...modelParams } })),
 
     wrapline: false,
     toggleWrapline: () => set((state) => ({ wrapline: !state.wrapline })),

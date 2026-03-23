@@ -20,7 +20,7 @@ type EffortSelectorProps = {
 
 export function ChatEffortSelector() {
   const config = useConfigStore(
-    useShallow((state) => ({ effort: state.effort, model: state.model })),
+    useShallow((state) => ({ effort: state.modelParams.effort, model: state.model })),
   );
   return <EffortSelectorBase value={config.effort} model={config.model} />;
 }
@@ -67,7 +67,8 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
       return;
     }
 
-    configStore.setConfig({ effort });
+    configStore.setModelParams({ effort });
+
     void syncThreadModelConfig({
       model: props.model,
       modelParams: { effort },

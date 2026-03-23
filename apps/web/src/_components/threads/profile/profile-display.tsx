@@ -13,7 +13,7 @@ export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
   const state = useConfigStore((state) => state);
 
-  const isActive = state.profile === profile._id;
+  const isActive = state.modelParams.profile === profile._id;
   const profileImageUrl = profile.imageKey ? buildImageAssetUrl(profile.imageKey) : undefined;
 
   return (
@@ -28,7 +28,7 @@ export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
       )}
       onClick={() => {
         const nextProfile = isActive ? null : profile._id;
-        configStore.setConfig({ profile: nextProfile });
+        configStore.setModelParams({ profile: nextProfile });
         void syncThreadModelConfig({ modelParams: { profile: nextProfile } });
       }}
     >
