@@ -1,8 +1,7 @@
-"use client";
-
 import { ArrowRightIcon, CircleCheckIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type StreamFeedbackToastComponentProps = {
   status: "success" | "error";
@@ -17,31 +16,30 @@ export function StreamFeedbackToastComponent(props: StreamFeedbackToastComponent
   const statusLabel = props.status === "success" ? "Response ready" : "Response failed";
 
   return (
-    <div className="flex max-w-80 min-w-0 flex-col gap-3">
+    <div className="flex w-full max-w-100 min-w-0 flex-col gap-3">
       <div className="flex items-start gap-3">
         <StatusIcon
-          className={
-            props.status === "success"
-              ? "mt-0.5 size-4 shrink-0 text-emerald-400"
-              : "mt-0.5 size-4 shrink-0 text-amber-400"
-          }
+          className={cn(
+            "mt-0.5 size-4 shrink-0",
+            props.status === "success" ? "text-emerald-400" : "text-amber-400",
+          )}
         />
 
         <div className="min-w-0 space-y-1.5">
           <div className="flex min-w-0 items-center gap-2">
             <span
-              className={
+              className={cn(
+                "min-w-min rounded-full px-2 py-0.5 text-[11px] font-medium tracking-wide",
                 props.status === "success"
-                  ? "rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-medium tracking-wide text-emerald-300"
-                  : "rounded-full bg-amber-500/12 px-2 py-0.5 text-[11px] font-medium tracking-wide text-amber-300"
-              }
+                  ? "bg-emerald-500/12 text-emerald-300"
+                  : "bg-amber-500/12 text-amber-300",
+              )}
             >
               {statusLabel}
             </span>
-
-            <p className="truncate text-sm leading-none font-medium">{props.threadTitle}</p>
           </div>
 
+          <p className="truncate text-sm leading-none font-medium">{props.threadTitle}</p>
           <p className="text-sm leading-snug text-muted-foreground">{props.description}</p>
         </div>
       </div>

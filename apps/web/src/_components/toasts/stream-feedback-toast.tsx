@@ -29,9 +29,9 @@ export function showStreamFeedbackToast(options: ShowStreamFeedbackToastOptions)
       />
     ),
     {
-      id: `chat-stream-${options.status}-${options.threadId}`,
       duration: 12000,
-      position: "bottom-right",
+      position: "top-center",
+      id: `chat-stream-${options.status}-${options.threadId}`,
     },
   );
 

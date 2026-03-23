@@ -58,8 +58,9 @@ function shouldShowDesktopNotification(desktopEnabled: boolean): boolean {
 function getThreadTitle(threadId: Id<"threads">): string {
   const groupedThreads = useThreadStore.getState().groupedThreads.threads;
   const thread = groupedThreads.find((item) => item._id === threadId);
+
   if (thread && thread.title.trim().length > 0) {
-    return thread.title;
+    return `Thread ${thread.title}`;
   }
 
   return `Thread ${threadId.slice(-6)}`;
@@ -83,16 +84,22 @@ function registerNotificationClick(notification: Notification, threadId: Id<"thr
   };
 }
 
-function getStreamFeedbackDescription(status: StreamFeedbackStatus, errorMessage?: string): string {
+function getStreamFeedbackDescription(
+  status: StreamFeedbackStatus,
+  kind: "notification" | "toast",
+  errorMessage?: string,
+): string {
   if (status === "success") {
-    return "The latest reply finished streaming while you were in another thread.";
+    return kind === "notification"
+      ? "The latest reply finished streaming while you were away. Click to view."
+      : "The latest reply finished streaming while you were in another thread. Click to view.";
   }
 
   if (typeof errorMessage === "string" && errorMessage.trim().length > 0) {
     return errorMessage;
   }
 
-  return "The latest reply could not finish streaming.";
+  return "The latest reply could not finish streaming. Click to view.";
 }
 
 function showInAppToast(
@@ -106,7 +113,7 @@ function showInAppToast(
     status,
     threadId,
     threadTitle,
-    description: getStreamFeedbackDescription(status, errorMessage),
+    description: getStreamFeedbackDescription(status, "toast", errorMessage),
     onOpenThread: () => {
       openThread(threadId, "toast");
     },
@@ -120,7 +127,7 @@ function showDesktopNotification(
 ): void {
   const threadTitle = getThreadTitle(threadId);
   const threadPath = getThreadPath(threadId);
-  const body = getStreamFeedbackDescription(status, errorMessage);
+  const body = getStreamFeedbackDescription(status, "notification", errorMessage);
 
   if (status === "success") {
     const notification = new Notification(threadTitle, {
