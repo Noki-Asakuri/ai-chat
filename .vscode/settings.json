@@ -17,7 +17,7 @@
   "files.associations": {
     "*.css": "tailwindcss"
   },
-  "oxc.enable": true,
+  "oxc.enable.oxlint": true,
   "js/ts.experimental.useTsgo": false,
   "js/ts.tsdk.path": "node_modules/typescript/lib",
   "js/ts.preferences.autoImportFileExcludePatterns": ["lucide-react"],
