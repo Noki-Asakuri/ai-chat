@@ -21,8 +21,6 @@ type ChatHistoryPayload = {
   variantMessageIdsByUserMessageId?: Record<Id<"messages">, Array<Id<"messages">>>;
 };
 
-type SyncMode = "replace" | "prepend";
-
 export const Route = createFileRoute("/_chat/threads/$threadId")({
   component: ChatComponentPage,
 
@@ -64,37 +62,26 @@ function ChatHistory() {
     },
   });
 
-  const syncMessage = useEffectEvent(
-    (
-      payload: ChatHistoryPayload,
-      syncToken: number,
-      options: { mode?: SyncMode; skipFollowUps?: boolean } = {},
-    ) => {
-      const mode = options.mode ?? "replace";
-      const skipFollowUps = options.skipFollowUps ?? false;
+  const syncMessage = useEffectEvent((payload: ChatHistoryPayload, syncToken: number) => {
+    messageStoreActions.syncMessages(threadId, payload, syncToken, "replace");
 
-      messageStoreActions.syncMessages(threadId, payload, syncToken, mode);
+    const lastMessage = payload.messages[payload.messages.length - 1];
+    if (!lastMessage) return;
 
-      if (skipFollowUps) return;
+    if (lastMessage.status === "streaming" && lastMessage.resumableStreamId) {
+      void autoResumeStream(lastMessage.resumableStreamId, lastMessage._id);
+    }
 
-      const lastMessage = payload.messages[payload.messages.length - 1];
-      if (!lastMessage) return;
+    // Clear any active controller if the stream has completed or errored
+    if (lastMessage.status === "complete" || lastMessage.status === "error") {
+      messageStoreActions.removeController(lastMessage.threadId);
+    }
 
-      if (lastMessage.status === "streaming" && lastMessage.resumableStreamId) {
-        void autoResumeStream(lastMessage.resumableStreamId, lastMessage._id);
-      }
-
-      // Clear any active controller if the stream has completed or errored
-      if (lastMessage.status === "complete" || lastMessage.status === "error") {
-        messageStoreActions.removeController(lastMessage.threadId);
-      }
-
-      // Auto scroll to bottom when new messages are added (only if user is already at bottom)
-      requestAnimationFrame(() => {
-        window.dispatchEvent(new Event("chat:scroll-if-sticky"));
-      });
-    },
-  );
+    // Auto scroll to bottom when new messages are added (only if user is already at bottom)
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("chat:scroll-if-sticky"));
+    });
+  });
 
   useEffect(() => {
     shouldForceScrollToBottomRef.current = true;
@@ -110,7 +97,6 @@ function ChatHistory() {
           variantMessageIdsByUserMessageId: data.variantMessageIdsByUserMessageId,
         },
         dataUpdatedAt,
-        { mode: "replace" },
       );
 
       if (shouldForceScrollToBottomRef.current) {
