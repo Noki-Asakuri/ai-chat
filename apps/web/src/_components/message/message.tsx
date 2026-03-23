@@ -5,10 +5,11 @@ import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { ChatEditTextarea } from "../chat-textarea/chat-edit-textarea";
 import { MessageContent } from "./message-content";
 import { MessageFooter } from "./message-footer";
 import { MessagePending } from "./message-pending";
+
+import { ChatEditTextarea } from "../chat-textarea/chat-edit-textarea";
 
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
