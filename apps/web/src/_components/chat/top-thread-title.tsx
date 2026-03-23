@@ -6,10 +6,10 @@ import { useParams } from "@tanstack/react-router";
 import { PinIcon, PinOffIcon, Share2Icon } from "lucide-react";
 import { useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThreadShareDialog } from "../threads/thread-share-dialog";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
 
 import { getConvexReactClient } from "@/lib/convex/client";
 import { convexSessionQuery } from "@/lib/convex/helpers";
@@ -46,7 +46,7 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
 
   return (
     <>
-      <title>{threadData.title}</title>
+      <title>{threadData.title + " - AI Chat"}</title>
 
       <div className="hidden min-w-0 items-center gap-1 md:flex">
         <Button
