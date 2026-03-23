@@ -55,9 +55,9 @@ This repo uses Bun for install and run scripts. But only use scripts that you're
 Any other scripts are forbidden to run by the agent. Same as manually run with `bunx`.
 
 These scripts are needed to be run everytime you finished the task.
+This is not required if the task contain no file changes.
 
 - `bun check`: Run lint, format and typecheck.
-  - Run this at the end of every task. Ensure no errors before finishing a task.
 
 ## TypeScript conventions
 
