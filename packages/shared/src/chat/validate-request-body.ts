@@ -208,7 +208,7 @@ export function createChatRequestValidator<
       case "google":
         if (modelInfo.capabilities.generateImage) {
           delete providerOptions.google.thinkingConfig;
-          providerOptions.google.responseModalities = ["TEXT", "IMAGE"];
+          providerOptions.google.responseModalities = ["IMAGE"];
 
           if (modelInfo.id === "google/gemini-3-pro-image") {
             providerOptions.google.imageConfig = { imageSize: "2K" };
