@@ -17,7 +17,7 @@
     "@ai-sdk/devtools": "catalog:shared",
     "@ai-sdk/google": "catalog:shared",
     "@ai-sdk/openai": "catalog:shared",
-    "@exalabs/ai-sdk": "^2.0.0",
+    "@exalabs/ai-sdk": "^2.0.1",
     "ai": "catalog:shared",
     "zod": "catalog:shared"
   },
