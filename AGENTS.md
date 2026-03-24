@@ -26,13 +26,14 @@ skills:
 This part is for agents to know what is the most important thing to do.
 
 1. Use bun (`bun` or `bunx`) for everything.
-2. Follow the user's instructions exactly. If you are not sure, ask the user for confirmation.
-3. Recommend to create to-do list for keeping progress and make sure all the tasks are done.
-4. Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
-5. Never run any scripts in terminal or bash, especially eval or any scripts that are not listed in the "Scripts" section below.
-6. When in planning mode, avoid asking questions one by one. Group your questions together and ask in a single message.
-7. When reviewing git diff, avoid reading bun.lock file, it really long and not important.
-8. Always use Conventional Commits when committing.
+2. Use subagents whenever it make sense. Like explore and review the codebase.
+3. Follow the user's instructions exactly. If you are not sure, ask the user for confirmation.
+4. Recommend to create to-do list for keeping progress and make sure all the tasks are done.
+5. Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
+6. Never run any scripts in terminal or bash, especially eval or any scripts that are not listed in the "Scripts" section below.
+7. When in planning mode, avoid asking questions one by one. Group your questions together and ask in a single message.
+8. When reviewing git diff, avoid reading bun.lock file, it really long and not important.
+9. Always use Conventional Commits when committing.
 
 ### Docs lookup
 
