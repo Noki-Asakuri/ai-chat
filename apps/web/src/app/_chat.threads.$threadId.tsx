@@ -109,5 +109,5 @@ function ChatHistory() {
     }
   }, [data, dataUpdatedAt]);
 
-  return <MessageHistory animateOnMount animationKey={params.threadId} />;
+  return <MessageHistory />;
 }

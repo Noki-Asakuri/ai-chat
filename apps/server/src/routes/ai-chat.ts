@@ -346,6 +346,7 @@ export async function handlePostChat(ctx: Context): Promise<Response> {
     const startTime = Date.now();
     const activeStreamId = streamId ?? requestId;
     const serverAbortController = registerStream(activeStreamId);
+
     let streamErrorDetected = false;
     let streamErrorHandlingStarted = false;
 
@@ -445,49 +446,7 @@ export async function handlePostChat(ctx: Context): Promise<Response> {
 
     const result = await agent.stream({
       prompt: modelMessages,
-
-      // IMPORTANT: Do not use req.signal here (browser/tab close should NOT cancel the server stream).
       abortSignal: serverAbortController.signal,
-
-      async onStepFinish({ finishReason, response, usage }) {
-        if (streamErrorDetected) return;
-
-        if (metadata.timeToFirstTokenMs === 0) {
-          metadata.timeToFirstTokenMs = Date.now() - startTime;
-        }
-
-        metadata.model.response = response.modelId;
-        metadata.finishReason = finishReason;
-        metadata.durations.request = Date.now() - startTime;
-
-        metadata.usages.inputTokens = usage.inputTokens ?? metadata.usages.inputTokens;
-        metadata.usages.outputTokens =
-          usage.outputTokens ??
-          usage.outputTokenDetails?.textTokens ??
-          metadata.usages.outputTokens;
-        metadata.usages.reasoningTokens =
-          usage.reasoningTokens ??
-          usage.outputTokenDetails?.reasoningTokens ??
-          metadata.usages.reasoningTokens;
-      },
-
-      async onFinish({ totalUsage, finishReason, response }) {
-        if (streamErrorDetected) return;
-
-        metadata.durations.request = Date.now() - startTime;
-        metadata.finishReason = finishReason;
-        metadata.model.response = response.modelId;
-
-        metadata.usages.inputTokens = totalUsage.inputTokens ?? metadata.usages.inputTokens;
-        metadata.usages.outputTokens =
-          totalUsage.outputTokens ??
-          totalUsage.outputTokenDetails?.textTokens ??
-          metadata.usages.outputTokens;
-        metadata.usages.reasoningTokens =
-          totalUsage.reasoningTokens ??
-          totalUsage.outputTokenDetails?.reasoningTokens ??
-          metadata.usages.reasoningTokens;
-      },
     });
 
     void updateTitle({
@@ -496,15 +455,20 @@ export async function handlePostChat(ctx: Context): Promise<Response> {
       serverConvexClient: convexClient,
     });
 
-    let reasoningStartTime = 0;
     let textStartTime = 0;
+    let reasoningStartTime = 0;
 
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
       generateMessageId: () => requestId,
+
+      sendFinish: true,
+      sendSources: true,
       sendReasoning: true,
+
       status: 200,
       headers: getStreamResponseHeaders(activeStreamId),
+
       consumeSseStream: async ({ stream }) => {
         logger.info("[Chat] Creating resumable stream", {
           userId,
@@ -558,6 +522,7 @@ export async function handlePostChat(ctx: Context): Promise<Response> {
               part.usage.outputTokens ??
               part.usage.outputTokenDetails?.textTokens ??
               metadata.usages.outputTokens;
+
             metadata.usages.reasoningTokens =
               part.usage.reasoningTokens ??
               part.usage.outputTokenDetails?.reasoningTokens ??
@@ -641,10 +606,11 @@ export async function handlePostChat(ctx: Context): Promise<Response> {
           if (!data) return;
 
           const url = buildAttachmentUrl(data.filePathname, file.mediaType);
-
           attachmentIds.push(data.attachmentDocId);
+
           const currentPart = uploadFileParts[index];
           if (!currentPart) return;
+
           currentPart.url = url;
         });
 

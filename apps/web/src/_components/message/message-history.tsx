@@ -10,15 +10,16 @@ import {
 import { useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 
+type MessageHistoryProps = {
+  readOnly?: boolean;
+  showUserAvatar?: boolean;
+  bottomPaddingPx?: number;
+};
 export function MessageHistory({
   readOnly = false,
   showUserAvatar = true,
   bottomPaddingPx,
-}: {
-  readOnly?: boolean;
-  showUserAvatar?: boolean;
-  bottomPaddingPx?: number;
-}) {
+}: MessageHistoryProps) {
   const textareaHeight = useChatStore((state) => state.textareaHeight);
   const resolvedBottomPadding = bottomPaddingPx ?? textareaHeight;
 
