@@ -13,42 +13,10 @@ import { defaultRemarkPlugins, Streamdown, type StreamdownProps } from "streamdo
 import { CodeBlock } from "@/components/ui/code-block";
 
 import { ExternalLinkSafetyModal } from "./external-link-safety-modal";
+import { addMissingFenceLanguages } from "./utils/add-missing-fence-languages";
 
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-function normalizeMissingFenceLanguages(text: string): string {
-  const parts = text.split(/(\r?\n)/);
-  let out = "";
-  let inFence = false;
-
-  for (let i = 0; i < parts.length; i += 2) {
-    const line = parts[i] ?? "";
-    const newline = parts[i + 1] ?? "";
-    const trimmedLine = line.trimStart();
-    const isBareTripleBacktickFence = /^```[ \t]*$/.test(trimmedLine);
-
-    if (!inFence && trimmedLine.startsWith("```")) {
-      if (isBareTripleBacktickFence) {
-        const leadingWhitespace = line.slice(0, line.length - trimmedLine.length);
-        out += leadingWhitespace + "```plaintext" + newline;
-      } else {
-        out += line + newline;
-      }
-
-      inFence = true;
-      continue;
-    }
-
-    if (inFence && isBareTripleBacktickFence) {
-      inFence = false;
-    }
-
-    out += line + newline;
-  }
-
-  return out;
-}
 
 function normalizeLatexDelimiters(text: string): string {
   const len = text.length;
@@ -320,8 +288,8 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
   ...props
 }: MarkdownProps) {
   const normalizedChildren = useMemo(() => {
-    const normalized = normalizeMissingFenceLanguages(children);
-    const normalizedMathDelimiters = normalizeLatexDelimiters(normalized);
+    const fixedFenceLanguages = addMissingFenceLanguages(children);
+    const normalizedMathDelimiters = normalizeLatexDelimiters(fixedFenceLanguages);
     return escapeInvalidMath(normalizedMathDelimiters);
   }, [children]);
 
