@@ -1,4 +1,3 @@
-import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef } from "react";
 
 import { Message } from "./message";
@@ -15,18 +14,13 @@ export function MessageHistory({
   readOnly = false,
   showUserAvatar = true,
   bottomPaddingPx,
-  animateOnMount = false,
-  animationKey,
 }: {
   readOnly?: boolean;
   showUserAvatar?: boolean;
   bottomPaddingPx?: number;
-  animateOnMount?: boolean;
-  animationKey?: string;
 }) {
   const textareaHeight = useChatStore((state) => state.textareaHeight);
   const resolvedBottomPadding = bottomPaddingPx ?? textareaHeight;
-  const prefersReducedMotion = useReducedMotion() ?? false;
 
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -99,46 +93,9 @@ export function MessageHistory({
         className="mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 pt-12"
         style={{ paddingBottom: `${resolvedBottomPadding}px` }}
       >
-        <AnimatedMessages
-          animateOnMount={animateOnMount}
-          animationKey={animationKey}
-          prefersReducedMotion={prefersReducedMotion}
-          readOnly={readOnly}
-          showUserAvatar={showUserAvatar}
-        />
+        <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />
       </div>
     </div>
-  );
-}
-
-function AnimatedMessages({
-  animateOnMount,
-  animationKey,
-  prefersReducedMotion,
-  readOnly = false,
-  showUserAvatar = true,
-}: {
-  animateOnMount: boolean;
-  animationKey?: string;
-  prefersReducedMotion: boolean;
-  readOnly?: boolean;
-  showUserAvatar?: boolean;
-}) {
-  const content = <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />;
-
-  if (!animateOnMount || prefersReducedMotion) {
-    return content;
-  }
-
-  return (
-    <motion.div
-      key={animationKey ?? "message-history"}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-    >
-      {content}
-    </motion.div>
   );
 }
 
