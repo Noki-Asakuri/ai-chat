@@ -50,6 +50,92 @@ function normalizeMissingFenceLanguages(text: string): string {
   return out;
 }
 
+function normalizeLatexDelimiters(text: string): string {
+  const len = text.length;
+  const out: string[] = [];
+  let i = 0;
+  let inFence = false;
+  let inInline = false;
+  let backslashRun = 0;
+
+  function findClosingDelimiter(start: number, closeCharacter: ")" | "]"): number {
+    let j = start + 2;
+    let localBackslashRun = 0;
+
+    while (j < len) {
+      const ch = text[j]!;
+      const escaped = (localBackslashRun & 1) === 1;
+
+      if (!escaped && ch === "\\" && text[j + 1] === closeCharacter) {
+        return j;
+      }
+
+      if (ch === "\\") {
+        localBackslashRun++;
+      } else {
+        localBackslashRun = 0;
+      }
+
+      j++;
+    }
+
+    return -1;
+  }
+
+  while (i < len) {
+    const ch = text[i]!;
+    const escaped = (backslashRun & 1) === 1;
+
+    if (!inInline && !escaped && ch === "`" && text[i + 1] === "`" && text[i + 2] === "`") {
+      inFence = !inFence;
+      out.push("```");
+      i += 3;
+      backslashRun = 0;
+      continue;
+    }
+
+    if (!inFence && !escaped && ch === "`") {
+      inInline = !inInline;
+      out.push("`");
+      i += 1;
+      backslashRun = 0;
+      continue;
+    }
+
+    if (
+      !inFence &&
+      !inInline &&
+      !escaped &&
+      ch === "\\" &&
+      (text[i + 1] === "(" || text[i + 1] === "[")
+    ) {
+      const closeCharacter = text[i + 1] === "(" ? ")" : "]";
+      const replacementDelimiter = closeCharacter === ")" ? "$" : "$$";
+      const closing = findClosingDelimiter(i, closeCharacter);
+
+      if (closing !== -1) {
+        const content = text.slice(i + 2, closing);
+
+        out.push(replacementDelimiter, content, replacementDelimiter);
+        i = closing + 2;
+        backslashRun = 0;
+        continue;
+      }
+    }
+
+    out.push(ch);
+    i++;
+
+    if (ch === "\\") {
+      backslashRun++;
+    } else {
+      backslashRun = 0;
+    }
+  }
+
+  return out.join("");
+}
+
 function escapeInvalidMath(text: string): string {
   const len = text.length;
   const out: string[] = [];
@@ -235,7 +321,8 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
 }: MarkdownProps) {
   const normalizedChildren = useMemo(() => {
     const normalized = normalizeMissingFenceLanguages(children);
-    return escapeInvalidMath(normalized);
+    const normalizedMathDelimiters = normalizeLatexDelimiters(normalized);
+    return escapeInvalidMath(normalizedMathDelimiters);
   }, [children]);
 
   const streamdownProps: StreamdownProps = {
