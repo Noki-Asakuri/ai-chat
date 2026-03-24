@@ -1,21 +1,7 @@
-/* eslint-disable @typescript-eslint/unbound-method */
-import { clsx, type ClassValue } from "clsx";
 import { tryCatch, tryCatchSync } from "@ai-chat/shared/utils/async";
+
+import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-
-const numberFormat = new Intl.NumberFormat("en-US");
-const timeFormat = new Intl.NumberFormat("en-US", {
-  style: "unit",
-  unit: "second",
-  unitDisplay: "narrow",
-  maximumFractionDigits: 2,
-});
-
-const dateFormat = new Intl.DateTimeFormat("en-US", {
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -48,10 +34,7 @@ export function fromUUID<T extends string>(uuid?: T | string | null) {
  * @returns A formatted string like "5.37 MB".
  */
 function formatBytes(bytes: number, locale = "en-US"): string {
-  // If you're dealing with 0 bytes, you get 0 bytes. Math is fun.
-  if (bytes === 0) {
-    return "0 B";
-  }
+  if (bytes === 0) return "0 B";
 
   const KILOBYTE = 1024;
   const MEGABYTE = KILOBYTE * 1024;
@@ -86,48 +69,19 @@ function formatBytes(bytes: number, locale = "en-US"): string {
   return formatter.format(value);
 }
 
-/**
- * A tuple representing the result of an operation that can fail.
- * On success, the tuple is `[data, null]`.
- * On failure, the tuple is `[null, error]`.
- * @template T The type of the data on success.
- * @template E The type of the error on failure, defaults to `Error`.
- */
-export function fixMarkdownCodeBlocks(markdownText: string): string {
-  const codeBlockRegex = /([\w])```/g;
+const numberFormat = new Intl.NumberFormat("en-US");
+const timeFormat = new Intl.NumberFormat("en-US", {
+  style: "unit",
+  unit: "second",
+  unitDisplay: "narrow",
+  maximumFractionDigits: 2,
+});
 
-  return markdownText.replace(codeBlockRegex, (match, group1) => {
-    return `${group1}\n\`\`\``;
-  });
-}
-
-/**
- * Returns the first non-empty string from the given arguments, in order.
- * All arguments before the final one are optional; the final argument is required
- * and is returned as a fallback even if it's empty.
- *
- * @param strings - A sequence of optional strings followed by a required final string (fallback).
- * @returns The first string with length > 0, or the last argument if none are non-empty.
- *
- * @example
- * firstNonEmptyOrLast(undefined, "", "hello", "fallback"); // "hello"
- *
- * @example
- * firstNonEmptyOrLast(undefined, "", ""); // ""
- *
- * @example
- * firstNonEmptyOrLast("value"); // "value"
- */
-export function firstNonEmptyOrLast(...strings: [...(string | undefined)[], string]): string {
-  const last = strings[strings.length - 1]!;
-
-  for (let i = 0; i < strings.length - 1; i++) {
-    const s = strings[i];
-    if (s && s.length > 0) return s;
-  }
-
-  return last;
-}
+const dateFormat = new Intl.DateTimeFormat("en-US", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
 
 export const format = {
   number: numberFormat.format,
