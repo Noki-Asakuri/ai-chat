@@ -51,6 +51,12 @@ export async function buildSystemInstruction(
 		- Supported inline math delimiters: $...$ and \(...\).
 		- Supported block math delimiters: $$...$$ and \[...\].
 		- Prefer $...$ for inline math and $$...$$ for block math.
+
+		When using single dollar sign delimiters, make sure there is a space between the delimiters and the expression.
+		For example, use $ x = 1 $ instead of $x = 1$.
+
+		To avoid making currency symbols into math, add a espace character before the dollar sign.
+		For example, use \$40 instead of $40 and 100\$ instead of 100$
 		</math>
 		`);
 
