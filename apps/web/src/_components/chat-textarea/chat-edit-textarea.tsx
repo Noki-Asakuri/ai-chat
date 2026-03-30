@@ -49,17 +49,18 @@ function syncEditorIntoView(editorElement: HTMLDivElement): void {
   } else {
     updateStickyToBottomFromScroll(scrollArea);
   }
-
-  focusTextareaByIdAtEnd("textarea-user-message-edit");
 }
 
 export function ChatEditTextarea() {
   const editorRef = useRef<HTMLDivElement>(null);
   const editMessage = useChatStore((state) => state.editMessage);
+  const editMessageId = editMessage?._id ?? null;
   const { isSaving, saveEdits } = useChatEditSave();
 
   useLayoutEffect(() => {
-    if (!editMessage) return;
+    if (!editMessageId) return;
+
+    focusTextareaByIdAtEnd("textarea-user-message-edit");
 
     let firstRafId = 0;
     let secondRafId = 0;
@@ -88,7 +89,7 @@ export function ChatEditTextarea() {
         cancelAnimationFrame(secondRafId);
       }
     };
-  }, [editMessage]);
+  }, [editMessageId]);
 
   if (!editMessage) return null;
 
