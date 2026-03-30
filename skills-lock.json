@@ -30,6 +30,11 @@
       "source": "get-convex/agent-skills",
       "sourceType": "github",
       "computedHash": "92a5c170cf238f45f08439d9d5d7947af490b880ee8f15306183240483cbed02"
+    },
+    "turborepo": {
+      "source": "vercel/turborepo",
+      "sourceType": "github",
+      "computedHash": "4d42a3146ea4928fefab325ca977ca471c3e2fee0a348e01cab9c4cccb92ef19"
     }
   }
 }
