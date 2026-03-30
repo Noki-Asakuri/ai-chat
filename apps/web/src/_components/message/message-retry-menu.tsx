@@ -8,6 +8,9 @@ import { buttonVariants, ButtonWithTip, type Button } from "@/components/ui/butt
 import { Icons } from "@/components/ui/icons";
 import { Menu, MenuArrow } from "@/components/ui/menu";
 
+import { EFFORT_OPTIONS } from "../chat-textarea/effort-selector";
+import { PROVIDER_ORDER, createEmptyProviderModels } from "../chat-textarea/model-selector";
+
 import {
   SelectableModelIds,
   prettifyProviderName,
@@ -19,7 +22,6 @@ import { useRetryChatMessage } from "@/lib/chat/server-function/retry-chat-messa
 import { useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage, ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { EFFORT_OPTIONS } from "../chat-textarea/effort-selector";
 
 type RetryModelPopupProps = React.ComponentPropsWithoutRef<typeof Button> & {
   userMessageId: ChatMessage["_id"];
@@ -49,20 +51,15 @@ type EffortOption = {
   icon: (typeof EFFORT_OPTIONS)[ReasoningEffort]["icon"];
 };
 
-const PROVIDER_ORDER: Array<Provider> = ["google", "openai", "deepseek"];
 const DEFAULT_REASONING_EFFORTS = new Set<ReasoningEffort>(["low", "medium", "high"]);
 const EFFORT_ORDER: Array<ReasoningEffort> = ["none", "minimal", "low", "medium", "high", "xhigh"];
-
-function createEmptyProviderModels(): ProviderModels {
-  return { google: [], openai: [], deepseek: [] };
-}
 
 function sortEntriesByLabel(a: RetryModelEntry, b: RetryModelEntry): number {
   return a.label.localeCompare(b.label);
 }
 
 function groupProviderModels(models: Array<RetryModelEntry>): ProviderModels {
-  const grouped = createEmptyProviderModels();
+  const grouped = createEmptyProviderModels<ProviderModels>();
 
   for (const model of models) {
     grouped[model.provider].push(model);

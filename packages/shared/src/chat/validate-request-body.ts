@@ -10,6 +10,7 @@ import { getModelData, resolveModel } from "./models";
 import { chatRequestBodySchema, safetySettings, type ChatRequestBody } from "./request";
 import { reasoningEffortSchema } from "./metadata";
 import { tryCatch, tryCatchSync } from "../utils/async";
+import type { MoonshotAIProviderOptions } from "@ai-sdk/moonshotai";
 
 export { RequestValidationError, safetySettings };
 
@@ -149,6 +150,8 @@ export function createChatRequestValidator<
     const providerOptions = {
       openai: { store: false } as OpenAIResponsesProviderOptions,
       google: { safetySettings } as GoogleGenerativeAIProviderOptions,
+      kimi: {} as MoonshotAIProviderOptions,
+      zai: {} as Exclude<MoonshotAIProviderOptions, "reasoningHistory">,
     };
 
     providerOptions.google.thinkingConfig = {
@@ -166,6 +169,15 @@ export function createChatRequestValidator<
       providerOptions.google.thinkingConfig.thinkingBudget =
         reasoningToBudget[effort] ?? reasoningToBudget.medium;
 
+      // Disable thinking if effort is set to 'none' for Kimi K2.5
+      if (modelInfo.provider === "kimi" && modelInfo.id === "kimi/kimi-k2.5" && effort === "none") {
+        providerOptions.kimi.thinking = { type: "disabled" };
+      }
+
+      if (modelInfo.provider === "zai" && effort === "none") {
+        providerOptions.zai.thinking = { type: "disabled" };
+      }
+
       if (modelInfo.id === "google/gemini-2.5-pro") {
         providerOptions.google.thinkingConfig.thinkingBudget =
           providerOptions.google.thinkingConfig.thinkingBudget === 0
@@ -174,7 +186,10 @@ export function createChatRequestValidator<
       }
 
       if (requestedId === "google/gemini-3-flash-thinking") {
-        providerOptions.google.thinkingConfig = { includeThoughts: true, thinkingLevel: "minimal" };
+        providerOptions.google.thinkingConfig = {
+          includeThoughts: true,
+          thinkingLevel: "minimal",
+        };
       }
 
       if (modelInfo.id === "google/gemini-3-pro") {

@@ -179,7 +179,9 @@
         "@ai-sdk/deepseek": "catalog:shared",
         "@ai-sdk/devtools": "catalog:shared",
         "@ai-sdk/google": "catalog:shared",
+        "@ai-sdk/moonshotai": "catalog:shared",
         "@ai-sdk/openai": "catalog:shared",
+        "@ai-sdk/openai-compatible": "catalog:shared",
         "@exalabs/ai-sdk": "^2.0.1",
         "ai": "catalog:shared",
         "zod": "catalog:shared",
@@ -201,7 +203,9 @@
       "@ai-sdk/deepseek": "^2.0.24",
       "@ai-sdk/devtools": "^0.0.15",
       "@ai-sdk/google": "^3.0.53",
+      "@ai-sdk/moonshotai": "^2.0.12",
       "@ai-sdk/openai": "^3.0.48",
+      "@ai-sdk/openai-compatible": "^2.0.37",
       "@axiomhq/js": "^1.4.0",
       "@axiomhq/logging": "^0.2.0",
       "@t3-oss/env-core": "^0.13.11",
@@ -239,7 +243,11 @@
 
     "@ai-sdk/google": ["@ai-sdk/google@3.0.53", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.21" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-uz8tIlkDgQJG9Js2Wh9JHzd4kI9+hYJqf9XXJLx60vyN5mRIqhr49iwR5zGP5Gl8odp2PeR3Gh2k+5bh3Z1HHw=="],
 
+    "@ai-sdk/moonshotai": ["@ai-sdk/moonshotai@2.0.12", "", { "dependencies": { "@ai-sdk/openai-compatible": "2.0.37", "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.21" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-dW5wxbqMCaNrUb52GD7xuPcW4+Xnz+Eq7u3nn9vNdfhpclAqOcgzJ5Arn+HmY3SGcvNft6srOzsNBdVETyF6cg=="],
+
     "@ai-sdk/openai": ["@ai-sdk/openai@3.0.48", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.21" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-ALmj/53EXpcRqMbGpPJPP4UOSWw0q4VGpnDo7YctvsynjkrKDmoneDG/1a7VQnSPYHnJp6tTRMf5ZdxZ5whulg=="],
+
+    "@ai-sdk/openai-compatible": ["@ai-sdk/openai-compatible@2.0.37", "", { "dependencies": { "@ai-sdk/provider": "3.0.8", "@ai-sdk/provider-utils": "4.0.21" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-+POSFVcgiu47BK64dhsI6OpcDC0/VAE2ZSaXdXGNNhpC/ava++uSRJYks0k2bpfY0wwCTgpAWZsXn/dG2Yppiw=="],
 
     "@ai-sdk/provider": ["@ai-sdk/provider@3.0.8", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-oGMAgGoQdBXbZqNG0Ze56CHjDZ1IDYOwGYxYjO5KLSlz5HiNQ9udIXsPZ61VWaHGZ5XW/jyjmr6t2xz2jGVwbQ=="],
 

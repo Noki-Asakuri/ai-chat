@@ -1,8 +1,11 @@
+import { createProviderRegistry, customProvider, wrapLanguageModel } from "ai";
+
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
-import { createProviderRegistry, customProvider, wrapLanguageModel } from "ai";
+import { createMoonshotAI } from "@ai-sdk/moonshotai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 import { type ModelIdKey, ModelsData } from "./index";
 
@@ -17,6 +20,12 @@ export function createModelRegistry(options: CreateModelRegistryOptions) {
 
   const deepseek = createDeepSeek(providerOptions);
   const baseOpenai = createOpenAI(providerOptions);
+  const baseKimi = createMoonshotAI(providerOptions);
+  const baseZai = createOpenAICompatible({
+    ...providerOptions,
+    name: "zai",
+    includeUsage: true,
+  });
   const baseGoogle = createGoogleGenerativeAI({
     ...providerOptions,
     baseURL: providerOptions.baseURL + "/v1beta/",
@@ -82,7 +91,33 @@ export function createModelRegistry(options: CreateModelRegistryOptions) {
     },
   });
 
-  const providers = createProviderRegistry({ google, openai, deepseek }, { separator: "/" });
+  const kimi = customProvider({
+    languageModels: {
+      "kimi-k2-thinking": baseKimi.languageModel("kimi-k2-thinking"),
+      "kimi-k2-0711": baseKimi.languageModel("kimi-k2-0711-preview"),
+      "kimi-k2-0905": baseKimi.languageModel("kimi-k2-0905-preview"),
+
+      "kimi-k2-thinking-turbo": baseKimi.languageModel("kimi-k2-thinking-turbo"),
+      "kimi-k2-turbo": baseKimi.languageModel("kimi-k2-turbo-preview"),
+
+      "kimi-k2.5": baseKimi.languageModel("kimi-k2.5"),
+    },
+  });
+
+  const zai = customProvider({
+    languageModels: {
+      "glm-4.5": baseZai.languageModel("glm-4.5"),
+      "glm-4.6": baseZai.languageModel("glm-4.6"),
+      "glm-4.7": baseZai.languageModel("glm-4.7"),
+
+      "glm-5": baseZai.languageModel("glm-5"),
+    },
+  });
+
+  const providers = createProviderRegistry(
+    { google, openai, deepseek, kimi, zai },
+    { separator: "/" },
+  );
 
   assertModelRegistryCoverage(function languageModel(modelId: ModelIdKey) {
     return providers.languageModel(modelId);

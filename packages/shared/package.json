@@ -16,7 +16,9 @@
     "@ai-sdk/deepseek": "catalog:shared",
     "@ai-sdk/devtools": "catalog:shared",
     "@ai-sdk/google": "catalog:shared",
+    "@ai-sdk/moonshotai": "catalog:shared",
     "@ai-sdk/openai": "catalog:shared",
+    "@ai-sdk/openai-compatible": "catalog:shared",
     "@exalabs/ai-sdk": "^2.0.1",
     "ai": "catalog:shared",
     "zod": "catalog:shared"

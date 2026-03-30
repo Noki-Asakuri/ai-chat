@@ -2,7 +2,9 @@ import type { ReasoningEffort } from "../metadata";
 
 import { deepseek } from "./services/deepseek";
 import { google } from "./services/google";
+import { kimi } from "./services/kimi";
 import { openai } from "./services/openai";
+import { zai } from "./services/zai";
 
 type Capability = {
   webSearch?: boolean;
@@ -12,7 +14,7 @@ type Capability = {
   customReasoningLevel?: ReasoningEffort[];
 };
 
-export type Provider = "google" | "openai" | "deepseek";
+export type Provider = "google" | "openai" | "deepseek" | "kimi" | "zai";
 export type ModelIdKey = `${Provider}/${string}`;
 
 export type ModelDeprecation = {
@@ -39,10 +41,18 @@ export const ModelsData: Record<ModelIdKey, ModelData> = {
   ...google,
   ...openai,
   ...deepseek,
+  ...kimi,
+  ...zai,
 };
 
 function isProvider(provider: string): provider is Provider {
-  return provider === "google" || provider === "openai" || provider === "deepseek";
+  return (
+    provider === "google" ||
+    provider === "openai" ||
+    provider === "deepseek" ||
+    provider === "kimi" ||
+    provider === "zai"
+  );
 }
 
 function isModelIdKey(modelId: string): modelId is ModelIdKey {
@@ -92,8 +102,10 @@ function buildModelIndexes() {
     const aliases = data.altModelIds ?? [];
     for (const alias of aliases) {
       const existing = aliasToRequestedId.get(alias);
+
       if (existing && existing !== requestedId) {
         const existingData = byRequestedId.get(existing);
+
         if (!existingData || existingData.id !== data.id) {
           throw new Error(
             `Duplicate alias detected: ${alias} (used by ${existing} and ${requestedId})`,
@@ -194,6 +206,10 @@ export function prettifyProviderName(provider: Provider | (string & {})) {
       return "OpenAI";
     case "deepseek":
       return "DeepSeek";
+    case "kimi":
+      return "Kimi";
+    case "zai":
+      return "ZAI";
     default:
       return "Unknown";
   }

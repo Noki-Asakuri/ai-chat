@@ -55,18 +55,18 @@ type ModelGroup = {
   models: Array<VisibleModelEntry>;
 };
 
-const PROVIDER_ORDER: Array<Provider> = ["google", "openai", "deepseek"];
+export const PROVIDER_ORDER: Array<Provider> = ["google", "openai", "deepseek", "kimi", "zai"];
 
-function createEmptyProviderModels(): ProviderModels {
-  return { google: [], openai: [], deepseek: [] };
+export function createEmptyProviderModels<T extends Record<Provider, unknown[]>>(): T {
+  return { google: [], openai: [], deepseek: [], kimi: [], zai: [] } as unknown as T;
 }
 
 function sortEntriesByLabel(a: VisibleModelEntry, b: VisibleModelEntry): number {
   return a.label.localeCompare(b.label);
 }
 
-function groupProviderModels(models: Array<VisibleModelEntry>): ProviderModels {
-  const grouped = createEmptyProviderModels();
+export function groupProviderModels(models: Array<VisibleModelEntry>): ProviderModels {
+  const grouped = createEmptyProviderModels<ProviderModels>();
 
   for (const model of models) {
     grouped[model.provider].push(model);
@@ -79,7 +79,7 @@ function groupProviderModels(models: Array<VisibleModelEntry>): ProviderModels {
   return grouped;
 }
 
-function appendProviderGroups(
+export function appendProviderGroups(
   groups: Array<ModelGroup>,
   providerModels: ProviderModels,
   options?: {
