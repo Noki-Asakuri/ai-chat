@@ -1,2 +1,8 @@
 [install]
 linker = "hoisted"
+
+# Only install package versions published at least 3 days ago
+minimumReleaseAge = 259200
+
+# These packages will bypass the 3-day minimum age requirement
+minimumReleaseAgeExcludes = ["@types/bun", "turbo", "typescript", "@typescript/native-preview"]
