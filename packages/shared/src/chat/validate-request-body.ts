@@ -14,13 +14,22 @@ import type { MoonshotAIProviderOptions } from "@ai-sdk/moonshotai";
 
 export { RequestValidationError, safetySettings };
 
-const reasoningToBudget: Record<ReasoningEffort, number> = {
+const reasoningToGeminiBudget: Record<ReasoningEffort, number> = {
   none: 0,
   minimal: 128,
   low: 1_024,
   medium: 10_000,
   high: 20_000,
   xhigh: 30_000,
+};
+
+const reasoningToKimiBudget: Record<ReasoningEffort, number> = {
+  none: 1_024,
+  minimal: 1_024,
+  low: 2_048,
+  medium: 4_096,
+  high: 8_192,
+  xhigh: 8_192,
 };
 
 const openaiReasoningToGoogle: Record<ReasoningEffort, "minimal" | "low" | "medium" | "high"> = {
@@ -145,6 +154,7 @@ export function createChatRequestValidator<
       });
     }
 
+    const effort = data.modelParams.effort ?? "medium";
     const modelMessages = await convertToModelMessages(normalizedMessages);
 
     const providerOptions = {
@@ -159,24 +169,25 @@ export function createChatRequestValidator<
       thinkingBudget: 0,
     };
 
-    if (modelInfo.capabilities.reasoning) {
-      const effort = data.modelParams.effort ?? "medium";
+    providerOptions.kimi.thinking = {
+      type: modelInfo.capabilities.reasoning && effort !== "none" ? "enabled" : "disabled",
+      budgetTokens: 1024,
+    };
 
+    providerOptions.zai.thinking = {
+      type: modelInfo.capabilities.reasoning && effort !== "none" ? "enabled" : "disabled",
+    };
+
+    if (modelInfo.capabilities.reasoning) {
       providerOptions.openai.reasoningEffort = effort;
       providerOptions.openai.reasoningSummary = "detailed";
       providerOptions.openai.include = ["reasoning.encrypted_content"];
 
       providerOptions.google.thinkingConfig.thinkingBudget =
-        reasoningToBudget[effort] ?? reasoningToBudget.medium;
+        reasoningToGeminiBudget[effort] ?? reasoningToGeminiBudget.medium;
 
-      // Disable thinking if effort is set to 'none' for Kimi K2.5
-      if (modelInfo.provider === "kimi" && modelInfo.id === "kimi/kimi-k2.5" && effort === "none") {
-        providerOptions.kimi.thinking = { type: "disabled" };
-      }
-
-      if (modelInfo.provider === "zai" && effort === "none") {
-        providerOptions.zai.thinking = { type: "disabled" };
-      }
+      providerOptions.kimi.thinking.budgetTokens =
+        reasoningToKimiBudget[effort] ?? reasoningToKimiBudget.medium;
 
       if (modelInfo.id === "google/gemini-2.5-pro") {
         providerOptions.google.thinkingConfig.thinkingBudget =

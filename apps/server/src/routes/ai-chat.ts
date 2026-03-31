@@ -445,7 +445,7 @@ export async function handlePostChat(ctx: Context): Promise<Response> {
     });
 
     const result = await agent.stream({
-      prompt: modelMessages,
+      messages: modelMessages,
       abortSignal: serverAbortController.signal,
     });
 

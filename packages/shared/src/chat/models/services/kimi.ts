@@ -5,7 +5,10 @@ export const kimi: Record<ModelIdKey, ModelData> = {
     display: { name: "Kimi K2.5" },
     id: "kimi/kimi-k2.5",
     provider: "kimi",
-    capabilities: { reasoning: true, webSearch: true, customReasoningLevel: ["none", "medium"] },
+    capabilities: {
+      reasoning: true,
+      customReasoningLevel: ["none", "minimal", "low", "medium", "high"],
+    },
   },
 
   "kimi/kimi-k2-thinking": {
@@ -13,21 +16,21 @@ export const kimi: Record<ModelIdKey, ModelData> = {
     id: "kimi/kimi-k2-thinking",
     provider: "kimi",
 
-    capabilities: { reasoning: "always", webSearch: true },
+    capabilities: { reasoning: "always" },
   },
   "kimi/kimi-k2-0905": {
     display: { name: "Kimi K2 0905" },
     id: "kimi/kimi-k2-0905",
     provider: "kimi",
 
-    capabilities: { webSearch: true },
+    capabilities: {},
   },
   "kimi/kimi-k2-0711": {
     display: { name: "Kimi K2 0711" },
     id: "kimi/kimi-k2-0711",
     provider: "kimi",
 
-    capabilities: { webSearch: true },
+    capabilities: {},
   },
 
   "kimi/kimi-k2-thinking-turbo": {
@@ -35,13 +38,13 @@ export const kimi: Record<ModelIdKey, ModelData> = {
     id: "kimi/kimi-k2-thinking-turbo",
     provider: "kimi",
 
-    capabilities: { reasoning: "always", webSearch: true },
+    capabilities: { reasoning: "always" },
   },
   "kimi/kimi-k2-turbo": {
     display: { name: "Kimi K2 Turbo" },
     id: "kimi/kimi-k2-turbo",
     provider: "kimi",
 
-    capabilities: { webSearch: true },
+    capabilities: {},
   },
 };
