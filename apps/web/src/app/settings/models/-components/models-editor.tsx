@@ -68,6 +68,8 @@ const PROVIDER_ORDER_INDEX: Record<Provider, number> = {
   google: 0,
   openai: 1,
   deepseek: 2,
+  kimi: 3,
+  zai: 4,
 };
 
 const STATUS_BADGE_STYLES: Record<"visible" | "hidden" | "favorite" | "deprecated", string> = {

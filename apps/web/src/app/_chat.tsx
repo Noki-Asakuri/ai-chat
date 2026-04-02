@@ -42,15 +42,17 @@ const getDefaultOpenSidebar = createIsomorphicFn()
 export const Route = createFileRoute("/_chat")({
   component: RouteComponent,
 
-  loader: async ({ context, location, params: rawParams }) => {
+  beforeLoad: async ({ location }) => {
     const auth = await getAuth();
-    console.log("Has auth?", auth.user);
 
     if (!auth.user) {
       const path = location.pathname;
       throw redirect({ to: "/auth/login", search: { rt: path } });
     }
 
+    return { user: auth.user };
+  },
+  loader: async ({ context, params: rawParams }) => {
     const { defaultOpenSidebar } = await getDefaultOpenSidebar();
 
     const params = rawParams as { threadId?: string };
@@ -77,7 +79,7 @@ export const Route = createFileRoute("/_chat")({
     }
 
     const [userPreferencesData] = (await Promise.all(promises)) as [UserPreferences];
-    return { user: auth.user, defaultOpenSidebar, userPreferencesData };
+    return { user: context.user, defaultOpenSidebar, userPreferencesData };
   },
 
   head: () => ({

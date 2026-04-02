@@ -233,7 +233,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   }, [allViewModels]);
 
   const allViewProviderModelsWithoutFavorites = useMemo(() => {
-    const grouped = createEmptyProviderModels();
+    const grouped = createEmptyProviderModels<ProviderModels>();
 
     for (const provider of PROVIDER_ORDER) {
       const models = allViewProviderModels[provider];
