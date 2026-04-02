@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { convexQuery } from "@convex-dev/react-query";
-import { getSignInUrl } from "@workos/authkit-tanstack-react-start";
 import { makeFunctionReference } from "convex/server";
 import { HomeIcon, Loader2Icon, LockIcon } from "lucide-react";
 import { useEffect, useMemo } from "react";
@@ -27,10 +26,7 @@ export const Route = createFileRoute("/share/$shareId")({
   component: SharedThreadPage,
   loader: async ({ params, context }) => {
     void context.queryClient.prefetchQuery(
-      convexQuery(getSharedThreadRef, {
-        shareId: params.shareId,
-        sessionId: context.sessionId,
-      }),
+      convexQuery(getSharedThreadRef, { shareId: params.shareId }),
     );
   },
   head: () => ({
@@ -169,8 +165,7 @@ function ReadOnlyMessageHistory() {
 
 function PrivateShareGate({ shareId }: { shareId: string }) {
   async function handleSignIn() {
-    const href = await getSignInUrl({ data: `/share/${shareId}` });
-    window.location.href = href;
+    window.location.href = `/auth/login?rt=${encodeURIComponent(`/share/${shareId}`)}`;
   }
 
   return (
@@ -189,6 +184,7 @@ function PrivateShareGate({ shareId }: { shareId: string }) {
           <Button size="sm" onClick={handleSignIn}>
             Sign in
           </Button>
+
           <Button size="sm" variant="outline" nativeButton={false} render={<Link to="/" />}>
             Go home
           </Button>

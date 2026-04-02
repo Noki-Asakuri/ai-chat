@@ -2,7 +2,7 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { getSignInUrl } from "@workos/authkit-tanstack-react-start";
+import { getAuth } from "@workos/authkit-tanstack-react-start";
 import { z } from "zod/v4";
 
 import { SettingsRouteHeader } from "@/components/settings/settings-route-header";
@@ -11,24 +11,20 @@ import { UserNavbar } from "@/components/user/navbar";
 
 export const Route = createFileRoute("/settings")({
   validateSearch: z.object({ rt: z.string().optional() }),
-  beforeLoad: async ({ context, location }) => {
-    if (!context.user) {
-      const path = location.pathname;
-      const href = await getSignInUrl({ data: path });
 
-      throw redirect({ href });
+  loader: async ({ context, location }) => {
+    const auth = await getAuth();
+    if (!auth.user) {
+      const path = location.pathname;
+      throw redirect({ to: "/auth/login", search: { rt: path } });
     }
 
     if (location.pathname === "/settings" || location.pathname === "/settings/") {
       throw redirect({ to: "/settings/account" });
     }
 
-    return { user: context.user };
-  },
-
-  loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser));
-    return { user: context.user };
+    return { user: auth.user };
   },
   component: AuthLayout,
 });

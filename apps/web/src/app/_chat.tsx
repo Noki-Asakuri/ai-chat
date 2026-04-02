@@ -10,7 +10,7 @@ import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 
 import { convexQuery } from "@convex-dev/react-query";
-import { getSignInUrl } from "@workos/authkit-tanstack-react-start";
+import { getAuth } from "@workos/authkit-tanstack-react-start";
 import { PlusIcon } from "lucide-react";
 import { Suspense } from "react";
 
@@ -42,18 +42,15 @@ const getDefaultOpenSidebar = createIsomorphicFn()
 export const Route = createFileRoute("/_chat")({
   component: RouteComponent,
 
-  beforeLoad: async ({ context, location }) => {
-    if (!context.user) {
-      const path = location.pathname;
-      const href = await getSignInUrl({ data: path });
+  loader: async ({ context, location, params: rawParams }) => {
+    const auth = await getAuth();
+    console.log("Has auth?", auth.user);
 
-      throw redirect({ href });
+    if (!auth.user) {
+      const path = location.pathname;
+      throw redirect({ to: "/auth/login", search: { rt: path } });
     }
 
-    return { user: context.user, sessionId: context.sessionId };
-  },
-
-  loader: async ({ context, params: rawParams }) => {
     const { defaultOpenSidebar } = await getDefaultOpenSidebar();
 
     const params = rawParams as { threadId?: string };
@@ -80,7 +77,7 @@ export const Route = createFileRoute("/_chat")({
     }
 
     const [userPreferencesData] = (await Promise.all(promises)) as [UserPreferences];
-    return { user: context.user, defaultOpenSidebar, userPreferencesData };
+    return { user: auth.user, defaultOpenSidebar, userPreferencesData };
   },
 
   head: () => ({

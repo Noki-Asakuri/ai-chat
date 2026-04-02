@@ -111,14 +111,11 @@ export const Route = createRootRouteWithContext<RootContext>()({
       scripts,
     };
   },
-  beforeLoad: async () => {
+  loader: async () => {
     const auth = await getAuth();
     if (!auth.user) return { user: undefined, sessionId: undefined };
 
     return { user: auth.user, sessionId: auth.sessionId };
-  },
-  loader: async ({ context }) => {
-    return { user: context.user, sessionId: context.sessionId };
   },
 
   shellComponent: RootLayout,
