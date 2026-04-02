@@ -33,7 +33,7 @@ export function MessageReasoning({ parts, metadata, className }: ThinkingToggleP
       <ReasoningTrigger
         disabled={reasoning.length === 0}
         showArrow={reasoning.length > 0}
-        className="w-max rounded-md bg-background/80 p-2 backdrop-blur-md backdrop-contrast-150"
+        className="w-max rounded-md border bg-background/80 p-2 backdrop-blur-md backdrop-contrast-150"
       />
 
       {reasoning.length > 0 && (
