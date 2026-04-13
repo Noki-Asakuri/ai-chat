@@ -21,7 +21,22 @@ export async function updateTitle({
   console.debug("[Server] Updating thread title", threadId);
 
   const content = (messages[0].content as TextPart[])[0]?.text ?? "Empty message";
+  await updateThreadTitleFromContent({
+    content,
+    threadId,
+    serverConvexClient,
+  });
+}
 
+export async function updateThreadTitleFromContent({
+  content,
+  threadId,
+  serverConvexClient,
+}: {
+  content: string;
+  threadId: Id<"threads">;
+  serverConvexClient: ServerConvexClient;
+}) {
   const { text } = await generateText({
     model: registry("google/gemini-2.5-flash"),
     providerOptions: { google: { safetySettings } },

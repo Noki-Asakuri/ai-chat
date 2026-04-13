@@ -4,6 +4,8 @@
   "type": "module",
   "exports": {
     "./chat/metadata": "./src/chat/metadata.ts",
+    "./chat/trpc": "./src/chat/trpc.ts",
+    "./chat/ui": "./src/chat/ui.ts",
     "./chat/request": "./src/chat/request.ts",
     "./chat/errors": "./src/chat/errors.ts",
     "./chat/validate-request-body": "./src/chat/validate-request-body.ts",

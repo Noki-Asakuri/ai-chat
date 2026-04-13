@@ -1,7 +1,6 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { Link, useParams } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 
 import { Dialog } from "@base-ui/react/dialog";
 import { Menu } from "@base-ui/react/menu";
@@ -26,13 +25,13 @@ import { CSS } from "@dnd-kit/utilities";
 import { buttonVariants } from "../ui/button";
 import { Input } from "../ui/input";
 
-import { regenerateThreadTitleServerFn } from "./server-function/regenerate-thread-title";
 import { ThreadDeleteDialog } from "./thread-delete-dialog";
 import { ThreadShareDialog } from "./thread-share-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
+import { regenerateThreadTitle } from "@/lib/trpc/client";
 import type { Thread } from "@/lib/types";
-import { cn, toUUID } from "@/lib/utils";
+import { cn, toUUID, tryCatch } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
 
@@ -134,8 +133,6 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const regenerateThreadTitle = useServerFn(regenerateThreadTitleServerFn);
-
   function toggleThreadPin() {
     console.debug("[Thread] Pin thread", thread);
     void convexClient.mutation(api.functions.threads.pinThread, {
@@ -164,11 +161,11 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
   }
 
   async function regenerateTitle() {
-    const { error } = await regenerateThreadTitle({ data: { threadId: thread._id } });
+    const [, error] = await tryCatch(regenerateThreadTitle({ threadId: thread._id }));
     if (!error) return;
 
     console.error("[Thread] Regenerate title error:", error);
-    toast.error(error);
+    toast.error(error.message);
   }
 
   return (

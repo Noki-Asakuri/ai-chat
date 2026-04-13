@@ -1,4 +1,8 @@
-import { readUIMessageStream, type UIMessage, type UIMessageChunk } from "ai";
+import {
+  readUIMessageStream,
+  type UIMessage,
+  type UIMessageChunk,
+} from "@ai-chat/shared/chat/ui";
 
 export type UIMessageStreamEvent<UI_MESSAGE extends UIMessage = UIMessage> =
   | {

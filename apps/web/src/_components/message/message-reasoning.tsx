@@ -1,4 +1,4 @@
-import type { ReasoningUIPart } from "ai";
+import type { ReasoningUIPart } from "@ai-chat/shared/chat/ui";
 
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "../ui/ai-elements/reasoning";
 

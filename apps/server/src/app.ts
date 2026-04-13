@@ -8,6 +8,7 @@ import { authenticate } from "./auth";
 import { env } from "./env";
 import { logger } from "./lib/logger";
 import { handleAbortChat, handlePostChat, handleResumeChat } from "./routes/ai-chat";
+import { handleTRPCRequest } from "./trpc";
 
 type ServerState = {
   serverStartedAt: number;
@@ -102,6 +103,7 @@ export function createServerApp(options: { commitSha: string }): ServerApp {
   app.get("/api/ai/chat", authenticate, handleResumeChat);
   app.post("/api/ai/chat", authenticate, handlePostChat);
   app.post("/api/ai/chat/abort", authenticate, handleAbortChat);
+  app.all("/api/trpc/*", (ctx) => handleTRPCRequest(ctx.req.raw));
 
   process.on("unhandledRejection", (reason) => {
     logger.error("[Server] Unhandled Rejection", { reason });

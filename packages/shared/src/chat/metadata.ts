@@ -1,5 +1,6 @@
-import type { UIDataTypes, UIMessage, UITools } from "ai";
 import { z } from "zod/v4";
+
+import type { UIDataTypes, UIMessage, UITools } from "./ui";
 
 export const reasoningEffortValues = ["none", "minimal", "low", "medium", "high", "xhigh"] as const;
 

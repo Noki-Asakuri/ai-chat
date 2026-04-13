@@ -1,24 +1,24 @@
-import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useParams } from "@tanstack/react-router";
-import { useConvex } from "convex/react";
 import { useShallow } from "zustand/shallow";
 
 import { useConfigStore } from "@/components/provider/config-provider";
 
+import { syncThreadModelConfig } from "@/lib/trpc/client";
 import { fromUUID, tryCatch } from "@/lib/utils";
-
-type UpdateThreadModelConfigArgs = (typeof api.functions.threads.updateThreadModelConfig)["_args"];
 
 type SyncThreadModelConfigOptions = {
   threadId?: Id<"threads">;
-  model?: UpdateThreadModelConfigArgs["latestModel"];
-  modelParams?: Partial<UpdateThreadModelConfigArgs["latestModelParams"]>;
+  model?: string;
+  modelParams?: Partial<{
+    webSearch: boolean;
+    effort: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+    profile?: Id<"profiles"> | null;
+  }>;
 };
 
 export function useSyncThreadModelConfig() {
-  const convexClient = useConvex();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
   const { model, modelParams } = useConfigStore(
@@ -30,9 +30,9 @@ export function useSyncThreadModelConfig() {
 
   async function syncThreadModelConfig(options: SyncThreadModelConfigOptions = {}) {
     const resolvedThreadId = options.threadId ?? fromUUID<Id<"threads">>(params?.threadId);
-    const latestModel = options.model ?? model;
+    const nextModel = options.model ?? model;
 
-    const latestModelParams: UpdateThreadModelConfigArgs["latestModelParams"] = {
+    const nextModelParams = {
       ...modelParams,
       ...options.modelParams,
       profile:
@@ -41,20 +41,13 @@ export function useSyncThreadModelConfig() {
           : options.modelParams.profile,
     };
 
-    const [, error] = resolvedThreadId
-      ? await tryCatch(
-          convexClient.mutation(api.functions.threads.updateThreadModelConfig, {
-            threadId: resolvedThreadId,
-            latestModel,
-            latestModelParams,
-          }),
-        )
-      : await tryCatch(
-          convexClient.mutation(api.functions.users.updateUserDefaultModelConfig, {
-            defaultModel: latestModel,
-            modelParams: latestModelParams,
-          }),
-        );
+    const [, error] = await tryCatch(
+      syncThreadModelConfig({
+        threadId: resolvedThreadId,
+        model: nextModel,
+        modelParams: nextModelParams,
+      }),
+    );
 
     if (error) {
       console.error("[Chat] Failed to sync model config", error);

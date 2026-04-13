@@ -1,8 +1,8 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
+import type { UIMessage } from "@ai-chat/shared/chat/ui";
 
 import { useQuery } from "@tanstack/react-query";
 import { useLoaderData } from "@tanstack/react-router";
-import type { UIMessage } from "ai";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps, HTMLAttributes } from "react";
 

@@ -1,4 +1,4 @@
-import type { DynamicToolUIPart, ToolUIPart, UITools } from "ai";
+import type { DynamicToolUIPart, ToolUIPart, UITools } from "@ai-chat/shared/chat/ui";
 
 import { CheckIcon, CircleDashedIcon, XIcon } from "lucide-react";
 

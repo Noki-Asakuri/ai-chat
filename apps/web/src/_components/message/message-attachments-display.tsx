@@ -1,4 +1,4 @@
-import type { FileUIPart } from "ai";
+import type { FileUIPart } from "@ai-chat/shared/chat/ui";
 import { BotIcon, FileTextIcon, ImageOffIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
