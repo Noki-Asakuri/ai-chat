@@ -111,6 +111,7 @@ export function createModelRegistry(options: CreateModelRegistryOptions) {
       "glm-4.7": baseZai.languageModel("glm-4.7"),
 
       "glm-5": baseZai.languageModel("glm-5"),
+      "glm-5.1": baseZai.languageModel("glm-5.1"),
     },
   });
 
