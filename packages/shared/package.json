@@ -7,21 +7,11 @@
     "./chat/trpc": "./src/chat/trpc.ts",
     "./chat/ui": "./src/chat/ui.ts",
     "./chat/request": "./src/chat/request.ts",
-    "./chat/errors": "./src/chat/errors.ts",
-    "./chat/validate-request-body": "./src/chat/validate-request-body.ts",
     "./chat/models": "./src/chat/models/index.ts",
-    "./chat/models/runtime-registry": "./src/chat/models/runtime-registry.ts",
     "./assets/urls": "./src/assets/urls.ts",
     "./utils/async": "./src/utils/async.ts"
   },
   "dependencies": {
-    "@ai-sdk/deepseek": "catalog:shared",
-    "@ai-sdk/devtools": "catalog:shared",
-    "@ai-sdk/google": "catalog:shared",
-    "@ai-sdk/moonshotai": "catalog:shared",
-    "@ai-sdk/openai": "catalog:shared",
-    "@ai-sdk/openai-compatible": "catalog:shared",
-    "@exalabs/ai-sdk": "^2.0.1",
     "ai": "catalog:shared",
     "zod": "catalog:shared"
   },

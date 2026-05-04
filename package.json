@@ -22,6 +22,7 @@
       "@ai-sdk/openai-compatible": "^2.0.41",
       "@axiomhq/js": "^1.6.0",
       "@axiomhq/logging": "^0.2.0",
+      "better-result": "^2.8.2",
       "@t3-oss/env-core": "^0.13.11",
       "@workos/authkit-session": "^0.3.4",
       "@workos-inc/node": "^8.13.0",

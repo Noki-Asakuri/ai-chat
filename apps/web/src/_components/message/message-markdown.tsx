@@ -48,16 +48,13 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
   }, [children]);
 
   const streamdownProps: StreamdownProps = {
-    caret: "block",
-    isAnimating,
     plugins: {
       cjk,
       math,
       mermaid,
       renderers: [{ component: CodeBlock, language: supportedLanguages }],
     },
-    animated: role === "assistant",
-    mode: role === "assistant" && isAnimating === true ? "streaming" : "static",
+    mode: "static",
     mermaid: { config: { theme: "dark" } },
 
     linkSafety: {

@@ -372,7 +372,6 @@ export const getThreadTitle = authenticatedQuery({
   args: { threadId: v.optional(v.id("threads")) },
   handler: async (ctx, args) => {
     const user = ctx.user;
-
     if (!args.threadId) return { title: null, pinned: false, isShared: false };
 
     const thread = await ctx.db.get("threads", args.threadId);

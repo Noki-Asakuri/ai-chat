@@ -1,14 +1,10 @@
-import {
-  regenerateThreadTitleInputSchema,
-  syncThreadModelConfigInputSchema,
-  type RegenerateThreadTitleInput,
-  type SyncThreadModelConfigInput,
-} from "@ai-chat/shared/chat/trpc";
-import { createTRPCUntypedClient, httpBatchLink } from "@trpc/client";
+import type { AppRouter, RouterInput } from "../../../../server/src/trpc/router";
+
+import { createTRPCClient, httpBatchLink } from "@trpc/client";
 
 import { env } from "@/env";
 
-let trpcClientSingleton: ReturnType<typeof createTRPCUntypedClient> | undefined;
+let trpcClientSingleton: ReturnType<typeof createTRPCClient<AppRouter>> | undefined;
 
 function getTRPCBaseUrl(): string {
   return new URL("/api/trpc", env.VITE_API_ENDPOINT).toString();
@@ -17,7 +13,7 @@ function getTRPCBaseUrl(): string {
 export function getTRPCClient() {
   if (trpcClientSingleton) return trpcClientSingleton;
 
-  trpcClientSingleton = createTRPCUntypedClient({
+  trpcClientSingleton = createTRPCClient<AppRouter>({
     links: [
       httpBatchLink({
         url: getTRPCBaseUrl(),
@@ -31,12 +27,12 @@ export function getTRPCClient() {
   return trpcClientSingleton;
 }
 
-export async function syncThreadModelConfig(input: SyncThreadModelConfigInput): Promise<void> {
+export async function syncThreadModelConfig(input: RouterInput["thread"]["syncModelConfig"]) {
   const client = getTRPCClient();
-  await client.mutation("thread.syncModelConfig", syncThreadModelConfigInputSchema.parse(input));
+  await client.thread.syncModelConfig.mutate(input);
 }
 
-export async function regenerateThreadTitle(input: RegenerateThreadTitleInput): Promise<void> {
+export async function regenerateThreadTitle(input: RouterInput["thread"]["regenerateTitle"]) {
   const client = getTRPCClient();
-  await client.mutation("thread.regenerateTitle", regenerateThreadTitleInputSchema.parse(input));
+  await client.thread.regenerateTitle.mutate(input);
 }
