@@ -25,7 +25,7 @@ This part is for agents to know what is the most important thing to do.
 
 - Follow the user's instructions exactly. If you are not sure, ask the user for confirmation.
 - Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
-- Always use Conventional Commits when committing.
+- Always use Conventional Commits with scope when committing.
 
 ### Docs lookup
 

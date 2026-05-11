@@ -6,9 +6,9 @@
     "@ai-chat/shared": "workspace:*",
     "@convex-dev/action-retrier": "^0.3.0",
     "@convex-dev/crons": "^0.2.0",
-    "@convex-dev/migrations": "^0.3.3",
-    "@convex-dev/r2": "^0.9.2",
-    "@convex-dev/workos-authkit": "^0.2.2",
+    "@convex-dev/migrations": "^0.3.4",
+    "@convex-dev/r2": "^0.10.1",
+    "@convex-dev/workos-authkit": "^0.2.4",
     "convex": "catalog:backend",
     "convex-helpers": "catalog:backend"
   },
