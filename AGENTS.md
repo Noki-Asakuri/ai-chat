@@ -23,24 +23,16 @@ skills:
 
 ## General
 
-This part is for agents to know what is the most important thing to do.
-
-1. Use bun (`bun` or `bunx`) for everything.
-2. Use subagents whenever it make sense. Like explore and review the codebase.
-3. Follow the user's instructions exactly. If you are not sure, ask the user for confirmation.
-4. Recommend to create to-do list for keeping progress and make sure all the tasks are done.
-5. Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
-6. Never run any scripts in terminal or bash, especially eval or any scripts that are not listed in the "Scripts" section below.
-7. When in planning mode, avoid asking questions one by one. Group your questions together and ask in a single message.
-8. When reviewing git diff, avoid reading bun.lock file, it really long and not important.
-9. Always use Conventional Commits when committing.
+- Use subagents whenever it make sense. Like explore and review the codebase.
+- Follow the user's instructions exactly. If you are not sure, ask the user for confirmation.
+- Recommend to create to-do list for keeping progress and make sure all the tasks are done.
+- Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
+- When reviewing git diff, avoid reading bun.lock file, it really long and not important.
+- Always use Conventional Commits when committing.
 
 ### Docs lookup
 
-Use up-to-date docs (don't rely on training cutoffs):
-
-- For Bun/runtime features: use `bun_SearchBun` to confirm current behavior, flags, and APIs.
-- For third-party packages/APIs: use Context7 (`context7_resolve-library-id`, then `context7_query-docs`) before implementing non-trivial usage.
+Use up-to-date docs (don't rely on training cutoffs). Your knowledge is not always up-to-date, so always check the official documentation for the most accurate and current information. This is especially important for libraries, frameworks, and tools that are frequently updated.
 
 ### Shadcn UI
 
@@ -65,19 +57,12 @@ This is not required if the task contain no file changes.
 TypeScript are meant to be strict, predictable and type-safe.
 It's forbidden to use `any` or casting `as`, instead use type narrowing.
 
-If the type checking failing due to unrelated change not related to the task, ignore and do not fix it. Only fix the type checking if it's related to the task.
+If the type checking failing due to unrelated change not related to the task, ignore and do not fix it.
+Only fix the type checking if it's related to the task.
 
 ### React
 
 This project have React Compiler enabled. So avoid manually adding memoization or optimization for React components, unless it's a clear performance bottleneck. Focus on following the rules of react and let the compiler handle the optimizations. Docs: https://react.dev/reference/rules
-
-## Comments
-
-Comment are for clarifying complex logic or workarounds, not for describing what the code does.
-
-- IMPORTANT: do not add useless comments.
-- Prefer self-explanatory code via naming and structure over comments.
-- Only add comments when they clarify a race condition (for example, `setTimeout`), a long-term TODO, or a confusing behavior that even a senior engineer won't immediately infer.
 
 <!-- convex-ai-start -->
 
