@@ -3,9 +3,10 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { chatModelParamsSchema } from "@ai-chat/shared/chat/request";
 
 import { TRPCError } from "@trpc/server";
+import type { TextPart } from "ai";
 import { z } from "zod/v4";
 
-import { generateThreadTitle } from "@/libs/ai/actions/generate-thread-title";
+import { generateNewThreadTitleAndSave } from "@/libs/ai/actions/generate-thread-title";
 import { createServerConvexClient } from "@/libs/convex";
 
 import { protectedProcedure, router } from "../index";
@@ -83,20 +84,16 @@ export const threadRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "No user message found" });
       }
 
-      let content = "Empty message";
-      for (const part of firstUser.parts) {
-        if (part.type !== "text" || !("text" in part)) break;
-        if (part.text.length === 0) break;
+      let content = "Empty Message";
+      const textParts = firstUser.parts.filter((part): part is TextPart => part.type === "text");
+      if (!textParts.length) content = "Empty Message";
 
-        content = part.text;
-      }
+      content = textParts.map((part) => part.text).join("\n\n");
 
-      const threadTitle = await generateThreadTitle({ content });
-      await convexClient.mutation(api.functions.threads.updateThreadTitle, {
-        threadId: threadId,
-        title: threadTitle,
+      await generateNewThreadTitleAndSave(convexClient, {
+        modelMessages: [{ role: "user", content }],
+        threadId,
       });
-
       return { ok: true };
     }),
 });

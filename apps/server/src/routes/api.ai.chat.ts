@@ -6,15 +6,18 @@ import { Hono } from "hono";
 
 import { authenticate } from "@/middlewares/workos-authenticate";
 
+import { generateNewThreadTitleAndSave } from "@/libs/ai/actions/generate-thread-title";
+
 import { buildChatAgent } from "@/libs/ai/agents";
 import { buildSystemPrompts } from "@/libs/ai/agents/build-system-prompt";
+import { createMessageMetadataHandler } from "@/libs/ai/agents/handle-metadata";
 import { getStreamResponseHeaders } from "@/libs/ai/headers";
 import { consumeUserPoints } from "@/libs/ai/limits";
 import type { ChatMetadata } from "@/libs/ai/types";
+
 import { validateRequestBody } from "@/libs/ai/validation";
 import { getValidationErrorResponse } from "@/libs/ai/validation/request";
 
-import { createMessageMetadataHandler } from "@/libs/ai/agents/handle-metadata";
 import { logger } from "@/libs/axiom";
 import { createServerConvexClient } from "@/libs/convex";
 import { redisStreamClient } from "@/libs/redis/stream-client";
@@ -185,6 +188,8 @@ chatRouter.post("/chat", async function (ctx) {
     abortSignal: streamHandle.abortSignal,
     messages: validatedBody.modelMessages,
   });
+
+  void generateNewThreadTitleAndSave(convexClient, validatedBody);
 
   return stream.toUIMessageStreamResponse({
     generateMessageId: () => requestId,

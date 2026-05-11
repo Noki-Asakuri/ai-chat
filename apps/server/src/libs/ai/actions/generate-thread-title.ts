@@ -1,9 +1,22 @@
-import { generateText } from "ai";
+import { api } from "@ai-chat/backend/convex/_generated/api";
+import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+
+import { generateText, type ModelMessage } from "ai";
+import { ConvexHttpClient } from "convex/browser";
 import dedent from "dedent";
 
 import { registry } from "../registry";
+import { logger } from "@/libs/axiom";
 
-export async function generateThreadTitle({ content }: { content: string }) {
+export async function generateNewThreadTitleAndSave(
+  convexClient: ConvexHttpClient,
+  options: { threadId: Id<"threads">; modelMessages: ModelMessage[] },
+) {
+  if (!options.modelMessages[0]) return;
+
+  logger.debug("[Server] Updating thread title", options.threadId);
+  const content = extractUserMessage(options.modelMessages[0]);
+
   const { text } = await generateText({
     model: registry("openai/gpt-5.4-mini"),
     providerOptions: { openai: { reasoningEffort: "low" } },
@@ -34,5 +47,17 @@ export async function generateThreadTitle({ content }: { content: string }) {
     ],
   });
 
-  return text.trim();
+  return convexClient.mutation(api.functions.threads.updateThreadTitle, {
+    threadId: options.threadId,
+    title: text.trim(),
+  });
+}
+
+function extractUserMessage(message: ModelMessage) {
+  if (typeof message.content === "string") return message.content;
+
+  const textParts = message.content.filter((part) => part.type === "text");
+  if (!textParts.length) return "Empty Message";
+
+  return textParts.map((part) => part.text).join("\n\n");
 }
