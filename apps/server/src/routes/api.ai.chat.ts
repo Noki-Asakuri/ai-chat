@@ -9,11 +9,12 @@ import { authenticate } from "@/middlewares/workos-authenticate";
 import { buildChatAgent } from "@/libs/ai/agents";
 import { buildSystemPrompts } from "@/libs/ai/agents/build-system-prompt";
 import { getStreamResponseHeaders } from "@/libs/ai/headers";
-import { consumeUserPoints, refundUserPoints } from "@/libs/ai/limits";
+import { consumeUserPoints } from "@/libs/ai/limits";
 import type { ChatMetadata } from "@/libs/ai/types";
 import { validateRequestBody } from "@/libs/ai/validation";
 import { getValidationErrorResponse } from "@/libs/ai/validation/request";
 
+import { createMessageMetadataHandler } from "@/libs/ai/agents/handle-metadata";
 import { logger } from "@/libs/axiom";
 import { createServerConvexClient } from "@/libs/convex";
 import { redisStreamClient } from "@/libs/redis/stream-client";
@@ -97,6 +98,8 @@ chatRouter.post("/chat", async function (ctx) {
   const auth = ctx.get("auth");
   const requestId = ctx.get("requestId");
 
+  const userId = auth.userId;
+
   const requestBody = await ctx.req.json();
   const validateResult = await validateRequestBody(requestBody);
 
@@ -131,7 +134,7 @@ chatRouter.post("/chat", async function (ctx) {
     });
 
     logger.error("[Chat Error]: User max message limit reached!", {
-      userId: auth.userId,
+      userId,
       used: userPointsResult.error.usage.used,
       base: userPointsResult.error.usage.base,
       resetType: userPointsResult.error.usage.resetType,
@@ -159,16 +162,13 @@ chatRouter.post("/chat", async function (ctx) {
     providerOptions: validatedBody.providerOptions,
   });
 
-  const streamHandleResult = await redisStreamClient.createStreamForUser({
-    requestId,
-    userId: auth.userId,
-  });
+  const streamHandleResult = await redisStreamClient.createStreamForUser({ requestId, userId });
 
   if (streamHandleResult.isErr()) {
     logger.error("[Chat Error]: Failed to create resumable stream handle!", {
-      userId: auth.userId,
       requestId,
-      error: streamHandleResult.error.message,
+      userId,
+      error: streamHandleResult.error,
     });
 
     return Response.json(
@@ -177,16 +177,14 @@ chatRouter.post("/chat", async function (ctx) {
     );
   }
 
-  const streamHandle = streamHandleResult.value;
-
   const startTime = Date.now();
+  const streamHandle = streamHandleResult.value;
+  const messageMetadataHandler = createMessageMetadataHandler({ metadata, startTime });
+
   const stream = await agent.stream({
     abortSignal: streamHandle.abortSignal,
     messages: validatedBody.modelMessages,
   });
-
-  let textStartTime = 0;
-  let reasoningStartTime = 0;
 
   return stream.toUIMessageStreamResponse({
     generateMessageId: () => requestId,
@@ -199,11 +197,9 @@ chatRouter.post("/chat", async function (ctx) {
     status: 200,
     headers: getStreamResponseHeaders(requestId),
 
+    messageMetadata: messageMetadataHandler,
     consumeSseStream: async function ({ stream }) {
-      logger.info("[Chat] Creating resumable stream", {
-        userId: auth.userId,
-        requestId: requestId,
-      });
+      logger.debug("[Chat] Creating resumable stream", { userId, requestId });
 
       await Promise.allSettled([
         streamHandle.startStream(stream),
@@ -212,60 +208,6 @@ chatRouter.post("/chat", async function (ctx) {
           updates: { status: "streaming", resumableStreamId: requestId, metadata },
         }),
       ]);
-    },
-
-    messageMetadata: ({ part }) => {
-      switch (part.type) {
-        case "reasoning-start":
-          if (metadata.timeToFirstTokenMs === 0) {
-            metadata.timeToFirstTokenMs = Date.now() - startTime;
-            reasoningStartTime = Date.now();
-          }
-          break;
-
-        case "reasoning-end":
-          if (metadata.durations.reasoning === 0) {
-            metadata.durations.reasoning = Date.now() - reasoningStartTime;
-          }
-          break;
-
-        case "text-start":
-          textStartTime = Date.now();
-          if (metadata.timeToFirstTokenMs === 0) {
-            metadata.timeToFirstTokenMs = Date.now() - startTime;
-          }
-          break;
-
-        case "text-end":
-          metadata.durations.text = Date.now() - textStartTime;
-          break;
-
-        case "finish-step":
-          metadata.model.response = part.response.modelId;
-          metadata.finishReason = part.finishReason;
-          metadata.durations.request = Date.now() - startTime;
-
-          metadata.usages.inputTokens = part.usage.inputTokens ?? metadata.usages.inputTokens;
-          metadata.usages.outputTokens =
-            part.usage.outputTokens ??
-            part.usage.outputTokenDetails?.textTokens ??
-            metadata.usages.outputTokens;
-
-          metadata.usages.reasoningTokens =
-            part.usage.reasoningTokens ??
-            part.usage.outputTokenDetails?.reasoningTokens ??
-            metadata.usages.reasoningTokens;
-          break;
-
-        case "finish":
-          metadata.usages.inputTokens = part.totalUsage.inputTokens ?? 0;
-          metadata.usages.outputTokens = part.totalUsage.outputTokenDetails.textTokens ?? 0;
-          metadata.usages.reasoningTokens = part.totalUsage.outputTokenDetails.reasoningTokens ?? 0;
-
-          return metadata;
-      }
-
-      return;
     },
 
     onFinish: async function ({ responseMessage }) {
