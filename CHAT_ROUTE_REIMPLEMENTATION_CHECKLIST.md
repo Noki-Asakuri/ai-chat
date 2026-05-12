@@ -7,10 +7,10 @@ old `apps/server/src/routes/ai-chat.ts` functionality into
 
 ## Progress summary
 
-Current progress is **19 of 46 items complete**.
+Current progress is **28 of 48 items complete**.
 
-- Restored: 19 items.
-- Top core features remaining: 18 items.
+- Restored: 28 items.
+- Top core features remaining: 11 items.
 - Important but secondary items remaining: 9 items.
 
 ## Already restored
@@ -46,6 +46,20 @@ helper files.
   `api.functions.messages.updateErrorMessage`.
 - [x] The stream client now publishes cancellation to the producer and exposes
   an abort signal for stream shutdown.
+- [x] Stream response now includes `onError`.
+- [x] Stream response now returns safe provider and client error messages.
+- [x] Server-generated `requestId` is used as the active stream ID for stream
+  headers, Redis stream keys, resume IDs, and message `resumableStreamId`.
+- [x] Abort route accepts `POST /api/ai/chat/abort` with the server-issued
+  stream ID as a query parameter.
+- [x] Abort persistence is handled by stream shutdown and `onFinish`, instead
+  of resending partial message payloads from the client.
+- [x] Aborted messages set metadata `finishReason: "aborted"`.
+- [x] Finished messages trigger `trackFinishedMessageById` when
+  `updateFinishedMessageById` returns `true`.
+- [x] `buildChatAgent` wires `experimental_download` to the Redis file cache.
+- [x] The Redis file caching helper stores downloaded file buffers and media
+  types with a TTL.
 
 ## Top core features still missing
 
@@ -55,21 +69,9 @@ behavior, billing or usage accounting, persistence, and stream recovery.
 - [ ] Restore usage refunds on stream, provider, or fatal errors with
   `api.functions.usages.refundRequest`.
 - [ ] Wrap the POST `/chat` handler in a fatal `try/catch`.
-- [ ] Add `onError` to the stream response.
 - [ ] Persist stream and provider failures with
   `api.functions.messages.updateErrorMessage`.
-- [ ] Return safe provider and client messages from stream errors.
 - [ ] Add provider error logging for AI SDK provider failures.
-- [ ] Restore `activeStreamId = validatedBody.streamId ?? requestId`.
-- [ ] Use `activeStreamId` consistently for stream headers, Redis stream keys,
-  resume IDs, and message `resumableStreamId`.
-- [ ] Restore abort request body validation with `streamId`, `threadId`,
-  `assistantMessageId`, `parts`, and optional `metadata`.
-- [ ] Restore abort persistence by saving partial parts, marking the message
-  complete, and clearing the resumable stream ID.
-- [ ] Set aborted metadata `finishReason: "aborted"`.
-- [ ] Trigger `trackFinishedMessageById` after finished messages when
-  `updateFinishedMessageById` returns `true`.
 - [ ] Restore generated file handling from agent results.
 - [ ] Upload generated files to R2 or the new equivalent file storage path.
 - [ ] Patch generated file part URLs before persisting parts.
@@ -91,15 +93,14 @@ runtime, persistence, and accounting behavior above.
 - [ ] Restore the resume guard against Convex message state if it's still
   needed. Current Redis ownership guard exists, but no database
   `canResumeStream` equivalent was found.
-- [ ] Add `experimental_download` support back to `buildChatAgent` if file
-  caching or download behavior is still needed.
-- [ ] Recreate the old file input caching helper or replace it with the new
-  storage path.
-- [ ] Fix the abort route method if the client still expects
-  `POST /api/ai/chat/abort`.
-- [ ] Fix typo: `Missing ststreamTextreamId`.
-- [ ] Remove the unnecessary `as Id<"messages">` in `onFinish` because
-  `validatedBody.assistantMessageId` is already typed.
+- [ ] Verify the Redis file caching helper handles missing or unexpected
+  `content-type` headers without throwing unexpectedly.
+- [ ] Verify the Redis file caching key normalization cannot collide for nested
+  attachment paths.
+- [ ] Verify the abort route no longer needs request body validation because
+  partial persistence now happens through stream shutdown.
+- [ ] Verify the client no longer creates fallback stream IDs when
+  `X-Stream-Id` is missing.
 - [ ] Rename `errorResposne` to `errorResponse`.
 - [ ] Replace `_tag` checks with `StreamNotFoundError.is(...)` or a consistent
   error matcher if preferred.
