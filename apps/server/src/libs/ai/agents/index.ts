@@ -3,6 +3,8 @@ import { Experimental_Agent, stepCountIs } from "ai";
 import { registry } from "@/libs/ai/registry";
 import type { ValidatedChatRequestBody } from "@/libs/ai/validation";
 
+import { handleImagesCaching } from "@/libs/redis/file-caching";
+
 type BuildChatAgentOptions = {
   systemInstruction: string;
   tools: ValidatedChatRequestBody["tools"];
@@ -17,9 +19,9 @@ export function buildChatAgent(options: BuildChatAgentOptions): Experimental_Age
     model: registry(modelId),
     instructions: systemInstruction,
     tools,
+    maxRetries: 5,
     providerOptions,
     stopWhen: stepCountIs(20),
-    maxRetries: 5,
-    experimental_telemetry: { isEnabled: false },
+    experimental_download: handleImagesCaching,
   });
 }
