@@ -1,6 +1,6 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
-import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
+import { APICallError } from "ai";
 import { matchError } from "better-result";
 import { Hono } from "hono";
 
@@ -25,12 +25,12 @@ import { redisStreamClient } from "@/libs/redis/stream-client";
 export const chatRouter = new Hono().basePath("/api/ai");
 chatRouter.use("*", authenticate);
 
-chatRouter.get("/chat/abort", async function (ctx) {
+chatRouter.post("/chat/abort", async function (ctx) {
   const { streamId } = ctx.req.query();
   const auth = ctx.get("auth");
 
   if (!streamId) {
-    logger.error("[Chat Error]: Missing ststreamTextreamId!", { streamId });
+    logger.error("[Chat Error]: Missing streamId!", { streamId });
     return Response.json({ error: { message: "Error: Missing streamId!" } }, { status: 400 });
   }
 
@@ -51,10 +51,7 @@ chatRouter.get("/chat/abort", async function (ctx) {
       error: streamResult.error.message,
     });
 
-    return Response.json(
-      { error: { message: "Error: Failed to resume stream!" } },
-      { status: 500 },
-    );
+    return Response.json({ error: { message: "Error: Failed to resume stream!" } }, { status: 500 });
   }
 
   logger.info("[Chat] Cancelled the stream!", { userId: auth.userId, streamId });
@@ -87,10 +84,7 @@ chatRouter.get("/chat", async function (ctx) {
       error: streamResult.error.message,
     });
 
-    return Response.json(
-      { error: { message: "Error: Failed to resume stream!" } },
-      { status: 500 },
-    );
+    return Response.json({ error: { message: "Error: Failed to resume stream!" } }, { status: 500 });
   }
 
   logger.info("[Chat] Resuming chat streaming!", { userId: auth.userId, streamId });
@@ -110,10 +104,7 @@ chatRouter.post("/chat", async function (ctx) {
     const errorResposne = getValidationErrorResponse(validateResult.error);
 
     logger.error("Received invalid chat request body", { err: validateResult.error });
-    return Response.json(
-      { error: { message: errorResposne.message } },
-      { status: errorResposne.status },
-    );
+    return Response.json({ error: { message: errorResposne.message } }, { status: errorResposne.status });
   }
 
   const validatedBody = validateResult.value;
@@ -174,10 +165,7 @@ chatRouter.post("/chat", async function (ctx) {
       error: streamHandleResult.error,
     });
 
-    return Response.json(
-      { error: { message: "Error: Failed to initialize stream!" } },
-      { status: 500 },
-    );
+    return Response.json({ error: { message: "Error: Failed to initialize stream!" } }, { status: 500 });
   }
 
   const startTime = Date.now();
@@ -215,13 +203,32 @@ chatRouter.post("/chat", async function (ctx) {
       ]);
     },
 
-    onFinish: async function ({ responseMessage }) {
+    onError: function (rawError) {
+      if (APICallError.isInstance(rawError)) {
+        return "The AI provider returned an error. Please try again in a moment.";
+      }
+
+      return "An error has occurred while processing your request. Please try again.";
+    },
+
+    onFinish: async function ({ responseMessage, isAborted }) {
       await redisStreamClient.cancelStreamForUser({ requestId, userId: auth.userId });
 
-      await convexClient.mutation(api.functions.messages.updateFinishedMessageById, {
-        messageId: validatedBody.assistantMessageId as Id<"messages">,
+      if (isAborted) {
+        logger.info("[Chat] Request aborted by user", { userId, threadId: validatedBody.threadId });
+        metadata.finishReason = "aborted";
+      }
+
+      const shouldTrack = await convexClient.mutation(api.functions.messages.updateFinishedMessageById, {
+        messageId: validatedBody.assistantMessageId,
         updates: { metadata, parts: responseMessage.parts },
       });
+
+      if (shouldTrack) {
+        void convexClient.action(api.functions.messages.trackFinishedMessageById, {
+          messageId: validatedBody.assistantMessageId,
+        });
+      }
     },
   });
 });

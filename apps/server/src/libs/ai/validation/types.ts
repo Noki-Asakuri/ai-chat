@@ -24,7 +24,6 @@ export type ValidatedChatRequestBody = {
   assistantMessageId: Id<"messages">;
   threadId: Id<"threads">;
 
-  streamId?: string;
   modelParams: ChatModelParams;
   model: { id: ModelIdKey; uniqueId: ModelIdKey };
 

@@ -37,11 +37,7 @@ app.get("/", function (ctx) {
   return ctx.json({ status: "ok", uptimeSeconds: Math.round(process.uptime()) });
 });
 
-app.all(
-  "/api/trpc/*",
-  authenticate,
-  trpcServer({ endpoint: "/api/trpc", router: appRouter, createContext }),
-);
+app.all("/api/trpc/*", authenticate, trpcServer({ endpoint: "/api/trpc", router: appRouter, createContext }));
 
 app.route("/", chatRouter);
 

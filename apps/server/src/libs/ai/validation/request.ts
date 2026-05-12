@@ -59,7 +59,6 @@ async function validateRequestBody(
     messages,
     modelMessages,
 
-    streamId: data.streamId,
     threadId: data.threadId as Id<"threads">,
     assistantMessageId: data.assistantMessageId as Id<"messages">,
 
