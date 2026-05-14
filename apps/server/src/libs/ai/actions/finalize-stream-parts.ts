@@ -10,6 +10,7 @@ export function finalizeStreamParts(message: UIChatMessage): UIChatMessage["part
         const content = part.text.trim();
         if (content.length === 0 && part.type === "reasoning") continue;
 
+        part.text = content;
         if (part.type === "reasoning") part.providerMetadata = undefined;
         part.state = "done";
       }
