@@ -43,10 +43,11 @@ export const createAttachment = authenticatedMutation({
     id: v.string(),
     name: v.string(),
     size: v.number(),
+    mimeType: v.string(),
+
     threadId: v.id("threads"),
     type: v.union(v.literal("image"), v.literal("pdf")),
     source: v.union(v.literal("assistant"), v.literal("user")),
-    mimeType: v.string(),
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
@@ -212,9 +213,7 @@ export const deleteAttachment = authenticatedMutation({
     // Unlink this attachment from any messages in the same thread for this user
     const messages = await ctx.db
       .query("messages")
-      .withIndex("by_userId_threadId", (q) =>
-        q.eq("userId", user.userId).eq("threadId", attachment.threadId),
-      )
+      .withIndex("by_userId_threadId", (q) => q.eq("userId", user.userId).eq("threadId", attachment.threadId))
       .collect();
 
     for (const message of messages) {
@@ -269,9 +268,7 @@ export const deleteAttachments = authenticatedMutation({
     for (const [threadId, ids] of byThread) {
       const messages = await ctx.db
         .query("messages")
-        .withIndex("by_userId_threadId", (q) =>
-          q.eq("userId", user.userId).eq("threadId", threadId),
-        )
+        .withIndex("by_userId_threadId", (q) => q.eq("userId", user.userId).eq("threadId", threadId))
         .collect();
 
       for (const message of messages) {

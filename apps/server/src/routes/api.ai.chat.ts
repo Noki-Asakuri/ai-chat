@@ -20,7 +20,8 @@ import { getValidationErrorResponse } from "@/libs/ai/validation/request";
 
 import { logger } from "@/libs/axiom";
 import { createServerConvexClient } from "@/libs/convex";
-import { redisStreamClient } from "@/libs/redis/stream-client";
+import { redisStreamClient, StreamNotFoundError } from "@/libs/redis/stream-client";
+import { handleUploadFileAttachment } from "@/libs/ai/actions/upload-file-attachments";
 
 export const chatRouter = new Hono().basePath("/api/ai");
 chatRouter.use("*", authenticate);
@@ -40,7 +41,7 @@ chatRouter.post("/chat/abort", async function (ctx) {
   });
 
   if (streamResult.isErr()) {
-    if (streamResult.error._tag === "StreamNotFoundError") {
+    if (StreamNotFoundError.is(streamResult.error)) {
       logger.error("[Chat Error]: Stream not found!", { userId: auth.userId, streamId });
       return Response.json({ error: { message: "Error: Stream not found!" } }, { status: 404 });
     }
@@ -73,7 +74,7 @@ chatRouter.get("/chat", async function (ctx) {
   });
 
   if (streamResult.isErr()) {
-    if (streamResult.error._tag === "StreamNotFoundError") {
+    if (StreamNotFoundError.is(streamResult.error)) {
       logger.error("[Chat Error]: Stream not found!", { userId: auth.userId, streamId });
       return Response.json({ error: { message: "Error: Stream not found!" } }, { status: 404 });
     }
@@ -101,10 +102,10 @@ chatRouter.post("/chat", async function (ctx) {
   const validateResult = await validateRequestBody(requestBody);
 
   if (validateResult.isErr()) {
-    const errorResposne = getValidationErrorResponse(validateResult.error);
+    const errorResponse = getValidationErrorResponse(validateResult.error);
 
     logger.error("Received invalid chat request body", { err: validateResult.error });
-    return Response.json({ error: { message: errorResposne.message } }, { status: errorResposne.status });
+    return Response.json({ error: { message: errorResponse.message } }, { status: errorResponse.status });
   }
 
   const validatedBody = validateResult.value;
@@ -219,9 +220,10 @@ chatRouter.post("/chat", async function (ctx) {
         metadata.finishReason = "aborted";
       }
 
+      const attachments = await handleUploadFileAttachment(ctx, validatedBody.threadId, responseMessage);
       const shouldTrack = await convexClient.mutation(api.functions.messages.updateFinishedMessageById, {
         messageId: validatedBody.assistantMessageId,
-        updates: { metadata, parts: responseMessage.parts },
+        updates: { metadata, parts: responseMessage.parts, attachments },
       });
 
       if (shouldTrack) {

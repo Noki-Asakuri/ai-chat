@@ -6,7 +6,6 @@ import { env } from "../env";
 const axiom = new Axiom({ token: env.AXIOM_TOKEN });
 
 const axiomLogger = new Logger({
-  // @ts-expect-error Weird type error from package typing?
   transports: [new AxiomJSTransport({ axiom, dataset: env.AXIOM_DATASET })],
 });
 
