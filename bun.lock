@@ -38,6 +38,7 @@
         "@t3-oss/env-core": "catalog:shared",
         "@trpc/server": "^11.17.0",
         "@workos-inc/node": "catalog:shared",
+        "@workos/authkit-session": "catalog:shared",
         "ai": "catalog:shared",
         "better-result": "catalog:shared",
         "convex": "catalog:backend",
