@@ -8,6 +8,7 @@ import { authenticate } from "@/middlewares/workos-authenticate";
 
 import { generateNewThreadTitleAndSave } from "@/libs/ai/actions/generate-thread-title";
 import { finalizeStreamParts } from "@/libs/ai/actions/finalize-stream-parts";
+import { createReservedUsageRefunder } from "@/libs/ai/actions/refund-reserved-usage";
 
 import { buildChatAgent } from "@/libs/ai/agents";
 import { buildSystemPrompts } from "@/libs/ai/agents/build-system-prompt";
@@ -111,7 +112,9 @@ chatRouter.post("/chat", async function (ctx) {
 
   const validatedBody = validateResult.value;
   const convexClient = await createServerConvexClient(ctx);
-  const userPointsResult = await consumeUserPoints({ convexClient });
+
+  const userPointsResult = await consumeUserPoints(ctx);
+  const refundReservedUsage = createReservedUsageRefunder(ctx);
 
   if (userPointsResult.isErr()) {
     const limitMessage: string = matchError(userPointsResult.error, {
@@ -139,104 +142,155 @@ chatRouter.post("/chat", async function (ctx) {
     return Response.json({ error: { message: limitMessage } }, { status: 429 });
   }
 
-  const metadata: ChatMetadata = {
-    model: { request: validatedBody.model.uniqueId, response: null },
-    finishReason: null,
-    timeToFirstTokenMs: 0,
-    usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
-    durations: { request: 0, reasoning: 0, text: 0 },
+  try {
+    const metadata: ChatMetadata = {
+      model: { request: validatedBody.model.uniqueId, response: null },
+      finishReason: null,
+      timeToFirstTokenMs: 0,
+      usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+      durations: { request: 0, reasoning: 0, text: 0 },
 
-    modelParams: validatedBody.modelParams,
-  };
+      modelParams: validatedBody.modelParams,
+    };
 
-  const systemInstruction = await buildSystemPrompts(ctx, metadata);
+    const systemInstruction = await buildSystemPrompts(ctx, metadata);
 
-  const agent = buildChatAgent({
-    systemInstruction,
-    tools: validatedBody.tools,
-    modelId: validatedBody.model.id,
-    providerOptions: validatedBody.providerOptions,
-  });
-
-  const streamHandleResult = await redisStreamClient.createStreamForUser({ requestId, userId });
-
-  if (streamHandleResult.isErr()) {
-    logger.error("[Chat Error]: Failed to create resumable stream handle!", {
-      requestId,
-      userId,
-      error: streamHandleResult.error,
+    const agent = buildChatAgent({
+      systemInstruction,
+      tools: validatedBody.tools,
+      modelId: validatedBody.model.id,
+      providerOptions: validatedBody.providerOptions,
     });
 
-    return Response.json({ error: { message: "Error: Failed to initialize stream!" } }, { status: 500 });
-  }
+    const streamHandleResult = await redisStreamClient.createStreamForUser({ requestId, userId });
 
-  const startTime = Date.now();
-  const streamHandle = streamHandleResult.value;
-  const messageMetadataHandler = createMessageMetadataHandler({ metadata, startTime });
-
-  const stream = await agent.stream({
-    abortSignal: streamHandle.abortSignal,
-    messages: validatedBody.modelMessages,
-  });
-
-  void generateNewThreadTitleAndSave(convexClient, validatedBody);
-
-  return stream.toUIMessageStreamResponse({
-    generateMessageId: () => requestId,
-    originalMessages: validatedBody.messages,
-
-    sendFinish: true,
-    sendSources: true,
-    sendReasoning: true,
-
-    status: 200,
-    headers: getStreamResponseHeaders(requestId),
-
-    messageMetadata: messageMetadataHandler,
-    consumeSseStream: async function ({ stream }) {
-      logger.debug("[Chat] Creating resumable stream", { userId, requestId });
-
-      await Promise.allSettled([
-        streamHandle.startStream(stream),
-        convexClient.mutation(api.functions.messages.updateMessageById, {
-          messageId: validatedBody.assistantMessageId,
-          updates: { status: "streaming", resumableStreamId: requestId, metadata },
-        }),
-      ]);
-    },
-
-    onError: function (rawError) {
-      void redisStreamClient.cancelStreamForUser({ requestId, userId: auth.userId });
-      logger.error("[Chat] An error occurred", rawError as Error);
-
-      if (APICallError.isInstance(rawError)) {
-        return "The AI provider returned an error. Please try again in a moment.";
-      }
-
-      return "An error has occurred while processing your request. Please try again.";
-    },
-
-    onFinish: async function ({ responseMessage, isAborted }) {
-      await redisStreamClient.cancelStreamForUser({ requestId, userId: auth.userId });
-
-      if (isAborted) {
-        logger.info("[Chat] Request aborted by user", { userId, threadId: validatedBody.threadId });
-        metadata.finishReason = "aborted";
-      }
-
-      const attachments = await handleUploadFileAttachment(ctx, validatedBody.threadId, responseMessage);
-      const parts = finalizeStreamParts(responseMessage);
-
-      const shouldTrack = await convexClient.mutation(api.functions.messages.updateFinishedMessageById, {
-        messageId: validatedBody.assistantMessageId,
-        updates: { metadata, parts, attachments },
+    if (streamHandleResult.isErr()) {
+      await refundReservedUsage({
+        userId,
+        requestId,
+        threadId: validatedBody.threadId,
+        assistantMessageId: validatedBody.assistantMessageId,
+        reason: "stream-handle-create",
+        error: streamHandleResult.error,
       });
 
-      if (shouldTrack) {
-        void convexClient.action(api.functions.messages.trackFinishedMessageById, {
-          messageId: validatedBody.assistantMessageId,
+      logger.error("[Chat Error]: Failed to create resumable stream handle!", {
+        requestId,
+        userId,
+        error: streamHandleResult.error,
+      });
+
+      return Response.json({ error: { message: "Error: Failed to initialize stream!" } }, { status: 500 });
+    }
+
+    const startTime = Date.now();
+    const streamHandle = streamHandleResult.value;
+    const messageMetadataHandler = createMessageMetadataHandler({ metadata, startTime });
+
+    const stream = await agent.stream({
+      abortSignal: streamHandle.abortSignal,
+      messages: validatedBody.modelMessages,
+    });
+
+    void generateNewThreadTitleAndSave(convexClient, validatedBody);
+
+    return stream.toUIMessageStreamResponse({
+      generateMessageId: () => requestId,
+      originalMessages: validatedBody.messages,
+
+      sendFinish: true,
+      sendSources: true,
+      sendReasoning: true,
+
+      status: 200,
+      headers: getStreamResponseHeaders(requestId),
+
+      messageMetadata: messageMetadataHandler,
+      consumeSseStream: async function ({ stream }) {
+        logger.debug("[Chat] Creating resumable stream", { userId, requestId });
+
+        await Promise.allSettled([
+          streamHandle.startStream(stream),
+          convexClient.mutation(api.functions.messages.updateMessageById, {
+            messageId: validatedBody.assistantMessageId,
+            updates: { status: "streaming", resumableStreamId: requestId, metadata },
+          }),
+        ]);
+      },
+
+      onError: function (rawError) {
+        void redisStreamClient.cancelStreamForUser({ requestId, userId: auth.userId });
+        void refundReservedUsage({
+          userId,
+          requestId,
+          threadId: validatedBody.threadId,
+          assistantMessageId: validatedBody.assistantMessageId,
+          reason: "stream-error",
+          error: rawError,
         });
-      }
-    },
-  });
+
+        logger.error("[Chat] An error occurred", rawError as Error);
+
+        if (APICallError.isInstance(rawError)) {
+          return "The AI provider returned an error. Please try again in a moment.";
+        }
+
+        return "An error has occurred while processing your request. Please try again.";
+      },
+
+      onFinish: async function ({ responseMessage, isAborted }) {
+        await redisStreamClient.cancelStreamForUser({ requestId, userId: auth.userId });
+
+        if (isAborted) {
+          logger.info("[Chat] Request aborted by user", { userId, threadId: validatedBody.threadId });
+          metadata.finishReason = "aborted";
+        }
+
+        const attachments = await handleUploadFileAttachment(ctx, validatedBody.threadId, responseMessage);
+        const parts = finalizeStreamParts(responseMessage);
+
+        const shouldTrack = await convexClient.mutation(api.functions.messages.updateFinishedMessageById, {
+          messageId: validatedBody.assistantMessageId,
+          updates: { metadata, parts, attachments },
+        });
+
+        if (shouldTrack) {
+          void convexClient.action(api.functions.messages.trackFinishedMessageById, {
+            messageId: validatedBody.assistantMessageId,
+          });
+        }
+      },
+    });
+  } catch (error) {
+    await refundReservedUsage({
+      userId,
+      requestId,
+      threadId: validatedBody.threadId,
+      assistantMessageId: validatedBody.assistantMessageId,
+      reason: "chat-fatal",
+      error,
+    });
+
+    await convexClient.mutation(api.functions.messages.updateErrorMessage, {
+      messageId: validatedBody.assistantMessageId,
+      error: "An error has occurred while processing your request. Please try again.",
+      metadata: {
+        model: { request: validatedBody.model.uniqueId, response: null },
+        modelParams: validatedBody.modelParams,
+      },
+    });
+
+    logger.error("[Chat Fatal Error]: Failed to process chat request", {
+      userId,
+      requestId,
+      threadId: validatedBody.threadId,
+      assistantMessageId: validatedBody.assistantMessageId,
+      error,
+    });
+
+    return Response.json(
+      { error: { message: "An error has occurred while processing your request. Please try again." } },
+      { status: 500 },
+    );
+  }
 });
