@@ -81,26 +81,3 @@ behavior, billing or usage accounting, persistence, and stream recovery.
       `toUIMessageStreamResponse`.
 - [ ] Make stream setup fail loudly or explicitly handle `Promise.allSettled`
       failures.
-
-## Important but secondary
-
-These items are useful to restore, but they are less critical than the core
-runtime, persistence, and accounting behavior above.
-
-- [ ] Restore background thread title updates after chat starts.
-- [ ] Decide whether title generation should call the existing
-      `generateThreadTitle` directly or use a new helper that updates Convex.
-- [ ] Restore the resume guard against Convex message state if it's still
-      needed. Current Redis ownership guard exists, but no database
-      `canResumeStream` equivalent was found.
-- [ ] Verify the Redis file caching helper handles missing or unexpected
-      `content-type` headers without throwing unexpectedly.
-- [ ] Verify the Redis file caching key normalization cannot collide for nested
-      attachment paths.
-- [ ] Verify the abort route no longer needs request body validation because
-      partial persistence now happens through stream shutdown.
-- [ ] Verify the client no longer creates fallback stream IDs when
-      `X-Stream-Id` is missing.
-- [ ] Rename `errorResposne` to `errorResponse`.
-- [ ] Replace `_tag` checks with `StreamNotFoundError.is(...)` or a consistent
-      error matcher if preferred.

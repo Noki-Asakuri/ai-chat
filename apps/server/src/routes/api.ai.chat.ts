@@ -206,6 +206,9 @@ chatRouter.post("/chat", async function (ctx) {
     },
 
     onError: function (rawError) {
+      void redisStreamClient.cancelStreamForUser({ requestId, userId: auth.userId });
+      logger.error("[Chat] An error occurred", rawError as Error);
+
       if (APICallError.isInstance(rawError)) {
         return "The AI provider returned an error. Please try again in a moment.";
       }
