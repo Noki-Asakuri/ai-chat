@@ -282,4 +282,27 @@ export const openai: Record<ModelIdKey, ModelData> = {
       customReasoningLevel: ["none", "low", "medium", "high", "xhigh"],
     },
   },
+
+  "openai/gpt-5.5": {
+    display: { name: "GPT 5.5" },
+    id: "openai/gpt-5.5",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+      customReasoningLevel: ["none", "low", "medium", "high", "xhigh"],
+    },
+  },
+  "openai/gpt-5.5-pro": {
+    display: { name: "GPT 5.5 Pro" },
+    id: "openai/gpt-5.5-pro",
+    provider: "openai",
+    capabilities: {
+      webSearch: true,
+      reasoning: true,
+      vision: true,
+      customReasoningLevel: ["none", "low", "medium", "high", "xhigh"],
+    },
+  },
 };

@@ -2,6 +2,7 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import type { UIChatMessage } from "@ai-chat/shared/chat/metadata";
 import type { ModelIdKey } from "@ai-chat/shared/chat/models";
 
+import type { DeepSeekLanguageModelOptions } from "@ai-sdk/deepseek";
 import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import type { MoonshotAIProviderOptions } from "@ai-sdk/moonshotai";
 import type { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
@@ -12,6 +13,7 @@ import type { ChatModelParams } from "../types";
 
 export type ChatProviderOptions = {
   openai: OpenAIResponsesProviderOptions;
+  deepseek: DeepSeekLanguageModelOptions;
   google: GoogleGenerativeAIProviderOptions;
   kimi: MoonshotAIProviderOptions;
   zai: MoonshotAIProviderOptions;

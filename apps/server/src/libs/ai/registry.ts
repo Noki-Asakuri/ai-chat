@@ -19,7 +19,7 @@ export type CreateModelRegistryOptions = {
 export function createModelRegistry(options: CreateModelRegistryOptions) {
   const providerOptions = { baseURL: options.proxyUrl, apiKey: options.proxyKey };
 
-  const deepseek = createDeepSeek(providerOptions);
+  const baseDeepseek = createDeepSeek(providerOptions);
   const baseOpenai = createOpenAI(providerOptions);
   const baseKimi = createMoonshotAI(providerOptions);
   const baseZai = createOpenAICompatible({
@@ -125,10 +125,17 @@ export function createModelRegistry(options: CreateModelRegistryOptions) {
     },
   });
 
-  const providers = createProviderRegistry(
-    { google, openai, deepseek, kimi, zai },
-    { separator: "/" },
-  );
+  const deepseek = customProvider({
+    languageModels: {
+      "deepseek-flash": baseDeepseek.languageModel("deepseek-v4-flash"),
+      "deepseek-v4-flash": baseDeepseek.languageModel("deepseek-v4-flash"),
+
+      "deepseek-v4-pro": baseDeepseek.languageModel("deepseek-v4-pro"),
+      "deepseek-reasoner": baseDeepseek.languageModel("deepseek-v4-pro"),
+    },
+  });
+
+  const providers = createProviderRegistry({ google, openai, deepseek, kimi, zai }, { separator: "/" });
 
   assertModelRegistryCoverage(function languageModel(modelId: ModelIdKey) {
     return providers.languageModel(modelId);

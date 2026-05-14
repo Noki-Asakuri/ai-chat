@@ -46,6 +46,7 @@ export function buildProviderOptions(input: {
   const reasoningEnabled = Boolean(modelInfo.capabilities.reasoning) && effort !== "none";
   const reasoningProviderOptions: ChatProviderOptions = {
     openai: buildOpenAIProviderOptions(input),
+    deepseek: buildDeepSeekProviderOptions(input),
     google: {
       safetySettings,
       thinkingConfig: buildGoogleThinkingConfig(input),
@@ -83,6 +84,30 @@ function buildOpenAIProviderOptions(input: {
     reasoningSummary: "detailed",
     include: ["reasoning.encrypted_content"],
   };
+}
+
+function buildDeepSeekProviderOptions(input: {
+  modelInfo: ModelData;
+  effort: ReasoningEffort;
+}): ChatProviderOptions["deepseek"] {
+  const reasoningEnabled = Boolean(input.modelInfo.capabilities.reasoning) && input.effort !== "none";
+
+  if (!reasoningEnabled) {
+    return { thinking: { type: "disabled" } };
+  }
+
+  return {
+    thinking: { type: "enabled" },
+    reasoningEffort: getDeepSeekReasoningEffort(input.effort),
+  };
+}
+
+function getDeepSeekReasoningEffort(
+  effort: ReasoningEffort,
+): NonNullable<ChatProviderOptions["deepseek"]["reasoningEffort"]> {
+  if (effort === "xhigh") return "max";
+
+  return "high";
 }
 
 function buildGoogleThinkingConfig(input: {
@@ -133,9 +158,7 @@ function buildGoogleImageProviderOptions(modelInfo: ModelData): ChatProviderOpti
 }
 
 export function buildTools(data: ChatRequestBody, modelInfo: ModelData): ToolSet {
-  const webSearchTools: ToolSet = data.modelParams.webSearch
-    ? buildWebSearchTools(modelInfo)
-    : {};
+  const webSearchTools: ToolSet = data.modelParams.webSearch ? buildWebSearchTools(modelInfo) : {};
   const imageTools: ToolSet = buildImageTools(modelInfo);
 
   return { ...webSearchTools, ...imageTools };
