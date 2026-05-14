@@ -5,6 +5,7 @@ import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 
 import { honoLoggerMiddleware } from "./middlewares/hono-logger";
+import { authenticate } from "./middlewares/workos-authenticate";
 
 import { createContext } from "./trpc/context";
 import { appRouter } from "./trpc/router";
@@ -40,7 +41,7 @@ app.get("/", function (ctx) {
   return ctx.json({ status: "ok", uptimeSeconds: Math.round(process.uptime()) });
 });
 
-app.all("/api/trpc/*", trpcServer({ endpoint: "/api/trpc", router: appRouter, createContext }));
+app.all("/api/trpc/*", authenticate, trpcServer({ endpoint: "/api/trpc", router: appRouter, createContext }));
 
 app.route("/", chatRouter);
 

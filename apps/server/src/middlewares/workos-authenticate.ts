@@ -88,6 +88,13 @@ class HonoCookieSessionStorage extends CookieSessionStorage<AuthRequest, Respons
 
     return readCookieFromHeader(cookieHeader, this.cookieName);
   }
+
+  async getCookie(request: AuthRequest, name: string): Promise<string | null> {
+    const cookieHeader = request.headers.get("cookie");
+    if (!cookieHeader) return null;
+
+    return readCookieFromHeader(cookieHeader, this.cookieName);
+  }
 }
 
 function getAuthSessionConfig(): AuthKitConfig {
@@ -179,9 +186,7 @@ async function buildSessionSaveHeaderResult(
   return Result.ok(extractSetCookieHeader(savedResult.value.headers));
 }
 
-async function buildClearSessionHeaderResult(): Promise<
-  BetterResult<string | null, SessionHeaderError>
-> {
+async function buildClearSessionHeaderResult(): Promise<BetterResult<string | null, SessionHeaderError>> {
   const clearedResult = await Result.tryPromise({
     try: function clearSession() {
       return authService.clearSession(undefined);
@@ -262,9 +267,7 @@ async function refreshAccessTokenResult(
   if (Result.isError(refreshedResult)) {
     const clearHeaderResult = await buildClearSessionHeaderResult();
     const clearSessionHeader = Result.isOk(clearHeaderResult) ? clearHeaderResult.value : null;
-    return Result.err(
-      new RefreshAccessTokenError({ cause: refreshedResult.error, clearSessionHeader }),
-    );
+    return Result.err(new RefreshAccessTokenError({ cause: refreshedResult.error, clearSessionHeader }));
   }
 
   if (!isAuthenticatedAuthResult(refreshedResult.value.auth)) {
@@ -279,9 +282,7 @@ async function refreshAccessTokenResult(
   }
 
   const nextSession = toAuthSession(refreshedResult.value.auth);
-  const sessionHeaderResult = await buildSessionSaveHeaderResult(
-    refreshedResult.value.encryptedSession,
-  );
+  const sessionHeaderResult = await buildSessionSaveHeaderResult(refreshedResult.value.encryptedSession);
   if (Result.isError(sessionHeaderResult)) {
     return Result.err(sessionHeaderResult.error);
   }

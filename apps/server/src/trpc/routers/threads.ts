@@ -58,9 +58,7 @@ export const threadRouter = router({
     const convexClient = await createServerConvexClient(ctx.honoCtx);
     const threadId = input.threadId as Id<"threads">;
 
-    const { title } = await convexClient.query(api.functions.threads.getThreadTitle, {
-      threadId,
-    });
+    const { title } = await convexClient.query(api.functions.threads.getThreadTitle, { threadId });
 
     if (title === null) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Thread not found" });
@@ -91,6 +89,7 @@ export const threadRouter = router({
       modelMessages: [{ role: "user", content }],
       threadId,
     });
+
     return { ok: true };
   }),
 });
