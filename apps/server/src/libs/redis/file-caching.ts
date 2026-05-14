@@ -33,7 +33,7 @@ async function handler(url: URL) {
   }
 
   const arrayBuffer = await response.arrayBuffer();
-  const mediaType = response.headers.get("content-type")!;
+  const mediaType = response.headers.get("content-type") ?? "application/octet-stream";
   const buffer = Buffer.from(arrayBuffer);
 
   // Expire after 12h; store raw buffer. Not awaited so it doesn't block the response.
