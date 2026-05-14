@@ -28,7 +28,7 @@ export function useSyncThreadModelConfig() {
     })),
   );
 
-  async function syncThreadModelConfig(options: SyncThreadModelConfigOptions = {}) {
+  async function syncThreadModelConfigWrapper(options: SyncThreadModelConfigOptions = {}) {
     const resolvedThreadId = options.threadId ?? fromUUID<Id<"threads">>(params?.threadId);
     const nextModel = options.model ?? model;
 
@@ -54,5 +54,5 @@ export function useSyncThreadModelConfig() {
     }
   }
 
-  return { syncThreadModelConfig };
+  return { syncThreadModelConfig: syncThreadModelConfigWrapper };
 }

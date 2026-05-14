@@ -2,14 +2,6 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 
-type AbortChatStreamRequestBody = {
-  streamId: string;
-  threadId: Id<"threads">;
-  assistantMessageId: Id<"messages">;
-  parts: unknown;
-  metadata?: unknown;
-};
-
 export function useAbortChatStream() {
   async function abortChatStream(threadId: Id<"threads">): Promise<void> {
     const state = useMessageStore.getState();
@@ -35,28 +27,16 @@ export function useAbortChatStream() {
     // Immediately reflect terminal abort state in the UI and normalize part.state=done.
     messageStoreActions.markMessageAborted(threadId, assistantMessageId);
 
-    const nextState = useMessageStore.getState();
-    const thread = nextState.threadsById[threadId];
-    const message =
-      thread?.messagesById[assistantMessageId] ?? nextState.messagesById[assistantMessageId];
-
-    const body: AbortChatStreamRequestBody = {
-      streamId,
-      threadId,
-      assistantMessageId,
-      parts: message?.parts ?? [],
-      ...(message?.metadata ? { metadata: message.metadata } : {}),
-    };
-
     try {
-      // Tell server to stop generating, and persist partial output.
+      // Tell server to stop generating.
       // Intentionally not using the abortController.signal: this request should go through even if the UI stream was aborted.
-      await fetch(new URL("/api/ai/chat/abort", import.meta.env.VITE_API_ENDPOINT), {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      await fetch(
+        new URL(
+          `/api/ai/chat/abort?streamId=${encodeURIComponent(streamId)}`,
+          import.meta.env.VITE_API_ENDPOINT,
+        ),
+        { method: "POST", credentials: "include" },
+      );
     } finally {
       messageStoreActions.removeController(threadId);
     }

@@ -1,7 +1,5 @@
 # AGENTS.md
 
-Agentic coding guide for this repository. This guide is for agents to know what is the most important thing to do.
-
 <!-- intent-skills:start -->
 
 # Skill mappings - when working in these areas, load the linked skill file into context.
@@ -23,16 +21,15 @@ skills:
 
 ## General
 
-- Use subagents whenever it make sense. Like explore and review the codebase.
-- Follow the user's instructions exactly. If you are not sure, ask the user for confirmation.
-- Recommend to create to-do list for keeping progress and make sure all the tasks are done.
+This part is for agents to know what is the most important thing to do.
+
+- Follow the user's instructions exactly. If you are not sure or the user is ambiguous, ask for clarification, NEVER guess or make assumptions.
 - Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
-- When reviewing git diff, avoid reading bun.lock file, it really long and not important.
-- Always use Conventional Commits when committing.
+- Always use Conventional Commits with scope when committing.
 
 ### Docs lookup
 
-Use up-to-date docs (don't rely on training cutoffs). Your knowledge is not always up-to-date, so always check the official documentation for the most accurate and current information. This is especially important for libraries, frameworks, and tools that are frequently updated.
+Use up-to-date docs and avoid using your training data knowledge, which may be outdated. Always look up the latest docs for any library or framework you're working with. This is crucial for ensuring that your code is using the most current best practices and APIs, and for avoiding bugs that may arise from using deprecated or changed features.
 
 ### Shadcn UI
 
@@ -57,8 +54,8 @@ This is not required if the task contain no file changes.
 TypeScript are meant to be strict, predictable and type-safe.
 It's forbidden to use `any` or casting `as`, instead use type narrowing.
 
-If the type checking failing due to unrelated change not related to the task, ignore and do not fix it.
-Only fix the type checking if it's related to the task.
+If the type checking failing due to unrelated change not related to the task, ignore and do not fix it. Only fix the type checking if it's related to the task.
+Avoid create a single line function wrapper or checker function that only used once, instead inline the logic and use type narrowing.
 
 ### React
 

@@ -75,11 +75,9 @@ export function useRetryChatMessage() {
     let errorTargetMessageId = assistantMessageId;
 
     const abortController = new AbortController();
-    const streamId = crypto.randomUUID();
     messageStoreActions.setController(threadId, {
       controller: abortController,
       assistantMessageId,
-      streamId,
     });
 
     const historySlice = messagesHistory.slice(0, userMessageIndex + 1);
@@ -137,7 +135,6 @@ export function useRetryChatMessage() {
       messageStoreActions.setController(threadId, {
         controller: abortController,
         assistantMessageId: nextAssistantMessageId,
-        streamId,
       });
 
       // Retrying is explicit intent to follow the latest response.
@@ -149,7 +146,6 @@ export function useRetryChatMessage() {
       const body: ChatRequestBody = {
         model,
         threadId,
-        streamId,
         messages: allMessages,
         assistantMessageId: nextAssistantMessageId,
         modelParams: mutationModelParams,
@@ -165,7 +161,7 @@ export function useRetryChatMessage() {
 
       await throwIfChatResponseError(response);
 
-      const responseStreamId = response.headers.get("X-Stream-Id") ?? streamId;
+      const responseStreamId = response.headers.get("X-Stream-Id");
       if (responseStreamId) {
         messageStoreActions.setController(threadId, {
           controller: abortController,

@@ -429,22 +429,6 @@ export const getAllMessagesWithoutAttachments = authenticatedQuery({
   },
 });
 
-export const canResumeStream = authenticatedQuery({
-  args: { streamId: v.string() },
-  handler: async (ctx, args) => {
-    const user = ctx.user;
-
-    const message = await ctx.db
-      .query("messages")
-      .withIndex("by_userId_resumableStreamId", (q) =>
-        q.eq("userId", user.userId).eq("resumableStreamId", args.streamId),
-      )
-      .first();
-
-    return message?.status === "streaming";
-  },
-});
-
 export const addAttachmentsToMessage = authenticatedMutation({
   args: {
     messageId: v.string(),
@@ -725,8 +709,6 @@ export const updateFinishedMessageById = authenticatedMutation({
     messageId: v.id("messages"),
     updates: v
       .object({
-        status: v.literal("complete"),
-        resumableStreamId: v.nullable(v.string()),
         parts: v.any(),
         metadata: AISDKMetadata,
         attachments: v.array(v.id("attachments")),
@@ -739,14 +721,18 @@ export const updateFinishedMessageById = authenticatedMutation({
 
     const message = await ctx.db.get("messages", args.messageId);
     if (!message) throw new Error("Message not found");
+
     if (message.userId !== user.userId) throw new Error("User not authorized");
     if (message.status === "error") return false;
     if (message.status === "complete") return false;
 
     await ctx.db.patch("messages", args.messageId, {
       ...args.updates,
-      statsTrackedAt: undefined,
+
+      status: "complete",
       updatedAt: Date.now(),
+      resumableStreamId: null,
+      statsTrackedAt: undefined,
     });
 
     await ctx.db.patch("threads", message.threadId, {
