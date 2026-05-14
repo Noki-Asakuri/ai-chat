@@ -56,7 +56,8 @@ async function ensureAuthSSRConvexClient(
   const isServer = import.meta.env.SSR;
   if (!isServer) return;
 
-  console.log("[Server] Setting up auth for server");
+  const auth = await getAuth();
+  console.log("[Server] Setting up auth for server", auth.user);
 
   convexClient.setAuth(async function () {
     const auth = await getAuth();
@@ -64,7 +65,6 @@ async function ensureAuthSSRConvexClient(
     return auth.accessToken;
   });
 
-  const auth = await getAuth();
   if (auth.user) {
     convexQueryClient.serverHttpClient?.setAuth(auth.accessToken);
   }

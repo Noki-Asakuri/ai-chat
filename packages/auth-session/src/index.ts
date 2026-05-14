@@ -88,8 +88,17 @@ class RequestCookieSessionStorage extends CookieSessionStorage<AuthRequest, unde
   async getSession(request: AuthRequest): Promise<string | null> {
     const cookieHeader = request.headers.get("cookie");
     if (!cookieHeader) return null;
+
     const value = readCookieFromHeader(cookieHeader, this.cookieName);
     return value ?? null;
+  }
+
+  async getCookie(request: AuthRequest, name: string): Promise<string | null> {
+    const cookieHeader = request.headers.get("cookie");
+    if (!cookieHeader) return null;
+
+    const cookies = readCookieFromHeader(cookieHeader, this.cookieName);
+    return cookies;
   }
 }
 
@@ -142,10 +151,7 @@ function extractSetCookieHeader(options: {
   return options.response?.headers?.get("Set-Cookie") ?? null;
 }
 
-function createAuthRequestWithSessionData(options: {
-  cookieName: string;
-  sessionData: string;
-}): AuthRequest {
+function createAuthRequestWithSessionData(options: { cookieName: string; sessionData: string }): AuthRequest {
   return {
     headers: {
       get: function get(name: string): string | null {
@@ -211,9 +217,7 @@ async function buildSessionSaveHeader(options: {
   return extractSetCookieHeader(saved);
 }
 
-export async function buildClearAuthSessionHeader(
-  config: AuthSessionConfig,
-): Promise<string | null> {
+export async function buildClearAuthSessionHeader(config: AuthSessionConfig): Promise<string | null> {
   const authService = createRequestAuthService(config);
   const cleared = await authService.clearSession(undefined);
   return extractSetCookieHeader(cleared);
@@ -296,8 +300,7 @@ export async function authenticateRequestSession(options: {
   }
 
   let refreshPromise: Promise<string> | null = null;
-  const refreshBufferSeconds =
-    options.refreshBufferSeconds ?? DEFAULT_AUTH_SESSION_REFRESH_BUFFER_SECONDS;
+  const refreshBufferSeconds = options.refreshBufferSeconds ?? DEFAULT_AUTH_SESSION_REFRESH_BUFFER_SECONDS;
 
   async function refreshAccessToken(): Promise<string> {
     try {
@@ -376,9 +379,7 @@ export async function authenticateRequestSession(options: {
   };
 }
 
-export function isAuthenticatedAuthResult(
-  auth: AuthResult,
-): auth is Extract<AuthResult, { user: User }> {
+export function isAuthenticatedAuthResult(auth: AuthResult): auth is Extract<AuthResult, { user: User }> {
   return auth.user !== null;
 }
 

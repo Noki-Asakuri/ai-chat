@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { getAuth } from "@workos/authkit-tanstack-react-start";
 
 import { terminateSession } from "@/lib/authkit/server-fn";
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/auth/logout")({
     const rt = rtSearchSchema.parse(location.search).rt ?? "/";
     const returnPath = "/auth/login?rt=" + rt;
 
-    if (!auth || !auth.user) throw redirect({ to: returnPath, throw: true, reloadDocument: true });
+    if (!auth || !auth.user) return new Response(null, { status: 307, headers: { Location: returnPath } });
     await terminateSession({ data: { returnTo: returnPath, sessionId: auth.sessionId } });
   },
 });

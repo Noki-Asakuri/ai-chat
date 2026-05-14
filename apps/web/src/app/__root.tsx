@@ -18,12 +18,8 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
 import { type ConvexQueryClient } from "@convex-dev/react-query";
-import { getAuth } from "@workos/authkit-tanstack-react-start";
-import {
-  AuthKitProvider,
-  useAccessToken,
-  useAuth,
-} from "@workos/authkit-tanstack-react-start/client";
+import { getAuth, getAuthAction } from "@workos/authkit-tanstack-react-start";
+import { AuthKitProvider, useAccessToken, useAuth } from "@workos/authkit-tanstack-react-start/client";
 import { SessionProvider } from "convex-helpers/react/sessions";
 import { ConvexProviderWithAuth } from "convex/react";
 import { useCallback, useMemo } from "react";
@@ -111,11 +107,9 @@ export const Route = createRootRouteWithContext<RootContext>()({
       scripts,
     };
   },
-  loader: async () => {
-    const auth = await getAuth();
-    if (!auth.user) return { user: undefined, sessionId: undefined };
-
-    return { user: auth.user, sessionId: auth.sessionId };
+  loader: async function () {
+    const auth = await getAuthAction();
+    return { auth };
   },
 
   shellComponent: RootLayout,
@@ -152,10 +146,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       await navigate({
         to: "/threads/$threadId",
         params: { threadId: toUUID(threadId) },
-        viewTransition: getNavigationViewTransition(
-          window.location.pathname,
-          `/threads/${toUUID(threadId)}`,
-        ),
+        viewTransition: getNavigationViewTransition(window.location.pathname, `/threads/${toUUID(threadId)}`),
       });
     },
   );
@@ -167,13 +158,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
 
       <body className="dark isolate max-h-svh overflow-hidden font-sans">
-        <AuthKitProvider
-          initialAuth={
-            loaderData.user && loaderData.sessionId
-              ? { user: loaderData.user, sessionId: loaderData.sessionId }
-              : { user: null }
-          }
-        >
+        <AuthKitProvider initialAuth={loaderData.auth}>
           <ConvexProviderWithAuth client={convex} useAuth={useAuthFromWorkOS}>
             <SessionProvider useStorage={sessionUseCookie}>{children}</SessionProvider>
           </ConvexProviderWithAuth>

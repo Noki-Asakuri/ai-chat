@@ -42,17 +42,14 @@ const getDefaultOpenSidebar = createIsomorphicFn()
 export const Route = createFileRoute("/_chat")({
   component: RouteComponent,
 
-  beforeLoad: async ({ location }) => {
+  loader: async function ({ context, params: rawParams, location }) {
     const auth = await getAuth();
-
     if (!auth.user) {
       const path = location.pathname;
+      console.debug("[Chat] No user found, redirect to login");
       throw redirect({ to: "/auth/login", search: { rt: path } });
     }
 
-    return { user: auth.user };
-  },
-  loader: async ({ context, params: rawParams }) => {
     const { defaultOpenSidebar } = await getDefaultOpenSidebar();
 
     const params = rawParams as { threadId?: string };
@@ -66,20 +63,16 @@ export const Route = createFileRoute("/_chat")({
       ),
     );
 
-    promises.push(
-      context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser)),
-    );
+    promises.push(context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser)));
 
     if (threadId) {
       promises.push(
-        context.queryClient.ensureQueryData(
-          convexQuery(api.functions.users.getCurrentUserPreferences),
-        ),
+        context.queryClient.ensureQueryData(convexQuery(api.functions.users.getCurrentUserPreferences)),
       );
     }
 
     const [userPreferencesData] = (await Promise.all(promises)) as [UserPreferences];
-    return { user: context.user, defaultOpenSidebar, userPreferencesData };
+    return { user: auth.user, defaultOpenSidebar, userPreferencesData };
   },
 
   head: () => ({
@@ -104,17 +97,11 @@ function RouteComponent() {
     >
       <ThreadSidebar />
 
-      <GlobalDropzone
-        data-slot="chat"
-        className="relative inset-0 h-dvh w-screen overflow-hidden border-x"
-      >
+      <GlobalDropzone data-slot="chat" className="relative inset-0 h-dvh w-screen overflow-hidden border-x">
         <div className="absolute top-0 z-10 flex h-10 w-full max-w-full items-center gap-2 border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[performance-mode=true]/sidebar-provider:bg-sidebar">
           <SidebarTrigger />
 
-          <Link
-            to="/"
-            className="rounded-md p-1.5 text-center transition-colors hover:bg-primary/20"
-          >
+          <Link to="/" className="rounded-md p-1.5 text-center transition-colors hover:bg-primary/20">
             <PlusIcon className="size-4" />
             <span className="sr-only">Create new thread</span>
           </Link>

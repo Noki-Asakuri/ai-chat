@@ -91,7 +91,7 @@
         "@uidotdev/usehooks": "^2.4.1",
         "@vercel/analytics": "^2.0.1",
         "@vercel/speed-insights": "^2.0.0",
-        "@workos/authkit-tanstack-react-start": "^0.6.0",
+        "@workos/authkit-tanstack-react-start": "^0.8.2",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
@@ -206,8 +206,8 @@
       "@axiomhq/js": "^1.6.1",
       "@axiomhq/logging": "^0.2.1",
       "@t3-oss/env-core": "^0.13.11",
-      "@workos-inc/node": "^8.13.0",
-      "@workos/authkit-session": "^0.3.4",
+      "@workos-inc/node": "^9.2.0",
+      "@workos/authkit-session": "^0.5.1",
       "ai": "^6.0.177",
       "better-result": "^2.9.2",
       "dedent": "^1.7.2",
@@ -1216,11 +1216,11 @@
 
     "@workos-inc/authkit-react": ["@workos-inc/authkit-react@0.11.0", "", { "dependencies": { "@workos-inc/authkit-js": "0.13.0" }, "peerDependencies": { "react": ">=17" } }, "sha512-67HFSxP4wXC8ECGyvc1yGMwuD5NGkwT2OPt8DavHoKAlO+hRaAlu9wwzqUx1EJrHht0Dcx+l20Byq8Ab0bEhlg=="],
 
-    "@workos-inc/node": ["@workos-inc/node@8.13.0", "", { "dependencies": { "eventemitter3": "^5.0.4" } }, "sha512-NgQKHpwh8AbT4KvAsW91Y+4f4jja2IvFPQ5atcy5NUxUMVRgXzRFEee3erawfXrTmiCVqJjd9PljHySKBXmHKQ=="],
+    "@workos-inc/node": ["@workos-inc/node@9.2.0", "", { "dependencies": { "eventemitter3": "^5.0.4" } }, "sha512-JAEjrwgr8aETOS7YzHmSlPj+1LCXonAKGX1/B89hIZ+l+YgQGJrdFZnBqBSlDnqUaOtxDZkGwg7V3LFNkF+evg=="],
 
-    "@workos/authkit-session": ["@workos/authkit-session@0.3.4", "", { "dependencies": { "@workos-inc/node": "8.0.0", "iron-webcrypto": "^2.0.0", "jose": "^6.1.3" } }, "sha512-lbLP1y8MHWL1Op9athZ3SrzKLcL0+xBVpADCMQLI39mPgSQj+/lopVdOx0Cku96hYnJBOJTLVTK3Zox4FbZl4A=="],
+    "@workos/authkit-session": ["@workos/authkit-session@0.5.1", "", { "dependencies": { "@workos-inc/node": "^8.0.0", "iron-webcrypto": "^2.0.0", "jose": "^6.1.3", "valibot": "^1.3.1" } }, "sha512-4nyHhxEfztJmmruMhefmxu/b2ElzswjlUZH/fub1GFXtLN1RNmT552L/VbV0by5ailiJYJ3gk7LJQ61obKHZLw=="],
 
-    "@workos/authkit-tanstack-react-start": ["@workos/authkit-tanstack-react-start@0.6.0", "", { "dependencies": { "@workos/authkit-session": "0.3.4" }, "peerDependencies": { "@tanstack/react-router": ">=1.0.0", "@tanstack/react-start": ">=1.0.0", "react": "^18.0 || ^19.0", "react-dom": "^18.0 || ^19.0" } }, "sha512-9cHWyS0la3XjQwW7Nl5uAY8W4j15Mc21+s1Tu+zJOqDYdQlFB39Umu6Gb1oRB9D8F64VJf5jw5P+EIAwdiMI6Q=="],
+    "@workos/authkit-tanstack-react-start": ["@workos/authkit-tanstack-react-start@0.8.2", "", { "dependencies": { "@workos/authkit-session": "^0.5.1" }, "peerDependencies": { "@tanstack/react-router": ">=1.0.0", "@tanstack/react-start": ">=1.0.0", "react": "^18.0 || ^19.0", "react-dom": "^18.0 || ^19.0" } }, "sha512-WXow2hqmfeHPbEUvXT1LDe+LDqX+fiAtHcpMujhGoXR/TK7FhnPvPUcEMkihfknCJKBxnyOi4zkk1xtgkqRFUA=="],
 
     "@yarnpkg/lockfile": ["@yarnpkg/lockfile@1.1.0", "", {}, "sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ=="],
 
@@ -2204,6 +2204,8 @@
 
     "uuid": ["uuid@14.0.0", "", { "bin": { "uuid": "dist-node/bin/uuid" } }, "sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg=="],
 
+    "valibot": ["valibot@1.4.0", "", { "peerDependencies": { "typescript": ">=5" }, "optionalPeers": ["typescript"] }, "sha512-iC/x7fVcSyOwlm/VSt7RlHnzNGLGvR9GnxdifUeWoCJo0q4ZZvrVkIHC6faTlkxG47I2Y4UrFquPuVHCrOnrLg=="],
+
     "vaul": ["vaul@1.1.2", "", { "dependencies": { "@radix-ui/react-dialog": "^1.1.1" }, "peerDependencies": { "react": "^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc", "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc" } }, "sha512-ZFkClGpWyI2WUQjdLJ/BaGuV6AVQiJ3uELGk3OYtP+B6yCO7Cmn9vPFXVJkRaGkOJu3m8bQMgtyzNHixULceQA=="],
 
     "vfile": ["vfile@6.0.3", "", { "dependencies": { "@types/unist": "^3.0.0", "vfile-message": "^4.0.0" } }, "sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q=="],
@@ -2340,9 +2342,7 @@
 
     "@vitest/mocker/vite": ["vite@8.0.1", "", { "dependencies": { "lightningcss": "^1.32.0", "picomatch": "^4.0.3", "postcss": "^8.5.8", "rolldown": "1.0.0-rc.10", "tinyglobby": "^0.2.15" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.1.0", "esbuild": "^0.27.0", "jiti": ">=1.21.0", "less": "^4.0.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-wt+Z2qIhfFt85uiyRt5LPU4oVEJBXj8hZNWKeqFG4gRG/0RaRGJ7njQCwzFVjO+v4+Ipmf5CY7VdmZRAYYBPHw=="],
 
-    "@workos/authkit-session/@workos-inc/node": ["@workos-inc/node@8.0.0", "", { "dependencies": { "iron-webcrypto": "^2.0.0", "jose": "~6.1.0" } }, "sha512-D8VDfx0GXeiVm8vccAl0rElW7taebRnrteKPJzZwehwzI9W/Usa4qKfmwxj+7Lh1Z1deEocDRCpZpV7ml4GpWQ=="],
-
-    "@workos/authkit-session/jose": ["jose@6.2.2", "", {}, "sha512-d7kPDd34KO/YnzaDOlikGpOurfF0ByC2sEV4cANCtdqLlTfBlw2p14O/5d/zv40gJPbIQxfES3nSx1/oYNyuZQ=="],
+    "@workos/authkit-session/@workos-inc/node": ["@workos-inc/node@8.13.0", "", { "dependencies": { "eventemitter3": "^5.0.4" } }, "sha512-NgQKHpwh8AbT4KvAsW91Y+4f4jja2IvFPQ5atcy5NUxUMVRgXzRFEee3erawfXrTmiCVqJjd9PljHySKBXmHKQ=="],
 
     "anymatch/picomatch": ["picomatch@2.3.1", "", {}, "sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA=="],
 
@@ -2461,8 +2461,6 @@
     "@vitest/mocker/vite/rolldown": ["rolldown@1.0.0-rc.10", "", { "dependencies": { "@oxc-project/types": "=0.120.0", "@rolldown/pluginutils": "1.0.0-rc.10" }, "optionalDependencies": { "@rolldown/binding-android-arm64": "1.0.0-rc.10", "@rolldown/binding-darwin-arm64": "1.0.0-rc.10", "@rolldown/binding-darwin-x64": "1.0.0-rc.10", "@rolldown/binding-freebsd-x64": "1.0.0-rc.10", "@rolldown/binding-linux-arm-gnueabihf": "1.0.0-rc.10", "@rolldown/binding-linux-arm64-gnu": "1.0.0-rc.10", "@rolldown/binding-linux-arm64-musl": "1.0.0-rc.10", "@rolldown/binding-linux-ppc64-gnu": "1.0.0-rc.10", "@rolldown/binding-linux-s390x-gnu": "1.0.0-rc.10", "@rolldown/binding-linux-x64-gnu": "1.0.0-rc.10", "@rolldown/binding-linux-x64-musl": "1.0.0-rc.10", "@rolldown/binding-openharmony-arm64": "1.0.0-rc.10", "@rolldown/binding-wasm32-wasi": "1.0.0-rc.10", "@rolldown/binding-win32-arm64-msvc": "1.0.0-rc.10", "@rolldown/binding-win32-x64-msvc": "1.0.0-rc.10" }, "bin": { "rolldown": "bin/cli.mjs" } }, "sha512-q7j6vvarRFmKpgJUT8HCAUljkgzEp4LAhPlJUvQhA5LA1SUL36s5QCysMutErzL3EbNOZOkoziSx9iZC4FddKA=="],
 
     "@vitest/mocker/vite/tinyglobby": ["tinyglobby@0.2.15", "", { "dependencies": { "fdir": "^6.5.0", "picomatch": "^4.0.3" } }, "sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ=="],
-
-    "@workos/authkit-session/@workos-inc/node/jose": ["jose@6.1.3", "", {}, "sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ=="],
 
     "cytoscape-fcose/cose-base/layout-base": ["layout-base@2.0.1", "", {}, "sha512-dp3s92+uNI1hWIpPGH3jK2kxE2lMjdXdr+DH8ynZHpd6PUlH6x6cbuXnoMmiNumznqaNO31xu9e79F0uuZ0JFg=="],
 

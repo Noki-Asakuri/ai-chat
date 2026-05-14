@@ -3,15 +3,15 @@ index ef19c1398b9c5010e82b869c90530723adc2a024..4014207eb44d595445fb80cdae4f3969
 --- a/node_modules/@workos/authkit-tanstack-react-start/dist/server/storage.js
 +++ b/node_modules/@workos/authkit-tanstack-react-start/dist/server/storage.js
 @@ -1,6 +1,12 @@
- import { CookieSessionStorage } from '@workos/authkit-session';
  import { getAuthKitContextOrNull } from './context.js';
+ import { parseCookies } from './cookie-utils.js';
  export class TanStackStartCookieSessionStorage extends CookieSessionStorage {
 +    constructor(options) {
 +        const cookieDomain = process.env["WORKOS_COOKIE_DOMAIN"];
 +        const cookieSameSite = process.env["WORKOS_COOKIE_SAME_SITE"];
 +
-+        super({ ...options,  cookieDomain, cookieSameSite });
++        super({ ...options, cookieDomain, cookieSameSite });
 +    }
-     async getSession(request) {
+     async getCookie(request, name) {
          const cookieHeader = request.headers.get('cookie');
          if (!cookieHeader)
