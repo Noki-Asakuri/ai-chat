@@ -51,49 +51,46 @@ export const threadRouter = router({
       return { ok: true };
     }),
 
-  regenerateTitle: protectedProcedure
-    .input(z.object({ threadId: z.string() }))
-    .mutation(async function ({ ctx, input }) {
-      const convexClient = await createServerConvexClient(ctx.honoCtx);
-      const threadId = input.threadId as Id<"threads">;
+  regenerateTitle: protectedProcedure.input(z.object({ threadId: z.string() })).mutation(async function ({
+    ctx,
+    input,
+  }) {
+    const convexClient = await createServerConvexClient(ctx.honoCtx);
+    const threadId = input.threadId as Id<"threads">;
 
-      const { title } = await convexClient.query(api.functions.threads.getThreadTitle, {
-        threadId,
-      });
+    const { title } = await convexClient.query(api.functions.threads.getThreadTitle, {
+      threadId,
+    });
 
-      if (title === null) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Thread not found" });
-      }
+    if (title === null) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Thread not found" });
+    }
 
-      await convexClient.mutation(api.functions.threads.updateThreadTitle, {
-        threadId: threadId,
-        title: "Regenerating...",
-      });
+    await convexClient.mutation(api.functions.threads.updateThreadTitle, {
+      threadId: threadId,
+      title: "Regenerating...",
+    });
 
-      const messages = await convexClient.query(
-        api.functions.messages.getAllMessagesWithoutAttachments,
-        { threadId },
-      );
+    const messages = await convexClient.query(api.functions.messages.getAllMessagesWithoutAttachments, {
+      threadId,
+    });
 
-      if (messages.length === 0) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "No messages found" });
-      }
+    if (messages.length === 0) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "No messages found" });
+    }
 
-      const firstUser = messages.find((message) => message.role === "user");
-      if (!firstUser || firstUser.parts.length === 0) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "No user message found" });
-      }
+    const firstUser = messages.find((message) => message.role === "user");
+    if (!firstUser || firstUser.parts.length === 0) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "No user message found" });
+    }
 
-      let content = "Empty Message";
-      const textParts = firstUser.parts.filter((part): part is TextPart => part.type === "text");
-      if (!textParts.length) content = "Empty Message";
+    const textParts = firstUser.parts.filter((part): part is TextPart => part.type === "text");
+    const content = textParts.length > 0 ? textParts.map((part) => part.text).join("\n\n") : "Empty Message";
 
-      content = textParts.map((part) => part.text).join("\n\n");
-
-      await generateNewThreadTitleAndSave(convexClient, {
-        modelMessages: [{ role: "user", content }],
-        threadId,
-      });
-      return { ok: true };
-    }),
+    await generateNewThreadTitleAndSave(convexClient, {
+      modelMessages: [{ role: "user", content }],
+      threadId,
+    });
+    return { ok: true };
+  }),
 });

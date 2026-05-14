@@ -11,6 +11,27 @@ type UploadFileR2 = { buffer: Uint8Array; threadId: Id<"threads">; mediaType: st
 
 type UploadSuccess = { attachmentDocId: Id<"attachments">; filePathname: string };
 
+type AttachmentType = "image" | "pdf";
+
+const extensionByMediaType: Record<string, string> = {
+  "application/pdf": "pdf",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+function createAttachmentMetadata(fileAttachmentId: string, mediaType: string): { name: string; type: AttachmentType } {
+  const normalizedMediaType = mediaType.toLowerCase().split(";")[0]?.trim() ?? "";
+  const mediaTypeMajor = normalizedMediaType.split("/")[0] ?? "";
+  const mediaTypeSubtype = normalizedMediaType.split("/")[1] ?? "";
+  const safeSubtype = mediaTypeSubtype.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const extension = extensionByMediaType[normalizedMediaType] ?? (safeSubtype || "bin");
+  const type = mediaTypeMajor === "image" ? "image" : "pdf";
+
+  return { name: `${fileAttachmentId}.${extension}`, type };
+}
+
 export class CreateAttachmentError extends TaggedError("CreateAttachmentError")<{
   message: string;
   threadId: Id<"threads">;
@@ -75,18 +96,19 @@ export async function serverUploadFileR2(
 
   const fileAttachmentId = crypto.randomUUID();
   const convexClient = await createServerConvexClient(ctx);
+  const attachmentMetadata = createAttachmentMetadata(fileAttachmentId, data.mediaType);
 
   const attachmentResult = await Result.tryPromise({
     try: () =>
       convexClient.mutation(api.functions.attachments.createAttachment, {
         id: fileAttachmentId,
-        name: `${fileAttachmentId}.${data.mediaType}`,
+        name: attachmentMetadata.name,
 
         threadId: data.threadId,
         size: data.buffer.length,
         mimeType: data.mediaType,
 
-        type: "image",
+        type: attachmentMetadata.type,
         source: "assistant",
       }),
     catch: (cause) =>

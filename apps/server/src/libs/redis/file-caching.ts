@@ -12,7 +12,7 @@ export async function handleImagesCaching(options: InputOptions): Promise<Output
 }
 
 async function handler(url: URL) {
-  const normalizedUrl = url.pathname.slice(1).replace("/", ":");
+  const normalizedUrl = url.pathname.slice(1).replaceAll("/", ":");
   const cacheKey = `${env.NODE_ENV}:attachment:${normalizedUrl}`;
 
   const [cachedBuffer, cachedMediaType] = await Promise.all([
@@ -20,13 +20,12 @@ async function handler(url: URL) {
     redis.get(`${cacheKey}:mediaType`),
   ]);
 
-  const hit = Boolean(cachedBuffer) && Boolean(cachedMediaType);
-  logger.info(`[Chat Cache] ${url}`, { url: url.toString(), status: hit ? "HIT" : "MISS", cacheKey });
-
-  if (hit) {
+  if (cachedBuffer && cachedMediaType) {
+    logger.info(`[Chat Cache] ${url}`, { url: url.toString(), status: "HIT", cacheKey });
     return { data: cachedBuffer!, mediaType: cachedMediaType! };
   }
 
+  logger.info(`[Chat Cache] ${url}`, { url: url.toString(), status: "MISS", cacheKey });
   const response = await fetch(url);
   if (!response.ok) {
     throw new DownloadError({ url: response.url, statusCode: response.status });
