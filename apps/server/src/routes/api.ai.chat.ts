@@ -7,6 +7,7 @@ import { Hono } from "hono";
 import { authenticate } from "@/middlewares/workos-authenticate";
 
 import { generateNewThreadTitleAndSave } from "@/libs/ai/actions/generate-thread-title";
+import { finalizeStreamParts } from "@/libs/ai/actions/finalize-stream-parts";
 
 import { buildChatAgent } from "@/libs/ai/agents";
 import { buildSystemPrompts } from "@/libs/ai/agents/build-system-prompt";
@@ -221,9 +222,11 @@ chatRouter.post("/chat", async function (ctx) {
       }
 
       const attachments = await handleUploadFileAttachment(ctx, validatedBody.threadId, responseMessage);
+      const parts = finalizeStreamParts(responseMessage);
+
       const shouldTrack = await convexClient.mutation(api.functions.messages.updateFinishedMessageById, {
         messageId: validatedBody.assistantMessageId,
-        updates: { metadata, parts: responseMessage.parts, attachments },
+        updates: { metadata, parts, attachments },
       });
 
       if (shouldTrack) {
