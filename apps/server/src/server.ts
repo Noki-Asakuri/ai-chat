@@ -5,7 +5,6 @@ import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 
 import { honoLoggerMiddleware } from "./middlewares/hono-logger";
-import { authenticate } from "./middlewares/workos-authenticate";
 
 import { createContext } from "./trpc/context";
 import { appRouter } from "./trpc/router";
@@ -13,12 +12,16 @@ import { appRouter } from "./trpc/router";
 import { chatRouter } from "./routes/api.ai.chat";
 
 import { env } from "./env";
+import { printStartupBanner, registerShutdownHandler, trackInFlightRequests } from "./libs/server-lifecycle";
+
+const PORT = 3001;
 
 export const app = new Hono();
 
 app.use(honoLoggerMiddleware);
 app.use(secureHeaders());
 app.use(requestId());
+app.use("*", trackInFlightRequests);
 
 app.use(
   "/api/*",
@@ -42,10 +45,11 @@ app.all("/api/trpc/*", trpcServer({ endpoint: "/api/trpc", router: appRouter, cr
 app.route("/", chatRouter);
 
 const server = Bun.serve({
-  port: 3001,
+  port: PORT,
   fetch: app.fetch,
   idleTimeout: 0,
   development: env.NODE_ENV === "development",
 });
 
-console.log("[Server] Started", server.hostname, server.port);
+printStartupBanner(PORT);
+registerShutdownHandler(server);
