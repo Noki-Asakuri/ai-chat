@@ -7,7 +7,6 @@ import { createMermaidPlugin } from "@streamdown/mermaid";
 import remarkBreaks from "remark-breaks";
 
 import { memo, useMemo } from "react";
-import { bundledLanguages } from "shiki";
 import { defaultRemarkPlugins, Streamdown, type StreamdownProps } from "streamdown";
 
 import { CodeBlock } from "@/components/ui/code-block";
@@ -15,6 +14,7 @@ import { CodeBlock } from "@/components/ui/code-block";
 import { ExternalLinkSafetyModal } from "./external-link-safety-modal";
 import { addMissingFenceLanguages } from "./utils/add-missing-fence-languages";
 import { fixLatexMath } from "./utils/fix-latex-math";
+import { normalizeCodeFenceLanguages } from "./utils/normalize-code-fence-languages";
 
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -26,12 +26,7 @@ type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
 
 const mermaid = createMermaidPlugin();
 const math = createMathPlugin({ singleDollarTextMath: true, errorColor: "var(--destructive)" });
-
-const supportedLanguages = [
-  ...Object.keys(bundledLanguages).filter((language) => !["mermaid"].includes(language)),
-  "plaintext",
-  "text",
-];
+const passthroughCodeFenceLanguages = new Set(["mermaid"]);
 
 export const StreamDownWrapper = memo(function StreamDownWrapper({
   role,
@@ -42,7 +37,10 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
 }: MarkdownProps) {
   const normalizedChildren = useMemo(() => {
     const fixedFenceLanguages = addMissingFenceLanguages(children);
-    const fixedMath = fixLatexMath(fixedFenceLanguages);
+    const normalizedFenceLanguages = normalizeCodeFenceLanguages(fixedFenceLanguages, {
+      passthroughLanguages: passthroughCodeFenceLanguages,
+    });
+    const fixedMath = fixLatexMath(normalizedFenceLanguages);
 
     return fixedMath;
   }, [children]);
@@ -52,7 +50,7 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
       cjk,
       math,
       mermaid,
-      renderers: [{ component: CodeBlock, language: supportedLanguages }],
+      renderers: [{ component: CodeBlock, language: ["text", "plaintext"] }],
     },
     mode: "static",
     mermaid: { config: { theme: "dark" } },

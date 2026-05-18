@@ -101,8 +101,7 @@
     "Space Grotesk", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
     "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
 
-  --font-serif:
-    "Space Grotesk", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-serif: "Space Grotesk", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 
   --font-mono:
     "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
@@ -125,8 +124,8 @@
 
 .font-sans {
   font-family:
-    var(--custom-ui-font, "Space Grotesk"), ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+    var(--custom-ui-font, "Space Grotesk"), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
 }
 
 .font-mono {
@@ -135,23 +134,62 @@
     "Liberation Mono", "Courier New", monospace;
 }
 
+[data-streamdown="mermaid-block"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+[data-streamdown="mermaid-block"] > :first-child {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+[data-streamdown="mermaid-block"] > [data-streamdown="mermaid-block-actions"] {
+  grid-column: 2;
+  grid-row: 1;
+  position: static;
+  z-index: auto;
+  width: auto;
+  height: 2rem;
+  margin-top: 0;
+  pointer-events: auto;
+}
+
+[data-streamdown="mermaid-block"] > [data-streamdown="mermaid-block-actions"] > div {
+  pointer-events: auto;
+}
+
+[data-streamdown="mermaid-block"] > :last-child {
+  grid-column: 1 / -1;
+}
+
 :root {
   --background: oklch(0.2155 0.0254 284.0647);
   --foreground: oklch(0.8787 0.0426 272.2767);
+
   --card: oklch(0.2429 0.0304 283.911);
   --card-foreground: oklch(0.8787 0.0426 272.2767);
+
   --popover: oklch(0.4037 0.032 280.152);
   --popover-foreground: oklch(0.8787 0.0426 272.2767);
+
   --primary: oklch(0.7871 0.1187 304.7693);
   --primary-foreground: oklch(0.2429 0.0304 283.911);
+
   --secondary: oklch(0.324 0.0319 281.9784);
   --secondary-foreground: oklch(0.8787 0.0426 272.2767);
+
   --muted: oklch(0.2973 0.0294 276.2144);
   --muted-foreground: oklch(0.751 0.0396 273.932);
+
   --accent: oklch(0.4037 0.032 280.152);
   --accent-foreground: oklch(0.8787 0.0426 272.2767);
+
   --destructive: oklch(0.7 0.13 30);
   --destructive-foreground: oklch(0.15 0.065 304);
+
   --border: oklch(0.324 0.0319 281.9784);
   --input: oklch(0.324 0.0319 281.9784);
   --ring: oklch(0.7871 0.1187 304.7693);
@@ -189,20 +227,28 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -257,16 +303,12 @@
 
 .custom-scroll,
 #textarea-chat-input {
-  scrollbar-gutter: stable both-edges;
-
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-ring) transparent;
+  @apply scrollbar-thin scrollbar-thumb-ring scrollbar-track-transparent scrollbar-gutter-both;
 }
 
 .custom-scroll::-webkit-scrollbar,
 #textarea-chat-input::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  @apply size-1.5;
 }
 
 .custom-scroll::-webkit-scrollbar-track,

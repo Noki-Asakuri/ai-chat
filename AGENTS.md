@@ -26,6 +26,7 @@ This part is for agents to know what is the most important thing to do.
 - Follow the user's instructions exactly. If you are not sure or the user is ambiguous, ask for clarification, NEVER guess or make assumptions.
 - Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
 - Always use Conventional Commits with scope when committing.
+- If there is a change that are not from you, it could coming from other agent or the user. Do not modify or revert those changes, stop and ask for clarification if you are not sure about the change. Always assume good intent and communicate clearly with the user or other agents to resolve any conflicts or confusion.
 
 ### Docs lookup
 

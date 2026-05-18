@@ -2,6 +2,8 @@ import { code as codePlugin, type HighlightOptions, type HighlightResult } from 
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { useIsCodeFenceIncomplete, type CustomRendererProps } from "streamdown";
 
+import { extractOriginalFenceLanguage } from "@/components/message/utils/normalize-code-fence-languages";
+
 import { Icons } from "../icons";
 
 import { CodeBlockBody } from "./body";
@@ -44,13 +46,21 @@ export const LANGUAGE_DISPLAY_NAME: Record<string, LanguageData> = {
   sh: { name: "Shell" },
 };
 
-export function CodeBlock({ code: rawCode, language }: CustomRendererProps) {
+export function CodeBlock({ code: rawCode, language, meta }: CustomRendererProps) {
   const code = String(rawCode).replace(TRAILING_NEWLINES_REGEX, "");
-  return <HighlightedCodeBlock language={language} code={code} />;
+  const displayLanguage = extractOriginalFenceLanguage(meta) ?? language;
+  return (
+    <HighlightedCodeBlock
+      language={displayLanguage}
+      displayLanguage={displayLanguage}
+      code={code}
+    />
+  );
 }
 
 type HighlightedCodeBlockProps = {
   language: string;
+  displayLanguage: string;
   code: string;
 };
 
@@ -101,7 +111,7 @@ function transformHighlightResult(result: HighlightResult) {
   };
 }
 
-function HighlightedCodeBlock({ language, code }: HighlightedCodeBlockProps) {
+function HighlightedCodeBlock({ language, displayLanguage, code }: HighlightedCodeBlockProps) {
   const totalLines = code.split("\n").length;
   const prevCodeRef = useRef(code);
 
@@ -144,7 +154,7 @@ function HighlightedCodeBlock({ language, code }: HighlightedCodeBlockProps) {
   }, [code, language, raw, isIncomplete]);
 
   return (
-    <CodeBlockProvider code={code} language={language} totalLines={totalLines}>
+    <CodeBlockProvider code={code} language={displayLanguage} totalLines={totalLines}>
       <CodeBlockContainer>
         <CodeBlockHeader />
         <CodeBlockBody result={result} />
