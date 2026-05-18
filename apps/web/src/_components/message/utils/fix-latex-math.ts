@@ -100,7 +100,7 @@ function fixLatexOutsideInlineCode(text: string): string {
 }
 
 function fixLatexInProse(text: string): string {
-  return text
+  const fixedDelimiters = text
     .replace(/\\(\(|\[)/g, function replaceOpeningDelimiter(_, delimiter: string) {
       return delimiter === "(" ? "$ " : "$$\n";
     })
@@ -110,6 +110,49 @@ function fixLatexInProse(text: string): string {
     .replace(/\$\$[\w].*(\n)[\W\w].*\$\$/g, function collapseDisplayMathLines(match) {
       return match.replace(/\n/g, " ");
     });
+
+  return escapeCurrencyDollarSigns(fixedDelimiters);
+}
+
+function escapeCurrencyDollarSigns(text: string): string {
+  let result = "";
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char !== "$") {
+      result += char;
+      continue;
+    }
+
+    const previousChar = text[i - 1] ?? "";
+    const nextChar = text[i + 1] ?? "";
+
+    if (previousChar === "\\" || previousChar === "$" || nextChar === "$") {
+      result += char;
+      continue;
+    }
+
+    if (isCurrencyDollarSign(text, i)) {
+      result += "\\$";
+      continue;
+    }
+
+    result += char;
+  }
+
+  return result.replace(/\\[ \t]+\\\$(?=\d)/g, "\\$");
+}
+
+function isCurrencyDollarSign(text: string, index: number): boolean {
+  const previousChar = text[index - 1] ?? "";
+  const nextChar = text[index + 1] ?? "";
+
+  if (/\d/.test(nextChar)) return true;
+  if (/\d|[A-Za-z]/.test(previousChar) && (nextChar === "" || /\s|[.,;:!?)]/.test(nextChar))) {
+    return true;
+  }
+
+  return false;
 }
 
 function getBacktickRunLength(text: string, startIndex: number): number {
