@@ -93,7 +93,7 @@ class RequestCookieSessionStorage extends CookieSessionStorage<AuthRequest, unde
     return value ?? null;
   }
 
-  async getCookie(request: AuthRequest, name: string): Promise<string | null> {
+  async getCookie(request: AuthRequest): Promise<string | null> {
     const cookieHeader = request.headers.get("cookie");
     if (!cookieHeader) return null;
 

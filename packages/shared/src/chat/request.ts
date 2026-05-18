@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-import { reasoningEffortSchema, type ReasoningEffort } from "./metadata";
+import { reasoningEffortSchema } from "./metadata";
 
 export const chatModelParamsSchema = z.object({
   webSearch: z.boolean().default(false),

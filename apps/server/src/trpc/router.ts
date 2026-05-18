@@ -6,7 +6,7 @@ import { threadRouter } from "./routers/threads";
 export const appRouter = router({
   thread: threadRouter,
 
-  healthCheck: publicProcedure.query(function (ctx) {
+  healthCheck: publicProcedure.query(function () {
     return "OK";
   }),
 });

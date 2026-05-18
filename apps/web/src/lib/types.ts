@@ -1,11 +1,7 @@
 import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import type { ChatRequestBody, ChatModelParams } from "@ai-chat/shared/chat/request";
-import {
-  metadataSchema,
-  type ReasoningEffort,
-  type UIChatMessage,
-} from "@ai-chat/shared/chat/metadata";
+import { metadataSchema, type ReasoningEffort, type UIChatMessage } from "@ai-chat/shared/chat/metadata";
+import type { ChatRequestBody } from "@ai-chat/shared/chat/request";
 
 type Thread = Doc<"threads">;
 
@@ -13,9 +9,7 @@ type UserAttachment = { id: string; file: File; type: "image" | "pdf" };
 
 type ChatMessage = Omit<Doc<"messages">, "attachments"> & {
   attachments: Doc<"attachments">[];
-  metadata?: Omit<NonNullable<Doc<"messages">["metadata"]>, "modelParams"> & {
-    modelParams: ChatModelParams<Doc<"profiles">["_id"]>;
-  };
+  metadata?: Doc<"messages">["metadata"];
 };
 
 type RemoveFunctions<T> = {
@@ -30,11 +24,11 @@ export type {
   ChatMessage,
   ChatRequestBody,
   ReasoningEffort,
+  RemoveAllExceptFunctions,
+  RemoveFunctions,
   Thread,
   UIChatMessage,
   UserAttachment,
-  RemoveFunctions,
-  RemoveAllExceptFunctions,
 };
 
 export { metadataSchema };

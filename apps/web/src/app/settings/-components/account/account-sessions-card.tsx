@@ -109,7 +109,9 @@ function RevokeSessionDialog({
 
 export function AccountSessionsCard() {
   const router = useRouter();
-  const { sessionId: currentSessionId } = useLoaderData({ from: "__root__" });
+  const { auth } = useLoaderData({ from: "__root__" });
+
+  const currentSessionId = auth.user ? auth.sessionId : undefined;
 
   const { data, error, isError, isPending, refetch } = useQuery({
     queryKey: ["account-sessions"],
@@ -220,15 +222,11 @@ export function AccountSessionsCard() {
                             <span className="text-xs text-muted-foreground">{s.status}</span>
                           </div>
 
-                          <div className="text-xs text-muted-foreground">
-                            {shortUserAgent(s.userAgent)}
-                          </div>
+                          <div className="text-xs text-muted-foreground">{shortUserAgent(s.userAgent)}</div>
 
                           <div className="text-xs text-muted-foreground">
-                            Created:{" "}
-                            <span className="text-foreground">{formatDate(s.createdAt)}</span> •
-                            Expires:{" "}
-                            <span className="text-foreground">{formatDate(s.expiresAt)}</span>
+                            Created: <span className="text-foreground">{formatDate(s.createdAt)}</span> •
+                            Expires: <span className="text-foreground">{formatDate(s.expiresAt)}</span>
                             {s.ipAddress ? (
                               <>
                                 {" "}
@@ -253,8 +251,7 @@ export function AccountSessionsCard() {
 
                       {isCurrent ? (
                         <p className="text-xs text-muted-foreground">
-                          This is the session you’re currently using. For safety, it can’t be
-                          revoked here.
+                          This is the session you’re currently using. For safety, it can’t be revoked here.
                         </p>
                       ) : null}
                     </div>

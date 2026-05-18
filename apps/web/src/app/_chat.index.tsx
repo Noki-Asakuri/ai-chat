@@ -1,9 +1,10 @@
-import { motion, useReducedMotion } from "motion/react";
 import { api } from "@ai-chat/backend/convex/_generated/api";
+import { motion, useReducedMotion } from "motion/react";
 
 import { createFileRoute } from "@tanstack/react-router";
 
 import { convexQuery } from "@convex-dev/react-query";
+import { getAuth } from "@workos/authkit-tanstack-react-start";
 import { useEffect } from "react";
 import { useShallow } from "zustand/shallow";
 
@@ -13,11 +14,10 @@ import { messageStoreActions } from "@/lib/store/messages-store";
 export const Route = createFileRoute("/_chat/")({
   component: RouteComponent,
   loader: async ({ context }) => {
-    await context.queryClient.prefetchQuery(
-      convexQuery(api.functions.users.getCurrentUserPreferences),
-    );
+    const auth = await getAuth();
+    await context.queryClient.prefetchQuery(convexQuery(api.functions.users.getCurrentUserPreferences));
 
-    return { user: context.user };
+    return { user: auth.user };
   },
 });
 
@@ -52,8 +52,7 @@ export function WelcomeScreen() {
         transition={prefersReducedMotion ? undefined : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       >
         <h1 className="text-center text-4xl font-light text-foreground">
-          What can I help you with today,{" "}
-          <span className="capitalize">{user?.firstName ?? "user"}</span>?
+          What can I help you with today, <span className="capitalize">{user?.firstName ?? "user"}</span>?
         </h1>
       </motion.div>
     </div>
