@@ -6,7 +6,8 @@ import { ClientOnly, Link } from "@tanstack/react-router";
 
 import { Dialog } from "@base-ui/react/dialog";
 import { useMutation } from "convex/react";
-import { useEffect, useRef, useState } from "react";
+import { Loader2Icon } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import {
   closestCorners,
@@ -29,11 +30,18 @@ import { Input } from "../ui/input";
 import { Skeleton } from "../ui/skeleton";
 
 import { ThreadGroup } from "./thread-group";
+import { ThreadDeleteDialog } from "./thread-delete-dialog";
 import { ThreadItem } from "./thread-item";
+import { ThreadShareDialog } from "./thread-share-dialog";
 import { UngroupedThreadGroup } from "./thread-ungrouped";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
+import { getConvexReactClient } from "@/lib/convex/client";
+import { buttonVariants } from "../ui/button";
+import { cn } from "@/lib/utils";
+
+const convexClient = getConvexReactClient();
 
 export function ThreadContents() {
   return (
@@ -199,6 +207,11 @@ function ThreadList({ data }: ThreadListProps) {
 
   const [optimisticGroups, setOptimisticGroups] = useState<Groups | null>(null);
   const [optimisticGrouped, setOptimisticGrouped] = useState<GroupThreads | null>(null);
+  const [shareThread, setShareThread] = useState<Doc<"threads"> | null>(null);
+  const [editThread, setEditThread] = useState<Doc<"threads"> | null>(null);
+  const [deleteThread, setDeleteThread] = useState<Doc<"threads"> | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [isSavingTitle, startSavingTitle] = useTransition();
 
   const pendingDropRef = useRef<PendingDrop | null>(null);
 
@@ -209,6 +222,31 @@ function ThreadList({ data }: ThreadListProps) {
 
   const grouped = optimisticGrouped ?? data.groupedThreads;
   const groups = optimisticGroups ?? data.groups;
+
+  function openEditThread(thread: Doc<"threads">): void {
+    setEditThread(thread);
+    setEditTitle(thread.title);
+  }
+
+  function saveThreadTitle(): void {
+    if (!editThread) return;
+
+    const title = editTitle.trim();
+    if (!title || title === editThread.title) {
+      setEditThread(null);
+      return;
+    }
+
+    console.debug("[Thread] Update title", { threadId: editThread._id, title });
+    startSavingTitle(async () => {
+      await convexClient.mutation(api.functions.threads.updateThreadTitle, {
+        threadId: editThread._id,
+        title,
+      });
+
+      setEditThread(null);
+    });
+  }
 
   function handleDragStart(event: DragStartEvent) {
     console.debug("[Thread] Drag start", event.active.id);
@@ -450,13 +488,97 @@ function ThreadList({ data }: ThreadListProps) {
             const key = group._id;
             const groupThreads = grouped[key]?.threads ?? [];
 
-            return <ThreadGroup key={key} group={group} threads={groupThreads} />;
+            return (
+              <ThreadGroup
+                key={key}
+                group={group}
+                threads={groupThreads}
+                onShareThread={setShareThread}
+                onEditThread={openEditThread}
+                onDeleteThread={setDeleteThread}
+              />
+            );
           })}
         </SortableContext>
 
-        <UngroupedThreadGroup threads={grouped.none?.threads ?? []} hasGroups={groups.length > 0} />
+        <UngroupedThreadGroup
+          threads={grouped.none?.threads ?? []}
+          hasGroups={groups.length > 0}
+          onShareThread={setShareThread}
+          onEditThread={openEditThread}
+          onDeleteThread={setDeleteThread}
+        />
         <ThreadDraggingOverlay />
       </DndContext>
+
+      {editThread && (
+        <Dialog.Root
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setEditThread(null);
+          }}
+        >
+          <Dialog.Portal>
+            <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 dark:opacity-70" />
+            <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+              <div className="mb-2">
+                <h2 className="text-lg font-semibold">Edit thread</h2>
+                <p className="text-sm text-muted-foreground">Update the thread title.</p>
+              </div>
+
+              <form
+                className="mt-3 space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  saveThreadTitle();
+                }}
+              >
+                <Input
+                  value={editTitle}
+                  onChange={(event) => setEditTitle(event.target.value)}
+                  placeholder="Thread title"
+                  autoFocus
+                />
+
+                <div className="flex justify-end gap-2">
+                  <Dialog.Close className={cn(buttonVariants({ variant: "ghost" }))}>Cancel</Dialog.Close>
+
+                  <button
+                    type="submit"
+                    className={cn(buttonVariants({ variant: "default" }))}
+                    disabled={isSavingTitle || editTitle.trim().length === 0}
+                  >
+                    {isSavingTitle ? <Loader2Icon className="size-4 animate-spin" /> : null}
+                    Save
+                  </button>
+                </div>
+              </form>
+            </Dialog.Popup>
+          </Dialog.Portal>
+        </Dialog.Root>
+      )}
+
+      {deleteThread && (
+        <ThreadDeleteDialog
+          threadId={deleteThread._id}
+          title={deleteThread.title}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setDeleteThread(null);
+          }}
+        />
+      )}
+
+      {shareThread && (
+        <ThreadShareDialog
+          threadId={shareThread._id}
+          threadTitle={shareThread.title}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setShareThread(null);
+          }}
+        />
+      )}
     </div>
   );
 }

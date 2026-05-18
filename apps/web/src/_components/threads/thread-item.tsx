@@ -2,7 +2,6 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { Link, useParams } from "@tanstack/react-router";
 
-import { Dialog } from "@base-ui/react/dialog";
 import {
   DeleteIcon,
   GitBranchIcon,
@@ -14,17 +13,13 @@ import {
   RefreshCwIcon,
   Share2Icon,
 } from "lucide-react";
-import { useRef, useState, useTransition } from "react";
+import { useRef } from "react";
 import { toast } from "sonner";
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { buttonVariants } from "../ui/button";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../ui/context-menu";
-import { Input } from "../ui/input";
-
-import { ThreadDeleteDialog } from "./thread-delete-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
 import { regenerateThreadTitle } from "@/lib/trpc/client";
@@ -38,9 +33,18 @@ type ThreadItemProps = {
   disabled?: boolean;
   isOverlay?: boolean;
   onShareThread?: (thread: Thread) => void;
+  onEditThread?: (thread: Thread) => void;
+  onDeleteThread?: (thread: Thread) => void;
 };
 
-export function ThreadItem({ thread, disabled, isOverlay, onShareThread }: ThreadItemProps) {
+export function ThreadItem({
+  thread,
+  disabled,
+  isOverlay,
+  onShareThread,
+  onEditThread,
+  onDeleteThread,
+}: ThreadItemProps) {
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: thread._id,
@@ -75,7 +79,13 @@ export function ThreadItem({ thread, disabled, isOverlay, onShareThread }: Threa
       )}
     >
       {!(isDragging || disabled) ? (
-        <ThreadActions thread={thread} isStreaming={isStreaming} onShareThread={onShareThread}>
+        <ThreadActions
+          thread={thread}
+          isStreaming={isStreaming}
+          onShareThread={onShareThread}
+          onEditThread={onEditThread}
+          onDeleteThread={onDeleteThread}
+        >
           <Link
             preload={isRecentlyCreated || thread.pinned ? "viewport" : "intent"}
             preloadDelay={100}
@@ -135,42 +145,26 @@ type ThreadActionsProps = {
   thread: Thread;
   isStreaming: boolean;
   onShareThread?: (thread: Thread) => void;
+  onEditThread?: (thread: Thread) => void;
+  onDeleteThread?: (thread: Thread) => void;
   children: React.ReactNode;
 };
 
-function ThreadActions({ thread, isStreaming, onShareThread, children }: ThreadActionsProps) {
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [editTitle, setEditTitle] = useState(thread.title);
-  const [isSaving, startSaving] = useTransition();
-
+function ThreadActions({
+  thread,
+  isStreaming,
+  onShareThread,
+  onEditThread,
+  onDeleteThread,
+  children,
+}: ThreadActionsProps) {
   const menuTriggerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   function toggleThreadPin() {
     console.debug("[Thread] Pin thread", thread);
     void convexClient.mutation(api.functions.threads.pinThread, {
       threadId: thread._id,
       pinned: !thread.pinned,
-    });
-  }
-
-  function saveThreadTitle(): void {
-    const title = editTitle.trim();
-
-    if (!title || title === thread.title) {
-      setEditOpen(false);
-      return;
-    }
-
-    console.debug("[Thread] Update title", { threadId: thread._id, title });
-    startSaving(async () => {
-      await convexClient.mutation(api.functions.threads.updateThreadTitle, {
-        threadId: thread._id,
-        title,
-      });
-
-      setEditOpen(false);
     });
   }
 
@@ -218,10 +212,7 @@ function ThreadActions({ thread, isStreaming, onShareThread, children }: ThreadA
           <ContextMenuItem
             title="Edit Thread"
             onClick={() => {
-              setEditTitle(thread.title);
-              setEditOpen(true);
-
-              inputRef.current?.focus();
+              onEditThread?.(thread);
             }}
           >
             <PencilIcon className="size-4" />
@@ -240,7 +231,7 @@ function ThreadActions({ thread, isStreaming, onShareThread, children }: ThreadA
 
           <ContextMenuItem
             title="Delete Thread"
-            onClick={() => setDeleteOpen(true)}
+            onClick={() => onDeleteThread?.(thread)}
             disabled={isStreaming}
             variant="destructive"
           >
@@ -249,51 +240,6 @@ function ThreadActions({ thread, isStreaming, onShareThread, children }: ThreadA
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-
-      <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
-        <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 dark:opacity-70" />
-          <Dialog.Popup
-            finalFocus={menuTriggerRef}
-            className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
-          >
-            <div className="mb-2">
-              <h2 className="text-lg font-semibold">Edit thread</h2>
-              <p className="text-sm text-muted-foreground">Update the thread title.</p>
-            </div>
-
-            <form className="mt-3 space-y-4" onSubmit={(e) => e.preventDefault()}>
-              <Input
-                ref={inputRef}
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                placeholder="Thread title"
-              />
-
-              <div className="flex justify-end gap-2">
-                <Dialog.Close className={cn(buttonVariants({ variant: "ghost" }))}>Cancel</Dialog.Close>
-
-                <button
-                  type="submit"
-                  className={cn(buttonVariants({ variant: "default" }))}
-                  disabled={isSaving || editTitle.trim().length === 0}
-                  onClick={saveThreadTitle}
-                >
-                  {isSaving ? <Loader2Icon className="size-4 animate-spin" /> : null}
-                  Save
-                </button>
-              </div>
-            </form>
-          </Dialog.Popup>
-        </Dialog.Portal>
-      </Dialog.Root>
-
-      <ThreadDeleteDialog
-        threadId={thread._id}
-        title={thread.title}
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-      />
     </>
   );
 }

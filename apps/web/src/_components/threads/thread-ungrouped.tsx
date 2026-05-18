@@ -53,9 +53,18 @@ function resolveVirtualizationElements(
 type UngroupedThreadGroupProps = {
   threads: Doc<"threads">[];
   hasGroups: boolean;
+  onShareThread?: (thread: Doc<"threads">) => void;
+  onEditThread?: (thread: Doc<"threads">) => void;
+  onDeleteThread?: (thread: Doc<"threads">) => void;
 };
 
-export function UngroupedThreadGroup({ threads, hasGroups }: UngroupedThreadGroupProps) {
+export function UngroupedThreadGroup({
+  threads,
+  hasGroups,
+  onShareThread,
+  onEditThread,
+  onDeleteThread,
+}: UngroupedThreadGroupProps) {
   const { setNodeRef: setDropRef } = useDroppable({
     id: "none",
     data: { type: "group", groupId: null, title: "Ungrouped" },
@@ -70,7 +79,15 @@ export function UngroupedThreadGroup({ threads, hasGroups }: UngroupedThreadGrou
       {Object.entries(groupedThreads).map(function renderItem([title, threads]) {
         const groupKey = `thread-ungrouped-group-${title}`;
         return (
-          <GroupByDateItem key={groupKey} groupKey={groupKey} title={title} threads={threads} />
+          <GroupByDateItem
+            key={groupKey}
+            groupKey={groupKey}
+            title={title}
+            threads={threads}
+            onShareThread={onShareThread}
+            onEditThread={onEditThread}
+            onDeleteThread={onDeleteThread}
+          />
         );
       })}
     </div>
@@ -89,9 +106,19 @@ type GroupByDateItemProps = {
   groupKey: string;
   title: string;
   threads: Doc<"threads">[];
+  onShareThread?: (thread: Doc<"threads">) => void;
+  onEditThread?: (thread: Doc<"threads">) => void;
+  onDeleteThread?: (thread: Doc<"threads">) => void;
 };
 
-function GroupByDateItem({ groupKey, title, threads }: GroupByDateItemProps) {
+function GroupByDateItem({
+  groupKey,
+  title,
+  threads,
+  onShareThread,
+  onEditThread,
+  onDeleteThread,
+}: GroupByDateItemProps) {
   const persistedKey = getUngroupedBucketKey(groupKey);
   const isOpen = useThreadGroupUIStore((state) => state.isOpenByKey[persistedKey] ?? true);
   const isOlderGroup = title === "older";
@@ -117,10 +144,23 @@ function GroupByDateItem({ groupKey, title, threads }: GroupByDateItemProps) {
 
         <Collapsible.Panel className="flex flex-col gap-1">
           {isOlderGroup ? (
-            <VirtualizedOlderThreadList threads={threads} />
+            <VirtualizedOlderThreadList
+              threads={threads}
+              onShareThread={onShareThread}
+              onEditThread={onEditThread}
+              onDeleteThread={onDeleteThread}
+            />
           ) : (
             threads.map(function renderItem(thread) {
-              return <ThreadItem key={thread._id} thread={thread} />;
+              return (
+                <ThreadItem
+                  key={thread._id}
+                  thread={thread}
+                  onShareThread={onShareThread}
+                  onEditThread={onEditThread}
+                  onDeleteThread={onDeleteThread}
+                />
+              );
             })
           )}
         </Collapsible.Panel>
@@ -131,9 +171,17 @@ function GroupByDateItem({ groupKey, title, threads }: GroupByDateItemProps) {
 
 type VirtualizedOlderThreadListProps = {
   threads: Doc<"threads">[];
+  onShareThread?: (thread: Doc<"threads">) => void;
+  onEditThread?: (thread: Doc<"threads">) => void;
+  onDeleteThread?: (thread: Doc<"threads">) => void;
 };
 
-function VirtualizedOlderThreadList({ threads }: VirtualizedOlderThreadListProps) {
+function VirtualizedOlderThreadList({
+  threads,
+  onShareThread,
+  onEditThread,
+  onDeleteThread,
+}: VirtualizedOlderThreadListProps) {
   const listElementRef = useRef<HTMLDivElement>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
 
@@ -209,7 +257,12 @@ function VirtualizedOlderThreadList({ threads }: VirtualizedOlderThreadListProps
             className="absolute top-0 left-0 w-full pb-1"
             style={{ transform: `translateY(${item.start - scrollMargin}px)` }}
           >
-            <ThreadItem thread={thread} />
+            <ThreadItem
+              thread={thread}
+              onShareThread={onShareThread}
+              onEditThread={onEditThread}
+              onDeleteThread={onDeleteThread}
+            />
           </div>
         );
       })}
