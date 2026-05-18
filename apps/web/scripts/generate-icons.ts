@@ -1,5 +1,4 @@
 // scripts/generate-icons.ts
-import sharp from "sharp";
 import path from "path";
 
 // Assuming your master file is the 1024 version
@@ -22,13 +21,16 @@ const targets: IconConfig[] = [
 async function generateIcons() {
   console.log(`Generating icons from ${SOURCE_ICON}...`);
 
-  for (const target of targets) {
-    await sharp(`./public/${SOURCE_ICON}`)
-      .resize(target.size, target.size)
-      .toFile(path.join(OUTPUT_DIR, target.name));
+  await Promise.all(
+    targets.map(async (target) => {
+      const imageBuffer = await new Bun.Image(`./public/${SOURCE_ICON}`)
+        .resize(target.size, target.size)
+        .toBuffer();
 
-    console.log(`Created ${target.name} (${target.size}x${target.size})`);
-  }
+      await Bun.write(path.join(OUTPUT_DIR, target.name), imageBuffer);
+      console.log(`Created ${target.name} (${target.size}x${target.size})`);
+    }),
+  );
 }
 
 generateIcons().catch(console.error);
