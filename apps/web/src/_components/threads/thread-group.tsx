@@ -27,20 +27,9 @@ type ThreadGroupProps = {
   threads: Doc<"threads">[];
   disabled?: boolean;
   isOverlay?: boolean;
-  onShareThread?: (thread: Doc<"threads">) => void;
-  onEditThread?: (thread: Doc<"threads">) => void;
-  onDeleteThread?: (thread: Doc<"threads">) => void;
 };
 
-export function ThreadGroup({
-  group,
-  threads,
-  disabled,
-  isOverlay,
-  onShareThread,
-  onEditThread,
-  onDeleteThread,
-}: ThreadGroupProps) {
+export function ThreadGroup({ group, threads, disabled, isOverlay }: ThreadGroupProps) {
   const {
     active,
     attributes,
@@ -111,9 +100,6 @@ export function ThreadGroup({
           group={group}
           threads={threads}
           isHidden={isOverlay || disabled || isGroupSorting}
-          onShareThread={onShareThread}
-          onEditThread={onEditThread}
-          onDeleteThread={onDeleteThread}
         />
       </SidebarGroup>
     </Collapsible.Root>
@@ -124,9 +110,6 @@ type ThreadGroupDropzoneProps = ComponentPropsWithRef<"div"> & {
   group: Doc<"groups"> | null;
   threads: Doc<"threads">[];
   isHidden?: boolean;
-  onShareThread?: (thread: Doc<"threads">) => void;
-  onEditThread?: (thread: Doc<"threads">) => void;
-  onDeleteThread?: (thread: Doc<"threads">) => void;
 };
 
 export function ThreadGroupDropzone(props: ThreadGroupDropzoneProps) {
@@ -145,15 +128,7 @@ export function ThreadGroupDropzone(props: ThreadGroupDropzoneProps) {
           strategy={verticalListSortingStrategy}
         >
           {props.threads.map(function renderItem(thread) {
-            return (
-              <ThreadItem
-                key={thread._id}
-                thread={thread}
-                onShareThread={props.onShareThread}
-                onEditThread={props.onEditThread}
-                onDeleteThread={props.onDeleteThread}
-              />
-            );
+            return <ThreadItem key={thread._id} thread={thread} />;
           })}
         </SortableContext>
 

@@ -36,6 +36,10 @@ import { ThreadShareDialog } from "./thread-share-dialog";
 import { UngroupedThreadGroup } from "./thread-ungrouped";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";
+import {
+  threadDialogStoreActions,
+  useThreadDialogStore,
+} from "@/lib/store/thread-dialog-store";
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { buttonVariants } from "../ui/button";
@@ -207,11 +211,10 @@ function ThreadList({ data }: ThreadListProps) {
 
   const [optimisticGroups, setOptimisticGroups] = useState<Groups | null>(null);
   const [optimisticGrouped, setOptimisticGrouped] = useState<GroupThreads | null>(null);
-  const [shareThread, setShareThread] = useState<Doc<"threads"> | null>(null);
-  const [editThread, setEditThread] = useState<Doc<"threads"> | null>(null);
-  const [deleteThread, setDeleteThread] = useState<Doc<"threads"> | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [isSavingTitle, startSavingTitle] = useTransition();
+  const activeDialog = useThreadDialogStore((state) => state.activeDialog);
+  const dialogThread = useThreadDialogStore((state) => state.thread);
 
   const pendingDropRef = useRef<PendingDrop | null>(null);
 
@@ -223,28 +226,31 @@ function ThreadList({ data }: ThreadListProps) {
   const grouped = optimisticGrouped ?? data.groupedThreads;
   const groups = optimisticGroups ?? data.groups;
 
-  function openEditThread(thread: Doc<"threads">): void {
-    setEditThread(thread);
-    setEditTitle(thread.title);
-  }
+  const isEditDialogOpen = activeDialog === "edit" && dialogThread !== null;
+  const isDeleteDialogOpen = activeDialog === "delete" && dialogThread !== null;
+  const isShareDialogOpen = activeDialog === "share" && dialogThread !== null;
+
+  useEffect(() => {
+    if (activeDialog === "edit" && dialogThread) setEditTitle(dialogThread.title);
+  }, [activeDialog, dialogThread]);
 
   function saveThreadTitle(): void {
-    if (!editThread) return;
+    if (!dialogThread || activeDialog !== "edit") return;
 
     const title = editTitle.trim();
-    if (!title || title === editThread.title) {
-      setEditThread(null);
+    if (!title || title === dialogThread.title) {
+      threadDialogStoreActions.closeThreadDialog();
       return;
     }
 
-    console.debug("[Thread] Update title", { threadId: editThread._id, title });
+    console.debug("[Thread] Update title", { threadId: dialogThread._id, title });
     startSavingTitle(async () => {
       await convexClient.mutation(api.functions.threads.updateThreadTitle, {
-        threadId: editThread._id,
+        threadId: dialogThread._id,
         title,
       });
 
-      setEditThread(null);
+      threadDialogStoreActions.closeThreadDialog();
     });
   }
 
@@ -489,14 +495,7 @@ function ThreadList({ data }: ThreadListProps) {
             const groupThreads = grouped[key]?.threads ?? [];
 
             return (
-              <ThreadGroup
-                key={key}
-                group={group}
-                threads={groupThreads}
-                onShareThread={setShareThread}
-                onEditThread={openEditThread}
-                onDeleteThread={setDeleteThread}
-              />
+              <ThreadGroup key={key} group={group} threads={groupThreads} />
             );
           })}
         </SortableContext>
@@ -504,18 +503,15 @@ function ThreadList({ data }: ThreadListProps) {
         <UngroupedThreadGroup
           threads={grouped.none?.threads ?? []}
           hasGroups={groups.length > 0}
-          onShareThread={setShareThread}
-          onEditThread={openEditThread}
-          onDeleteThread={setDeleteThread}
         />
         <ThreadDraggingOverlay />
       </DndContext>
 
-      {editThread && (
+      {isEditDialogOpen && (
         <Dialog.Root
           open={true}
           onOpenChange={(open) => {
-            if (!open) setEditThread(null);
+            if (!open) threadDialogStoreActions.closeThreadDialog();
           }}
         >
           <Dialog.Portal>
@@ -558,24 +554,24 @@ function ThreadList({ data }: ThreadListProps) {
         </Dialog.Root>
       )}
 
-      {deleteThread && (
+      {isDeleteDialogOpen && dialogThread && (
         <ThreadDeleteDialog
-          threadId={deleteThread._id}
-          title={deleteThread.title}
+          threadId={dialogThread._id}
+          title={dialogThread.title}
           open={true}
           onOpenChange={(open) => {
-            if (!open) setDeleteThread(null);
+            if (!open) threadDialogStoreActions.closeThreadDialog();
           }}
         />
       )}
 
-      {shareThread && (
+      {isShareDialogOpen && dialogThread && (
         <ThreadShareDialog
-          threadId={shareThread._id}
-          threadTitle={shareThread.title}
+          threadId={dialogThread._id}
+          threadTitle={dialogThread.title}
           open={true}
           onOpenChange={(open) => {
-            if (!open) setShareThread(null);
+            if (!open) threadDialogStoreActions.closeThreadDialog();
           }}
         />
       )}

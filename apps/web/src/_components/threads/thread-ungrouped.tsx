@@ -53,18 +53,9 @@ function resolveVirtualizationElements(
 type UngroupedThreadGroupProps = {
   threads: Doc<"threads">[];
   hasGroups: boolean;
-  onShareThread?: (thread: Doc<"threads">) => void;
-  onEditThread?: (thread: Doc<"threads">) => void;
-  onDeleteThread?: (thread: Doc<"threads">) => void;
 };
 
-export function UngroupedThreadGroup({
-  threads,
-  hasGroups,
-  onShareThread,
-  onEditThread,
-  onDeleteThread,
-}: UngroupedThreadGroupProps) {
+export function UngroupedThreadGroup({ threads, hasGroups }: UngroupedThreadGroupProps) {
   const { setNodeRef: setDropRef } = useDroppable({
     id: "none",
     data: { type: "group", groupId: null, title: "Ungrouped" },
@@ -84,9 +75,6 @@ export function UngroupedThreadGroup({
             groupKey={groupKey}
             title={title}
             threads={threads}
-            onShareThread={onShareThread}
-            onEditThread={onEditThread}
-            onDeleteThread={onDeleteThread}
           />
         );
       })}
@@ -106,19 +94,9 @@ type GroupByDateItemProps = {
   groupKey: string;
   title: string;
   threads: Doc<"threads">[];
-  onShareThread?: (thread: Doc<"threads">) => void;
-  onEditThread?: (thread: Doc<"threads">) => void;
-  onDeleteThread?: (thread: Doc<"threads">) => void;
 };
 
-function GroupByDateItem({
-  groupKey,
-  title,
-  threads,
-  onShareThread,
-  onEditThread,
-  onDeleteThread,
-}: GroupByDateItemProps) {
+function GroupByDateItem({ groupKey, title, threads }: GroupByDateItemProps) {
   const persistedKey = getUngroupedBucketKey(groupKey);
   const isOpen = useThreadGroupUIStore((state) => state.isOpenByKey[persistedKey] ?? true);
   const isOlderGroup = title === "older";
@@ -144,23 +122,10 @@ function GroupByDateItem({
 
         <Collapsible.Panel className="flex flex-col gap-1">
           {isOlderGroup ? (
-            <VirtualizedOlderThreadList
-              threads={threads}
-              onShareThread={onShareThread}
-              onEditThread={onEditThread}
-              onDeleteThread={onDeleteThread}
-            />
+            <VirtualizedOlderThreadList threads={threads} />
           ) : (
             threads.map(function renderItem(thread) {
-              return (
-                <ThreadItem
-                  key={thread._id}
-                  thread={thread}
-                  onShareThread={onShareThread}
-                  onEditThread={onEditThread}
-                  onDeleteThread={onDeleteThread}
-                />
-              );
+              return <ThreadItem key={thread._id} thread={thread} />;
             })
           )}
         </Collapsible.Panel>
@@ -171,17 +136,9 @@ function GroupByDateItem({
 
 type VirtualizedOlderThreadListProps = {
   threads: Doc<"threads">[];
-  onShareThread?: (thread: Doc<"threads">) => void;
-  onEditThread?: (thread: Doc<"threads">) => void;
-  onDeleteThread?: (thread: Doc<"threads">) => void;
 };
 
-function VirtualizedOlderThreadList({
-  threads,
-  onShareThread,
-  onEditThread,
-  onDeleteThread,
-}: VirtualizedOlderThreadListProps) {
+function VirtualizedOlderThreadList({ threads }: VirtualizedOlderThreadListProps) {
   const listElementRef = useRef<HTMLDivElement>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
 
@@ -257,12 +214,7 @@ function VirtualizedOlderThreadList({
             className="absolute top-0 left-0 w-full pb-1"
             style={{ transform: `translateY(${item.start - scrollMargin}px)` }}
           >
-            <ThreadItem
-              thread={thread}
-              onShareThread={onShareThread}
-              onEditThread={onEditThread}
-              onDeleteThread={onDeleteThread}
-            />
+            <ThreadItem thread={thread} />
           </div>
         );
       })}

@@ -22,6 +22,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../ui/context-menu";
 
 import { getConvexReactClient } from "@/lib/convex/client";
+import { threadDialogStoreActions } from "@/lib/store/thread-dialog-store";
 import { regenerateThreadTitle } from "@/lib/trpc/client";
 import type { Thread } from "@/lib/types";
 import { cn, toUUID, tryCatch } from "@/lib/utils";
@@ -32,19 +33,9 @@ type ThreadItemProps = {
   thread: Thread;
   disabled?: boolean;
   isOverlay?: boolean;
-  onShareThread?: (thread: Thread) => void;
-  onEditThread?: (thread: Thread) => void;
-  onDeleteThread?: (thread: Thread) => void;
 };
 
-export function ThreadItem({
-  thread,
-  disabled,
-  isOverlay,
-  onShareThread,
-  onEditThread,
-  onDeleteThread,
-}: ThreadItemProps) {
+export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: thread._id,
@@ -79,13 +70,7 @@ export function ThreadItem({
       )}
     >
       {!(isDragging || disabled) ? (
-        <ThreadActions
-          thread={thread}
-          isStreaming={isStreaming}
-          onShareThread={onShareThread}
-          onEditThread={onEditThread}
-          onDeleteThread={onDeleteThread}
-        >
+        <ThreadActions thread={thread} isStreaming={isStreaming}>
           <Link
             preload={isRecentlyCreated || thread.pinned ? "viewport" : "intent"}
             preloadDelay={100}
@@ -144,20 +129,10 @@ export function ThreadItem({
 type ThreadActionsProps = {
   thread: Thread;
   isStreaming: boolean;
-  onShareThread?: (thread: Thread) => void;
-  onEditThread?: (thread: Thread) => void;
-  onDeleteThread?: (thread: Thread) => void;
   children: React.ReactNode;
 };
 
-function ThreadActions({
-  thread,
-  isStreaming,
-  onShareThread,
-  onEditThread,
-  onDeleteThread,
-  children,
-}: ThreadActionsProps) {
+function ThreadActions({ thread, isStreaming, children }: ThreadActionsProps) {
   const menuTriggerRef = useRef<HTMLDivElement>(null);
 
   function toggleThreadPin() {
@@ -212,7 +187,7 @@ function ThreadActions({
           <ContextMenuItem
             title="Edit Thread"
             onClick={() => {
-              onEditThread?.(thread);
+              threadDialogStoreActions.openEditThread(thread);
             }}
           >
             <PencilIcon className="size-4" />
@@ -222,7 +197,7 @@ function ThreadActions({
           <ContextMenuItem
             title="Share Thread"
             onClick={() => {
-              onShareThread?.(thread);
+              threadDialogStoreActions.openShareThread(thread);
             }}
           >
             <Share2Icon className="size-4" />
@@ -231,7 +206,7 @@ function ThreadActions({
 
           <ContextMenuItem
             title="Delete Thread"
-            onClick={() => onDeleteThread?.(thread)}
+            onClick={() => threadDialogStoreActions.openDeleteThread(thread)}
             disabled={isStreaming}
             variant="destructive"
           >
