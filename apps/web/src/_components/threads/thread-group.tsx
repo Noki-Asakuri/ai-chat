@@ -72,18 +72,18 @@ export function ThreadGroup({ group, threads, disabled, isOverlay }: ThreadGroup
     >
       <SidebarGroup style={style} ref={setSortableRef} className="flex">
         <div className="flex items-center justify-between gap-2">
-          <SidebarGroupLabel
-            {...attributes}
-            {...listeners}
-            render={<span />}
-            className="font-semibold select-none"
-          >
-            {group?.title}
-          </SidebarGroupLabel>
+          <ThreadGroupActions group={group}>
+            <SidebarGroupLabel
+              {...attributes}
+              {...listeners}
+              render={<span />}
+              className="font-semibold select-none"
+            >
+              {group?.title}
+            </SidebarGroupLabel>
+          </ThreadGroupActions>
 
           <div className="flex items-center gap-2">
-            <ThreadGroupActions group={group} />
-
             <Collapsible.Trigger className="group/trigger flex w-full items-center justify-between gap-2">
               <ChevronLeftIcon
                 className={cn(
@@ -121,11 +121,7 @@ export function ThreadGroupDropzone(props: ThreadGroupDropzoneProps) {
   if (props.isHidden) return null;
 
   return (
-    <Collapsible.Panel
-      ref={setDropRef}
-      data-group={props.group?._id}
-      data-slot="thread-group-dropzone"
-    >
+    <Collapsible.Panel ref={setDropRef} data-group={props.group?._id} data-slot="thread-group-dropzone">
       <SidebarGroupContent className="flex flex-col gap-1">
         <SortableContext
           items={props.threads.map((thread) => thread._id)}

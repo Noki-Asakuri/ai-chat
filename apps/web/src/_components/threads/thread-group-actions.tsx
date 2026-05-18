@@ -1,11 +1,10 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { DeleteIcon, EllipsisIcon, Loader2Icon, PencilIcon } from "lucide-react";
-import { type ComponentPropsWithRef, useRef, useState, useTransition } from "react";
+import { DeleteIcon, Loader2Icon, PencilIcon } from "lucide-react";
+import { type ReactNode, useRef, useState, useTransition } from "react";
 
 import { Dialog } from "@base-ui/react/dialog";
-import { Menu } from "@base-ui/react/menu";
 
 import {
   AlertDialog,
@@ -18,18 +17,19 @@ import {
   AlertDialogTitle,
 } from "../ui/alert-dialog";
 import { buttonVariants } from "../ui/button";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../ui/context-menu";
 import { Input } from "../ui/input";
 
 import { getConvexReactClient } from "@/lib/convex/client";
-import { cn } from "@/lib/utils";
 
-type ThreadGroupActionProps = ComponentPropsWithRef<"button"> & {
+type ThreadGroupActionProps = {
   group: Doc<"groups">;
+  children: ReactNode;
 };
 
 const convexClient = getConvexReactClient();
 
-export function ThreadGroupActions({ group, ...props }: ThreadGroupActionProps) {
+export function ThreadGroupActions({ group, children }: ThreadGroupActionProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(group.title);
@@ -37,7 +37,7 @@ export function ThreadGroupActions({ group, ...props }: ThreadGroupActionProps) 
   const [isSaving, startSaving] = useTransition();
   const [isDeleting, startDeleting] = useTransition();
 
-  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const menuTriggerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function saveGroupTitle(): void {
@@ -67,54 +67,30 @@ export function ThreadGroupActions({ group, ...props }: ThreadGroupActionProps) 
 
   return (
     <>
-      <Menu.Root>
-        <Menu.Trigger
-          ref={menuTriggerRef}
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-          }}
-          className={cn("flex size-5 items-center justify-center")}
-          {...props}
-        >
-          <EllipsisIcon className="size-4" />
-          <span className="sr-only">Group actions</span>
-        </Menu.Trigger>
+      <ContextMenu>
+        <ContextMenuTrigger ref={menuTriggerRef} className="min-w-0 flex-1">
+          {children}
+        </ContextMenuTrigger>
 
-        <Menu.Portal>
-          <Menu.Positioner side="right" align="center" className="p-1" sideOffset={42}>
-            <Menu.Popup className="flex w-max origin-[var(--transform-origin)] flex-col overflow-hidden rounded-md border bg-sidebar/60 backdrop-blur-md backdrop-saturate-150">
-              <Menu.Item
-                title="Rename Group"
-                onClick={() => {
-                  setEditTitle(group.title);
-                  setEditOpen(true);
-                  inputRef.current?.focus();
-                }}
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  "w-full cursor-pointer justify-start rounded-none",
-                )}
-              >
-                <PencilIcon className="size-4" />
-                <span className="pointer-events-none">Rename Group</span>
-              </Menu.Item>
+        <ContextMenuContent side="right" align="center" sideOffset={8}>
+          <ContextMenuItem
+            title="Rename Group"
+            onClick={() => {
+              setEditTitle(group.title);
+              setEditOpen(true);
+              inputRef.current?.focus();
+            }}
+          >
+            <PencilIcon className="size-4" />
+            <span className="pointer-events-none">Rename Group</span>
+          </ContextMenuItem>
 
-              <Menu.Item
-                title="Delete Group"
-                onClick={() => setDeleteOpen(true)}
-                className={cn(
-                  buttonVariants({ variant: "destructive" }),
-                  "w-full cursor-pointer justify-start rounded-t-none",
-                )}
-              >
-                <DeleteIcon className="size-4" />
-                <span className="pointer-events-none">Delete Group</span>
-              </Menu.Item>
-            </Menu.Popup>
-          </Menu.Positioner>
-        </Menu.Portal>
-      </Menu.Root>
+          <ContextMenuItem title="Delete Group" onClick={() => setDeleteOpen(true)} variant="destructive">
+            <DeleteIcon className="size-4" />
+            <span className="pointer-events-none">Delete Group</span>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
         <Dialog.Portal>
@@ -139,7 +115,7 @@ export function ThreadGroupActions({ group, ...props }: ThreadGroupActionProps) 
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
-                  className={cn(buttonVariants({ variant: "ghost" }))}
+                  className={buttonVariants({ variant: "ghost" })}
                   onClick={() => setEditOpen(false)}
                 >
                   Cancel
@@ -147,7 +123,7 @@ export function ThreadGroupActions({ group, ...props }: ThreadGroupActionProps) 
 
                 <button
                   type="submit"
-                  className={cn(buttonVariants({ variant: "default" }))}
+                  className={buttonVariants({ variant: "default" })}
                   disabled={isSaving || editTitle.trim().length === 0}
                   onClick={saveGroupTitle}
                 >

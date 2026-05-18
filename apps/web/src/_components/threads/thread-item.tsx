@@ -3,10 +3,8 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import { Link, useParams } from "@tanstack/react-router";
 
 import { Dialog } from "@base-ui/react/dialog";
-import { Menu } from "@base-ui/react/menu";
 import {
   DeleteIcon,
-  EllipsisIcon,
   GitBranchIcon,
   GripVerticalIcon,
   Loader2Icon,
@@ -16,17 +14,17 @@ import {
   RefreshCwIcon,
   Share2Icon,
 } from "lucide-react";
-import { useRef, useState, useTransition, type ComponentProps } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import { buttonVariants } from "../ui/button";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../ui/context-menu";
 import { Input } from "../ui/input";
 
 import { ThreadDeleteDialog } from "./thread-delete-dialog";
-import { ThreadShareDialog } from "./thread-share-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
 import { regenerateThreadTitle } from "@/lib/trpc/client";
@@ -39,9 +37,10 @@ type ThreadItemProps = {
   thread: Thread;
   disabled?: boolean;
   isOverlay?: boolean;
+  onShareThread?: (thread: Thread) => void;
 };
 
-export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
+export function ThreadItem({ thread, disabled, isOverlay, onShareThread }: ThreadItemProps) {
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: thread._id,
@@ -71,26 +70,41 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
       className={cn(
         "group/thread flex items-center justify-between gap-2 overflow-hidden rounded-md px-2",
         "text-sidebar-foreground transition-colors hover:bg-primary/30",
-        "data-[thread-active=true]:bg-primary/30 [&:has(button[data-popup-open])]:bg-primary/30",
+        "data-[thread-active=true]:bg-primary/30",
         "data-[is-dragging=true]:bg-primary/30",
       )}
     >
-      <Link
-        preload={isRecentlyCreated || thread.pinned ? "viewport" : "intent"}
-        preloadDelay={100}
-        preloadIntentProximity={60}
-        title={thread.title}
-        to="/threads/$threadId"
-        params={{ threadId: toUUID(thread._id) }}
-        className="flex w-full min-w-0 items-center gap-2 py-1.5"
-      >
-        {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
-        <span className="truncate text-sm">{thread.title}</span>
-      </Link>
+      {!(isDragging || disabled) ? (
+        <ThreadActions thread={thread} isStreaming={isStreaming} onShareThread={onShareThread}>
+          <Link
+            preload={isRecentlyCreated || thread.pinned ? "viewport" : "intent"}
+            preloadDelay={100}
+            preloadIntentProximity={60}
+            title={thread.title}
+            to="/threads/$threadId"
+            params={{ threadId: toUUID(thread._id) }}
+            className="flex w-full min-w-0 items-center gap-2 py-1.5"
+          >
+            {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
+            <span className="truncate text-sm">{thread.title}</span>
+          </Link>
+        </ThreadActions>
+      ) : (
+        <Link
+          preload={isRecentlyCreated || thread.pinned ? "viewport" : "intent"}
+          preloadDelay={100}
+          preloadIntentProximity={60}
+          title={thread.title}
+          to="/threads/$threadId"
+          params={{ threadId: toUUID(thread._id) }}
+          className="flex w-full min-w-0 items-center gap-2 py-1.5"
+        >
+          {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
+          <span className="truncate text-sm">{thread.title}</span>
+        </Link>
+      )}
 
       <div className="flex items-center gap-2">
-        {!(isDragging || disabled) && <ThreadActions thread={thread} isStreaming={isStreaming} />}
-
         {isStreaming && (
           <div className="inline-block">
             <Loader2Icon className="size-4 animate-spin" />
@@ -106,7 +120,6 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
             className={cn(
               "cursor-grab py-1.5 active:cursor-grabbing",
               "hidden group-hover/thread:flex",
-              "peer-data-popup-open:flex",
               (isDragging || disabled) && "flex cursor-grabbing",
             )}
           >
@@ -118,19 +131,20 @@ export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
   );
 }
 
-type ThreadActionsProps = ComponentProps<typeof Menu.Trigger> & {
+type ThreadActionsProps = {
   thread: Thread;
   isStreaming: boolean;
+  onShareThread?: (thread: Thread) => void;
+  children: React.ReactNode;
 };
 
-function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActionsProps) {
+function ThreadActions({ thread, isStreaming, onShareThread, children }: ThreadActionsProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(thread.title);
   const [isSaving, startSaving] = useTransition();
 
-  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const menuTriggerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function toggleThreadPin() {
@@ -170,130 +184,71 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
 
   return (
     <>
-      <Menu.Root>
-        <Menu.Trigger
-          ref={menuTriggerRef}
-          data-slot="thread-actions-trigger"
-          {...props}
-          className={cn(
-            "peer pointer-events-auto hidden items-center justify-center group-hover/thread:flex data-popup-open:flex",
-            className,
-          )}
-        >
-          <EllipsisIcon className="size-4 shrink-0" />
-        </Menu.Trigger>
+      <ContextMenu>
+        <ContextMenuTrigger ref={menuTriggerRef} className="min-w-0 flex-1">
+          {children}
+        </ContextMenuTrigger>
 
-        <Menu.Portal>
-          <Menu.Positioner
-            side="right"
-            align="center"
-            className="isolate z-50 outline-none"
-            sideOffset={isStreaming ? 20 : 50}
-          >
-            <Menu.Popup
-              data-slot="dropdown-menu-content"
-              className="z-50 flex max-h-(--available-height) w-max min-w-32 origin-(--transform-origin) flex-col overflow-hidden overflow-x-hidden overflow-y-auto rounded-md border bg-sidebar/60 text-popover-foreground shadow-md backdrop-blur-md backdrop-saturate-150 duration-100 outline-none data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+        <ContextMenuContent side="right" align="center" sideOffset={isStreaming ? 8 : 12}>
+          {thread.branchedFrom && (
+            <ContextMenuItem
+              title="Go to parent thread"
+              render={
+                <Link preload={false} to="/threads/$threadId" params={{ threadId: thread.branchedFrom }} />
+              }
             >
-              {thread.branchedFrom && (
-                <Menu.Item
-                  title="Go to parent thread"
-                  render={
-                    <Link
-                      preload={false}
-                      to="/threads/$threadId"
-                      params={{ threadId: thread.branchedFrom }}
-                    />
-                  }
-                  className={cn(
-                    buttonVariants({ variant: "ghost" }),
-                    "w-full justify-start rounded-b-none",
-                  )}
-                >
-                  <GitBranchIcon className="size-4 rotate-180" />
-                  <span className="pointer-events-none">Go to parent thread</span>
-                </Menu.Item>
-              )}
+              <GitBranchIcon className="size-4 rotate-180" />
+              <span className="pointer-events-none">Go to parent thread</span>
+            </ContextMenuItem>
+          )}
 
-              {thread.groupId === null && (
-                <Menu.Item
-                  title={thread.pinned ? "Unpin Thread" : "Pin Thread"}
-                  onClick={toggleThreadPin}
-                  className={cn(
-                    buttonVariants({ variant: "ghost" }),
-                    "w-full cursor-pointer justify-start rounded-none",
-                  )}
-                >
-                  {thread.pinned ? (
-                    <PinOffIcon className="size-4" />
-                  ) : (
-                    <PinIcon className="size-4" />
-                  )}
+          {thread.groupId === null && (
+            <ContextMenuItem title={thread.pinned ? "Unpin Thread" : "Pin Thread"} onClick={toggleThreadPin}>
+              {thread.pinned ? <PinOffIcon className="size-4" /> : <PinIcon className="size-4" />}
 
-                  <span className="pointer-events-none">
-                    {thread.pinned ? "Unpin Thread" : "Pin Thread"}
-                  </span>
-                </Menu.Item>
-              )}
+              <span className="pointer-events-none">{thread.pinned ? "Unpin Thread" : "Pin Thread"}</span>
+            </ContextMenuItem>
+          )}
 
-              <Menu.Item
-                title="Regenerate Title"
-                onClick={regenerateTitle}
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  "w-full cursor-pointer justify-start rounded-none",
-                )}
-              >
-                <RefreshCwIcon className="size-4" />
-                <span className="pointer-events-none">Regenerate Title</span>
-              </Menu.Item>
+          <ContextMenuItem title="Regenerate Title" onClick={regenerateTitle}>
+            <RefreshCwIcon className="size-4" />
+            <span className="pointer-events-none">Regenerate Title</span>
+          </ContextMenuItem>
 
-              <Menu.Item
-                title="Edit Thread"
-                onClick={() => {
-                  setEditTitle(thread.title);
-                  setEditOpen(true);
+          <ContextMenuItem
+            title="Edit Thread"
+            onClick={() => {
+              setEditTitle(thread.title);
+              setEditOpen(true);
 
-                  inputRef.current?.focus();
-                }}
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  "w-full cursor-pointer justify-start rounded-none",
-                )}
-              >
-                <PencilIcon className="size-4" />
-                <span className="pointer-events-none">Edit Thread</span>
-              </Menu.Item>
+              inputRef.current?.focus();
+            }}
+          >
+            <PencilIcon className="size-4" />
+            <span className="pointer-events-none">Edit Thread</span>
+          </ContextMenuItem>
 
-              <Menu.Item
-                title="Share Thread"
-                onClick={() => {
-                  setShareOpen(true);
-                }}
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  "w-full cursor-pointer justify-start rounded-none",
-                )}
-              >
-                <Share2Icon className="size-4" />
-                <span className="pointer-events-none">Share Thread</span>
-              </Menu.Item>
+          <ContextMenuItem
+            title="Share Thread"
+            onClick={() => {
+              onShareThread?.(thread);
+            }}
+          >
+            <Share2Icon className="size-4" />
+            <span className="pointer-events-none">Share Thread</span>
+          </ContextMenuItem>
 
-              <Menu.Item
-                title="Delete Thread"
-                onClick={() => setDeleteOpen(true)}
-                disabled={isStreaming}
-                className={cn(
-                  buttonVariants({ variant: "destructive" }),
-                  "w-full cursor-pointer justify-start rounded-t-none disabled:cursor-not-allowed disabled:opacity-50",
-                )}
-              >
-                <DeleteIcon className="size-4" />
-                <span className="pointer-events-none">Delete Thread</span>
-              </Menu.Item>
-            </Menu.Popup>
-          </Menu.Positioner>
-        </Menu.Portal>
-      </Menu.Root>
+          <ContextMenuItem
+            title="Delete Thread"
+            onClick={() => setDeleteOpen(true)}
+            disabled={isStreaming}
+            variant="destructive"
+          >
+            <DeleteIcon className="size-4" />
+            <span className="pointer-events-none">Delete Thread</span>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       <Dialog.Root open={editOpen} onOpenChange={setEditOpen}>
         <Dialog.Portal>
@@ -316,9 +271,7 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
               />
 
               <div className="flex justify-end gap-2">
-                <Dialog.Close className={cn(buttonVariants({ variant: "ghost" }))}>
-                  Cancel
-                </Dialog.Close>
+                <Dialog.Close className={cn(buttonVariants({ variant: "ghost" }))}>Cancel</Dialog.Close>
 
                 <button
                   type="submit"
@@ -340,13 +293,6 @@ function ThreadActions({ thread, isStreaming, className, ...props }: ThreadActio
         title={thread.title}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-      />
-
-      <ThreadShareDialog
-        threadId={thread._id}
-        threadTitle={thread.title}
-        open={shareOpen}
-        onOpenChange={setShareOpen}
       />
     </>
   );
