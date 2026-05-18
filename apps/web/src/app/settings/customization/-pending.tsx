@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -5,9 +7,19 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 
+type CustomFontProperties = CSSProperties & {
+  "--custom-ui-font": string;
+  "--custom-code-font": string;
+};
+
 export function LoadingCustomizationSkeleton() {
+  const customStyle: CustomFontProperties = {
+    "--custom-ui-font": "Space Grotesk",
+    "--custom-code-font": "JetBrains Mono",
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans" style={customStyle}>
       <form className="space-y-6">
         <Card className="rounded-md">
           <CardHeader>
@@ -59,6 +71,32 @@ export function LoadingCustomizationSkeleton() {
 
               <div className="flex items-start justify-between gap-6 py-4">
                 <div className="min-w-0 space-y-1">
+                  <Label className="text-sm leading-none font-medium">
+                    Play chat completion sound
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Play a sound when a response finishes or fails.
+                  </p>
+                </div>
+                <Skeleton className="h-[1.15rem] w-8 rounded-full" />
+              </div>
+
+              <Separator className="-mx-4" />
+
+              <div className="flex items-start justify-between gap-6 py-4">
+                <div className="min-w-0 space-y-1">
+                  <Label className="text-sm leading-none font-medium">Desktop notifications</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Show browser notifications when responses finish or fail in background tabs.
+                  </p>
+                </div>
+                <Skeleton className="h-[1.15rem] w-8 rounded-full" />
+              </div>
+
+              <Separator className="-mx-4" />
+
+              <div className="flex items-start justify-between gap-6 py-4">
+                <div className="min-w-0 space-y-1">
                   <Label className="text-sm leading-none font-medium">Wrap long code lines</Label>
                   <p className="text-sm text-muted-foreground">
                     Wrap code blocks instead of scrolling horizontally.
@@ -91,6 +129,29 @@ export function LoadingCustomizationSkeleton() {
                   </p>
                 </div>
                 <Skeleton className="h-[1.15rem] w-8 rounded-full" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-md">
+            <CardHeader>
+              <CardTitle>Fonts</CardTitle>
+              <CardDescription>Set custom font families for UI text and code.</CardDescription>
+            </CardHeader>
+
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>UI font</Label>
+                <Input disabled className="bg-input/30" placeholder="Space Grotesk" />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Code block font</Label>
+                <Input
+                  disabled
+                  className="bg-input/30 font-mono"
+                  placeholder="JetBrains Mono"
+                />
               </div>
             </CardContent>
           </Card>

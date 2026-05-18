@@ -189,6 +189,7 @@ export const CodeBlockContent = memo(
         <pre
           className={cn(
             className,
+            "font-mono",
             "bg-[var(--sdm-bg,inherit)]",
             "dark:bg-[var(--shiki-dark-bg,var(--sdm-bg,inherit))]",
             wrapline

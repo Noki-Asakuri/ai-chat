@@ -101,7 +101,8 @@
     "Space Grotesk", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
     "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
 
-  --font-serif: "Space Grotesk", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-serif:
+    "Space Grotesk", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 
   --font-mono:
     "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
@@ -120,6 +121,18 @@
       opacity: "0";
     }
   }
+}
+
+.font-sans {
+  font-family:
+    var(--custom-ui-font, "Space Grotesk"), ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+}
+
+.font-mono {
+  font-family:
+    var(--custom-code-font, "JetBrains Mono"), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 }
 
 :root {

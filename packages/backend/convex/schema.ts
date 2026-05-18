@@ -306,6 +306,11 @@ export const userPreferences = v.object({
   backgroundImage: v.nullable(v.string()),
   performanceEnabled: v.boolean(),
 
+  fonts: v.object({
+    ui: v.string(),
+    code: v.string(),
+  }),
+
   sendPreference: v.union(v.literal("enter"), v.literal("ctrlEnter")),
 
   notifications: v.object({

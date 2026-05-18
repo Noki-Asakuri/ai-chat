@@ -9,10 +9,11 @@ const MODEL_PROVIDER_PREFIXES = ["google/", "openai/", "deepseek/"] as const;
 
 export type UserPreferences = Doc<"users">["preferences"];
 export type UserPreferencesPatch = Partial<
-  Omit<UserPreferences, "models" | "notifications" | "code">
+  Omit<UserPreferences, "models" | "notifications" | "code" | "fonts">
 > & {
   notifications?: Partial<UserPreferences["notifications"]>;
   code?: Partial<UserPreferences["code"]>;
+  fonts?: Partial<UserPreferences["fonts"]>;
   models?: Omit<Partial<UserPreferences["models"]>, "modelParams"> & {
     modelParams?: Partial<UserPreferences["models"]["modelParams"]>;
   };
@@ -24,6 +25,12 @@ const userPreferencesPatch = v.object({
   backgroundImage: v.optional(v.nullable(v.string())),
   performanceEnabled: v.optional(v.boolean()),
   sendPreference: v.optional(v.union(v.literal("enter"), v.literal("ctrlEnter"))),
+  fonts: v.optional(
+    v.object({
+      ui: v.optional(v.string()),
+      code: v.optional(v.string()),
+    }),
+  ),
   notifications: v.optional(
     v.object({
       sound: v.optional(v.boolean()),
@@ -53,6 +60,10 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   backgroundImage: null,
   performanceEnabled: false,
   sendPreference: "enter",
+  fonts: {
+    ui: "Space Grotesk",
+    code: "JetBrains Mono",
+  },
   notifications: {
     sound: true,
     desktop: false,
@@ -91,6 +102,11 @@ export function mergeUserPreferences(
       ...DEFAULT_USER_PREFERENCES.code,
       ...current?.code,
       ...updates?.code,
+    },
+    fonts: {
+      ...DEFAULT_USER_PREFERENCES.fonts,
+      ...current?.fonts,
+      ...updates?.fonts,
     },
     models: {
       ...DEFAULT_USER_PREFERENCES.models,

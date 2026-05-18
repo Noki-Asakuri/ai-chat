@@ -6,7 +6,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { useDebounce } from "@uidotdev/usehooks";
 import { useMutation } from "convex/react";
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef, CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -24,6 +24,9 @@ import { BackgroundCard } from "../-components/customization/background-card";
 import { BehaviorOptionsCard } from "../-components/customization/behavior-options-card";
 
 import { LoadingCustomizationSkeleton } from "./-pending";
+
+const DEFAULT_UI_FONT = "Space Grotesk";
+const DEFAULT_CODE_FONT = "JetBrains Mono";
 
 export const Route = createFileRoute("/settings/customization")({
   component: RouteComponent,
@@ -58,6 +61,8 @@ function RouteComponent() {
   const [desktopNotification, setDesktopNotification] = useState<boolean>(
     data?.notifications?.desktop ?? false,
   );
+  const [uiFont, setUiFont] = useState(data?.fonts?.ui ?? DEFAULT_UI_FONT);
+  const [codeFont, setCodeFont] = useState(data?.fonts?.code ?? DEFAULT_CODE_FONT);
   const [backgroundImageId, setBackgroundImageId] = useState<string | null>(
     data?.backgroundImage ?? null,
   );
@@ -98,6 +103,14 @@ function RouteComponent() {
   useEffect(() => {
     desktopNotificationRef.current = desktopNotification;
   }, [desktopNotification]);
+
+  useEffect(() => {
+    setUiFont(data?.fonts?.ui ?? DEFAULT_UI_FONT);
+  }, [data?.fonts?.ui]);
+
+  useEffect(() => {
+    setCodeFont(data?.fonts?.code ?? DEFAULT_CODE_FONT);
+  }, [data?.fonts?.code]);
 
   useEffect(() => {
     setBackgroundImageId(data?.backgroundImage ?? null);
@@ -159,6 +172,8 @@ function RouteComponent() {
     const performanceEnabled = getFormString("performance-mode", formData) === "on";
     const showFullCode = getFormString("show-full-code", formData) === "on";
     const autoWrap = getFormString("auto-wrap", formData) === "on";
+    const uiFont = getFormString("ui-font", formData).trim();
+    const codeFont = getFormString("code-font", formData).trim();
 
     const previousBackgroundId = backgroundIdRef.current;
     const nextBackgroundFile = getFormFile("background-image", formData);
@@ -176,6 +191,10 @@ function RouteComponent() {
       notifications: {
         sound: notificationSoundRef.current,
         desktop: desktopNotificationRef.current,
+      },
+      fonts: {
+        ui: uiFont,
+        code: codeFont,
       },
       code: { showFullCode, autoWrap },
       backgroundImage: uploadedBackgroundId ?? previousBackgroundId,
@@ -264,9 +283,16 @@ function RouteComponent() {
   }
 
   const formDisabled = isPending;
+  const customStyle: CSSProperties & {
+    "--custom-ui-font": string;
+    "--custom-code-font": string;
+  } = {
+    "--custom-ui-font": uiFont || DEFAULT_UI_FONT,
+    "--custom-code-font": codeFont || DEFAULT_CODE_FONT,
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans" style={customStyle}>
       <form
         ref={formRef}
         className="space-y-6"
@@ -317,19 +343,58 @@ function RouteComponent() {
         </Card>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] xl:items-start">
-          <BehaviorOptionsCard
-            disabled={formDisabled}
-            defaultAutoWrap={data?.code?.autoWrap ?? false}
-            defaultPerformanceEnabled={data?.performanceEnabled ?? false}
-            defaultShowFullCode={data?.code?.showFullCode ?? false}
-            sendPreference={sendPreference}
-            notificationSound={notificationSound}
-            desktopNotification={desktopNotification}
-            onSendPreferenceChange={setSendPreference}
-            onNotificationSoundChange={(enabled) => setNotificationSound(enabled)}
-            onDesktopNotificationChange={updateDesktopNotification}
-            onBehaviorChange={requestAutoSave}
-          />
+          <div className="space-y-6">
+            <BehaviorOptionsCard
+              disabled={formDisabled}
+              defaultAutoWrap={data?.code?.autoWrap ?? false}
+              defaultPerformanceEnabled={data?.performanceEnabled ?? false}
+              defaultShowFullCode={data?.code?.showFullCode ?? false}
+              sendPreference={sendPreference}
+              notificationSound={notificationSound}
+              desktopNotification={desktopNotification}
+              onSendPreferenceChange={setSendPreference}
+              onNotificationSoundChange={(enabled) => setNotificationSound(enabled)}
+              onDesktopNotificationChange={updateDesktopNotification}
+              onBehaviorChange={requestAutoSave}
+            />
+
+            <Card className="rounded-md">
+              <CardHeader>
+                <CardTitle>Fonts</CardTitle>
+                <CardDescription>Set custom font families for UI text and code.</CardDescription>
+              </CardHeader>
+
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="ui-font">UI font</Label>
+                  <ControlledInput
+                    id="ui-font"
+                    name="ui-font"
+                    autoComplete="off"
+                    placeholder="Space Grotesk"
+                    className="bg-input/30"
+                    disabled={formDisabled}
+                    value={uiFont}
+                    onValueChange={setUiFont}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="code-font">Code block font</Label>
+                  <ControlledInput
+                    id="code-font"
+                    name="code-font"
+                    autoComplete="off"
+                    placeholder="JetBrains Mono"
+                    className="bg-input/30 font-mono"
+                    disabled={formDisabled}
+                    value={codeFont}
+                    onValueChange={setCodeFont}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           <BackgroundCard
             disabled={formDisabled || isSaving}

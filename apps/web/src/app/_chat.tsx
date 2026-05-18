@@ -2,7 +2,6 @@ import "streamdown/styles.css";
 
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
-import type { UserPreferences } from "@ai-chat/backend/convex/functions/users";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, redirect, useParams } from "@tanstack/react-router";
@@ -12,7 +11,7 @@ import { getCookie } from "@tanstack/react-start/server";
 import { convexQuery } from "@convex-dev/react-query";
 import { getAuth } from "@workos/authkit-tanstack-react-start";
 import { PlusIcon } from "lucide-react";
-import { Suspense } from "react";
+import { Suspense, type CSSProperties } from "react";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { GlobalDropzone } from "@/components/chat/global-dropzone";
@@ -26,6 +25,9 @@ import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/componen
 import { buildImageAssetUrl } from "@/lib/assets/urls";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { fromUUID } from "@/lib/utils";
+
+const DEFAULT_UI_FONT = "Space Grotesk";
+const DEFAULT_CODE_FONT = "JetBrains Mono";
 
 const getDefaultOpenSidebar = createIsomorphicFn()
   .server(async function () {
@@ -71,8 +73,8 @@ export const Route = createFileRoute("/_chat")({
       );
     }
 
-    const [userPreferencesData] = (await Promise.all(promises)) as [UserPreferences];
-    return { user: auth.user, defaultOpenSidebar, userPreferencesData };
+    await Promise.all(promises);
+    return { user: auth.user, defaultOpenSidebar };
   },
 
   head: () => ({
@@ -81,19 +83,19 @@ export const Route = createFileRoute("/_chat")({
 });
 
 function RouteComponent() {
-  const { defaultOpenSidebar, userPreferencesData } = Route.useLoaderData();
+  const { defaultOpenSidebar } = Route.useLoaderData();
+  const { data: userPreferencesData } = useSuspenseQuery(
+    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
+  );
+  const customStyle = getCustomizationStyle(userPreferencesData.fonts, userPreferencesData.backgroundImage);
 
   return (
     <SidebarProvider
       id="sidebar-provider"
       defaultOpen={defaultOpenSidebar}
       data-performance-mode={userPreferencesData.performanceEnabled ? "true" : "false"}
-      className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat"
-      style={{
-        backgroundImage: userPreferencesData.backgroundImage
-          ? `url(${buildImageAssetUrl(userPreferencesData.backgroundImage)})`
-          : undefined,
-      }}
+      className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat font-sans"
+      style={customStyle}
     >
       <ThreadSidebar />
 
@@ -115,6 +117,20 @@ function RouteComponent() {
       <RegisterEventHandlers />
     </SidebarProvider>
   );
+}
+
+function getCustomizationStyle(
+  fonts: { ui: string; code: string },
+  backgroundImage: string | null,
+): CSSProperties & {
+  "--custom-ui-font": string;
+  "--custom-code-font": string;
+} {
+  return {
+    "--custom-ui-font": fonts.ui || DEFAULT_UI_FONT,
+    "--custom-code-font": fonts.code || DEFAULT_CODE_FONT,
+    backgroundImage: backgroundImage ? `url(${buildImageAssetUrl(backgroundImage)})` : undefined,
+  };
 }
 
 function ChatLayoutConfig() {
