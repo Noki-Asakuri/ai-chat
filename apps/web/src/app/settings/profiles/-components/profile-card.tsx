@@ -51,7 +51,7 @@ export const ProfileCard = memo(function ProfileCard({
 
   return (
     <Card className="rounded-md">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="flex flex-row items-center justify-between gap-y-0">
         <CardTitle className="text-base font-semibold">{profile.name}</CardTitle>
 
         <div className="flex items-center gap-1">
@@ -59,7 +59,7 @@ export const ProfileCard = memo(function ProfileCard({
             type="button"
             variant="secondary"
             size="icon"
-            className="h-8 w-8"
+            className="size-8"
             onClick={() =>
               onEdit({ id: profile._id, name: profile.name, systemPrompt: profile.systemPrompt })
             }
@@ -71,7 +71,7 @@ export const ProfileCard = memo(function ProfileCard({
           <AlertDialog>
             <AlertDialogTrigger
               render={<Button variant="destructive" size="icon" />}
-              className="h-8 w-8"
+              className="size-8"
               title="Delete"
               type="button"
             >
@@ -100,10 +100,10 @@ export const ProfileCard = memo(function ProfileCard({
           <img
             src={imageUrl}
             alt={profile.name}
-            className="h-16 w-16 shrink-0 rounded-md object-cover"
+            className="size-16 shrink-0 rounded-md object-cover"
           />
         ) : (
-          <div className="h-16 w-16 shrink-0 rounded-md bg-muted" />
+          <div className="size-16 shrink-0 rounded-md bg-muted" />
         )}
 
         <div className="text-sm text-foreground/80">{shortDesc || "No description"}</div>

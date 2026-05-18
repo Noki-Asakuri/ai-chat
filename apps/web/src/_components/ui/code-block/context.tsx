@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type Dispatch } from "react";
+import { createContext, use, useState, type Dispatch } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
@@ -53,7 +53,7 @@ interface CodeBlockContextType {
 export const CodeBlockContext = createContext<CodeBlockContextType | null>(null);
 
 export const useCodeBlockContext = () =>
-  useContext(CodeBlockContext as React.Context<CodeBlockContextType>);
+  use(CodeBlockContext as React.Context<CodeBlockContextType>);
 
 type CodeBlockProviderProps = {
   code: string;

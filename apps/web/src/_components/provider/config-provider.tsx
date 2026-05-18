@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, use, useEffect, useRef } from "react";
 import { useStore } from "zustand";
 
 import {
@@ -33,14 +33,14 @@ export function ConfigStoreProvider(props: ConfigStoreProviderProps) {
 }
 
 export function useConfigStore<T>(selector: (state: ConfigStore) => T): T {
-  const configStore = useContext(ConfigStoreContext);
+  const configStore = use(ConfigStoreContext);
   if (!configStore) throw new Error("useConfigStore must be used within a ConfigStoreProvider");
 
   return useStore(configStore, selector);
 }
 
 export function useConfigStoreState() {
-  const configStore = useContext(ConfigStoreContext);
+  const configStore = use(ConfigStoreContext);
   if (!configStore) throw new Error("useConfigStore must be used within a ConfigStoreProvider");
 
   return configStore.getState();

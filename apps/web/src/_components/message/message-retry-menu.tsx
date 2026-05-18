@@ -96,14 +96,15 @@ function appendProviderGroups(
 
 function getValidReasoningEffortOptions(model: ModelData): Array<EffortOption> {
   const allowedEfforts = model.capabilities.customReasoningLevel;
+  const allowedEffortSet = allowedEfforts ? new Set<ReasoningEffort>(allowedEfforts) : null;
   const options: Array<EffortOption> = [];
 
   for (const effort of EFFORT_ORDER) {
     const effortOption = EFFORT_OPTIONS[effort];
     if (!effortOption) continue;
 
-    if (allowedEfforts) {
-      if (!allowedEfforts.includes(effort)) continue;
+    if (allowedEffortSet) {
+      if (!allowedEffortSet.has(effort)) continue;
     } else if (!DEFAULT_REASONING_EFFORTS.has(effort)) {
       continue;
     }

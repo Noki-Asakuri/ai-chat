@@ -7,6 +7,59 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const BYTE_UNITS = ["byte", "kilobyte", "megabyte", "gigabyte"] as const;
+type ByteUnit = (typeof BYTE_UNITS)[number];
+
+const defaultByteFormatters: Record<ByteUnit, Intl.NumberFormat> = {
+  byte: new Intl.NumberFormat("en-US", {
+    style: "unit",
+    unit: "byte",
+    unitDisplay: "short",
+    maximumFractionDigits: 2,
+  }),
+  kilobyte: new Intl.NumberFormat("en-US", {
+    style: "unit",
+    unit: "kilobyte",
+    unitDisplay: "short",
+    maximumFractionDigits: 2,
+  }),
+  megabyte: new Intl.NumberFormat("en-US", {
+    style: "unit",
+    unit: "megabyte",
+    unitDisplay: "short",
+    maximumFractionDigits: 2,
+  }),
+  gigabyte: new Intl.NumberFormat("en-US", {
+    style: "unit",
+    unit: "gigabyte",
+    unitDisplay: "short",
+    maximumFractionDigits: 2,
+  }),
+};
+
+const byteFormatters = new Map<string, Intl.NumberFormat>();
+
+function createByteFormatter(locale: string, unit: ByteUnit): Intl.NumberFormat {
+  return new Intl.NumberFormat(locale, {
+    style: "unit",
+    unit,
+    unitDisplay: "short", // This gives us 'MB' instead of 'megabytes'
+    maximumFractionDigits: 2,
+  });
+}
+
+function getByteFormatter(locale: string, unit: ByteUnit): Intl.NumberFormat {
+  if (locale === "en-US") return defaultByteFormatters[unit];
+
+  const key = `${locale}:${unit}`;
+  const cached = byteFormatters.get(key);
+  if (cached) return cached;
+
+  const formatter = createByteFormatter(locale, unit);
+  byteFormatters.set(key, formatter);
+  return formatter;
+}
+
 export function toUUID(str: string) {
   if (str.length !== 32) throw new Error("Invalid UUID");
   return [
@@ -41,7 +94,7 @@ function formatBytes(bytes: number, locale = "en-US"): string {
   const GIGABYTE = MEGABYTE * 1024;
 
   let value: number;
-  let unit: "gigabyte" | "megabyte" | "kilobyte" | "byte";
+  let unit: ByteUnit;
 
   // Figure out the best unit to use
   if (bytes >= GIGABYTE) {
@@ -58,13 +111,7 @@ function formatBytes(bytes: number, locale = "en-US"): string {
     unit = "byte";
   }
 
-  // The Intl.NumberFormat wizard does the rest
-  const formatter = new Intl.NumberFormat(locale, {
-    style: "unit",
-    unit: unit,
-    unitDisplay: "short", // This gives us 'MB' instead of 'megabytes'
-    maximumFractionDigits: 2,
-  });
+  const formatter = getByteFormatter(locale, unit);
 
   return formatter.format(value);
 }

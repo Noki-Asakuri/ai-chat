@@ -7,7 +7,7 @@ export function LoadingStatisticsSkeleton() {
       <div className="grid gap-4 md:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
           <Card key={index} className="rounded-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardHeader className="flex flex-row items-center justify-between gap-y-0">
               <Skeleton className="h-5 w-20" />
             </CardHeader>
 

@@ -1,7 +1,7 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { useMutation } from "convex/react";
-import { useCallback, useContext } from "react";
+import { use, useCallback } from "react";
 
 import { ConfigStoreContext } from "@/components/provider/config-provider";
 
@@ -10,7 +10,7 @@ import { tryCatch } from "@/lib/utils";
 import type { SendPreference } from "./send-preference";
 
 export function useUpdateSendPreference() {
-  const configStore = useContext(ConfigStoreContext);
+  const configStore = use(ConfigStoreContext);
   const updateUserPreferences = useMutation(api.functions.users.updateUserPreferences);
 
   return useCallback(

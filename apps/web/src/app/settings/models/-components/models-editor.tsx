@@ -547,7 +547,10 @@ export function ModelsEditor(props: ModelsEditorProps) {
       if (capabilityFilter.size > 0) {
         let hasAllCapabilities = true;
 
-        for (const capability of capabilityFilter) {
+        for (const option of CAPABILITY_FILTER_OPTIONS) {
+          const capability = option.value;
+          if (!capabilityFilter.has(capability)) continue;
+
           if (!entry.capabilitySet.has(capability)) {
             hasAllCapabilities = false;
             break;

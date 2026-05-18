@@ -135,7 +135,7 @@ function StatisticsPage() {
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="rounded-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-y-0">
             <CardTitle className="text-sm font-normal text-muted-foreground">Threads</CardTitle>
           </CardHeader>
 
@@ -148,7 +148,7 @@ function StatisticsPage() {
         </Card>
 
         <Card className="rounded-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-y-0">
             <CardTitle className="text-sm font-normal text-muted-foreground">Assistant</CardTitle>
           </CardHeader>
 
@@ -161,7 +161,7 @@ function StatisticsPage() {
         </Card>
 
         <Card className="rounded-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-y-0">
             <CardTitle className="text-sm font-normal text-muted-foreground">User</CardTitle>
           </CardHeader>
 

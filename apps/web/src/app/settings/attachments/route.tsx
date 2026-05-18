@@ -252,12 +252,10 @@ function AttachmentsPage() {
   });
 
   const data = attachmentsQuery.data;
-  if (!data) return <LoadingAttachmentsSkeleton />;
-
-  const attachments = data.items;
-  const totalItems = data.totalCount;
-  const totalPages = data.totalPages;
-  const currentPage = data.page;
+  const attachments = useMemo(() => data?.items ?? [], [data?.items]);
+  const totalItems = data?.totalCount ?? 0;
+  const totalPages = data?.totalPages ?? 0;
+  const currentPage = data?.page ?? page;
 
   const imageItems = useMemo(
     () => attachments.filter((attachment) => attachment.type === "image"),
@@ -313,6 +311,8 @@ function AttachmentsPage() {
   const selectedTypeOption = TYPE_FILTER_OPTIONS[typeFilter];
   const selectedSortValue = getAttachmentSortValue(sortField, sortDirection);
   const selectedSortOption = ATTACHMENT_SORT_OPTIONS[selectedSortValue];
+
+  if (!data) return <LoadingAttachmentsSkeleton />;
 
   function onPageChange(nextPage: number) {
     if (nextPage < 1 || nextPage > totalPages) return;

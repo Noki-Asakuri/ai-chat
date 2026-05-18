@@ -45,14 +45,12 @@ export const Route = createFileRoute("/_chat")({
   component: RouteComponent,
 
   loader: async function ({ context, params: rawParams, location }) {
-    const auth = await getAuth();
+    const [auth, { defaultOpenSidebar }] = await Promise.all([getAuth(), getDefaultOpenSidebar()]);
     if (!auth.user) {
       const path = location.pathname;
       console.debug("[Chat] No user found, redirect to login");
       throw redirect({ to: "/auth/login", search: { rt: path } });
     }
-
-    const { defaultOpenSidebar } = await getDefaultOpenSidebar();
 
     const params = rawParams as { threadId?: string };
     const threadId = fromUUID<Id<"threads">>(params.threadId);

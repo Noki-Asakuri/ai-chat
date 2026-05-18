@@ -6,7 +6,7 @@ export function LoadingProfilesListSkeleton() {
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       {Array.from({ length: 6 }).map((_, i) => (
         <Card key={i} className="rounded-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-y-0">
             <Skeleton className="h-5 w-40" />
             <div className="flex items-center gap-1">
               <Skeleton className="size-8 rounded-md" />

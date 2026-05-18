@@ -1,6 +1,6 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
+import { useCallback, useEffect, useImperativeHandle, useState } from "react";
 
 import { uploadAiProfileImage } from "@/lib/convex/uploadFiles";
 
@@ -30,14 +30,19 @@ export type ProfilesDialogControllerHandle = {
   openEdit: (seed: ProfileEditSeed) => void;
 };
 
-export const ProfilesDialogController = forwardRef<
-  ProfilesDialogControllerHandle,
-  {
-    createProfile: (args: CreateProfileArgs) => Promise<unknown>;
-    updateProfile: (args: UpdateProfileArgs) => Promise<unknown>;
-    onAfterSubmit: () => void;
-  }
->(function ProfilesDialogController({ createProfile, updateProfile, onAfterSubmit }, ref) {
+type ProfilesDialogControllerProps = {
+  ref?: React.Ref<ProfilesDialogControllerHandle>;
+  createProfile: (args: CreateProfileArgs) => Promise<unknown>;
+  updateProfile: (args: UpdateProfileArgs) => Promise<unknown>;
+  onAfterSubmit: () => void;
+};
+
+export function ProfilesDialogController({
+  ref,
+  createProfile,
+  updateProfile,
+  onAfterSubmit,
+}: ProfilesDialogControllerProps) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ProfileEditSeed | null>(null);
 
@@ -157,4 +162,4 @@ export const ProfilesDialogController = forwardRef<
       onSubmit={handleSubmit}
     />
   );
-});
+}

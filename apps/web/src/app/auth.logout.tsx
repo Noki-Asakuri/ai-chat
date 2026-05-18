@@ -11,11 +11,10 @@ export const Route = createFileRoute("/auth/logout")({
   preload: false,
 
   loader: async ({ location }) => {
-    const auth = await getAuth();
-
     const rt = rtSearchSchema.parse(location.search).rt ?? "/";
     const returnPath = "/auth/login?rt=" + rt;
 
+    const auth = await getAuth();
     if (!auth || !auth.user) return new Response(null, { status: 307, headers: { Location: returnPath } });
     await terminateSession({ data: { returnTo: returnPath, sessionId: auth.sessionId } });
   },

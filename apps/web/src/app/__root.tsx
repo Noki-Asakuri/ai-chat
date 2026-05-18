@@ -48,6 +48,10 @@ type RootContext = {
 };
 
 export const Route = createRootRouteWithContext<RootContext>()({
+  loader: async function () {
+    const auth = await getAuthAction();
+    return { auth };
+  },
   head: () => {
     const scripts: AnyRouteMatch["headScripts"] = [];
 
@@ -106,10 +110,6 @@ export const Route = createRootRouteWithContext<RootContext>()({
       ],
       scripts,
     };
-  },
-  loader: async function () {
-    const auth = await getAuthAction();
-    return { auth };
   },
 
   shellComponent: RootLayout,

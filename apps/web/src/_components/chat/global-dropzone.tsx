@@ -88,7 +88,7 @@ function GlobalDropzoneOverlay() {
       data-active={isDragOver}
       className="group pointer-events-none absolute inset-0 z-5 flex items-center justify-center"
     >
-      <div className="m-2 flex h-[calc(100%-1rem)] w-[calc(100%-1rem)] items-center justify-center rounded-md border-2 border-dashed border-primary bg-primary/10 text-primary opacity-0 transition-opacity duration-150 group-data-[active=true]:opacity-100">
+      <div className="m-2 flex size-[calc(100%-1rem)] items-center justify-center rounded-md border-2 border-dashed border-primary bg-primary/10 text-primary opacity-0 transition-opacity duration-150 group-data-[active=true]:opacity-100">
         <span className="rounded-md border bg-background/80 px-3 py-1 text-sm">
           Drop files to attach
         </span>

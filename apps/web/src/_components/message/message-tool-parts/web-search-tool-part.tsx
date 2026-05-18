@@ -195,12 +195,12 @@ export function WebSearchHeaderIcons({ output }: { output: ParsedWebSearchOutput
   if (icons.length === 0) return null;
 
   return (
-    <div className="flex shrink-0 items-center -space-x-1">
+    <div className="-ml-1 flex shrink-0 items-center">
       {icons.map((icon) => (
         <span
           key={icon.key}
           title={icon.title}
-          className="flex size-4 items-center justify-center rounded border border-background bg-muted"
+          className="-mr-1 flex size-4 items-center justify-center rounded border border-background bg-muted"
         >
           {icon.favicon ? (
             <img alt="" src={icon.favicon} className="size-3 rounded-[2px]" />

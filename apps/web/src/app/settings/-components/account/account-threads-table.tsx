@@ -145,12 +145,14 @@ function BulkDeleteDialog({ open, onOpenChange, threadIds, threadCount }: BulkDe
 
   function onDelete() {
     startTransition(async () => {
-      for (const threadId of threadIds) {
-        const [, error] = await tryCatch(deleteThread({ threadId, deleteAttachments: checked }));
-        if (error) {
-          toast.error("Failed to delete threads", { description: error.message });
-          return;
-        }
+      const results = await Promise.all(
+        threadIds.map((threadId) => tryCatch(deleteThread({ threadId, deleteAttachments: checked }))),
+      );
+
+      const firstError = results.find(([, error]) => error)?.[1];
+      if (firstError) {
+        toast.error("Failed to delete threads", { description: firstError.message });
+        return;
       }
 
       toast.success(`Deleted ${threadCount} thread(s)`);
@@ -892,13 +894,16 @@ export function AccountThreadsTable() {
   });
 
   async function bulkPin(nextPinned: boolean) {
-    for (const threadId of selectedIds) {
-      const [, error] = await tryCatch(pinThread({ threadId, pinned: nextPinned }));
-      if (error) {
-        toast.error("Failed to update threads", { description: error.message });
-        return;
-      }
+    const results = await Promise.all(
+      selectedIds.map((threadId) => tryCatch(pinThread({ threadId, pinned: nextPinned }))),
+    );
+
+    const firstError = results.find(([, error]) => error)?.[1];
+    if (firstError) {
+      toast.error("Failed to update threads", { description: firstError.message });
+      return;
     }
+
     toast.success(nextPinned ? "Pinned selected threads" : "Unpinned selected threads");
   }
 

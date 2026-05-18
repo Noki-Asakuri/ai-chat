@@ -46,6 +46,7 @@ export function useAutoResumeStream() {
 
         await throwIfChatResponseError(response);
         await processStreamResponse(response, messageId, threadId);
+
         emitStreamFeedback({
           status: "success",
           threadId,

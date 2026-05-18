@@ -135,20 +135,10 @@ function getCookieRaw(name: string): string | null {
   if (!all) return null;
 
   const parts = all.split(";");
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i]!.trim();
-    if (!part) continue;
+  const matchingPart = parts.find((rawPart) => rawPart.trim().startsWith(`${encodedName}=`));
+  if (!matchingPart) return null;
 
-    const eqIndex = part.indexOf("=");
-    if (eqIndex === -1) continue;
-
-    const k = part.slice(0, eqIndex);
-    if (k !== encodedName) continue;
-
-    return part.slice(eqIndex + 1);
-  }
-
-  return null;
+  return matchingPart.trim().slice(encodedName.length + 1);
 }
 
 function setCookieRaw(name: string, value: string): void {

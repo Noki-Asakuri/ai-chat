@@ -51,28 +51,35 @@ export function ChatEditAttachmentsDisplay() {
 
   const keptIdSet = new Set(editMessage.keptAttachmentIds);
 
-  const existingPreview: Array<ExistingPreview> = editMessage.currentAttachments
-    .filter((a) => keptIdSet.has(a._id))
-    .map((a) => ({
-      _id: a._id,
-      name: a.name,
-      size: a.size,
-      mimeType: a.mimeType,
-      type: a.type,
-      url: buildAttachmentUrl(a.path, a.mimeType),
-    }));
+  const existingPreview: Array<ExistingPreview> = [];
+  for (const attachment of editMessage.currentAttachments) {
+    if (!keptIdSet.has(attachment._id)) continue;
+
+    existingPreview.push({
+      _id: attachment._id,
+      name: attachment.name,
+      size: attachment.size,
+      mimeType: attachment.mimeType,
+      type: attachment.type,
+      url: buildAttachmentUrl(attachment.path, attachment.mimeType),
+    });
+  }
 
   const hasAny = existingPreview.length > 0 || localPreview.length > 0;
   if (!hasAny) return null;
 
-  const imageList = [
-    ...existingPreview
-      .filter((p) => p.type === "image")
-      .map((p) => ({ src: p.url, name: p.name, bytes: p.size })),
-    ...localPreview
-      .filter((p) => p.type === "image")
-      .map((p) => ({ src: p.url, name: p.file.name, bytes: p.file.size })),
-  ];
+  const imageList: Array<{ src: string; name: string; bytes: number }> = [];
+  for (const preview of existingPreview) {
+    if (preview.type === "image") {
+      imageList.push({ src: preview.url, name: preview.name, bytes: preview.size });
+    }
+  }
+
+  for (const preview of localPreview) {
+    if (preview.type === "image") {
+      imageList.push({ src: preview.url, name: preview.file.name, bytes: preview.file.size });
+    }
+  }
 
   return (
     <div

@@ -13,14 +13,14 @@ export const Route = createFileRoute("/settings")({
   validateSearch: z.object({ rt: z.string().optional() }),
 
   loader: async ({ context, location }) => {
+    if (location.pathname === "/settings" || location.pathname === "/settings/") {
+      throw redirect({ to: "/settings/account" });
+    }
+
     const auth = await getAuth();
     if (!auth.user) {
       const path = location.pathname;
       throw redirect({ to: "/auth/login", search: { rt: path } });
-    }
-
-    if (location.pathname === "/settings" || location.pathname === "/settings/") {
-      throw redirect({ to: "/settings/account" });
     }
 
     await context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser));

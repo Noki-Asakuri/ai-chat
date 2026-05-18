@@ -117,10 +117,10 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
 
   if (import.meta.env.PROD && !isFinished) return null;
 
-  const content = message.parts
-    .filter(isTextPart)
-    .map((p) => p.text)
-    .join("\n\n");
+  const content = message.parts.reduce<Array<string>>((textParts, part) => {
+    if (isTextPart(part)) textParts.push(part.text);
+    return textParts;
+  }, []).join("\n\n");
 
   return (
     <div className="flex items-center gap-0.5 rounded-md border bg-background/80 p-1 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
@@ -230,10 +230,10 @@ function EditButton({ message }: { message: ChatMessage }) {
 
     chatStoreActions.setEditMessage({
       _id: message._id,
-      input: message.parts
-        .filter(isTextPart)
-        .map((p) => p.text)
-        .join("\n\n"),
+      input: message.parts.reduce<Array<string>>((textParts, part) => {
+        if (isTextPart(part)) textParts.push(part.text);
+        return textParts;
+      }, []).join("\n\n"),
 
       attachments: [],
       currentAttachments: message.attachments,

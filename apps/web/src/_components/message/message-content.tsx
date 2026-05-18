@@ -110,7 +110,8 @@ function buildAssistantFlowBlocks(parts: MessagePart[]): AssistantFlowBlock[] {
       const lastBlock = getLastBlock();
 
       if (lastBlock?.kind === "reasoning") {
-        lastBlock.parts.push(part);
+        const { parts } = lastBlock;
+        parts.push(part);
       } else {
         blocks.push({ kind: "reasoning", key: `reasoning-${index}`, parts: [part] });
       }

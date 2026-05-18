@@ -144,10 +144,14 @@ export function BaseInputTextArea({
         className="max-h-62.5 w-full resize-none rounded-none border-0 bg-transparent! p-0 ring-0!"
         onPaste={(event) => {
           const { items } = event.clipboardData;
-          const files = Array.from(items)
-            .filter((item) => item.kind === "file")
-            .map((item) => item.getAsFile())
-            .filter((file): file is File => file !== null);
+          const files = Array.from(items).reduce<Array<File>>((result, item) => {
+            if (item.kind !== "file") return result;
+
+            const file = item.getAsFile();
+            if (file) result.push(file);
+
+            return result;
+          }, []);
 
           if (files.length === 0) return;
 

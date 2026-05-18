@@ -74,7 +74,7 @@ export type ImageLightboxTriggerProps = React.ComponentProps<typeof Dialog.Trigg
 export function ImageLightboxTrigger(props: ImageLightboxTriggerProps) {
   const { index, children, className } = props;
 
-  const handle = React.useContext(LightboxHandleContext);
+  const handle = React.use(LightboxHandleContext);
   if (!handle) {
     throw new Error("ImageLightboxTrigger must be used within ImageLightboxProvider.");
   }
@@ -104,12 +104,8 @@ type NavigationDirection = -1 | 0 | 1;
 function ImageLightboxDialog(props: ImageLightboxDialogProps) {
   const { images, initialIndex } = props;
 
-  const [activeIndex, setActiveIndex] = React.useState(() =>
-    wrapIndex(initialIndex, images.length),
-  );
-  const [naturalSize, setNaturalSize] = React.useState<{ width: number; height: number } | null>(
-    null,
-  );
+  const [activeIndex, setActiveIndex] = React.useState(() => wrapIndex(initialIndex, images.length));
+  const [naturalSize, setNaturalSize] = React.useState<{ width: number; height: number } | null>(null);
   const [imageLoadState, setImageLoadState] = React.useState<ImageLoadState>("loading");
   const [retryVersion, setRetryVersion] = React.useState(0);
   const [navigationDirection, setNavigationDirection] = React.useState<NavigationDirection>(0);
@@ -162,9 +158,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
 
   React.useEffect(() => {
     if (!hasMultipleImages) return;
-    const el = thumbsRef.current?.querySelector<HTMLButtonElement>(
-      `button[data-index="${activeIndex}"]`,
-    );
+    const el = thumbsRef.current?.querySelector<HTMLButtonElement>(`button[data-index="${activeIndex}"]`);
     el?.scrollIntoView({ block: "nearest", inline: "center" });
   }, [activeIndex, hasMultipleImages]);
 
@@ -217,9 +211,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
   if (typeof active.bytes === "number") metaParts.push(format.size(active.bytes));
   if (resolvedWidth && resolvedHeight) metaParts.push(`${resolvedWidth}×${resolvedHeight}`);
   const meta = metaParts.join(" · ");
-  const imagePositionLabel = hasMultipleImages
-    ? `${activeIndex + 1} of ${images.length}`
-    : "Single image";
+  const imagePositionLabel = hasMultipleImages ? `${activeIndex + 1} of ${images.length}` : "Single image";
   const liveMessageParts = [imagePositionLabel, activeTitle, meta].filter(Boolean);
   const liveMessage = liveMessageParts.join(" - ");
   const dialogDescription = hasMultipleImages
@@ -262,20 +254,12 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
 
           <div className="pointer-events-none flex shrink-0 justify-end p-4">
             <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-lg bg-black/60 p-2 backdrop-blur">
-              <Button
-                title="Download image"
-                className={actionBtn}
-                onClick={() => void downloadImage(active)}
-              >
+              <Button title="Download image" className={actionBtn} onClick={() => void downloadImage(active)}>
                 <DownloadIcon className="size-4" />
                 <span className="sr-only">Download</span>
               </Button>
 
-              <Button
-                title="Copy URL"
-                className={actionBtn}
-                onClick={() => void copyText(activeActionUrl)}
-              >
+              <Button title="Copy URL" className={actionBtn} onClick={() => void copyText(activeActionUrl)}>
                 <CopyIcon className="size-4" />
                 <span className="sr-only">Copy URL</span>
               </Button>
@@ -289,19 +273,12 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
                 <span className="sr-only">New tab</span>
               </Button>
 
-              <Button
-                title="Copy image"
-                className={actionBtn}
-                onClick={() => void copyImage(active)}
-              >
+              <Button title="Copy image" className={actionBtn} onClick={() => void copyImage(active)}>
                 <ImagesIcon className="size-4" />
                 <span className="sr-only">Copy image</span>
               </Button>
 
-              <Dialog.Close
-                title="Close"
-                className={cn(actionBtn, "bg-white/15 hover:bg-white/20")}
-              >
+              <Dialog.Close title="Close" className={cn(actionBtn, "bg-white/15 hover:bg-white/20")}>
                 <XIcon className="size-4" />
                 <span className="sr-only">Close</span>
               </Dialog.Close>
@@ -374,10 +351,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
                             <Button className={actionBtn} onClick={handleRetryImageLoad}>
                               Retry
                             </Button>
-                            <Button
-                              className={actionBtn}
-                              onClick={() => openInNewTab(activeActionUrl)}
-                            >
+                            <Button className={actionBtn} onClick={() => openInNewTab(activeActionUrl)}>
                               Open in new tab
                             </Button>
                           </div>
@@ -404,9 +378,7 @@ function ImageLightboxDialog(props: ImageLightboxDialogProps) {
             <div className="pointer-events-auto mx-auto flex w-fit max-w-full flex-col items-center gap-2">
               <div className="relative z-10 flex shrink-0 flex-col items-center rounded-lg bg-black/55 px-3 py-2 text-center text-white backdrop-blur-sm">
                 <div className="text-xs text-white/70">{imagePositionLabel}</div>
-                <div className="max-w-[80vw] truncate text-sm font-medium">
-                  {active.name ?? "Untitled"}
-                </div>
+                <div className="max-w-[80vw] truncate text-sm font-medium">{active.name ?? "Untitled"}</div>
 
                 {meta ? <div className="text-xs text-white/70">{meta}</div> : null}
               </div>
@@ -463,6 +435,7 @@ type ZoomableImageHandle = {
 };
 
 type ZoomableImageProps = {
+  ref?: React.Ref<ZoomableImageHandle>;
   src: string;
   alt: string;
   className?: string;
@@ -472,224 +445,211 @@ type ZoomableImageProps = {
   onLoadStateChange?: (state: ImageLoadState) => void;
 };
 
-const ZoomableImage = React.forwardRef<ZoomableImageHandle, ZoomableImageProps>(
-  function ZoomableImage(props, ref) {
-    const {
-      src,
-      alt,
-      className,
-      minScale = 0.2,
-      maxScale = 8,
-      onNaturalSize,
-      onLoadStateChange,
-    } = props;
+function ZoomableImage(props: ZoomableImageProps) {
+  const { ref, src, alt, className, minScale = 0.2, maxScale = 8, onNaturalSize, onLoadStateChange } = props;
 
-    const imgRef = React.useRef<HTMLImageElement | null>(null);
-    const viewportRef = React.useRef<HTMLDivElement | null>(null);
-    const rafRef = React.useRef<number | null>(null);
+  const imgRef = React.useRef<HTMLImageElement | null>(null);
+  const viewportRef = React.useRef<HTMLDivElement | null>(null);
+  const rafRef = React.useRef<number | null>(null);
 
-    const stateRef = React.useRef({ scale: 1, x: 0, y: 0 });
+  const stateRef = React.useRef({ scale: 1, x: 0, y: 0 });
 
-    const dragRef = React.useRef<{
-      pointerId: number;
-      startX: number;
-      startY: number;
-      startTranslateX: number;
-      startTranslateY: number;
-    } | null>(null);
+  const dragRef = React.useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startTranslateX: number;
+    startTranslateY: number;
+  } | null>(null);
 
-    const clampPosition = React.useCallback((nextX: number, nextY: number, nextScale: number) => {
-      const img = imgRef.current;
-      const viewport = viewportRef.current;
-      if (!img || !viewport || nextScale <= 1) {
-        return { x: 0, y: 0 };
-      }
-
-      const baseWidth = img.clientWidth;
-      const baseHeight = img.clientHeight;
-      const viewportWidth = viewport.clientWidth;
-      const viewportHeight = viewport.clientHeight;
-      if (baseWidth <= 0 || baseHeight <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
-        return { x: nextX, y: nextY };
-      }
-
-      const maxOffsetX = Math.max(0, (baseWidth * nextScale - viewportWidth) / 2);
-      const maxOffsetY = Math.max(0, (baseHeight * nextScale - viewportHeight) / 2);
-
-      return {
-        x: clamp(nextX, -maxOffsetX, maxOffsetX),
-        y: clamp(nextY, -maxOffsetY, maxOffsetY),
-      };
-    }, []);
-
-    const applyNow = React.useCallback(() => {
-      const el = imgRef.current;
-      if (!el) return;
-
-      const { scale, x, y } = stateRef.current;
-      el.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
-      el.style.transformOrigin = "center center";
-      el.style.cursor = scale > 1 ? "grab" : "zoom-in";
-    }, []);
-
-    const scheduleApply = React.useCallback(() => {
-      if (rafRef.current != null) return;
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null;
-        applyNow();
-      });
-    }, [applyNow]);
-
-    const reset = React.useCallback(() => {
-      stateRef.current.scale = 1;
-      stateRef.current.x = 0;
-      stateRef.current.y = 0;
-      applyNow();
-    }, [applyNow]);
-
-    React.useImperativeHandle(
-      ref,
-      () => ({
-        reset,
-      }),
-      [reset],
-    );
-
-    React.useEffect(() => {
-      reset();
-    }, [src, reset]);
-
-    React.useEffect(() => {
-      const el = imgRef.current;
-      if (!el || !el.complete || el.naturalWidth <= 0 || el.naturalHeight <= 0) return;
-
-      onLoadStateChange?.("loaded");
-      onNaturalSize?.({ width: el.naturalWidth, height: el.naturalHeight });
-    }, [onLoadStateChange, onNaturalSize, src]);
-
-    React.useEffect(() => {
-      const el = imgRef.current;
-      if (!el) return;
-
-      function onWheel(e: WheelEvent) {
-        e.preventDefault();
-
-        const factor = Math.exp(-e.deltaY * 0.001);
-        const nextScale = clamp(stateRef.current.scale * factor, minScale, maxScale);
-        const nextPosition = clampPosition(stateRef.current.x, stateRef.current.y, nextScale);
-
-        stateRef.current.scale = nextScale;
-        stateRef.current.x = nextPosition.x;
-        stateRef.current.y = nextPosition.y;
-
-        if (nextScale <= 1) {
-          stateRef.current.x = 0;
-          stateRef.current.y = 0;
-        }
-
-        scheduleApply();
-      }
-
-      el.addEventListener("wheel", onWheel, { passive: false });
-      return () => el.removeEventListener("wheel", onWheel);
-    }, [clampPosition, maxScale, minScale, scheduleApply]);
-
-    React.useEffect(() => {
-      return () => {
-        if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-      };
-    }, []);
-
-    function onPointerDown(e: React.PointerEvent<HTMLImageElement>) {
-      if (e.button !== 0) return;
-      const el = imgRef.current;
-      if (!el) return;
-      if (stateRef.current.scale <= 1) return;
-
-      el.setPointerCapture(e.pointerId);
-      dragRef.current = {
-        pointerId: e.pointerId,
-        startX: e.clientX,
-        startY: e.clientY,
-        startTranslateX: stateRef.current.x,
-        startTranslateY: stateRef.current.y,
-      };
-
-      el.style.cursor = "grabbing";
+  const clampPosition = React.useCallback((nextX: number, nextY: number, nextScale: number) => {
+    const img = imgRef.current;
+    const viewport = viewportRef.current;
+    if (!img || !viewport || nextScale <= 1) {
+      return { x: 0, y: 0 };
     }
 
-    function onPointerMove(e: React.PointerEvent<HTMLImageElement>) {
-      const drag = dragRef.current;
-      if (!drag || drag.pointerId !== e.pointerId) return;
-      if (stateRef.current.scale <= 1) return;
+    const baseWidth = img.clientWidth;
+    const baseHeight = img.clientHeight;
+    const viewportWidth = viewport.clientWidth;
+    const viewportHeight = viewport.clientHeight;
+    if (baseWidth <= 0 || baseHeight <= 0 || viewportWidth <= 0 || viewportHeight <= 0) {
+      return { x: nextX, y: nextY };
+    }
 
-      const nextPosition = clampPosition(
-        drag.startTranslateX + (e.clientX - drag.startX),
-        drag.startTranslateY + (e.clientY - drag.startY),
-        stateRef.current.scale,
-      );
+    const maxOffsetX = Math.max(0, (baseWidth * nextScale - viewportWidth) / 2);
+    const maxOffsetY = Math.max(0, (baseHeight * nextScale - viewportHeight) / 2);
+
+    return {
+      x: clamp(nextX, -maxOffsetX, maxOffsetX),
+      y: clamp(nextY, -maxOffsetY, maxOffsetY),
+    };
+  }, []);
+
+  const applyNow = React.useCallback(() => {
+    const el = imgRef.current;
+    if (!el) return;
+
+    const { scale, x, y } = stateRef.current;
+    el.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+    el.style.transformOrigin = "center center";
+    el.style.cursor = scale > 1 ? "grab" : "zoom-in";
+  }, []);
+
+  const scheduleApply = React.useCallback(() => {
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      applyNow();
+    });
+  }, [applyNow]);
+
+  const reset = React.useCallback(() => {
+    stateRef.current.scale = 1;
+    stateRef.current.x = 0;
+    stateRef.current.y = 0;
+    applyNow();
+  }, [applyNow]);
+
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      reset,
+    }),
+    [reset],
+  );
+
+  React.useEffect(() => {
+    reset();
+  }, [src, reset]);
+
+  React.useEffect(() => {
+    const el = imgRef.current;
+    if (!el || !el.complete || el.naturalWidth <= 0 || el.naturalHeight <= 0) return;
+
+    onLoadStateChange?.("loaded");
+    onNaturalSize?.({ width: el.naturalWidth, height: el.naturalHeight });
+  }, [onLoadStateChange, onNaturalSize, src]);
+
+  React.useEffect(() => {
+    const el = imgRef.current;
+    if (!el) return;
+
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+
+      const factor = Math.exp(-e.deltaY * 0.001);
+      const nextScale = clamp(stateRef.current.scale * factor, minScale, maxScale);
+      const nextPosition = clampPosition(stateRef.current.x, stateRef.current.y, nextScale);
+
+      stateRef.current.scale = nextScale;
       stateRef.current.x = nextPosition.x;
       stateRef.current.y = nextPosition.y;
+
+      if (nextScale <= 1) {
+        stateRef.current.x = 0;
+        stateRef.current.y = 0;
+      }
+
       scheduleApply();
     }
 
-    function onPointerUp(e: React.PointerEvent<HTMLImageElement>) {
-      const el = imgRef.current;
-      const drag = dragRef.current;
-      if (!drag || drag.pointerId !== e.pointerId) return;
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [clampPosition, maxScale, minScale, scheduleApply]);
 
-      if (el?.hasPointerCapture(e.pointerId)) {
-        el.releasePointerCapture(e.pointerId);
-      }
+  React.useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
-      dragRef.current = null;
-      applyNow();
-    }
+  function onPointerDown(e: React.PointerEvent<HTMLImageElement>) {
+    if (e.button !== 0) return;
+    const el = imgRef.current;
+    if (!el) return;
+    if (stateRef.current.scale <= 1) return;
 
-    function onDoubleClick() {
-      reset();
-    }
+    el.setPointerCapture(e.pointerId);
+    dragRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startTranslateX: stateRef.current.x,
+      startTranslateY: stateRef.current.y,
+    };
 
-    function onLoad(e: React.SyntheticEvent<HTMLImageElement>) {
-      onLoadStateChange?.("loaded");
-      if (!onNaturalSize) return;
-      const el = e.currentTarget;
-      if (el.naturalWidth && el.naturalHeight) {
-        onNaturalSize({ width: el.naturalWidth, height: el.naturalHeight });
-      }
-    }
+    el.style.cursor = "grabbing";
+  }
 
-    function onError() {
-      onLoadStateChange?.("error");
-    }
+  function onPointerMove(e: React.PointerEvent<HTMLImageElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    if (stateRef.current.scale <= 1) return;
 
-    return (
-      <div
-        ref={viewportRef}
-        className="relative flex size-full min-h-0 items-center justify-center rounded-md"
-      >
-        <img
-          ref={imgRef}
-          src={src}
-          alt={alt}
-          draggable={false}
-          decoding="async"
-          onLoad={onLoad}
-          onError={onError}
-          onDoubleClick={onDoubleClick}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          className={cn(
-            "block touch-none rounded-md object-contain will-change-transform select-none",
-            className,
-          )}
-        />
-      </div>
+    const nextPosition = clampPosition(
+      drag.startTranslateX + (e.clientX - drag.startX),
+      drag.startTranslateY + (e.clientY - drag.startY),
+      stateRef.current.scale,
     );
-  },
-);
+    stateRef.current.x = nextPosition.x;
+    stateRef.current.y = nextPosition.y;
+    scheduleApply();
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLImageElement>) {
+    const el = imgRef.current;
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+
+    if (el?.hasPointerCapture(e.pointerId)) {
+      el.releasePointerCapture(e.pointerId);
+    }
+
+    dragRef.current = null;
+    applyNow();
+  }
+
+  function onDoubleClick() {
+    reset();
+  }
+
+  function onLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    onLoadStateChange?.("loaded");
+    if (!onNaturalSize) return;
+    const el = e.currentTarget;
+    if (el.naturalWidth && el.naturalHeight) {
+      onNaturalSize({ width: el.naturalWidth, height: el.naturalHeight });
+    }
+  }
+
+  function onError() {
+    onLoadStateChange?.("error");
+  }
+
+  return (
+    <div ref={viewportRef} className="relative flex size-full min-h-0 items-center justify-center rounded-md">
+      <img
+        ref={imgRef}
+        src={src}
+        alt={alt}
+        draggable={false}
+        decoding="async"
+        onLoad={onLoad}
+        onError={onError}
+        onDoubleClick={onDoubleClick}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        className={cn(
+          "block touch-none rounded-md object-contain will-change-transform select-none",
+          className,
+        )}
+      />
+    </div>
+  );
+}
 
 function shouldIgnoreLightboxArrowKeyTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -796,9 +756,7 @@ async function copyImage(img: LightboxImage) {
 
   ctx.drawImage(htmlImage, 0, 0);
 
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob((b) => resolve(b), "image/png"),
-  );
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
 
   if (!blob) {
     toast.error(

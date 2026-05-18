@@ -77,7 +77,7 @@ function PinThread() {
     <Button
       variant="ghost"
       title={thread?.pinned ? "Unpin Thread" : "Pin Thread"}
-      className="h-7 w-7 cursor-pointer rounded-md border px-2 py-1"
+      className="size-7 cursor-pointer rounded-md border px-2 py-1"
       onClick={toggleThreadPin}
     >
       {thread?.pinned ? <PinOffIcon className="size-4" /> : <PinIcon className="size-4" />}

@@ -14,8 +14,10 @@ import { messageStoreActions } from "@/lib/store/messages-store";
 export const Route = createFileRoute("/_chat/")({
   component: RouteComponent,
   loader: async ({ context }) => {
-    const auth = await getAuth();
-    await context.queryClient.prefetchQuery(convexQuery(api.functions.users.getCurrentUserPreferences));
+    const [auth] = await Promise.all([
+      getAuth(),
+      context.queryClient.prefetchQuery(convexQuery(api.functions.users.getCurrentUserPreferences)),
+    ]);
 
     return { user: auth.user };
   },
