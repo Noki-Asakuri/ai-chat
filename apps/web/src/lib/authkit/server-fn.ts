@@ -2,7 +2,7 @@ import { DEFAULT_AUTH_SESSION_COOKIE_NAME } from "@ai-chat/auth-session";
 
 import { redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { deleteCookie } from "@tanstack/react-start/server";
+import { deleteCookie, setResponseHeader } from "@tanstack/react-start/server";
 
 import { getAuthkit } from "@workos/authkit-tanstack-react-start";
 import { DEFAULT_STORAGE_KEY } from "convex-helpers/react/sessions";
@@ -17,6 +17,7 @@ export const terminateSession = createServerFn({ method: "POST" })
 
     deleteCookie(DEFAULT_STORAGE_KEY);
     deleteCookie(DEFAULT_AUTH_SESSION_COOKIE_NAME);
+    setResponseHeader("Clear-Site-Data", '"storage", "cache"');
 
     console.log("[Auth] Terminated session", { sessionId, returnTo, logoutUrl });
     throw redirect({ href: logoutUrl, throw: true, reloadDocument: true });
