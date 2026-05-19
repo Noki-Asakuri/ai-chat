@@ -37,6 +37,38 @@ describe("normalizeCodeFenceLanguages", function () {
       ['```text sdOriginalLanguage="custom" title="Demo"', "plain text", "```"].join("\n"),
     );
   });
+
+  test("normalizes languages inside blockquotes", function () {
+    const markdown = [
+      "> ```typescript",
+      "> function add(a: number, b: number): number {",
+      ">   return a + b;",
+      "> }",
+      "> ```",
+    ].join("\n");
+
+    expect(normalizeCodeFenceLanguages(markdown, { passthroughLanguages })).toBe(
+      [
+        '> ```text sdOriginalLanguage="typescript"',
+        "> function add(a: number, b: number): number {",
+        ">   return a + b;",
+        "> }",
+        "> ```",
+      ].join("\n"),
+    );
+  });
+
+  test("preserves nested blockquote prefixes when normalizing languages", function () {
+    const markdown = ["> > ~~~tsx title=\"Demo\"", "> > <Component />", "> > ~~~"].join("\n");
+
+    expect(normalizeCodeFenceLanguages(markdown, { passthroughLanguages })).toBe(
+      [
+        '> > ~~~text sdOriginalLanguage="tsx" title="Demo"',
+        "> > <Component />",
+        "> > ~~~",
+      ].join("\n"),
+    );
+  });
 });
 
 describe("extractOriginalFenceLanguage", function () {

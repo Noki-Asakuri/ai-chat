@@ -4,6 +4,7 @@ type NormalizeCodeFenceLanguagesOptions = {
 
 const FENCE_START_REGEX = /^(```+|~~~+)(.*)$/;
 const ORIGINAL_LANGUAGE_META_PREFIX = "sdOriginalLanguage=";
+const BLOCKQUOTE_PREFIX_REGEX = /^([ \t]*(?:>[ \t]?)+)(.*)$/;
 
 export function extractOriginalFenceLanguage(meta: string | undefined): string | null {
   if (!meta) return null;
@@ -46,6 +47,22 @@ function escapeMetaString(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
+function stripBlockquotePrefix(line: string): {
+  content: string;
+  prefix: string;
+} {
+  const match = line.match(BLOCKQUOTE_PREFIX_REGEX);
+
+  if (!match) {
+    return { content: line, prefix: "" };
+  }
+
+  return {
+    content: match[2] ?? "",
+    prefix: match[1] ?? "",
+  };
+}
+
 export function normalizeCodeFenceLanguages(
   text: string,
   options: NormalizeCodeFenceLanguagesOptions,
@@ -57,7 +74,8 @@ export function normalizeCodeFenceLanguages(
   for (let i = 0; i < parts.length; i += 2) {
     const line = parts[i] ?? "";
     const newline = parts[i + 1] ?? "";
-    const trimmedLine = line.trimStart();
+    const blockquoteLine = stripBlockquotePrefix(line);
+    const trimmedLine = blockquoteLine.content.trimStart();
 
     if (openFenceMarker) {
       if (trimmedLine.startsWith(openFenceMarker)) {
@@ -93,7 +111,9 @@ export function normalizeCodeFenceLanguages(
       continue;
     }
 
-    const leadingWhitespace = line.slice(0, line.length - trimmedLine.length);
+    const leadingWhitespace =
+      blockquoteLine.prefix +
+      blockquoteLine.content.slice(0, blockquoteLine.content.length - trimmedLine.length);
     const originalLanguageMeta = `${ORIGINAL_LANGUAGE_META_PREFIX}"${escapeMetaString(language)}"`;
     const nextMeta = meta ? `${originalLanguageMeta} ${meta}` : originalLanguageMeta;
 
