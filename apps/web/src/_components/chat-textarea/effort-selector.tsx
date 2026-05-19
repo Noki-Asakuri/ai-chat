@@ -97,7 +97,7 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
       <PopoverTrigger
         className={cn(
           buttonVariants({ variant: "ghost" }),
-          "flex h-9 cursor-pointer items-center justify-between gap-2 border border-border px-2 py-1.5 capitalize hover:bg-primary/15!",
+          "surface-edge flex h-9 cursor-pointer items-center justify-between gap-2 border border-border px-2 py-1.5 capitalize hover:bg-primary/15!",
           props.className,
         )}
       >

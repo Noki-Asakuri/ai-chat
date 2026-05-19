@@ -43,7 +43,7 @@ export function ChatTextarea() {
       {hasMessages ? <ScrollButton /> : null}
 
       <form ref={parentRef} className="mx-auto space-y-2">
-        <div className="pointer-events-auto relative mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150">
+        <div className="surface-edge pointer-events-auto relative mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150">
           <ChatAttachmentsDisplay />
 
           <div>

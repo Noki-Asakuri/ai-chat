@@ -79,7 +79,7 @@ export function ChatSendButton() {
     <Menu.Root open={open} onOpenChange={setOpen}>
       <div
         data-streaming={isInFlight}
-        className="group flex h-9 items-center gap-2 overflow-hidden rounded-md border bg-card px-2 data-[streaming=true]:border-destructive data-[streaming=true]:bg-destructive/60 data-[streaming=true]:pr-3 md:pr-0 md:pl-3"
+        className="surface-edge group flex h-9 items-center gap-2 overflow-hidden rounded-md border bg-card px-2 data-[streaming=true]:border-destructive data-[streaming=true]:bg-destructive/60 data-[streaming=true]:pr-3 md:pr-0 md:pl-3"
       >
         <ButtonWithTip
           size="none"
@@ -160,7 +160,7 @@ export function ChatEditSendButton({ isSaving, onSave }: ChatEditSendButtonProps
         size="none"
         variant="none"
         title="Cancel Editing"
-        className="h-9 cursor-pointer gap-2 rounded-md border border-border bg-card px-3"
+        className="surface-edge h-9 cursor-pointer gap-2 rounded-md border border-border bg-card px-3"
         onClick={() => chatStoreActions.setEditMessage(null)}
         disabled={isSaving}
       >
@@ -169,7 +169,7 @@ export function ChatEditSendButton({ isSaving, onSave }: ChatEditSendButtonProps
       </ButtonWithTip>
 
       <Menu.Root open={open} onOpenChange={(next) => (!isSaving ? setOpen(next) : undefined)}>
-        <div className="group flex h-9 items-center gap-2 overflow-hidden rounded-md border bg-card pl-3">
+        <div className="surface-edge group flex h-9 items-center gap-2 overflow-hidden rounded-md border bg-card pl-3">
           <ButtonWithTip
             type="button"
             size="none"

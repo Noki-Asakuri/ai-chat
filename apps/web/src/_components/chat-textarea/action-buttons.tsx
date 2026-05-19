@@ -84,7 +84,7 @@ export function BaseWebSearchButton({
       variant="ghost"
       hidden={!canDoWebSearch}
       data-active={webSearch}
-      className="size-9 cursor-pointer border border-border px-2 py-1.5 text-xs data-[active=true]:border-blue-400"
+      className="surface-edge size-9 cursor-pointer border border-border px-2 py-1.5 text-xs data-[active=true]:border-blue-400"
       onMouseDown={() => setWebSearch(!webSearch)}
       title={webSearch ? "Disable Web Search" : "Enable Web Search"}
     >

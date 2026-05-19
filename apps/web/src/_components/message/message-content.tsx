@@ -218,7 +218,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
                   {block.parts.map((part, index) => (
                     <MessageContentElement
                       key={`${message._id}-${block.key}-${index}`}
-                      className="backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
+                      className="surface-edge backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
                     >
                       <StreamDownWrapper
                         isAnimating={part.state === "streaming"}
@@ -251,7 +251,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
                 {userTextParts.map((part, i) => (
                   <MessageContentElement
                     key={`${message._id}-${i}`}
-                    className="backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
+                    className="surface-edge backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
                   >
                     <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>
                       {part.text}
