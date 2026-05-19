@@ -91,10 +91,11 @@ export function MessageHistory({
       <div
         ref={contentRef}
         data-slot="message-history"
-        className="mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 pt-12"
+        className="mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 pt-12 [overflow-anchor:none]"
         style={{ paddingBottom: `${resolvedBottomPadding}px` }}
       >
         <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />
+        <div aria-hidden="true" className="h-px [overflow-anchor:auto]" />
       </div>
     </div>
   );
