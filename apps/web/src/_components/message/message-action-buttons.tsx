@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useShallow } from "zustand/shallow";
 
 import { CopyButton } from "../copy-button";
+import { useConfigStore } from "../provider/config-provider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,6 +56,13 @@ type MessageActionButtonsProps = {
 type RetryState = {
   canRetry: boolean;
   retryUserMessageId: Id<"messages"> | null;
+};
+
+type EditState = {
+  canEdit: boolean;
+  isPending: boolean;
+  model: string | null;
+  modelParams: NonNullable<ChatMessage["metadata"]>["modelParams"] | null;
 };
 
 type VariantPagerState = {
@@ -103,7 +111,12 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
 
       const nextMessageId = state.messageIds[messageIndex + 1];
       if (!nextMessageId) {
-        return { canRetry: false, retryUserMessageId: null };
+        const isLastUserMessage = message.role === "user" && messageIndex === state.messageIds.length - 1;
+
+        return {
+          canRetry: isLastUserMessage,
+          retryUserMessageId: isLastUserMessage ? message._id : null,
+        };
       }
 
       const nextMessage = state.messagesById[nextMessageId];
@@ -117,10 +130,12 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
 
   if (import.meta.env.PROD && !isFinished) return null;
 
-  const content = message.parts.reduce<Array<string>>((textParts, part) => {
-    if (isTextPart(part)) textParts.push(part.text);
-    return textParts;
-  }, []).join("\n\n");
+  const content = message.parts
+    .reduce<Array<string>>((textParts, part) => {
+      if (isTextPart(part)) textParts.push(part.text);
+      return textParts;
+    }, [])
+    .join("\n\n");
 
   return (
     <div className="flex items-center gap-0.5 rounded-md border bg-background/80 p-1 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
@@ -146,11 +161,7 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
           )}
 
           {canRetry && retryUserMessageId && (
-            <MessageRetryMenu
-              userMessageId={retryUserMessageId}
-              message={message}
-              className="size-8"
-            />
+            <MessageRetryMenu userMessageId={retryUserMessageId} message={message} className="size-8" />
           )}
         </>
       )}
@@ -179,13 +190,7 @@ function DebugButton({ messageId }: { messageId: Id<"messages"> }) {
   }
 
   return (
-    <ButtonWithTip
-      variant="ghost"
-      side="bottom"
-      className="size-8"
-      title="Debug"
-      onClick={handleDebug}
-    >
+    <ButtonWithTip variant="ghost" side="bottom" className="size-8" title="Debug" onClick={handleDebug}>
       <BugPlayIcon className="size-4" />
       <span className="sr-only">Debug</span>
     </ButtonWithTip>
@@ -193,53 +198,53 @@ function DebugButton({ messageId }: { messageId: Id<"messages"> }) {
 }
 
 function EditButton({ message }: { message: ChatMessage }) {
-  const { canEdit, isPending, pairedAssistantMessage } = useMessageStore(
-    useShallow((state) => {
+  const configModel = useConfigStore((state) => state.model);
+  const configModelParams = useConfigStore((state) => state.modelParams);
+
+  const { canEdit, isPending, model, modelParams } = useMessageStore(
+    useShallow((state): EditState => {
       const lastMessageId = state.messageIds.at(-1);
       const lastStatus = lastMessageId ? state.messagesById[lastMessageId]?.status : "complete";
+      const isPending = lastStatus === "pending" || lastStatus === "streaming";
 
       if (message.role === "assistant") {
-        return {
-          canEdit: false,
-          isPending: lastStatus === "pending" || lastStatus === "streaming",
-          pairedAssistantMessage: null,
-        };
+        return { canEdit: false, isPending, model: null, modelParams: null };
       }
 
       const activeAssistantMessageId = state.activeAssistantMessageIdByUserMessageId[message._id];
       const pairedAssistantMessage = activeAssistantMessageId
         ? state.messagesById[activeAssistantMessageId]
         : null;
+      const pairedAssistantMetadata = pairedAssistantMessage?.metadata;
 
       return {
-        canEdit: pairedAssistantMessage?.metadata !== undefined,
-        isPending: lastStatus === "pending" || lastStatus === "streaming",
-        pairedAssistantMessage,
+        canEdit: true,
+        isPending,
+        model: pairedAssistantMetadata?.model.request ?? null,
+        modelParams: pairedAssistantMetadata?.modelParams ?? null,
       };
     }),
   );
 
-  const pairedAssistantMetadata = pairedAssistantMessage?.metadata;
-  if (!canEdit || !pairedAssistantMetadata) return null;
+  if (!canEdit) return null;
 
   function handleEditMessage() {
-    const metadata = pairedAssistantMetadata;
-    if (!metadata) return;
-
     suppressStickyResizeAutoScroll();
 
     chatStoreActions.setEditMessage({
       _id: message._id,
-      input: message.parts.reduce<Array<string>>((textParts, part) => {
-        if (isTextPart(part)) textParts.push(part.text);
-        return textParts;
-      }, []).join("\n\n"),
+      input: message.parts
+        .reduce<Array<string>>((textParts, part) => {
+          if (isTextPart(part)) textParts.push(part.text);
+          return textParts;
+        }, [])
+        .join("\n\n"),
 
       attachments: [],
       currentAttachments: message.attachments,
       keptAttachmentIds: message.attachments.map((a) => a._id),
-      model: metadata.model.request,
-      modelParams: metadata.modelParams,
+      model: model ?? configModel,
+      modelParams: modelParams ?? configModelParams,
     });
   }
 
@@ -334,8 +339,7 @@ function DeleteButton({ message }: { message: ChatMessage }) {
           }
         }
 
-        const startTurnIndex =
-          message.role === "user" ? targetUserTurnIndex : targetUserTurnIndex + 1;
+        const startTurnIndex = message.role === "user" ? targetUserTurnIndex : targetUserTurnIndex + 1;
 
         for (let i = startTurnIndex; i < canonicalUserMessageIds.length; i += 1) {
           const userMessageId = canonicalUserMessageIds[i];
@@ -412,8 +416,7 @@ function DeleteButton({ message }: { message: ChatMessage }) {
   );
 
   const effectiveDeleteScope: DeleteScope = canDeleteVariantOnly ? deleteScope : "turnAndBelow";
-  const deleteCount =
-    effectiveDeleteScope === "assistantVariantOnly" ? variantDeleteCount : turnDeleteCount;
+  const deleteCount = effectiveDeleteScope === "assistantVariantOnly" ? variantDeleteCount : turnDeleteCount;
   const attachmentCount =
     effectiveDeleteScope === "assistantVariantOnly" ? variantAttachmentCount : turnAttachmentCount;
 
@@ -426,13 +429,9 @@ function DeleteButton({ message }: { message: ChatMessage }) {
     assistantLaterDeleteCount,
   );
   const deleteButtonTitle =
-    effectiveDeleteScope === "assistantVariantOnly"
-      ? "Delete response variant"
-      : "Delete message and below";
+    effectiveDeleteScope === "assistantVariantOnly" ? "Delete response variant" : "Delete message and below";
   const deleteButtonSrLabel =
-    effectiveDeleteScope === "assistantVariantOnly"
-      ? "Delete response variant"
-      : "Delete message and below";
+    effectiveDeleteScope === "assistantVariantOnly" ? "Delete response variant" : "Delete message and below";
 
   React.useEffect(() => {
     if (canDeleteVariantOnly) {
@@ -542,18 +541,14 @@ function DeleteButton({ message }: { message: ChatMessage }) {
                 <RadioGroupItem value="assistantVariantOnly" className="mt-0.5" />
                 <span className="flex flex-col gap-0.5">
                   <span className="text-sm leading-none font-medium">Delete this variant only</span>
-                  <span className="text-xs text-muted-foreground">
-                    Keep newer messages in this thread.
-                  </span>
+                  <span className="text-xs text-muted-foreground">Keep newer messages in this thread.</span>
                 </span>
               </Label>
 
               <Label className="flex w-full items-start gap-2 rounded-md border px-3 py-2 text-left">
                 <RadioGroupItem value="turnAndBelow" className="mt-0.5" />
                 <span className="flex flex-col gap-0.5">
-                  <span className="text-sm leading-none font-medium">
-                    Delete this message and newer
-                  </span>
+                  <span className="text-sm leading-none font-medium">Delete this message and newer</span>
                   <span className="text-xs text-muted-foreground">
                     Also removes newer messages in this thread.
                   </span>
@@ -571,10 +566,7 @@ function DeleteButton({ message }: { message: ChatMessage }) {
                 className="size-5"
               />
 
-              <Label
-                htmlFor={`delete-message-attachments-${message._id}`}
-                className="text-sm leading-none"
-              >
+              <Label htmlFor={`delete-message-attachments-${message._id}`} className="text-sm leading-none">
                 Also delete eligible attachments from storage (up to {attachmentCount})?
               </Label>
             </div>
@@ -625,8 +617,7 @@ function VariantPager({ message }: { message: ChatMessage }) {
         };
       }
 
-      const userMessageId =
-        state.userMessageIdByMessageId[message._id] ?? message.parentUserMessageId;
+      const userMessageId = state.userMessageIdByMessageId[message._id] ?? message.parentUserMessageId;
       if (!userMessageId) {
         return {
           threadId: state.currentThreadId,
@@ -675,11 +666,7 @@ function VariantPager({ message }: { message: ChatMessage }) {
     setPendingDirection(direction);
 
     try {
-      messageStoreActions.selectAssistantVariant(
-        threadId,
-        ensuredUserMessageId,
-        nextAssistantMessageId,
-      );
+      messageStoreActions.selectAssistantVariant(threadId, ensuredUserMessageId, nextAssistantMessageId);
 
       await setActiveVariant({
         threadId,
@@ -742,10 +729,7 @@ function VariantPager({ message }: { message: ChatMessage }) {
   );
 }
 
-function shouldClearEditMessageForTarget(
-  targetMessageId: Id<"messages">,
-  deleteScope: DeleteScope,
-): boolean {
+function shouldClearEditMessageForTarget(targetMessageId: Id<"messages">, deleteScope: DeleteScope): boolean {
   if (deleteScope === "assistantVariantOnly") {
     return false;
   }
