@@ -16,9 +16,16 @@ type EditMessage = {
   modelParams: { effort?: ReasoningEffort; webSearch?: boolean };
 };
 
+export type SelectedBlockquoteContext = {
+  text: string;
+};
+
 export type ChatStore = {
   input: string;
   setInput: (content: string) => void;
+
+  selectedBlockquoteContext: SelectedBlockquoteContext | null;
+  setSelectedBlockquoteContext: (context: SelectedBlockquoteContext | null) => void;
 
   editMessage: EditMessage | null;
   setEditMessage: (message: EditMessage | null) => void;
@@ -49,6 +56,9 @@ export const useChatStore = create<ChatStore>()(
     (set, get) => ({
       input: "",
       setInput: (content) => set({ input: content }),
+
+      selectedBlockquoteContext: null,
+      setSelectedBlockquoteContext: (context) => set({ selectedBlockquoteContext: context }),
 
       editMessage: null,
       setEditMessage: (message) => set({ editMessage: message }),
@@ -101,7 +111,7 @@ export const useChatStore = create<ChatStore>()(
         set((state) => ({ attachments: state.attachments.filter((a) => a.id !== id) })),
       clearAttachments: () => set({ attachments: [] }),
 
-      resetInput: () => set({ input: "", attachments: [] }),
+      resetInput: () => set({ input: "", attachments: [], selectedBlockquoteContext: null }),
 
       // Default: 147px + 8px (positon bottom) + 16px (padding above)
       textareaHeight: 147 + 8 + 16,

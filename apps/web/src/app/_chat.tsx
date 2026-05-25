@@ -3,7 +3,7 @@ import "streamdown/styles.css";
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, redirect, useParams } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
@@ -44,7 +44,7 @@ const getDefaultOpenSidebar = createIsomorphicFn()
 export const Route = createFileRoute("/_chat")({
   component: RouteComponent,
 
-  loader: async function ({ context, params: rawParams, location }) {
+  loader: async function ({ context, location }) {
     const [auth, { defaultOpenSidebar }] = await Promise.all([getAuth(), getDefaultOpenSidebar()]);
     if (!auth.user) {
       const path = location.pathname;
@@ -52,24 +52,13 @@ export const Route = createFileRoute("/_chat")({
       throw redirect({ to: "/auth/login", search: { rt: path } });
     }
 
-    const params = rawParams as { threadId?: string };
-    const threadId = fromUUID<Id<"threads">>(params.threadId);
-
     const promises: Promise<unknown>[] = [];
 
     promises.push(
-      context.queryClient.ensureQueryData(
-        convexQuery(api.functions.users.getCurrentUserPreferences, { threadId }),
-      ),
+      context.queryClient.ensureQueryData(convexQuery(api.functions.users.getCurrentUserPreferences)),
     );
 
     promises.push(context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser)));
-
-    if (threadId) {
-      promises.push(
-        context.queryClient.ensureQueryData(convexQuery(api.functions.users.getCurrentUserPreferences)),
-      );
-    }
 
     await Promise.all(promises);
     return { user: auth.user, defaultOpenSidebar };
@@ -134,10 +123,14 @@ function getCustomizationStyle(
 function ChatLayoutConfig() {
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const threadId = fromUUID<Id<"threads">>(params?.threadId);
-
-  const { data: userPreferences } = useSuspenseQuery(
-    convexSessionQuery(api.functions.users.getCurrentUserPreferences, { threadId }),
+  const { data: defaultUserPreferences } = useSuspenseQuery(
+    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
   );
+
+  const { data: userPreferences } = useQuery({
+    ...convexSessionQuery(api.functions.users.getCurrentUserPreferences, { threadId }),
+    initialData: defaultUserPreferences,
+  });
 
   return (
     <ConfigStoreProvider

@@ -14,7 +14,7 @@ import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
-import type { ChatMessage, ChatRequestBody } from "@/lib/types";
+import type { ChatRequestBody, UIChatMessage } from "@/lib/types";
 import { fromUUID, toUUID, tryCatch } from "@/lib/utils";
 
 import { convertToUIChatMessages, processStreamResponse, uploadUserAttachment } from "../shared";
@@ -25,8 +25,31 @@ import {
   throwIfChatResponseError,
 } from "./chat-errors";
 
-type CreateMessage =
-  (typeof api.functions.messages.addMessagesToThread)["_args"]["messages"][number];
+type CreateMessage = (typeof api.functions.messages.addMessagesToThread)["_args"]["messages"][number];
+type MessageParts = CreateMessage["parts"];
+
+const SELECTED_BLOCKQUOTE_FOCUS_INSTRUCTION =
+  "Instruction: The quoted blockquote in the user message is selected context from an assistant response. Focus your answer on that blockquote and treat the remaining text as the user's follow-up.";
+
+function formatSelectedTextBlockquote(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .map((line) => `> ${line}`)
+    .join("\n");
+}
+
+function buildInputWithBlockquoteInstruction({
+  input,
+  selectedBlockquoteContext,
+}: {
+  input: string;
+  selectedBlockquoteContext: { text: string } | null;
+}): string {
+  if (!selectedBlockquoteContext) return input;
+  if (!input.includes(formatSelectedTextBlockquote(selectedBlockquoteContext.text))) return input;
+
+  return `${SELECTED_BLOCKQUOTE_FOCUS_INSTRUCTION}\n\n${input}`;
+}
 
 export function useSendChatMessage() {
   const navigate = useNavigate();
@@ -46,7 +69,7 @@ export function useSendChatMessage() {
   async function sendChatRequest() {
     let threadId: Id<"threads"> | null = fromUUID<Id<"threads">>(params?.threadId) ?? null;
 
-    const { input, attachments } = useChatStore.getState();
+    const { input, attachments, selectedBlockquoteContext } = useChatStore.getState();
     const messageState = useMessageStore.getState();
 
     const messagesHistory = messageState.messageIds
@@ -56,6 +79,7 @@ export function useSendChatMessage() {
     const lastMessage = messagesHistory[messagesHistory.length - 1];
 
     if (!input || lastMessage?.status === "pending" || lastMessage?.status === "streaming") return;
+    const inputForRequest = buildInputWithBlockquoteInstruction({ input, selectedBlockquoteContext });
     chatStoreActions.resetInput();
 
     if (!threadId) {
@@ -112,26 +136,28 @@ export function useSendChatMessage() {
 
     const messages = convertToUIChatMessages(messagesHistory);
     const uploadedAttachments = await uploadUserAttachment(attachments, threadId);
+    const userMessageRequestParts: UIChatMessage["parts"] = [{ type: "text", text: inputForRequest }];
+    const userMessageDisplayParts: MessageParts = [{ type: "text", text: input }];
 
     messages.push({
       role: "user",
       id: userMessage.messageId,
-      parts: [{ type: "text", text: input }],
+      parts: userMessageRequestParts,
     });
 
     if (uploadedAttachments.length > 0) {
-      const userMessageParts = messages[messages.length - 1]!.parts;
       const attachmentIds = uploadedAttachments.map((a) => a.attachmentId);
 
       for (const { path, mediaType } of uploadedAttachments) {
         const url = buildAttachmentUrl(path, mediaType);
 
-        userMessageParts.push({ type: "file", url, mediaType });
+        messages[messages.length - 1]!.parts.push({ type: "file", url, mediaType });
+        userMessageDisplayParts.push({ type: "file", url, mediaType });
       }
 
       await convexClient.mutation(api.functions.messages.addAttachmentsToMessage, {
         messageId: userMessage.messageId,
-        parts: userMessageParts as ChatMessage["parts"],
+        parts: userMessageDisplayParts,
         attachmentIds,
       });
     }
