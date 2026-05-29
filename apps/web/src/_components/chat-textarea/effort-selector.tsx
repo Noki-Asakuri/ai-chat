@@ -1,4 +1,11 @@
-import { BrainIcon, SignalHighIcon, SignalLowIcon, SignalMediumIcon } from "lucide-react";
+import {
+  BrainIcon,
+  SignalHighIcon,
+  SignalIcon,
+  SignalLowIcon,
+  SignalMediumIcon,
+  SignalZeroIcon,
+} from "lucide-react";
 import { useEffect, useEffectEvent } from "react";
 import { useShallow } from "zustand/shallow";
 
@@ -33,12 +40,12 @@ export const EFFORT_OPTIONS: Record<
   ReasoningEffort,
   { label: string; icon: typeof SignalLowIcon }
 > = {
-  none: { label: "None", icon: SignalLowIcon },
+  none: { label: "None", icon: SignalZeroIcon },
   minimal: { label: "Minimal", icon: SignalLowIcon },
   low: { label: "Low", icon: SignalLowIcon },
   medium: { label: "Medium", icon: SignalMediumIcon },
   high: { label: "High", icon: SignalHighIcon },
-  xhigh: { label: "XHigh", icon: SignalHighIcon },
+  xhigh: { label: "XHigh", icon: SignalIcon },
 };
 
 type EffortSelectorBaseInnerProps = EffortSelectorProps & {
