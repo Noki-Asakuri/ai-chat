@@ -1,12 +1,6 @@
-import {
-  BrainIcon,
-  SignalHighIcon,
-  SignalIcon,
-  SignalLowIcon,
-  SignalMediumIcon,
-  SignalZeroIcon,
-} from "lucide-react";
-import { useEffect, useEffectEvent } from "react";
+import { SignalHighIcon, SignalIcon, SignalLowIcon, SignalMediumIcon, SignalZeroIcon } from "lucide-react";
+import { useDebounce } from "@uidotdev/usehooks";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { useConfigStore, useConfigStoreState } from "../provider/config-provider";
@@ -17,6 +11,8 @@ import { tryGetModelData } from "@/lib/chat/models";
 import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
 import type { ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+const EFFORT_SYNC_DEBOUNCE_MS = 1_000;
 
 type EffortSelectorProps = {
   value: ReasoningEffort;
@@ -36,10 +32,7 @@ export function EffortSelector(props: EffortSelectorProps) {
   return <EffortSelectorBase {...props} />;
 }
 
-export const EFFORT_OPTIONS: Record<
-  ReasoningEffort,
-  { label: string; icon: typeof SignalLowIcon }
-> = {
+export const EFFORT_OPTIONS: Record<ReasoningEffort, { label: string; icon: typeof SignalLowIcon }> = {
   none: { label: "None", icon: SignalZeroIcon },
   minimal: { label: "Minimal", icon: SignalLowIcon },
   low: { label: "Low", icon: SignalLowIcon },
@@ -63,6 +56,10 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
   const configStore = useConfigStoreState();
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
 
+  const [pendingSyncEffort, setPendingSyncEffort] = useState<ReasoningEffort | null>(null);
+  const debouncedSyncEffort = useDebounce(pendingSyncEffort, EFFORT_SYNC_DEBOUNCE_MS);
+
+  const TriggerIcon = EFFORT_OPTIONS[props.value].icon;
   const shouldHideSelector =
     typeof modelData.capabilities.reasoning === "undefined" ||
     modelData.capabilities.reasoning === "always" ||
@@ -75,7 +72,10 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
     }
 
     configStore.setModelParams({ effort });
+    setPendingSyncEffort(effort);
+  });
 
+  const syncPendingEffort = useEffectEvent((effort: ReasoningEffort) => {
     void syncThreadModelConfig({
       model: props.model,
       modelParams: { effort },
@@ -97,6 +97,12 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
     }
   }, [props.value, validOptions]);
 
+  useEffect(() => {
+    if (debouncedSyncEffort === null) return;
+
+    syncPendingEffort(debouncedSyncEffort);
+  }, [debouncedSyncEffort]);
+
   if (shouldHideSelector) return null;
 
   return (
@@ -108,7 +114,7 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
           props.className,
         )}
       >
-        <BrainIcon className="size-4" />
+        <TriggerIcon className="size-4" />
         {props.value}
       </PopoverTrigger>
 
