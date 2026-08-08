@@ -5,18 +5,19 @@ import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Cell, Pie, PieChart, type TooltipProps } from "recharts";
+import {
+  Pie,
+  PieChart,
+  Sector,
+  type DefaultTooltipContentProps,
+  type PieSectorShapeProps,
+  type TooltipProps,
+} from "recharts";
 
 import { Icons } from "@/components/ui/icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { LoadingStatisticsSkeleton } from "./-pending";
 
@@ -61,9 +62,7 @@ function getColorForName(name: string): string {
 function StatisticsPage() {
   const currentYear = new Date().getUTCFullYear();
   const [selectedYearValue, setSelectedYearValue] = useState(String(currentYear));
-  const selectedYear = Number.isFinite(Number(selectedYearValue))
-    ? Number(selectedYearValue)
-    : currentYear;
+  const selectedYear = Number.isFinite(Number(selectedYearValue)) ? Number(selectedYearValue) : currentYear;
 
   const statistics = useSuspenseQuery(
     convexSessionQuery(api.functions.statistics.getStatistics, { year: selectedYear }),
@@ -87,9 +86,7 @@ function StatisticsPage() {
   const assistantTokens = outputTokens + reasoningTokens;
 
   const availableYears = getAvailableYears(activity);
-  const selectedYearActivity = activity.filter(
-    (point) => getYearFromDay(point.day) === selectedYear,
-  );
+  const selectedYearActivity = activity.filter((point) => getYearFromDay(point.day) === selectedYear);
 
   let activityTotal = 0;
   let activityPeak = 0;
@@ -218,9 +215,8 @@ function StatisticsPage() {
                 <>No user messages tracked yet for {selectedYear}.</>
               ) : (
                 <>
-                  A total of {format.number(activityTotal)} user messages were sent in{" "}
-                  {selectedYear}, with a peak of {format.number(activityPeak)} messages on a single
-                  day.
+                  A total of {format.number(activityTotal)} user messages were sent in {selectedYear}, with a
+                  peak of {format.number(activityPeak)} messages on a single day.
                 </>
               )}
             </p>
@@ -236,9 +232,7 @@ function StatisticsPage() {
             </div>
           </div>
 
-          <div className="text-xs text-muted-foreground">
-            Total tokens: {format.number(tokensTotal)}
-          </div>
+          <div className="text-xs text-muted-foreground">Total tokens: {format.number(tokensTotal)}</div>
         </CardContent>
       </Card>
 
@@ -326,24 +320,22 @@ function RankPieChart(props: {
             <ChartContainer config={chartConfig} className="aspect-auto h-72 w-full">
               <PieChart>
                 <ChartTooltip content={<PieTooltipContent valueLabel={props.valueLabel} />} />
-                <Pie data={chartData} dataKey="value" nameKey="name" outerRadius={122}>
-                  {chartData.map((item) => (
-                    <Cell key={item.name} fill={item.color} stroke="var(--card)" strokeWidth={2} />
-                  ))}
-                </Pie>
+                <Pie
+                  data={chartData}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={122}
+                  shape={PieChartSector}
+                />
               </PieChart>
             </ChartContainer>
 
             <div className="space-y-3">
               {chartData.map((item) => (
                 <div key={item.name} className="flex items-center gap-2 text-sm">
-                  <div
-                    className="size-3 shrink-0 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  {item.provider ? (
-                    <Icons.provider provider={item.provider} className="size-3.5 shrink-0" />
-                  ) : null}
+                  <div className="size-3 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                  {item.provider && <Icons.provider provider={item.provider} className="size-3.5 shrink-0" />}
+
                   <span className="min-w-0 text-muted-foreground">
                     {item.name} ({format.number(item.value)} {props.valueLabel.toLowerCase()} -{" "}
                     {percentageFormat.format(item.percentage)}%)
@@ -377,28 +369,23 @@ function createPieChartData(data: Array<RankItem>): Array<PieChartItem> {
 }
 
 function PieTooltipContent(
-  props: TooltipProps<number, string> & {
-    valueLabel: string;
-  },
+  props: TooltipProps<number, string> &
+    DefaultTooltipContentProps<number, string> & {
+      valueLabel: string;
+    },
 ) {
   if (!props.active || !props.payload?.length) return null;
-
-  const payload = props.payload[0]?.payload;
-  if (!isPieChartItem(payload)) return null;
+  const payload = props.payload[0]?.payload as PieChartItem;
 
   return (
     <Card className="rounded-md border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
       <CardContent className="flex min-w-[12rem] items-center justify-between gap-3 p-0">
         <span className="flex items-center gap-2 text-muted-foreground">
-          <div
-            className="size-3 shrink-0 rounded-full"
-            style={{ backgroundColor: payload.color }}
-          />
-          {payload.provider ? (
-            <Icons.provider provider={payload.provider} className="size-3.5 shrink-0" />
-          ) : null}
+          <div className="size-3 shrink-0 rounded-full" style={{ backgroundColor: payload.color }} />
+          {payload.provider && <Icons.provider provider={payload.provider} className="size-3.5 shrink-0" />}
           <span>{payload.name}</span>
         </span>
+
         <span className="font-mono font-medium text-foreground tabular-nums">
           {format.number(payload.value)} {props.valueLabel.toLowerCase()} -{" "}
           {percentageFormat.format(payload.percentage)}%
@@ -406,6 +393,16 @@ function PieTooltipContent(
       </CardContent>
     </Card>
   );
+}
+
+function PieChartSector(props: PieSectorShapeProps) {
+  const payload: unknown = props.payload;
+  const fill =
+    typeof payload === "object" && payload !== null && "color" in payload && typeof payload.color === "string"
+      ? payload.color
+      : props.fill;
+
+  return <Sector {...props} fill={fill} stroke="var(--card)" strokeWidth={2} />;
 }
 
 function createBreakdownChartData(data: Array<RankItem>): Array<RankItem> {
@@ -421,43 +418,12 @@ function createBreakdownChartData(data: Array<RankItem>): Array<RankItem> {
 
 function createPieChartConfig(data: Array<PieChartItem>, valueLabel: string): ChartConfig {
   const config: ChartConfig = {
-    value: {
-      label: valueLabel,
-      color: getColorForName(valueLabel),
-    },
+    value: { label: valueLabel, color: getColorForName(valueLabel) },
   };
 
   for (const item of data) {
-    config[item.name] = {
-      label: item.name,
-      color: item.color,
-    };
+    config[item.name] = { label: item.name, color: item.color };
   }
 
   return config;
-}
-
-function isPieChartItem(value: unknown): value is PieChartItem {
-  if (typeof value !== "object" || value === null) return false;
-  if (
-    !("name" in value) ||
-    !("value" in value) ||
-    !("color" in value) ||
-    !("percentage" in value)
-  ) {
-    return false;
-  }
-  if (typeof value.name !== "string") return false;
-  if (typeof value.value !== "number") return false;
-  if (typeof value.color !== "string") return false;
-  if (typeof value.percentage !== "number") return false;
-
-  const provider = "provider" in value ? value.provider : undefined;
-
-  return (
-    provider === undefined ||
-    provider === "google" ||
-    provider === "openai" ||
-    provider === "deepseek"
-  );
 }
