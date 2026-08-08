@@ -48,7 +48,7 @@ function getErrorDetails(error: unknown): {
 }
 
 export const updateAccountProfile = createServerFn({ method: "POST" })
-  .inputValidator((data: UpdateAccountProfileInput) => data)
+  .validator((data: UpdateAccountProfileInput) => data)
   .handler(async ({ data }) => {
     const auth = await getAuth();
     if (!auth?.user) throw new Error("Not authenticated");
@@ -148,7 +148,7 @@ type RevokeAccountSessionInput = {
 };
 
 export const revokeAccountSession = createServerFn({ method: "POST" })
-  .inputValidator((data: RevokeAccountSessionInput) => data)
+  .validator((data: RevokeAccountSessionInput) => data)
   .handler(async ({ data }) => {
     const auth = await getAuth();
 

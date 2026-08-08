@@ -8,7 +8,7 @@ import { getAuthkit } from "@workos/authkit-tanstack-react-start";
 import { DEFAULT_STORAGE_KEY } from "convex-helpers/react/sessions";
 
 export const terminateSession = createServerFn({ method: "POST" })
-  .inputValidator((data: { sessionId?: string; returnTo?: string }) => data)
+  .validator((data: { sessionId?: string; returnTo?: string }) => data)
   .handler(async ({ data: { sessionId, returnTo } }) => {
     if (!sessionId) throw redirect({ to: returnTo, throw: true, reloadDocument: true });
 
