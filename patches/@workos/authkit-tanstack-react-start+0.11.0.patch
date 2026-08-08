@@ -3,7 +3,7 @@ index ef19c1398b9c5010e82b869c90530723adc2a024..4014207eb44d595445fb80cdae4f3969
 --- a/node_modules/@workos/authkit-tanstack-react-start/dist/server/storage.js
 +++ b/node_modules/@workos/authkit-tanstack-react-start/dist/server/storage.js
 @@ -1,6 +1,12 @@
- import { getAuthKitContextOrNull } from './context.js';
+ import { getInternalAuthKitContextOrNull } from './context.js';
  import { parseCookies } from './cookie-utils.js';
  export class TanStackStartCookieSessionStorage extends CookieSessionStorage {
 +    constructor(options) {

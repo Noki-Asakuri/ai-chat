@@ -24,7 +24,7 @@
       "@axiomhq/logging": "^0.4.0",
       "better-result": "^3.0.0",
       "@t3-oss/env-core": "^0.13.11",
-      "@workos/authkit-session": "^0.5.2",
+      "@workos/authkit-session": "^0.7.1",
       "@workos-inc/node": "^10.0.0",
       "ai": "^7.0.52",
       "dedent": "^1.7.2",
