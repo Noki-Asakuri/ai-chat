@@ -15,12 +15,12 @@ type UserPointsUsage = {
 export class LimitReachError extends TaggedError("UserMessageLimitReachedError")<{
   message: string;
   usage: UserPointsUsage;
-}>() {}
+}> {}
 
 export class RefundError extends TaggedError("RefundError")<{
   userId: string;
   cause: unknown;
-}>() {}
+}> {}
 
 export function getUserPointsLimitMessage(usage: { used: number; base: number; resetType: string }): string {
   const resetWindowLabel = usage.resetType === "daily" ? "Daily" : "Monthly";

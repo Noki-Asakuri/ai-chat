@@ -25,7 +25,7 @@ class WorkOSAuthError extends TaggedError("WorkOSAuthError")<{
   operation: string;
   message: string;
   cause: unknown;
-}>() {
+}> {
   constructor(args: { operation: string; cause: unknown }) {
     const message = args.cause instanceof Error ? args.cause.message : String(args.cause);
     super({ ...args, message: `WorkOS ${args.operation} failed: ${message}` });
@@ -36,7 +36,7 @@ class SessionHeaderError extends TaggedError("SessionHeaderError")<{
   operation: string;
   message: string;
   cause: unknown;
-}>() {
+}> {
   constructor(args: { operation: string; cause: unknown }) {
     const message = args.cause instanceof Error ? args.cause.message : String(args.cause);
     super({ ...args, message: `Auth session ${args.operation} header failed: ${message}` });
@@ -46,7 +46,7 @@ class SessionHeaderError extends TaggedError("SessionHeaderError")<{
 class UnauthenticatedError extends TaggedError("UnauthenticatedError")<{
   message: string;
   clearSessionHeader: string | null;
-}>() {
+}> {
   constructor(args: { clearSessionHeader: string | null }) {
     super({ ...args, message: "Unauthenticated" });
   }
@@ -56,7 +56,7 @@ class RefreshAccessTokenError extends TaggedError("RefreshAccessTokenError")<{
   message: string;
   cause: unknown;
   clearSessionHeader: string | null;
-}>() {
+}> {
   constructor(args: { cause: unknown; clearSessionHeader: string | null }) {
     const message = args.cause instanceof Error ? args.cause.message : String(args.cause);
     super({ ...args, message: `Auth session refresh failed: ${message}` });
@@ -295,7 +295,7 @@ async function refreshAccessTokenResult(
 }
 
 function getAuthErrorStatus(error: AuthContextError): 401 | 500 {
-  return matchError(error, {
+  return matchError<AuthContextError, 401 | 500>(error, {
     UnauthenticatedError: function getUnauthenticatedStatus() {
       return 401;
     },

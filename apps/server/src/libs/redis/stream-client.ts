@@ -58,26 +58,26 @@ export class RedisOperationError extends TaggedError("RedisOperationError")<{
   key: string;
   message: string;
   cause: unknown;
-}>() {}
+}> {}
 
 export class StreamAlreadyExistsError extends TaggedError("StreamAlreadyExistsError")<{
   userId: string;
   requestId: string;
   message: string;
-}>() {}
+}> {}
 
 export class StreamReadError extends TaggedError("StreamReadError")<{
   userId: string;
   requestId: string;
   message: string;
   cause: unknown;
-}>() {}
+}> {}
 
 export class StreamNotFoundError extends TaggedError("StreamNotFoundError")<{
   userId: string;
   requestId: string;
   message: string;
-}>() {}
+}> {}
 
 export type RedisStreamError =
   | RedisOperationError

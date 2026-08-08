@@ -38,7 +38,7 @@ export class CreateAttachmentError extends TaggedError("CreateAttachmentError")<
   mediaType: string;
   fileAttachmentId: string;
   cause: unknown;
-}>() {}
+}> {}
 
 export class GenerateAttachmentUploadUrlError extends TaggedError("GenerateAttachmentUploadUrlError")<{
   message: string;
@@ -47,7 +47,7 @@ export class GenerateAttachmentUploadUrlError extends TaggedError("GenerateAttac
   fileAttachmentId: string;
   attachmentDocId: Id<"attachments">;
   cause: unknown;
-}>() {}
+}> {}
 
 export class UploadFileToR2RequestError extends TaggedError("UploadFileToR2RequestError")<{
   message: string;
@@ -57,7 +57,7 @@ export class UploadFileToR2RequestError extends TaggedError("UploadFileToR2Reque
   attachmentDocId: Id<"attachments">;
   filePathname: string;
   cause: unknown;
-}>() {}
+}> {}
 
 export class UploadFileToR2ResponseError extends TaggedError("UploadFileToR2ResponseError")<{
   message: string;
@@ -69,7 +69,7 @@ export class UploadFileToR2ResponseError extends TaggedError("UploadFileToR2Resp
   status: number;
   statusText: string;
   responseBody: string;
-}>() {}
+}> {}
 
 export class SyncAttachmentMetadataError extends TaggedError("SyncAttachmentMetadataError")<{
   message: string;
@@ -79,7 +79,7 @@ export class SyncAttachmentMetadataError extends TaggedError("SyncAttachmentMeta
   attachmentDocId: Id<"attachments">;
   filePathname: string;
   cause: unknown;
-}>() {}
+}> {}
 
 export type UploadErrors =
   | CreateAttachmentError

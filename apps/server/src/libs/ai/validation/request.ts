@@ -75,7 +75,7 @@ type ValidationErrorResponse = {
 };
 
 function getValidationErrorResponse(error: ChatRequestValidationError): ValidationErrorResponse {
-  return matchError(error, {
+  return matchError<ChatRequestValidationError, ValidationErrorResponse>(error, {
     DeprecatedModelError: function getDeprecatedModelMessage(deprecatedModelError) {
       return {
         message: `This model is no longer available. Please switch to ${deprecatedModelError.details.replacementModelName} and try again.`,
