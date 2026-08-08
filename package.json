@@ -50,7 +50,7 @@
     "dev:convex": "bun run --cwd packages/backend dev",
     "build": "turbo run build",
     "start": "turbo run start",
-    "check": "bun lint && bun typecheck",
+    "check": "turbo run lint typecheck",
     "format:check": "prettier --check .",
     "format:write": "prettier --write .",
     "lint": "turbo run lint",
