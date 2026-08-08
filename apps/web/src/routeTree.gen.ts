@@ -9,30 +9,30 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './app/__root'
-import { Route as SettingsRouteImport } from './app/settings'
 import { Route as ChatRouteImport } from './app/_chat'
+import { Route as SettingsRouteImport } from './app/settings'
 import { Route as ChatIndexRouteImport } from './app/_chat.index'
-import { Route as ShareShareIdRouteImport } from './app/share.$shareId'
-import { Route as SettingsThreadsRouteImport } from './app/settings/threads'
-import { Route as SettingsAccountRouteImport } from './app/settings/account'
-import { Route as AuthLogoutRouteImport } from './app/auth.logout'
-import { Route as AuthLoginRouteImport } from './app/auth.login'
-import { Route as SettingsStatisticsRouteRouteImport } from './app/settings/statistics/route'
-import { Route as SettingsProfilesRouteRouteImport } from './app/settings/profiles.route'
-import { Route as SettingsModelsRouteRouteImport } from './app/settings/models/route'
-import { Route as SettingsCustomizationRouteRouteImport } from './app/settings/customization/route'
-import { Route as SettingsAttachmentsRouteRouteImport } from './app/settings/attachments/route'
 import { Route as ChatThreadsRouteRouteImport } from './app/_chat.threads.route'
-import { Route as ApiAuthCallbackRouteImport } from './app/api/auth/callback'
+import { Route as AuthLoginRouteImport } from './app/auth.login'
+import { Route as AuthLogoutRouteImport } from './app/auth.logout'
+import { Route as SettingsAccountRouteImport } from './app/settings/account'
+import { Route as SettingsAttachmentsRouteRouteImport } from './app/settings/attachments/route'
+import { Route as SettingsCustomizationRouteRouteImport } from './app/settings/customization/route'
+import { Route as SettingsModelsRouteRouteImport } from './app/settings/models/route'
+import { Route as SettingsProfilesRouteRouteImport } from './app/settings/profiles.route'
+import { Route as SettingsStatisticsRouteRouteImport } from './app/settings/statistics/route'
+import { Route as SettingsThreadsRouteImport } from './app/settings/threads'
+import { Route as ShareShareIdRouteImport } from './app/share.$shareId'
 import { Route as ChatThreadsThreadIdRouteImport } from './app/_chat.threads.$threadId'
+import { Route as ApiAuthCallbackRouteImport } from './app/api/auth/callback'
 
+const ChatRoute = ChatRouteImport.update({
+  id: '/_chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChatRoute = ChatRouteImport.update({
-  id: '/_chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatIndexRoute = ChatIndexRouteImport.update({
@@ -40,34 +40,41 @@ const ChatIndexRoute = ChatIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ChatRoute,
 } as any)
-const ShareShareIdRoute = ShareShareIdRouteImport.update({
-  id: '/share/$shareId',
-  path: '/share/$shareId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsThreadsRoute = SettingsThreadsRouteImport.update({
+const ChatThreadsRouteRoute = ChatThreadsRouteRouteImport.update({
   id: '/threads',
   path: '/threads',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const SettingsAccountRoute = SettingsAccountRouteImport.update({
-  id: '/account',
-  path: '/account',
-  getParentRoute: () => SettingsRoute,
-} as any)
-const AuthLogoutRoute = AuthLogoutRouteImport.update({
-  id: '/auth/logout',
-  path: '/auth/logout',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => ChatRoute,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsStatisticsRouteRoute = SettingsStatisticsRouteRouteImport.update({
-  id: '/statistics',
-  path: '/statistics',
+const AuthLogoutRoute = AuthLogoutRouteImport.update({
+  id: '/auth/logout',
+  path: '/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsAccountRoute = SettingsAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAttachmentsRouteRoute =
+  SettingsAttachmentsRouteRouteImport.update({
+    id: '/attachments',
+    path: '/attachments',
+    getParentRoute: () => SettingsRoute,
+  } as any)
+const SettingsCustomizationRouteRoute =
+  SettingsCustomizationRouteRouteImport.update({
+    id: '/customization',
+    path: '/customization',
+    getParentRoute: () => SettingsRoute,
+  } as any)
+const SettingsModelsRouteRoute = SettingsModelsRouteRouteImport.update({
+  id: '/models',
+  path: '/models',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsProfilesRouteRoute = SettingsProfilesRouteRouteImport.update({
@@ -75,37 +82,30 @@ const SettingsProfilesRouteRoute = SettingsProfilesRouteRouteImport.update({
   path: '/profiles',
   getParentRoute: () => SettingsRoute,
 } as any)
-const SettingsModelsRouteRoute = SettingsModelsRouteRouteImport.update({
-  id: '/models',
-  path: '/models',
+const SettingsStatisticsRouteRoute = SettingsStatisticsRouteRouteImport.update({
+  id: '/statistics',
+  path: '/statistics',
   getParentRoute: () => SettingsRoute,
 } as any)
-const SettingsCustomizationRouteRoute =
-  SettingsCustomizationRouteRouteImport.update({
-    id: '/customization',
-    path: '/customization',
-    getParentRoute: () => SettingsRoute,
-  } as any)
-const SettingsAttachmentsRouteRoute =
-  SettingsAttachmentsRouteRouteImport.update({
-    id: '/attachments',
-    path: '/attachments',
-    getParentRoute: () => SettingsRoute,
-  } as any)
-const ChatThreadsRouteRoute = ChatThreadsRouteRouteImport.update({
+const SettingsThreadsRoute = SettingsThreadsRouteImport.update({
   id: '/threads',
   path: '/threads',
-  getParentRoute: () => ChatRoute,
+  getParentRoute: () => SettingsRoute,
 } as any)
-const ApiAuthCallbackRoute = ApiAuthCallbackRouteImport.update({
-  id: '/api/auth/callback',
-  path: '/api/auth/callback',
+const ShareShareIdRoute = ShareShareIdRouteImport.update({
+  id: '/share/$shareId',
+  path: '/share/$shareId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatThreadsThreadIdRoute = ChatThreadsThreadIdRouteImport.update({
   id: '/$threadId',
   path: '/$threadId',
   getParentRoute: () => ChatThreadsRouteRoute,
+} as any)
+const ApiAuthCallbackRoute = ApiAuthCallbackRouteImport.update({
+  id: '/api/auth/callback',
+  path: '/api/auth/callback',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -227,18 +227,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_chat': {
       id: '/_chat'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_chat/': {
@@ -248,33 +248,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatIndexRouteImport
       parentRoute: typeof ChatRoute
     }
-    '/share/$shareId': {
-      id: '/share/$shareId'
-      path: '/share/$shareId'
-      fullPath: '/share/$shareId'
-      preLoaderRoute: typeof ShareShareIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings/threads': {
-      id: '/settings/threads'
+    '/_chat/threads': {
+      id: '/_chat/threads'
       path: '/threads'
-      fullPath: '/settings/threads'
-      preLoaderRoute: typeof SettingsThreadsRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/account': {
-      id: '/settings/account'
-      path: '/account'
-      fullPath: '/settings/account'
-      preLoaderRoute: typeof SettingsAccountRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/auth/logout': {
-      id: '/auth/logout'
-      path: '/auth/logout'
-      fullPath: '/auth/logout'
-      preLoaderRoute: typeof AuthLogoutRouteImport
-      parentRoute: typeof rootRouteImport
+      fullPath: '/threads'
+      preLoaderRoute: typeof ChatThreadsRouteRouteImport
+      parentRoute: typeof ChatRoute
     }
     '/auth/login': {
       id: '/auth/login'
@@ -283,32 +262,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings/statistics': {
-      id: '/settings/statistics'
-      path: '/statistics'
-      fullPath: '/settings/statistics'
-      preLoaderRoute: typeof SettingsStatisticsRouteRouteImport
-      parentRoute: typeof SettingsRoute
+    '/auth/logout': {
+      id: '/auth/logout'
+      path: '/auth/logout'
+      fullPath: '/auth/logout'
+      preLoaderRoute: typeof AuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/settings/profiles': {
-      id: '/settings/profiles'
-      path: '/profiles'
-      fullPath: '/settings/profiles'
-      preLoaderRoute: typeof SettingsProfilesRouteRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/models': {
-      id: '/settings/models'
-      path: '/models'
-      fullPath: '/settings/models'
-      preLoaderRoute: typeof SettingsModelsRouteRouteImport
-      parentRoute: typeof SettingsRoute
-    }
-    '/settings/customization': {
-      id: '/settings/customization'
-      path: '/customization'
-      fullPath: '/settings/customization'
-      preLoaderRoute: typeof SettingsCustomizationRouteRouteImport
+    '/settings/account': {
+      id: '/settings/account'
+      path: '/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof SettingsAccountRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/attachments': {
@@ -318,18 +283,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAttachmentsRouteRouteImport
       parentRoute: typeof SettingsRoute
     }
-    '/_chat/threads': {
-      id: '/_chat/threads'
-      path: '/threads'
-      fullPath: '/threads'
-      preLoaderRoute: typeof ChatThreadsRouteRouteImport
-      parentRoute: typeof ChatRoute
+    '/settings/customization': {
+      id: '/settings/customization'
+      path: '/customization'
+      fullPath: '/settings/customization'
+      preLoaderRoute: typeof SettingsCustomizationRouteRouteImport
+      parentRoute: typeof SettingsRoute
     }
-    '/api/auth/callback': {
-      id: '/api/auth/callback'
-      path: '/api/auth/callback'
-      fullPath: '/api/auth/callback'
-      preLoaderRoute: typeof ApiAuthCallbackRouteImport
+    '/settings/models': {
+      id: '/settings/models'
+      path: '/models'
+      fullPath: '/settings/models'
+      preLoaderRoute: typeof SettingsModelsRouteRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/profiles': {
+      id: '/settings/profiles'
+      path: '/profiles'
+      fullPath: '/settings/profiles'
+      preLoaderRoute: typeof SettingsProfilesRouteRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/statistics': {
+      id: '/settings/statistics'
+      path: '/statistics'
+      fullPath: '/settings/statistics'
+      preLoaderRoute: typeof SettingsStatisticsRouteRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/threads': {
+      id: '/settings/threads'
+      path: '/threads'
+      fullPath: '/settings/threads'
+      preLoaderRoute: typeof SettingsThreadsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/share/$shareId': {
+      id: '/share/$shareId'
+      path: '/share/$shareId'
+      fullPath: '/share/$shareId'
+      preLoaderRoute: typeof ShareShareIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_chat/threads/$threadId': {
@@ -338,6 +331,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/threads/$threadId'
       preLoaderRoute: typeof ChatThreadsThreadIdRouteImport
       parentRoute: typeof ChatThreadsRouteRoute
+    }
+    '/api/auth/callback': {
+      id: '/api/auth/callback'
+      path: '/api/auth/callback'
+      fullPath: '/api/auth/callback'
+      preLoaderRoute: typeof ApiAuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
