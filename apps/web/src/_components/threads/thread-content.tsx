@@ -6,8 +6,15 @@ import { ClientOnly, useNavigate, useParams } from "@tanstack/react-router";
 
 import { Dialog } from "@base-ui/react/dialog";
 import { useMutation } from "convex/react";
-import { FolderIcon, FolderPlusIcon, Loader2Icon, SearchIcon, SquarePenIcon } from "lucide-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  FolderIcon,
+  FolderPlusIcon,
+  Loader2Icon,
+  SearchIcon,
+  SquarePenIcon,
+  XIcon,
+} from "lucide-react";
+import { type KeyboardEvent, useEffect, useRef, useState, useTransition } from "react";
 
 import { Button } from "../ui/button";
 import {
@@ -18,9 +25,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandShortcut,
 } from "../ui/command";
 import { Input } from "../ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
+import { Kbd } from "../ui/kbd";
+import { Separator } from "../ui/separator";
 import {
   Select,
   SelectContent,
@@ -79,6 +89,7 @@ function CreateGroupButton() {
       <Button
         size="icon"
         variant="outline"
+        className="size-10"
         aria-label="Create group"
         title="Create group"
         onClick={() => setOpen(true)}
@@ -89,7 +100,7 @@ function CreateGroupButton() {
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
           <Dialog.Backdrop className="data-ending-style:opacity-0ata-[starting-style]:opacity-0 fixed inset-0 z-40 bg-black opacity-20 transition-opacity duration-150 dark:opacity-70" />
-          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,36rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-8 shadow-lg transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
             <div className="mb-2">
               <h2 className="text-lg font-semibold">Create group</h2>
               <p className="text-sm text-muted-foreground">Enter a group name.</p>
@@ -110,11 +121,17 @@ function CreateGroupButton() {
               />
 
               <div className="flex justify-end gap-2">
-                <Dialog.Close className="inline-flex h-8 items-center rounded-md border px-3 text-sm">
+                <Dialog.Close render={<Button variant="outline" className="h-9 w-28" />}>
+                  <XIcon data-icon="inline-start" />
                   Cancel
                 </Dialog.Close>
 
-                <Button type="submit" size="sm" disabled={title.trim().length === 0}>
+                <Button
+                  type="submit"
+                  className="h-9 w-28"
+                  disabled={title.trim().length === 0}
+                >
+                  <FolderPlusIcon data-icon="inline-start" />
                   Create
                 </Button>
               </div>
@@ -231,10 +248,29 @@ function ThreadList({ data }: ThreadListProps) {
     await navigate({ to: "/" });
   }
 
+  function handleNewChatShortcut(event: KeyboardEvent<HTMLDivElement>): void {
+    if ((!event.ctrlKey && !event.metaKey) || event.altKey || event.shiftKey) return;
+
+    const shortcutNumber = Number(event.key);
+    if (!Number.isInteger(shortcutNumber) || shortcutNumber < 1 || shortcutNumber > 9) return;
+
+    if (shortcutNumber === 1) {
+      event.preventDefault();
+      void createNewChat(null);
+      return;
+    }
+
+    const group = data.groups[shortcutNumber - 2];
+    if (!group) return;
+
+    event.preventDefault();
+    void createNewChat(group._id);
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center gap-1.5 px-2 pb-1.5">
-        <InputGroup className="rounded-md border-transparent bg-transparent shadow-none has-[[data-slot=input-group-control]:focus-visible]:bg-muted">
+        <InputGroup className="h-10 rounded-md border-transparent bg-input/30 shadow-none">
           <InputGroupAddon>
             <SearchIcon />
           </InputGroupAddon>
@@ -242,7 +278,7 @@ function ThreadList({ data }: ThreadListProps) {
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search threads"
+            placeholder="Search"
             aria-label="Search threads in active group"
             className="font-mono text-sm placeholder:text-muted-foreground"
           />
@@ -250,7 +286,8 @@ function ThreadList({ data }: ThreadListProps) {
 
         <Button
           size="icon"
-          variant="ghost"
+          variant="outline"
+          className="size-10"
           aria-label="New chat"
           title="New chat"
           onClick={() => setNewChatOpen(true)}
@@ -261,7 +298,7 @@ function ThreadList({ data }: ThreadListProps) {
 
       <div className="flex items-center gap-1.5 px-2 pb-1">
         <Select value={activeGroupId ?? UNGROUPED_SELECT_VALUE} onValueChange={selectGroup}>
-          <SelectTrigger className="min-w-0 flex-1 rounded-md border-transparent px-2 font-mono text-sm hover:bg-muted">
+          <SelectTrigger className="min-w-0 flex-1 rounded-md border-transparent bg-input/30 px-2.5 font-mono text-sm hover:bg-input/50 data-[size=default]:h-10">
             <span className="flex min-w-0 flex-1 items-center gap-2">
               <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
               <span className="truncate">{activeGroup?.title ?? "Ungrouped"}</span>
@@ -303,35 +340,67 @@ function ThreadList({ data }: ThreadListProps) {
         description="Choose which group the new chat belongs to."
         className="h-[min(36rem,calc(100dvh-4rem))] rounded-lg sm:max-w-3xl"
       >
-        <Command>
+        <Command
+          className="[&_[data-slot=command-input-wrapper]]:p-2 [&_[data-slot=command-input]]:text-sm! [&_[data-slot=input-group]]:h-12! [&_[data-slot=command-input-wrapper]_svg]:size-5!"
+          onKeyDown={handleNewChatShortcut}
+        >
           <CommandInput placeholder="Choose a group..." />
           <CommandList className="max-h-none flex-1">
             <CommandEmpty>No groups found.</CommandEmpty>
-            <CommandGroup heading="Groups">
+            <CommandGroup heading="Groups" className="px-2 py-2">
               <CommandItem
                 value="Ungrouped"
+                className="min-h-16 gap-3 rounded-md! px-3 py-3 text-sm"
                 onSelect={() => {
                   void createNewChat(null);
                 }}
               >
                 <FolderIcon />
-                <span>Ungrouped</span>
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="truncate font-medium">Ungrouped</span>
+                  <span className="truncate text-xs text-muted-foreground">Create without a group</span>
+                </span>
+                <CommandShortcut>Ctrl+1</CommandShortcut>
               </CommandItem>
 
-              {data.groups.map((group) => (
+              {data.groups.map((group, index) => (
                 <CommandItem
                   key={group._id}
                   value={group.title}
+                  className="min-h-16 gap-3 rounded-md! px-3 py-3 text-sm"
                   onSelect={() => {
                     void createNewChat(group._id);
                   }}
                 >
                   <FolderIcon />
-                  <span>{group.title}</span>
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate font-medium">{group.title}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {data.groupedThreads[group._id]?.threads.length ?? 0} threads
+                    </span>
+                  </span>
+                  {index < 8 && <CommandShortcut>Ctrl+{index + 2}</CommandShortcut>}
                 </CommandItem>
               ))}
             </CommandGroup>
           </CommandList>
+
+          <Separator />
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <Kbd>↑</Kbd>
+              <Kbd>↓</Kbd>
+              Navigate
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Kbd>Enter</Kbd>
+              Select
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Kbd>Esc</Kbd>
+              Close
+            </span>
+          </div>
         </Command>
       </CommandDialog>
 
