@@ -1,6 +1,5 @@
-import { useLayoutEffect, useRef } from "react";
+import { useEffectEvent, useLayoutEffect, useRef } from "react";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from "uuid";
 
 import { ChatEditActionButtons } from "./action-buttons";
 import { ChatEditAttachmentsDisplay } from "./chat-edit-attachments-display";
@@ -14,6 +13,10 @@ import {
   updateStickyToBottomFromScroll,
 } from "@/lib/chat/scroll-stickiness";
 import { focusTextareaByIdAtEnd } from "@/lib/chat/focus-textarea";
+import {
+  getAttachmentRejectionMessage,
+  prepareAttachmentsForModel,
+} from "@/lib/chat/attachments";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
 const EDITOR_VIEWPORT_MARGIN_PX = 16;
@@ -57,6 +60,26 @@ export function ChatEditTextarea() {
   const editMessageId = editMessage?._id ?? null;
   const { isSaving, saveEdits } = useChatEditSave();
 
+  const handleAddAttachments = useEffectEvent(({ files }: { files: File[] }) => {
+    const currentEditMessage = useChatStore.getState().editMessage;
+    if (!currentEditMessage) return;
+
+    const { attachments, rejectedCount } = prepareAttachmentsForModel(
+      files,
+      currentEditMessage.model,
+    );
+
+    if (attachments.length > 0) {
+      chatStoreActions.addEditAttachments(attachments);
+    }
+
+    if (rejectedCount > 0) {
+      toast.error("File type not supported", {
+        description: getAttachmentRejectionMessage(currentEditMessage.model),
+      });
+    }
+  });
+
   useLayoutEffect(() => {
     if (!editMessageId) return;
 
@@ -92,28 +115,6 @@ export function ChatEditTextarea() {
   }, [editMessageId]);
 
   if (!editMessage) return null;
-
-  function handleAddAttachments({ files }: { files: File[] }) {
-    const acceptFiles = files.filter(
-      (file) => file.type.includes("image") || file.type.includes("pdf"),
-    );
-
-    if (acceptFiles.length > 0) {
-      const attachments = acceptFiles.map((file) => ({
-        id: uuidv4(),
-        file,
-        type: (file.type.includes("image") ? "image" : "pdf") as "image" | "pdf",
-      }));
-
-      chatStoreActions.addEditAttachments(attachments);
-    }
-
-    if (acceptFiles.length < files.length) {
-      toast.error("File type not supported", {
-        description: "Please upload an image or PDF file.",
-      });
-    }
-  }
 
   return (
     <div ref={editorRef} data-slot="chat-textarea" className="pointer-events-none">

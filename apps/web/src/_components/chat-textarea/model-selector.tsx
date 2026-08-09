@@ -30,6 +30,7 @@ import {
   type Provider,
 } from "@/lib/chat/models";
 import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
+import { chatStoreActions } from "@/lib/store/chat-store";
 import { cn, tryCatch } from "@/lib/utils";
 
 type ModelSelectorProps = {
@@ -296,8 +297,13 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   }, [allViewModels.length, favoriteVisibleModels.length, selectedSection]);
 
   function handleChange(model: string) {
-    if (onChange) onChange(model);
-    else setConfig({ model });
+    if (onChange) {
+      onChange(model);
+      return;
+    }
+
+    chatStoreActions.retainCompatibleAttachments(model);
+    setConfig({ model });
   }
 
   async function handleToggleFavorite(modelId: string) {
@@ -473,6 +479,8 @@ export function ChatModelSelector() {
   const setConfig = useConfigStore((state) => state.setConfig);
 
   function handleChange(model: string) {
+    chatStoreActions.retainCompatibleAttachments(model);
+
     if (isWelcomeRoute) {
       setConfig({ model, defaultModel: model });
     } else {

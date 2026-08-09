@@ -1,6 +1,5 @@
 import { useEffect, useEffectEvent, useRef } from "react";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from "uuid";
 
 import { Textarea } from "../ui/textarea";
 
@@ -10,7 +9,9 @@ import { ScrollButton } from "./scroll-group-button";
 import { ChatSendButton } from "./send-button";
 
 import { useGetSendDescription, useShouldSend } from "@/lib/chat/send-preference";
+import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
 import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message";
+import { useConfigStore } from "../provider/config-provider";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 
@@ -62,26 +63,19 @@ export function ChatTextarea() {
 
 function InputChatTextArea() {
   const input = useChatStore((state) => state.input);
+  const model = useConfigStore((state) => state.model);
   const { sendChatRequest } = useSendChatMessage();
 
   function handleAddAttachments({ files }: { files: File[] }) {
-    const acceptFiles = files.filter(
-      (file) => file.type.includes("image") || file.type.includes("pdf"),
-    );
+    const { attachments, rejectedCount } = prepareAttachmentsForModel(files, model);
 
-    if (acceptFiles.length > 0) {
-      const attachments = acceptFiles.map((file) => ({
-        id: uuidv4(),
-        file,
-        type: (file.type.includes("image") ? "image" : "pdf") as "image" | "pdf",
-      }));
-
+    if (attachments.length > 0) {
       chatStoreActions.addAttachments(attachments);
     }
 
-    if (acceptFiles.length < files.length) {
+    if (rejectedCount > 0) {
       toast.error("File type not supported", {
-        description: "Please upload an image or PDF file.",
+        description: getAttachmentRejectionMessage(model),
       });
     }
   }

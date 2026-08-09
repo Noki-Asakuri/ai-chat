@@ -7,7 +7,7 @@ import { useConfigStore, useConfigStoreState } from "../provider/config-provider
 import { Button, buttonVariants } from "../ui/button";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "../ui/popover";
 
-import { tryGetModelData } from "@/lib/chat/models";
+import { getDefaultReasoning, getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
 import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
 import type { ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -60,10 +60,7 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
   const debouncedSyncEffort = useDebounce(pendingSyncEffort, EFFORT_SYNC_DEBOUNCE_MS);
 
   const TriggerIcon = EFFORT_OPTIONS[props.value].icon;
-  const shouldHideSelector =
-    typeof modelData.capabilities.reasoning === "undefined" ||
-    modelData.capabilities.reasoning === "always" ||
-    modelData.capabilities.reasoning === false;
+  const validOptions = getReasoningOptions(modelData);
 
   const handleChange = useEffectEvent((effort: ReasoningEffort) => {
     if (props.onChange) {
@@ -82,20 +79,11 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
     });
   });
 
-  // If they don't have customReasoningLevel, we fallback to the only 3 levels.
-  const validOptions = Object.entries(EFFORT_OPTIONS).filter(([key]) =>
-    modelData.capabilities.customReasoningLevel
-      ? modelData.capabilities.customReasoningLevel?.includes(key as ReasoningEffort)
-      : ["high", "medium", "low"].includes(key),
-  );
-
   useEffect(() => {
-    const validKeys = validOptions.map(([key]) => key);
-
-    if (!validKeys.includes(props.value)) {
-      handleChange(validKeys[0] as ReasoningEffort);
+    if (validOptions.length > 0 && !validOptions.includes(props.value)) {
+      handleChange(getDefaultReasoning(modelData));
     }
-  }, [props.value, validOptions]);
+  }, [modelData, props.value, validOptions]);
 
   useEffect(() => {
     if (debouncedSyncEffort === null) return;
@@ -103,7 +91,7 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
     syncPendingEffort(debouncedSyncEffort);
   }, [debouncedSyncEffort]);
 
-  if (shouldHideSelector) return null;
+  if (validOptions.length === 0) return null;
 
   return (
     <Popover>
@@ -126,18 +114,21 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
         <PopoverArrow className="fill-card" />
 
         <div className="flex flex-col gap-1">
-          {validOptions.map(([key, { label, icon: Icon }]) => (
-            <Button
-              key={`effort-selector-${key}`}
-              variant="ghost"
-              size="default"
-              className="w-full cursor-pointer justify-start"
-              onClick={() => handleChange(key as ReasoningEffort)}
-            >
-              <Icon className="size-4" />
-              {label}
-            </Button>
-          ))}
+          {validOptions.map((key) => {
+            const { label, icon: Icon } = EFFORT_OPTIONS[key];
+            return (
+              <Button
+                key={`effort-selector-${key}`}
+                variant="ghost"
+                size="default"
+                className="w-full cursor-pointer justify-start"
+                onClick={() => handleChange(key)}
+              >
+                <Icon className="size-4" />
+                {label}
+              </Button>
+            );
+          })}
         </div>
       </PopoverContent>
     </Popover>

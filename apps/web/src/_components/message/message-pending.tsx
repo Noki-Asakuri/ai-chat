@@ -15,7 +15,9 @@ export function MessagePending({ metadata }: MessagePendingProps) {
 
   const effort = metadata?.modelParams?.effort;
   const showEffort =
-    modelData?.capabilities.reasoning === true && effort !== undefined && effort !== "medium";
+    modelData?.capabilities.reasoning?.type === "selectable" &&
+    effort !== undefined &&
+    effort !== "medium";
 
   const modelName = modelData?.display.name ?? "Model";
   const provider: Provider = modelData?.provider ?? "openai";

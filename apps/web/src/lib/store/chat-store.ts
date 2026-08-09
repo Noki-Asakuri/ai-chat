@@ -3,6 +3,7 @@ import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { tryGetModelData } from "../chat/models";
 import type { ReasoningEffort, RemoveAllExceptFunctions, UserAttachment } from "../types";
 
 type EditMessage = {
@@ -38,6 +39,8 @@ export type ChatStore = {
   addAttachments: (attachments: UserAttachment[]) => void;
   removeAttachment: (id: string) => void;
   clearAttachments: () => void;
+  retainCompatibleAttachments: (modelId: string) => void;
+  retainCompatibleEditAttachments: (modelId: string) => void;
 
   resetInput: () => void;
 
@@ -110,6 +113,41 @@ export const useChatStore = create<ChatStore>()(
       removeAttachment: (id) =>
         set((state) => ({ attachments: state.attachments.filter((a) => a.id !== id) })),
       clearAttachments: () => set({ attachments: [] }),
+      retainCompatibleAttachments: (modelId) =>
+        set((state) => {
+          const model = tryGetModelData(modelId);
+          return {
+            attachments: model
+              ? state.attachments.filter((attachment) =>
+                  model.modalities.input.includes(attachment.type),
+                )
+              : [],
+          };
+        }),
+      retainCompatibleEditAttachments: (modelId) =>
+        set((state) => {
+          const editMessage = state.editMessage;
+          if (!editMessage) return state;
+
+          const model = tryGetModelData(modelId);
+          const attachments = model
+            ? editMessage.attachments.filter((attachment) =>
+                model.modalities.input.includes(attachment.type),
+              )
+            : [];
+          const keptAttachmentIds = model
+            ? editMessage.keptAttachmentIds.filter((attachmentId) => {
+                const attachment = editMessage.currentAttachments.find(
+                  (candidate) => candidate._id === attachmentId,
+                );
+                return attachment ? model.modalities.input.includes(attachment.type) : false;
+              })
+            : [];
+
+          return {
+            editMessage: { ...editMessage, attachments, keptAttachmentIds },
+          };
+        }),
 
       resetInput: () => set({ input: "", attachments: [], selectedBlockquoteContext: null }),
 

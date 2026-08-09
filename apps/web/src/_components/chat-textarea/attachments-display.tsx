@@ -21,10 +21,13 @@ export function BaseChatAttachmentsButton({
   handleAddAttachments,
   ...props
 }: BaseChatAttachmentsButtonProps) {
-  const hasImageVision = tryGetModelData(model)?.capabilities.vision;
+  const modelData = tryGetModelData(model);
+  const acceptedAttachmentTypes = modelData?.modalities?.input.filter(
+    (modality) => modality === "image" || modality === "pdf",
+  );
   const inputId = useId();
 
-  if (!hasImageVision) return null;
+  if (!acceptedAttachmentTypes || acceptedAttachmentTypes.length === 0) return null;
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -47,10 +50,7 @@ export function BaseChatAttachmentsButton({
         title="Upload attachment"
         className="size-9 border border-border p-0! px-2 py-1.5 text-xs"
       >
-        <label
-          htmlFor={inputId}
-          className="flex size-full cursor-pointer items-center justify-center"
-        >
+        <label htmlFor={inputId} className="flex size-full cursor-pointer items-center justify-center">
           <PaperclipIcon />
           <span className="sr-only">Upload attachment</span>
         </label>
@@ -59,7 +59,9 @@ export function BaseChatAttachmentsButton({
       <input
         type="file"
         id={inputId}
-        accept="image/*,application/pdf"
+        accept={acceptedAttachmentTypes
+          .map((modality) => (modality === "image" ? "image/*" : "application/pdf"))
+          .join(",")}
         onChange={handleChange}
         className="hidden"
       />
@@ -70,12 +72,7 @@ export function BaseChatAttachmentsButton({
 export function ChatAttachmentsButton() {
   const model = useConfigStore((state) => state.model);
 
-  return (
-    <BaseChatAttachmentsButton
-      model={model}
-      handleAddAttachments={chatStoreActions.addAttachments}
-    />
-  );
+  return <BaseChatAttachmentsButton model={model} handleAddAttachments={chatStoreActions.addAttachments} />;
 }
 
 type Preview = { id: string; type: "image" | "pdf"; file: File; url: string };

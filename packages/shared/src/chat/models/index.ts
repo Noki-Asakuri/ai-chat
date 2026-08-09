@@ -7,11 +7,26 @@ import { openai } from "./services/openai";
 import { zai } from "./services/zai";
 
 type Capability = {
-  webSearch?: boolean;
-  generateImage?: boolean;
-  vision?: boolean;
-  reasoning?: boolean | "always";
-  customReasoningLevel?: ReasoningEffort[];
+  toolCalling?: boolean;
+  imageGeneration?: boolean;
+  reasoning?: ReasoningPolicy;
+};
+
+export type ModelInputModality = "image" | "pdf" | "text";
+export type ModelOutputModality = "image" | "text";
+
+export type ModelModalities = {
+  input: ReadonlyArray<ModelInputModality>;
+  output: ReadonlyArray<ModelOutputModality>;
+};
+
+export type ReasoningPolicy =
+  | { type: "fixed"; level: ReasoningEffort }
+  | { type: "selectable"; defaultLevel: ReasoningEffort; levels: ReadonlyArray<ReasoningEffort> };
+
+export type ModelRuntime = {
+  modelId?: string;
+  api?: "chat" | "languageModel";
 };
 
 export type Provider = "google" | "openai" | "deepseek" | "kimi" | "zai";
@@ -27,7 +42,9 @@ export type ModelData = {
   id: ModelIdKey;
   altModelIds?: string[];
   provider: Provider;
+  modalities: ModelModalities;
   capabilities: Capability;
+  runtime?: ModelRuntime;
   deprecation?: ModelDeprecation;
 };
 
@@ -87,6 +104,17 @@ function buildModelIndexes() {
       throw new Error(`Invalid canonical model id for ${requestedIdRaw}: ${data.id}`);
     }
 
+    const reasoning = data.capabilities.reasoning;
+    if (reasoning?.type === "selectable") {
+      if (reasoning.levels.length === 0) {
+        throw new Error(`Selectable reasoning requires levels for ${requestedIdRaw}`);
+      }
+
+      if (!reasoning.levels.includes(reasoning.defaultLevel)) {
+        throw new Error(`Reasoning default must be selectable for ${requestedIdRaw}`);
+      }
+    }
+
     const requestedId = requestedIdRaw;
 
     modelIds.push(requestedId);
@@ -107,9 +135,7 @@ function buildModelIndexes() {
         const existingData = byRequestedId.get(existing);
 
         if (!existingData || existingData.id !== data.id) {
-          throw new Error(
-            `Duplicate alias detected: ${alias} (used by ${existing} and ${requestedId})`,
-          );
+          throw new Error(`Duplicate alias detected: ${alias} (used by ${existing} and ${requestedId})`);
         }
 
         continue;
@@ -188,14 +214,42 @@ export function tryGetModelData(modelId: string | null | undefined): ModelData |
   return resolved ? resolved.data : null;
 }
 
-export function tryGetModelDeprecation(
-  modelId: string | null | undefined,
-): ModelDeprecation | null {
+export function tryGetModelDeprecation(modelId: string | null | undefined): ModelDeprecation | null {
   return tryGetModelData(modelId)?.deprecation ?? null;
 }
 
 export function isDeprecatedModel(modelId: string | null | undefined): boolean {
   return tryGetModelDeprecation(modelId) !== null;
+}
+
+export function getReasoningOptions(model: ModelData): ReadonlyArray<ReasoningEffort> {
+  if (model.capabilities.reasoning?.type !== "selectable") return [];
+
+  return model.capabilities.reasoning.levels;
+}
+
+export function getDefaultReasoning(model: ModelData): ReasoningEffort {
+  const policy = model.capabilities.reasoning;
+  if (policy?.type === "selectable") return policy.defaultLevel;
+  if (policy?.type === "fixed") return policy.level;
+
+  return "none";
+}
+
+export function resolveReasoning(model: ModelData, requestedLevel: ReasoningEffort): ReasoningEffort {
+  const policy = model.capabilities.reasoning;
+  if (!policy) return "none";
+  if (policy.type === "fixed") return policy.level;
+  if (policy.levels.includes(requestedLevel)) return requestedLevel;
+
+  return policy.defaultLevel;
+}
+
+export function getFileInputModality(mediaType: string): Exclude<ModelInputModality, "text"> | null {
+  if (mediaType === "image" || mediaType.startsWith("image/")) return "image";
+  if (mediaType === "application/pdf") return "pdf";
+
+  return null;
 }
 
 export function prettifyProviderName(provider: Provider | (string & {})) {

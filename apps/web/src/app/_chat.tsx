@@ -86,22 +86,7 @@ function RouteComponent() {
     >
       <ThreadSidebar />
 
-      <GlobalDropzone data-slot="chat" className="relative inset-0 h-dvh w-screen overflow-hidden border-x">
-        <div className="absolute top-0 z-10 flex h-10 w-full max-w-full items-center gap-2 border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[performance-mode=true]/sidebar-provider:bg-sidebar">
-          <SidebarTrigger />
-
-          <Link to="/" className="rounded-md p-1.5 text-center transition-colors hover:bg-primary/20">
-            <PlusIcon className="size-4" />
-            <span className="sr-only">Create new thread</span>
-          </Link>
-
-          <ThreadTitle />
-        </div>
-
-        <ChatLayoutConfig />
-      </GlobalDropzone>
-
-      <RegisterEventHandlers />
+      <ChatLayoutConfig />
     </SidebarProvider>
   );
 }
@@ -151,15 +136,29 @@ function ChatLayoutConfig() {
         modelParams: userPreferences.models.selectedModelParams,
       }}
     >
-      <div className="min-h-0 min-w-0 flex-1 bg-background">
-        <Suspense>
-          <Outlet />
-        </Suspense>
-      </div>
+      <GlobalDropzone data-slot="chat" className="relative inset-0 h-dvh w-screen overflow-hidden border-x">
+        <div className="absolute top-0 z-10 flex h-10 w-full max-w-full items-center gap-2 border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[performance-mode=true]/sidebar-provider:bg-sidebar">
+          <SidebarTrigger />
 
-      <ChatTextarea key="main-chat-textarea" />
+          <Link to="/" className="rounded-md p-1.5 text-center transition-colors hover:bg-primary/20">
+            <PlusIcon className="size-4" />
+            <span className="sr-only">Create new thread</span>
+          </Link>
 
-      <ThreadProfileSidebar />
+          <ThreadTitle />
+        </div>
+
+        <div className="min-h-0 min-w-0 flex-1 bg-background">
+          <Suspense>
+            <Outlet />
+          </Suspense>
+        </div>
+
+        <ChatTextarea key="main-chat-textarea" />
+        <ThreadProfileSidebar />
+      </GlobalDropzone>
+
+      <RegisterEventHandlers />
     </ConfigStoreProvider>
   );
 }

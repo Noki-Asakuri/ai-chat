@@ -5,7 +5,7 @@ import { generateText, type ModelMessage } from "ai";
 import { ConvexHttpClient } from "convex/browser";
 import dedent from "dedent";
 
-import { registry } from "../registry";
+import { getLanguageModel } from "../registry";
 import { logger } from "@/libs/axiom";
 
 export async function generateNewThreadTitleAndSave(
@@ -18,7 +18,7 @@ export async function generateNewThreadTitleAndSave(
   const content = extractUserMessage(options.modelMessages[0]);
 
   const { text } = await generateText({
-    model: registry("openai/gpt-5.4-mini"),
+    model: getLanguageModel("openai/gpt-5.4-mini"),
     providerOptions: { openai: { reasoningEffort: "low" } },
 
     instructions:

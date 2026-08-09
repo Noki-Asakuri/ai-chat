@@ -7,9 +7,9 @@ import { convexQuery } from "@convex-dev/react-query";
 import { MessageSquarePlusIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from "uuid";
 
 import { ButtonWithTip } from "../ui/button";
+import { useConfigStore } from "../provider/config-provider";
 
 import {
   computeIsAtBottom,
@@ -18,13 +18,16 @@ import {
   scrollToBottomIfStickyRaf,
   setStickyToBottom,
 } from "@/lib/chat/scroll-stickiness";
+import {
+  getAttachmentRejectionMessage,
+  prepareAttachmentsForModel,
+} from "@/lib/chat/attachments";
 import { focusTextareaByIdAtEnd } from "@/lib/chat/focus-textarea";
 import { useAbortChatStream } from "@/lib/chat/server-function/abort-chat-stream";
 import { useWindowEvent } from "@/lib/hooks/use-window-event";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import { threadStoreActions } from "@/lib/store/thread-store";
-import type { UserAttachment } from "@/lib/types";
 
 const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
@@ -145,6 +148,7 @@ export function RegisterEventHandlers() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { abortChatStream } = useAbortChatStream();
+  const model = useConfigStore((state) => state.model);
   const [selectionAction, setSelectionAction] = useState<SelectionActionState | null>(null);
 
   function updateSelectionAction() {
@@ -185,22 +189,18 @@ export function RegisterEventHandlers() {
       // Default behavior: add files to the global chat composer
       const files = Array.from(event.clipboardData.files ?? []);
 
-      const acceptFiles = files.filter((file) => file.type.includes("image") || file.type.includes("pdf"));
+      const { attachments, rejectedCount } = prepareAttachmentsForModel(files, model);
 
-      if (acceptFiles.length > 0) {
+      if (attachments.length > 0) {
         event.preventDefault();
         event.stopPropagation();
-
-        const attachments = acceptFiles.map((file): UserAttachment => {
-          return { id: uuidv4(), file, type: file.type.includes("image") ? "image" : "pdf" };
-        });
 
         chatStoreActions.addAttachments(attachments);
       }
 
-      if (acceptFiles.length < files.length) {
+      if (rejectedCount > 0) {
         toast.error("File type not supported", {
-          description: "Please upload an image or PDF file.",
+          description: getAttachmentRejectionMessage(model),
         });
       }
 

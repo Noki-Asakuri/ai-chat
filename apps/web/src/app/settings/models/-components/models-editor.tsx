@@ -3,8 +3,9 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDownIcon,
   BrainIcon,
-  EyeIcon,
-  GlobeIcon,
+  FileTextIcon,
+  ImageIcon,
+  WrenchIcon,
   ImagePlusIcon,
   LoaderCircleIcon,
   StarIcon,
@@ -62,7 +63,13 @@ type ModelsCustomization = {
 
 type PersistableModelSet = "hidden" | "favorite";
 
-type ModelCapabilityKey = "reasoning" | "webSearch" | "vision" | "generateImage";
+type ModelCapabilityKey =
+  | "reasoning"
+  | "toolCalling"
+  | "imageInput"
+  | "pdfInput"
+  | "imageOutput"
+  | "imageGeneration";
 
 const PROVIDER_ORDER_INDEX: Record<Provider, number> = {
   google: 0,
@@ -90,9 +97,11 @@ const CAPABILITY_FILTER_OPTIONS: Array<{
   Icon: typeof BrainIcon;
 }> = [
   { value: "reasoning", label: "Reasoning", Icon: BrainIcon },
-  { value: "webSearch", label: "Web search", Icon: GlobeIcon },
-  { value: "vision", label: "Vision", Icon: EyeIcon },
-  { value: "generateImage", label: "Image generation", Icon: ImagePlusIcon },
+  { value: "toolCalling", label: "Tools", Icon: WrenchIcon },
+  { value: "imageInput", label: "Image input", Icon: ImageIcon },
+  { value: "pdfInput", label: "PDF input", Icon: FileTextIcon },
+  { value: "imageOutput", label: "Image output", Icon: ImagePlusIcon },
+  { value: "imageGeneration", label: "Image generation tool", Icon: ImagePlusIcon },
 ];
 
 const SELECTABLE_MODEL_ID_SET: ReadonlySet<string> = new Set<string>(SelectableModelIds);
@@ -124,20 +133,28 @@ const MODEL_ENTRIES: Array<ModelEntry> = AllModelIds.slice()
 function getCapabilitySet(data: ModelData): ReadonlySet<ModelCapabilityKey> {
   const capabilitySet = new Set<ModelCapabilityKey>();
 
-  if (data.capabilities.reasoning === true || data.capabilities.reasoning === "always") {
+  if (data.capabilities.reasoning) {
     capabilitySet.add("reasoning");
   }
 
-  if (data.capabilities.webSearch) {
-    capabilitySet.add("webSearch");
+  if (data.capabilities.toolCalling) {
+    capabilitySet.add("toolCalling");
   }
 
-  if (data.capabilities.vision) {
-    capabilitySet.add("vision");
+  if (data.modalities.input.includes("image")) {
+    capabilitySet.add("imageInput");
   }
 
-  if (data.capabilities.generateImage) {
-    capabilitySet.add("generateImage");
+  if (data.modalities.input.includes("pdf")) {
+    capabilitySet.add("pdfInput");
+  }
+
+  if (data.modalities.output.includes("image")) {
+    capabilitySet.add("imageOutput");
+  }
+
+  if (data.capabilities.imageGeneration) {
+    capabilitySet.add("imageGeneration");
   }
 
   return capabilitySet;
@@ -1037,28 +1054,40 @@ const capabilityMetadata: Record<
     Icon: BrainIcon,
     className: "border-indigo-500/30 bg-indigo-500/10 text-indigo-300",
   },
-  webSearch: {
-    label: "Web search",
-    Icon: GlobeIcon,
+  toolCalling: {
+    label: "Tools",
+    Icon: WrenchIcon,
     className: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300",
   },
-  vision: {
-    label: "Vision",
-    Icon: EyeIcon,
+  imageInput: {
+    label: "Image input",
+    Icon: ImageIcon,
     className: "border-teal-500/30 bg-teal-500/10 text-teal-300",
   },
-  generateImage: {
-    label: "Image generation",
+  pdfInput: {
+    label: "PDF input",
+    Icon: FileTextIcon,
+    className: "border-sky-500/30 bg-sky-500/10 text-sky-300",
+  },
+  imageOutput: {
+    label: "Image output",
     Icon: ImagePlusIcon,
     className: "border-orange-500/30 bg-orange-500/10 text-orange-300",
+  },
+  imageGeneration: {
+    label: "Image generation tool",
+    Icon: ImagePlusIcon,
+    className: "border-amber-500/30 bg-amber-500/10 text-amber-300",
   },
 };
 
 const capabilityOrder: Array<ModelCapabilityKey> = [
   "reasoning",
-  "webSearch",
-  "vision",
-  "generateImage",
+  "toolCalling",
+  "imageInput",
+  "pdfInput",
+  "imageOutput",
+  "imageGeneration",
 ];
 
 const ModelRow = memo(function ModelRow(props: ModelRowProps) {

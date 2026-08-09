@@ -35,8 +35,7 @@ export function MessageMetadata({ metadata, rightAccessory }: MessageMetadataPro
   const hasFullMetadata = metadata.usages.inputTokens > 0;
 
   const showEffort =
-    typeof modelData.capabilities.reasoning === "boolean" &&
-    modelData.capabilities.reasoning === true &&
+    modelData.capabilities.reasoning?.type === "selectable" &&
     metadata.modelParams.effort &&
     metadata.modelParams.effort !== "medium";
 

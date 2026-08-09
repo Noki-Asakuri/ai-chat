@@ -1,10 +1,10 @@
+import { metadataSchema, type UIChatMessage } from "@ai-chat/shared/chat/metadata";
+import type { ChatRequestBody } from "@ai-chat/shared/chat/request";
+
 import type { ModelMessage } from "@ai-sdk/provider-utils";
 
 import { convertToModelMessages, validateUIMessages } from "ai";
 import { Result, type Result as BetterResult } from "better-result";
-
-import { metadataSchema, type UIChatMessage } from "@ai-chat/shared/chat/metadata";
-import type { ChatRequestBody } from "@ai-chat/shared/chat/request";
 
 import { MessagesValidationError, ModelMessagesConversionError } from "./errors";
 import { getErrorMessage } from "./utils";

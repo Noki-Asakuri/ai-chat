@@ -1,6 +1,6 @@
 import { isStepCount, ToolLoopAgent, type ToolSet } from "ai";
 
-import { registry } from "@/libs/ai/registry";
+import { getLanguageModel } from "@/libs/ai/registry";
 import type { ValidatedChatRequestBody } from "@/libs/ai/validation";
 
 import { handleImagesCaching } from "@/libs/redis/file-caching";
@@ -10,17 +10,19 @@ type BuildChatAgentOptions = {
   tools: ValidatedChatRequestBody["tools"];
   modelId: ValidatedChatRequestBody["model"]["id"];
   providerOptions: ValidatedChatRequestBody["providerOptions"];
+  reasoning: ValidatedChatRequestBody["sdkReasoning"];
 };
 
 export function buildChatAgent(options: BuildChatAgentOptions): ToolLoopAgent<never, ToolSet> {
-  const { modelId, systemInstruction, providerOptions, tools } = options;
+  const { modelId, reasoning, systemInstruction, providerOptions, tools } = options;
 
   return new ToolLoopAgent({
-    model: registry(modelId),
+    model: getLanguageModel(modelId),
     instructions: systemInstruction,
     tools,
     maxRetries: 5,
     providerOptions,
+    reasoning,
     stopWhen: isStepCount(20),
     experimental_download: handleImagesCaching,
   });

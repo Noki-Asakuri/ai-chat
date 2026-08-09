@@ -10,6 +10,7 @@ import { useConfigStore, useConfigStoreState } from "@/components/provider/confi
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
+import { chatStoreActions } from "@/lib/store/chat-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
 
@@ -212,6 +213,9 @@ export function useRetryChatMessage() {
           action: {
             label: `Switch to ${deprecatedModelError.replacementModelName}`,
             onClick: () => {
+              chatStoreActions.retainCompatibleAttachments(
+                deprecatedModelError.replacementModelId,
+              );
               configStore.setConfig({
                 model: deprecatedModelError.replacementModelId,
                 defaultModel: deprecatedModelError.replacementModelId,

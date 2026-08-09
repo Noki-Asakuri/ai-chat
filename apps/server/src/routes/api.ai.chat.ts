@@ -159,6 +159,7 @@ chatRouter.post("/chat", async function (ctx) {
       tools: validatedBody.tools,
       modelId: validatedBody.model.id,
       providerOptions: validatedBody.providerOptions,
+      reasoning: validatedBody.sdkReasoning,
     });
 
     const streamHandleResult = await redisStreamClient.createStreamForUser({ requestId, userId });

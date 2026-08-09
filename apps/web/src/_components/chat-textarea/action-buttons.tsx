@@ -33,7 +33,10 @@ export function ChatEditActionButtons() {
     <div className="flex items-center justify-center gap-2">
       <ModelSelector
         value={editMessage.model}
-        onChange={(model) => chatStoreActions.updateEditMessage({ model })}
+        onChange={(model) => {
+          chatStoreActions.retainCompatibleEditAttachments(model);
+          chatStoreActions.updateEditMessage({ model });
+        }}
         triggerId="button-edit-model-selector-trigger"
       />
 
@@ -76,7 +79,7 @@ export function BaseWebSearchButton({
   webSearch: boolean;
   setWebSearch: (webSearch: boolean) => void;
 }) {
-  const canDoWebSearch = tryGetModelData(model)?.capabilities.webSearch ?? false;
+  const canDoWebSearch = tryGetModelData(model)?.capabilities.toolCalling ?? false;
 
   return (
     <ButtonWithTip

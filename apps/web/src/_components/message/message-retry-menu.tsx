@@ -13,6 +13,7 @@ import { PROVIDER_ORDER, createEmptyProviderModels } from "../chat-textarea/mode
 
 import {
   SelectableModelIds,
+  getReasoningOptions,
   prettifyProviderName,
   tryGetModelData,
   type ModelData,
@@ -51,7 +52,6 @@ type EffortOption = {
   icon: (typeof EFFORT_OPTIONS)[ReasoningEffort]["icon"];
 };
 
-const DEFAULT_REASONING_EFFORTS = new Set<ReasoningEffort>(["low", "medium", "high"]);
 const EFFORT_ORDER: Array<ReasoningEffort> = ["none", "minimal", "low", "medium", "high", "xhigh"];
 
 function sortEntriesByLabel(a: RetryModelEntry, b: RetryModelEntry): number {
@@ -95,19 +95,14 @@ function appendProviderGroups(
 }
 
 function getValidReasoningEffortOptions(model: ModelData): Array<EffortOption> {
-  const allowedEfforts = model.capabilities.customReasoningLevel;
-  const allowedEffortSet = allowedEfforts ? new Set<ReasoningEffort>(allowedEfforts) : null;
+  const allowedEffortSet = new Set<ReasoningEffort>(getReasoningOptions(model));
   const options: Array<EffortOption> = [];
 
   for (const effort of EFFORT_ORDER) {
     const effortOption = EFFORT_OPTIONS[effort];
     if (!effortOption) continue;
 
-    if (allowedEffortSet) {
-      if (!allowedEffortSet.has(effort)) continue;
-    } else if (!DEFAULT_REASONING_EFFORTS.has(effort)) {
-      continue;
-    }
+    if (!allowedEffortSet.has(effort)) continue;
 
     options.push({ effort, label: effortOption.label, icon: effortOption.icon });
   }
@@ -513,7 +508,7 @@ function RetryModelItem({
     [model.data],
   );
 
-  if (model.data.capabilities.reasoning === true && effortOptions.length > 0) {
+  if (effortOptions.length > 0) {
     return (
       <Menu.SubmenuRoot>
         <Menu.SubmenuTrigger

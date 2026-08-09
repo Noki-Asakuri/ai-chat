@@ -6,8 +6,9 @@ export const deepseek: Record<ModelIdKey, ModelData> = {
     id: "deepseek/deepseek-v4-flash",
     altModelIds: ["deepseek/deepseek-chat"],
     provider: "deepseek",
+    modalities: { input: ["text"], output: ["text"] },
     capabilities: {
-      webSearch: true,
+      toolCalling: true,
     },
   },
   "deepseek/deepseek-v4-pro": {
@@ -15,10 +16,11 @@ export const deepseek: Record<ModelIdKey, ModelData> = {
     id: "deepseek/deepseek-v4-pro",
     altModelIds: ["deepseek/deepseek-reasoner"],
     provider: "deepseek",
+    runtime: { modelId: "deepseek-v4-pro" },
+    modalities: { input: ["text"], output: ["text"] },
     capabilities: {
-      reasoning: true,
-      webSearch: true,
-      customReasoningLevel: ["none", "low", "medium", "high", "xhigh"],
+      reasoning: { type: "selectable", defaultLevel: "medium", levels: ["none", "low", "medium", "high", "xhigh"] },
+      toolCalling: true,
     },
   },
 };

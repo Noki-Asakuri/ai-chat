@@ -1,10 +1,6 @@
 import { Result, type Result as BetterResult } from "better-result";
 
-import {
-  getModelData,
-  tryResolveModel,
-  type ResolvedModel,
-} from "@ai-chat/shared/chat/models";
+import { getModelData, tryResolveModel, type ResolvedModel } from "@ai-chat/shared/chat/models";
 
 import { DeprecatedModelError, MissingModelError, UnknownModelError } from "./errors";
 

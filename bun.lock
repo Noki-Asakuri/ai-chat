@@ -26,7 +26,6 @@
         "@ai-chat/backend": "workspace:*",
         "@ai-chat/shared": "workspace:*",
         "@ai-sdk/deepseek": "catalog:shared",
-        "@ai-sdk/devtools": "catalog:shared",
         "@ai-sdk/google": "catalog:shared",
         "@ai-sdk/moonshotai": "catalog:shared",
         "@ai-sdk/openai": "catalog:shared",
@@ -200,7 +199,6 @@
     },
     "shared": {
       "@ai-sdk/deepseek": "^3.0.24",
-      "@ai-sdk/devtools": "^1.0.11",
       "@ai-sdk/google": "^4.0.34",
       "@ai-sdk/moonshotai": "^3.0.28",
       "@ai-sdk/openai": "^4.0.30",
@@ -237,8 +235,6 @@
     "@ai-chat/web": ["@ai-chat/web@workspace:apps/web"],
 
     "@ai-sdk/deepseek": ["@ai-sdk/deepseek@3.0.24", "", { "dependencies": { "@ai-sdk/provider": "4.0.6", "@ai-sdk/provider-utils": "5.0.23" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-jEQb84nzvK79dRbZT6+7KL3xgyXmAUAL7LaSlbHQEvljNBK/ony2oyWporTx5vdFAnm/Or74t9LtYMK2sqy4oA=="],
-
-    "@ai-sdk/devtools": ["@ai-sdk/devtools@1.0.11", "", { "dependencies": { "@ai-sdk/provider": "4.0.6", "@hono/node-server": "^1.19.13", "hono": "^4.12.25" }, "bin": { "devtools": "bin/cli.js" } }, "sha512-2oYFPRo2w6KRRtkeCD4befBtaSIiYhcF43DAp881yt0l5fP6kxSw3I0YFhrk/PuMXBA7om+4NwiuFHZYuiAGiw=="],
 
     "@ai-sdk/gateway": ["@ai-sdk/gateway@4.0.41", "", { "dependencies": { "@ai-sdk/provider": "4.0.5", "@ai-sdk/provider-utils": "5.0.21", "@vercel/oidc": "3.2.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-DPkDmmA336kqmIp62on550/6Q6JHvldsnvN1SmkwU8QGrVt1PzFxqyKUn0C5EGGmSBpvF1ohZNtvWNl8gEVugA=="],
 

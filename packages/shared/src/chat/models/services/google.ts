@@ -6,9 +6,9 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-2.5-flash-lite",
     altModelIds: ["google/gemini-2.5-flash-lite-preview-06-17"],
     provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
     capabilities: {
-      vision: true,
-      webSearch: true,
+      toolCalling: true,
     },
   },
   "google/gemini-2.5-flash-lite-thinking": {
@@ -16,10 +16,11 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-2.5-flash-lite",
     altModelIds: ["google/gemini-2.5-flash-lite-preview-06-17"],
     provider: "google",
+    runtime: { modelId: "gemini-2.5-flash-lite" },
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
     capabilities: {
-      vision: true,
-      webSearch: true,
-      reasoning: true,
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
     },
   },
   "google/gemini-2.5-flash": {
@@ -27,9 +28,9 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-2.5-flash",
     altModelIds: ["google/gemini-2.5-flash-preview-05-20"],
     provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
     capabilities: {
-      vision: true,
-      webSearch: true,
+      toolCalling: true,
     },
   },
   "google/gemini-2.5-flash-thinking": {
@@ -37,10 +38,11 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-2.5-flash",
     altModelIds: ["google/gemini-2.5-flash-preview-05-20"],
     provider: "google",
+    runtime: { modelId: "gemini-2.5-flash" },
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
     capabilities: {
-      vision: true,
-      webSearch: true,
-      reasoning: true,
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
     },
   },
   "google/gemini-2.5-flash-image": {
@@ -48,9 +50,8 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-2.5-flash-image",
     altModelIds: ["google/gemini-2.5-flash-image-preview"],
     provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["image", "text"] },
     capabilities: {
-      vision: true,
-      generateImage: true,
     },
   },
   "google/gemini-2.5-pro-thinking": {
@@ -62,10 +63,11 @@ export const google: Record<ModelIdKey, ModelData> = {
       "google/gemini-2.5-pro",
     ],
     provider: "google",
+    runtime: { modelId: "gemini-2.5-pro" },
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
     capabilities: {
-      vision: true,
-      webSearch: true,
-      reasoning: true,
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
     },
   },
   "google/gemini-3-flash": {
@@ -73,9 +75,10 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-3-flash",
     altModelIds: ["google/gemini-3-flash-preview"],
     provider: "google",
+    runtime: { modelId: "gemini-3-flash-preview" },
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
     capabilities: {
-      vision: true,
-      webSearch: true,
+      toolCalling: true,
     },
   },
   "google/gemini-3-flash-thinking": {
@@ -83,10 +86,11 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-3-flash",
     altModelIds: ["google/gemini-3-flash-preview"],
     provider: "google",
+    runtime: { modelId: "gemini-3-flash-preview" },
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
     capabilities: {
-      vision: true,
-      webSearch: true,
-      reasoning: true,
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
     },
   },
   "google/gemini-3-pro": {
@@ -94,11 +98,11 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-3-pro",
     altModelIds: ["google/gemini-3-pro-preview"],
     provider: "google",
+    runtime: { modelId: "gemini-3-pro-preview" },
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
     capabilities: {
-      vision: true,
-      webSearch: true,
-      reasoning: true,
-      customReasoningLevel: ["low", "high"],
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "low", levels: ["low", "high"] },
     },
   },
   "google/gemini-3.1-pro": {
@@ -106,11 +110,11 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-3.1-pro",
     altModelIds: ["google/gemini-3.1-pro-preview"],
     provider: "google",
+    runtime: { modelId: "gemini-3.1-pro-preview" },
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
     capabilities: {
-      vision: true,
-      webSearch: true,
-      reasoning: true,
-      customReasoningLevel: ["low", "medium", "high"],
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
     },
   },
   "google/gemini-3.1-flash-image": {
@@ -118,11 +122,11 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-3.1-flash-image",
     altModelIds: ["google/gemini-3.1-flash-image-preview"],
     provider: "google",
+    runtime: { modelId: "gemini-3.1-flash-image-preview" },
+    modalities: { input: ["image", "pdf", "text"], output: ["image", "text"] },
     capabilities: {
-      vision: true,
-      webSearch: true,
-      reasoning: true,
-      generateImage: true,
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "minimal", levels: ["minimal", "high"] },
     },
   },
   "google/gemini-3-pro-image": {
@@ -130,11 +134,11 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-3-pro-image",
     altModelIds: ["google/gemini-3-pro-image-preview"],
     provider: "google",
+    runtime: { modelId: "gemini-3-pro-image-preview" },
+    modalities: { input: ["image", "pdf", "text"], output: ["image", "text"] },
     capabilities: {
-      vision: true,
-      webSearch: true,
-      reasoning: true,
-      generateImage: true,
+      toolCalling: true,
+      reasoning: { type: "fixed", level: "high" },
     },
   },
 };

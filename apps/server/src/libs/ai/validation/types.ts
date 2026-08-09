@@ -1,22 +1,25 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
-import type { UIChatMessage } from "@ai-chat/shared/chat/metadata";
+import type { ReasoningEffort, UIChatMessage } from "@ai-chat/shared/chat/metadata";
 import type { ModelIdKey } from "@ai-chat/shared/chat/models";
 
 import type { DeepSeekLanguageModelOptions } from "@ai-sdk/deepseek";
 import type { GoogleLanguageModelOptions } from "@ai-sdk/google";
-import type { MoonshotAIProviderOptions } from "@ai-sdk/moonshotai";
+import type { MoonshotAILanguageModelOptions } from "@ai-sdk/moonshotai";
 import type { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
-import type { ModelMessage } from "@ai-sdk/provider-utils";
-import type { ToolSet } from "ai";
+import type { OpenAICompatibleLanguageModelChatOptions } from "@ai-sdk/openai-compatible";
+import type { ModelMessage, ProviderOptions } from "@ai-sdk/provider-utils";
+import type { ToolLoopAgentSettings, ToolSet } from "ai";
 
 import type { ChatModelParams } from "../types";
 
-export type ChatProviderOptions = {
+export type ChatProviderOptions = ProviderOptions & {
   openai: OpenAIResponsesProviderOptions;
   deepseek: DeepSeekLanguageModelOptions;
   google: GoogleLanguageModelOptions;
-  kimi: MoonshotAIProviderOptions;
-  zai: MoonshotAIProviderOptions;
+  moonshotai: MoonshotAILanguageModelOptions;
+  zai: OpenAICompatibleLanguageModelChatOptions & {
+    thinking?: { type: "enabled" | "disabled" };
+  };
 };
 
 export type ValidatedChatRequestBody = {
@@ -31,4 +34,6 @@ export type ValidatedChatRequestBody = {
 
   tools: ToolSet;
   providerOptions: ChatProviderOptions;
+  reasoning: ReasoningEffort;
+  sdkReasoning: ToolLoopAgentSettings["reasoning"];
 };

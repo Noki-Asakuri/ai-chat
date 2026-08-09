@@ -1,15 +1,12 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import { getFileInputModality, resolveReasoning } from "@ai-chat/shared/chat/models";
 import { chatRequestBodySchema, type ChatRequestBody } from "@ai-chat/shared/chat/request";
 
 import { Result } from "better-result";
 import { z } from "zod/v4";
 
-import { RequestBodySchemaError, type ChatRequestValidationError } from "./errors";
-import {
-  convertMessages,
-  moveAssistantFilePartsToNextUserMessage,
-  validateMessages,
-} from "./messages";
+import { MessagesValidationError, RequestBodySchemaError, type ChatRequestValidationError } from "./errors";
+import { convertMessages, moveAssistantFilePartsToNextUserMessage, validateMessages } from "./messages";
 import { resolveRequestedModel, validateModelAvailability } from "./model";
 import { buildProviderOptions, buildTools } from "./provider-options";
 import type { ValidatedChatRequestBody } from "./types";
@@ -35,6 +32,24 @@ async function validateRequestBody(
     const availableModel = yield* validateModelAvailability(model);
 
     const messages = yield* Result.await(validateMessages(data.messages));
+    const unsupportedFilePart = messages
+      .flatMap((message) => message.parts)
+      .find((part) => {
+        if (part.type !== "file") return false;
+
+        const modality = getFileInputModality(part.mediaType);
+        return modality === null || !availableModel.data.modalities.input.includes(modality);
+      });
+
+    if (unsupportedFilePart?.type === "file") {
+      return Result.err(
+        new MessagesValidationError({
+          cause: unsupportedFilePart,
+          message: `Model ${availableModel.requestedId} does not support ${unsupportedFilePart.mediaType} input`,
+        }),
+      );
+    }
+
     const normalizedMessages = moveAssistantFilePartsToNextUserMessage(messages);
     const modelMessages = yield* Result.await(convertMessages(normalizedMessages));
 
@@ -49,11 +64,18 @@ async function validateRequestBody(
   const { data: modelInfo, requestedId } = model;
 
   const tools = buildTools(data, modelInfo);
-  const providerOptions = buildProviderOptions({
-    modelInfo,
-    requestedId,
-    effort: data.modelParams.effort,
-  });
+  const reasoning = resolveReasoning(modelInfo, data.modelParams.effort);
+  const sdkReasoning =
+    modelInfo.provider === "kimi" ||
+    modelInfo.provider === "zai" ||
+    modelInfo.capabilities.reasoning?.type !== "selectable"
+      ? undefined
+      : reasoning;
+  const providerOptions = buildProviderOptions(modelInfo, reasoning);
+  const modelParams: ChatModelParams = {
+    ...(data.modelParams as ChatModelParams),
+    effort: reasoning,
+  };
 
   return Result.ok({
     messages,
@@ -64,7 +86,9 @@ async function validateRequestBody(
 
     tools,
     providerOptions,
-    modelParams: data.modelParams as ChatModelParams,
+    reasoning,
+    sdkReasoning,
+    modelParams,
     model: { id: modelInfo.id, uniqueId: requestedId },
   });
 }

@@ -234,6 +234,9 @@ export function useSendChatMessage() {
           action: {
             label: `Switch to ${deprecatedModelError.replacementModelName}`,
             onClick: () => {
+              chatStoreActions.retainCompatibleAttachments(
+                deprecatedModelError.replacementModelId,
+              );
               configStore.setConfig({
                 model: deprecatedModelError.replacementModelId,
                 defaultModel: deprecatedModelError.replacementModelId,

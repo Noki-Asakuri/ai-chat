@@ -1,36 +1,33 @@
 import { useRef } from "react";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from "uuid";
 
+import { useConfigStore } from "@/components/provider/config-provider";
+import {
+  getAttachmentRejectionMessage,
+  prepareAttachmentsForModel,
+} from "@/lib/chat/attachments";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
-import type { UserAttachment } from "@/lib/types";
 
 export function GlobalDropzone({ children, ...props }: React.ComponentPropsWithoutRef<"main">) {
   const dragCounterRef = useRef<number>(0);
+  const model = useConfigStore((state) => state.model);
 
   function handleAddAttachments(files: Array<File>) {
     const editMessage = useChatStore.getState().editMessage;
+    const modelId = editMessage?.model ?? model;
+    const { attachments, rejectedCount } = prepareAttachmentsForModel(files, modelId);
 
-    const acceptFiles = files.filter(
-      (file) => file.type.includes("image") || file.type.includes("pdf"),
-    );
-
-    if (acceptFiles.length > 0) {
-      const attachments = acceptFiles.map((file): UserAttachment => {
-        return { id: uuidv4(), file, type: file.type.includes("image") ? "image" : "pdf" };
-      });
-
+    if (attachments.length > 0) {
       if (editMessage) {
         chatStoreActions.addEditAttachments(attachments);
-        return;
+      } else {
+        chatStoreActions.addAttachments(attachments);
       }
-
-      chatStoreActions.addAttachments(attachments);
     }
 
-    if (acceptFiles.length < files.length) {
+    if (rejectedCount > 0) {
       toast.error("File type not supported", {
-        description: "Please upload an image or PDF file.",
+        description: getAttachmentRejectionMessage(modelId),
       });
     }
   }
