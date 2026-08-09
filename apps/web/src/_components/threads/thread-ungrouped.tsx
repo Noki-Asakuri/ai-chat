@@ -105,7 +105,7 @@ function GroupByDateItem({ groupKey, title, threads }: GroupByDateItemProps) {
       <SidebarGroup>
         <SidebarGroupLabel
           render={<Collapsible.Trigger />}
-          className="group/trigger flex w-full items-center justify-between gap-2 py-1 text-sm text-muted-foreground"
+          className="group/trigger flex w-full items-center justify-between gap-2 py-1 text-sm text-muted-foreground focus-visible:ring-0"
         >
           <span>{beautifyTitle}</span>
           <ChevronLeftIcon className="size-4 transition-[rotate] group-data-panel-open/trigger:-rotate-90" />

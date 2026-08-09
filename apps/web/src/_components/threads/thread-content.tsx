@@ -6,17 +6,10 @@ import { ClientOnly, useNavigate, useParams } from "@tanstack/react-router";
 
 import { Dialog } from "@base-ui/react/dialog";
 import { useMutation } from "convex/react";
-import {
-  FolderIcon,
-  FolderPlusIcon,
-  Loader2Icon,
-  SearchIcon,
-  SquarePenIcon,
-  XIcon,
-} from "lucide-react";
+import { FolderIcon, FolderPlusIcon, Loader2Icon, SearchIcon, SquarePenIcon, XIcon } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState, useTransition } from "react";
 
-import { Button } from "../ui/button";
+import { Button, buttonVariants } from "../ui/button";
 import {
   Command,
   CommandDialog,
@@ -30,28 +23,18 @@ import {
 import { Input } from "../ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
 import { Kbd } from "../ui/kbd";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger } from "../ui/select";
 import { Separator } from "../ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-} from "../ui/select";
 import { Skeleton } from "../ui/skeleton";
 
 import { ThreadDeleteDialog } from "./thread-delete-dialog";
 import { ThreadShareDialog } from "./thread-share-dialog";
 import { UngroupedThreadGroup } from "./thread-ungrouped";
 
-import { convexSessionQuery } from "@/lib/convex/helpers";
-import {
-  threadDialogStoreActions,
-  useThreadDialogStore,
-} from "@/lib/store/thread-dialog-store";
-import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import { getConvexReactClient } from "@/lib/convex/client";
-import { buttonVariants } from "../ui/button";
+import { convexSessionQuery } from "@/lib/convex/helpers";
+import { threadDialogStoreActions, useThreadDialogStore } from "@/lib/store/thread-dialog-store";
+import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import { cn, fromUUID } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
@@ -126,11 +109,7 @@ function CreateGroupButton() {
                   Cancel
                 </Dialog.Close>
 
-                <Button
-                  type="submit"
-                  className="h-9 w-28"
-                  disabled={title.trim().length === 0}
-                >
+                <Button type="submit" className="h-9 w-28" disabled={title.trim().length === 0}>
                   <FolderPlusIcon data-icon="inline-start" />
                   Create
                 </Button>
@@ -341,7 +320,7 @@ function ThreadList({ data }: ThreadListProps) {
         className="h-[min(36rem,calc(100dvh-4rem))] rounded-lg sm:max-w-3xl"
       >
         <Command
-          className="[&_[data-slot=command-input-wrapper]]:p-2 [&_[data-slot=command-input]]:text-sm! [&_[data-slot=input-group]]:h-12! [&_[data-slot=command-input-wrapper]_svg]:size-5!"
+          className="[&_[data-slot=command-input-wrapper]]:p-2 [&_[data-slot=command-input-wrapper]_svg]:size-5! [&_[data-slot=command-input]]:text-sm! [&_[data-slot=input-group]]:h-12!"
           onKeyDown={handleNewChatShortcut}
         >
           <CommandInput placeholder="Choose a group..." />
