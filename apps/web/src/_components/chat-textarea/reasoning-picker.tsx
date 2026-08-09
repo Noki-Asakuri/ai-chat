@@ -1,5 +1,5 @@
-import { SignalHighIcon, SignalIcon, SignalLowIcon, SignalMediumIcon, SignalZeroIcon } from "lucide-react";
 import { useDebounce } from "@uidotdev/usehooks";
+import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useShallow } from "zustand/shallow";
 
@@ -32,14 +32,14 @@ export function ReasoningPicker(props: ReasoningPickerProps) {
   return <ReasoningPickerBase {...props} />;
 }
 
-export const REASONING_OPTIONS: Record<ReasoningEffort, { label: string; icon: typeof SignalLowIcon }> = {
-  none: { label: "None", icon: SignalZeroIcon },
-  minimal: { label: "Minimal", icon: SignalLowIcon },
-  low: { label: "Low", icon: SignalLowIcon },
-  medium: { label: "Medium", icon: SignalMediumIcon },
-  high: { label: "High", icon: SignalHighIcon },
-  xhigh: { label: "XHigh", icon: SignalIcon },
-  max: { label: "Max", icon: SignalIcon },
+export const REASONING_OPTIONS: Record<ReasoningEffort, { label: string }> = {
+  none: { label: "None" },
+  minimal: { label: "Minimal" },
+  low: { label: "Low" },
+  medium: { label: "Medium" },
+  high: { label: "High" },
+  xhigh: { label: "XHigh" },
+  max: { label: "Max" },
 };
 
 type ReasoningPickerBaseInnerProps = ReasoningPickerProps & {
@@ -103,6 +103,7 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
         )}
       >
         {props.value}
+        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
       </PopoverTrigger>
 
       <PopoverContent

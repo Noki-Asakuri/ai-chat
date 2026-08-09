@@ -17,8 +17,9 @@ import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 export function ChatActionButtons() {
   const model = useConfigStore((state) => state.model);
   const modelData = tryGetModelData(model);
+
   const supportsReasoning = modelData ? getReasoningOptions(modelData).length > 0 : false;
-  const supportsWebSearch = modelData?.capabilities.toolCalling ?? false;
+  const supportToolCalling = modelData?.capabilities.toolCalling ?? false;
   const supportsAttachments =
     modelData?.modalities.input.some((modality) => modality === "image" || modality === "pdf") ?? false;
 
@@ -31,16 +32,13 @@ export function ChatActionButtons() {
           <ChatReasoningPicker />
         </>
       )}
-      {supportsWebSearch && (
+
+      {(supportToolCalling || supportsAttachments) && (
         <>
           <ActionButtonSeparator />
-          <WebSearchButton />
-        </>
-      )}
-      {supportsAttachments && (
-        <>
-          <ActionButtonSeparator />
-          <ChatAttachmentsButton />
+
+          {supportToolCalling && <WebSearchButton />}
+          {supportsAttachments && <ChatAttachmentsButton />}
         </>
       )}
     </div>
