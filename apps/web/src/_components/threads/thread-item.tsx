@@ -64,7 +64,12 @@ export function ThreadItem({ thread, showMetadata = false }: ThreadItemProps) {
             <span className="truncate">{modelName}</span>
           </span>
 
-          <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary">
+          <span
+            className={cn(
+              "flex shrink-0 items-center gap-1 px-1.5 py-0.5 text-sm font-medium",
+              isStreaming ? "text-primary" : "text-success",
+            )}
+          >
             {isStreaming ? (
               <>
                 <Loader2Icon className="size-3.5 animate-spin" />
