@@ -15,7 +15,6 @@ import {
   computeIsAtBottom,
   getMessagesScrollAreaElement,
   scrollToBottom,
-  scrollToBottomIfStickyRaf,
   setStickyToBottom,
 } from "@/lib/chat/scroll-stickiness";
 import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
@@ -355,38 +354,6 @@ export function RegisterEventHandlers() {
       return;
     }
   });
-
-  // Scroll to bottom only if the user is currently "sticky" (already at the bottom).
-  useWindowEvent(
-    "chat:scroll-if-sticky",
-    function handleScrollIfSticky() {
-      const element = getMessagesScrollAreaElement();
-      if (!element) return;
-
-      scrollToBottomIfStickyRaf(element, "auto");
-    },
-    { capture: true },
-  );
-
-  // Scroll to bottom regardless of current scroll position (explicit user intent).
-  useWindowEvent(
-    "chat:force-scroll-bottom",
-    function handleForceScrollBottom() {
-      const element = getMessagesScrollAreaElement();
-      if (!element) return;
-
-      setStickyToBottom(true);
-
-      requestAnimationFrame(() => {
-        scrollToBottom(element, "auto");
-
-        requestAnimationFrame(() => {
-          scrollToBottom(element, "auto");
-        });
-      });
-    },
-    { capture: true },
-  );
 
   return (
     <>

@@ -1,12 +1,23 @@
-import { useEffect, useRef } from "react";
+import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { Message } from "./message";
 
 import {
-  consumeStickyResizeAutoScrollSuppression,
-  scrollToBottomIfStickyRaf,
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+  useMessageScroller,
+} from "../ui/message-scroller";
+
+import {
+  getStickyToBottom,
+  setStickyToBottom,
   updateStickyToBottomFromScroll,
 } from "@/lib/chat/scroll-stickiness";
+import { useWindowEvent } from "@/lib/hooks/use-window-event";
 import { useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import { cn } from "@/lib/utils";
@@ -27,88 +38,54 @@ export function MessageHistory({
   const textareaHeight = useChatStore((state) => state.textareaHeight);
   const resolvedBottomPadding = bottomPaddingPx ?? textareaHeight;
 
-  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
-  const contentRef = useRef<HTMLDivElement | null>(null);
-  const scrollRafRef = useRef<number | null>(null);
-  const stickySyncRafRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const scrollArea = scrollAreaRef.current;
-    const content = contentRef.current;
-    if (!scrollArea || !content) return;
-
-    const scrollElement: HTMLElement = scrollArea;
-
-    // Initialize sticky state based on the current scroll position (after initial render).
-    updateStickyToBottomFromScroll(scrollElement);
-
-    function syncStickyFromScroll(): void {
-      updateStickyToBottomFromScroll(scrollElement);
-    }
-
-    function handleScroll(): void {
-      if (scrollRafRef.current !== null) return;
-
-      scrollRafRef.current = requestAnimationFrame(() => {
-        scrollRafRef.current = null;
-        syncStickyFromScroll();
-      });
-    }
-
-    const passiveScrollOptions: AddEventListenerOptions = { passive: true };
-    scrollElement.addEventListener("scroll", handleScroll, passiveScrollOptions);
-
-    const resizeObserver = new ResizeObserver(() => {
-      if (stickySyncRafRef.current !== null) return;
-
-      stickySyncRafRef.current = requestAnimationFrame(() => {
-        stickySyncRafRef.current = null;
-        if (consumeStickyResizeAutoScrollSuppression()) return;
-        scrollToBottomIfStickyRaf(scrollElement, "auto");
-      });
-    });
-
-    resizeObserver.observe(content);
-
-    return () => {
-      resizeObserver.disconnect();
-
-      scrollElement.removeEventListener("scroll", handleScroll, passiveScrollOptions);
-
-      if (scrollRafRef.current !== null) {
-        cancelAnimationFrame(scrollRafRef.current);
-      }
-
-      if (stickySyncRafRef.current !== null) {
-        cancelAnimationFrame(stickySyncRafRef.current);
-      }
-    };
-  }, []);
-
   return (
-    <div
-      ref={scrollAreaRef}
-      id="messages-scrollarea"
-      className={cn(
-        "custom-scroll absolute right-0 bottom-0 left-0 scroll-fade-t overflow-y-scroll",
-        insetBelowHeader ? "top-10" : "top-0",
-      )}
-      style={{ scrollbarGutter: "stable both-edges" }}
-    >
-      <div
-        ref={contentRef}
-        data-slot="message-history"
-        className={cn(
-          "mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 [overflow-anchor:none]",
-          insetBelowHeader ? "pt-2" : "pt-12",
-        )}
-        style={{ paddingBottom: `${resolvedBottomPadding}px` }}
+    <MessageScrollerProvider autoScroll defaultScrollPosition="end" scrollEdgeThreshold={40}>
+      <MessageScroller
+        className={cn("absolute right-0 bottom-0 left-0", insetBelowHeader ? "top-10" : "top-0")}
       >
-        <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />
-        <div aria-hidden="true" className="h-px [overflow-anchor:auto]" />
-      </div>
-    </div>
+        <MessageScrollerEvents />
+        <MessageScrollerViewport
+          id="messages-scrollarea"
+          className="custom-scroll scroll-fade-t overflow-y-scroll"
+          style={{ scrollbarGutter: "stable both-edges" }}
+          onScroll={(event) => updateStickyToBottomFromScroll(event.currentTarget)}
+        >
+          <MessageScrollerContent
+            data-slot="message-history"
+            className={cn(
+              "mx-auto min-h-full w-full max-w-[calc(56rem+32px)] gap-4 px-4",
+              insetBelowHeader ? "pt-2" : "pt-12",
+            )}
+            style={{ paddingBottom: `${resolvedBottomPadding}px` }}
+          >
+            <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />
+          </MessageScrollerContent>
+        </MessageScrollerViewport>
+        <MessageScrollerButton
+          title="Scroll to Bottom"
+          className="bg-background/80 text-muted-foreground backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-card"
+          style={{ bottom: `${resolvedBottomPadding + 8}px` }}
+        />
+      </MessageScroller>
+    </MessageScrollerProvider>
   );
+}
+
+function MessageScrollerEvents() {
+  const { scrollToEnd } = useMessageScroller();
+
+  useWindowEvent("chat:scroll-if-sticky", function handleScrollIfSticky() {
+    if (getStickyToBottom()) {
+      scrollToEnd({ behavior: "auto" });
+    }
+  });
+
+  useWindowEvent("chat:force-scroll-bottom", function handleForceScrollBottom() {
+    setStickyToBottom(true);
+    scrollToEnd({ behavior: "auto" });
+  });
+
+  return null;
 }
 
 function Messages({
@@ -121,7 +98,7 @@ function Messages({
   const messages = useMessageStore((state) => state.messageIds);
 
   return messages.map((messageId, index) => (
-    <Message
+    <MessageHistoryItem
       key={messageId}
       messageId={messageId}
       index={index}
@@ -130,4 +107,32 @@ function Messages({
       showUserAvatar={showUserAvatar}
     />
   ));
+}
+
+function MessageHistoryItem({
+  messageId,
+  index,
+  total,
+  readOnly,
+  showUserAvatar,
+}: {
+  messageId: Id<"messages">;
+  index: number;
+  total: number;
+  readOnly: boolean;
+  showUserAvatar: boolean;
+}) {
+  const role = useMessageStore((state) => state.messagesById[messageId]?.role);
+
+  return (
+    <MessageScrollerItem messageId={messageId} scrollAnchor={role === "user"}>
+      <Message
+        messageId={messageId}
+        index={index}
+        total={total}
+        readOnly={readOnly}
+        showUserAvatar={showUserAvatar}
+      />
+    </MessageScrollerItem>
+  );
 }
