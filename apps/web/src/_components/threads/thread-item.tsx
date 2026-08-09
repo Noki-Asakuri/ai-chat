@@ -14,7 +14,7 @@ import {
   Share2Icon,
 } from "lucide-react";
 import { useRef } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";

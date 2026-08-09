@@ -2,7 +2,7 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useParams } from "@tanstack/react-router";
 import { useCallback } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { useConfigStore } from "@/components/provider/config-provider";
 

@@ -13,7 +13,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import * as React from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { useShallow } from "zustand/shallow";
 
 import { CopyButton } from "../copy-button";

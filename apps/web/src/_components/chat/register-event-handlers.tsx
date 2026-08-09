@@ -6,7 +6,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { convexQuery } from "@convex-dev/react-query";
 import { MessageSquarePlusIcon } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { ButtonWithTip } from "../ui/button";
 import { useConfigStore } from "../provider/config-provider";
@@ -18,10 +18,7 @@ import {
   scrollToBottomIfStickyRaf,
   setStickyToBottom,
 } from "@/lib/chat/scroll-stickiness";
-import {
-  getAttachmentRejectionMessage,
-  prepareAttachmentsForModel,
-} from "@/lib/chat/attachments";
+import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
 import { focusTextareaByIdAtEnd } from "@/lib/chat/focus-textarea";
 import { useAbortChatStream } from "@/lib/chat/server-function/abort-chat-stream";
 import { useWindowEvent } from "@/lib/hooks/use-window-event";

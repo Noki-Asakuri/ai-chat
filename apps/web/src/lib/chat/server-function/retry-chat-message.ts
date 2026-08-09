@@ -2,7 +2,7 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useConvex } from "convex/react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { useShallow } from "zustand/shallow";
 
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
@@ -100,9 +100,7 @@ export function useRetryChatMessage() {
     const mutationModelParams = {
       ...mergedModelParams,
       profile:
-        modelParams.profile === null
-          ? null
-          : (modelParams.profile ?? mergedModelParams.profile ?? null),
+        modelParams.profile === null ? null : (modelParams.profile ?? mergedModelParams.profile ?? null),
     };
 
     const retryMetadata = {
@@ -127,11 +125,7 @@ export function useRetryChatMessage() {
       const nextAssistantMessageId = retryResult.assistantMessageId;
       errorTargetMessageId = nextAssistantMessageId;
 
-      messageStoreActions.resetAssistantMessageForRetry(
-        threadId,
-        nextAssistantMessageId,
-        retryMetadata,
-      );
+      messageStoreActions.resetAssistantMessageForRetry(threadId, nextAssistantMessageId, retryMetadata);
 
       messageStoreActions.setController(threadId, {
         controller: abortController,
@@ -210,12 +204,10 @@ export function useRetryChatMessage() {
       if (deprecatedModelError) {
         toast.error("Selected model is deprecated", {
           description: deprecatedModelError.message,
-          action: {
-            label: `Switch to ${deprecatedModelError.replacementModelName}`,
+          actionProps: {
+            children: `Switch to ${deprecatedModelError.replacementModelName}`,
             onClick: () => {
-              chatStoreActions.retainCompatibleAttachments(
-                deprecatedModelError.replacementModelId,
-              );
+              chatStoreActions.retainCompatibleAttachments(deprecatedModelError.replacementModelId);
               configStore.setConfig({
                 model: deprecatedModelError.replacementModelId,
                 defaultModel: deprecatedModelError.replacementModelId,

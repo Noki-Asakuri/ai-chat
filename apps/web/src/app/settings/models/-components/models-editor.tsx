@@ -10,7 +10,7 @@ import {
   LoaderCircleIcon,
   StarIcon,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { Badge } from "@/components/ui/badge";
@@ -31,12 +31,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 
-import type {
-  AllModelIds as ModelId,
-  ModelDeprecation,
-  ModelIdKey,
-  Provider,
-} from "@/lib/chat/models";
+import type { AllModelIds as ModelId, ModelDeprecation, ModelIdKey, Provider } from "@/lib/chat/models";
 import {
   AllModelIds,
   getModelData,
@@ -64,12 +59,7 @@ type ModelsCustomization = {
 type PersistableModelSet = "hidden" | "favorite";
 
 type ModelCapabilityKey =
-  | "reasoning"
-  | "toolCalling"
-  | "imageInput"
-  | "pdfInput"
-  | "imageOutput"
-  | "imageGeneration";
+  "reasoning" | "toolCalling" | "imageInput" | "pdfInput" | "imageOutput" | "imageGeneration";
 
 const PROVIDER_ORDER_INDEX: Record<Provider, number> = {
   google: 0,
@@ -168,10 +158,7 @@ function isModelIdKey(value: string): value is ModelIdKey {
   return provider === "google" || provider === "openai" || provider === "deepseek";
 }
 
-function sanitizeModelIds(
-  modelIds: string[],
-  selectableModelIdSet: ReadonlySet<string>,
-): Set<string> {
+function sanitizeModelIds(modelIds: string[], selectableModelIdSet: ReadonlySet<string>): Set<string> {
   const sanitized = new Set<string>();
 
   for (const modelId of modelIds) {
@@ -628,10 +615,7 @@ export function ModelsEditor(props: ModelsEditorProps) {
         <div className="flex flex-wrap items-center gap-2 border-b pb-3 text-xs text-muted-foreground">
           <Badge
             variant="outline"
-            className={cn(
-              "gap-1 rounded-sm px-2 py-0.5 text-xs font-medium",
-              STATUS_BADGE_STYLES.visible,
-            )}
+            className={cn("gap-1 rounded-sm px-2 py-0.5 text-xs font-medium", STATUS_BADGE_STYLES.visible)}
           >
             <span className="font-semibold tabular-nums">{counts.visible}</span>
             visible
@@ -639,10 +623,7 @@ export function ModelsEditor(props: ModelsEditorProps) {
 
           <Badge
             variant="outline"
-            className={cn(
-              "gap-1 rounded-sm px-2 py-0.5 text-xs font-medium",
-              STATUS_BADGE_STYLES.hidden,
-            )}
+            className={cn("gap-1 rounded-sm px-2 py-0.5 text-xs font-medium", STATUS_BADGE_STYLES.hidden)}
           >
             <span className="font-semibold tabular-nums">{counts.hidden}</span>
             hidden
@@ -650,10 +631,7 @@ export function ModelsEditor(props: ModelsEditorProps) {
 
           <Badge
             variant="outline"
-            className={cn(
-              "gap-1 rounded-sm px-2 py-0.5 text-xs font-medium",
-              STATUS_BADGE_STYLES.favorite,
-            )}
+            className={cn("gap-1 rounded-sm px-2 py-0.5 text-xs font-medium", STATUS_BADGE_STYLES.favorite)}
           >
             <span className="font-semibold tabular-nums">{counts.favorite}</span>
             favorites
@@ -661,10 +639,7 @@ export function ModelsEditor(props: ModelsEditorProps) {
 
           <Badge
             variant="outline"
-            className={cn(
-              "gap-1 rounded-sm px-2 py-0.5 text-xs font-medium",
-              STATUS_BADGE_STYLES.deprecated,
-            )}
+            className={cn("gap-1 rounded-sm px-2 py-0.5 text-xs font-medium", STATUS_BADGE_STYLES.deprecated)}
           >
             <span className="font-semibold tabular-nums">{counts.deprecated}</span>
             deprecated
@@ -679,13 +654,7 @@ export function ModelsEditor(props: ModelsEditorProps) {
             )}
 
             {hasSaveError && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={saving}
-                onClick={onRetrySave}
-              >
+              <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={onRetrySave}>
                 Retry save
               </Button>
             )}
@@ -968,10 +937,7 @@ function VirtualizedModelsGrid(props: ModelsGridProps) {
 
   return (
     <div ref={listElementRef} className="relative w-full" style={{ height: totalHeight }}>
-      <div
-        className="absolute top-0 left-0 w-full"
-        style={{ transform: `translateY(${offsetY}px)` }}
-      >
+      <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${offsetY}px)` }}>
         {virtualItems.map(function renderVirtualRow(item) {
           const row = rows[item.index];
           if (!row) return null;
@@ -1013,9 +979,7 @@ type ModelVisibilityToggleProps = {
   onToggle: () => void;
 };
 
-const ModelVisibilityToggle = memo(function ModelVisibilityToggle(
-  props: ModelVisibilityToggleProps,
-) {
+const ModelVisibilityToggle = memo(function ModelVisibilityToggle(props: ModelVisibilityToggleProps) {
   return (
     <button
       type="button"
@@ -1135,14 +1099,10 @@ const ModelRow = memo(function ModelRow(props: ModelRowProps) {
                 )}
               </div>
 
-              <div className="truncate text-xs text-muted-foreground">
-                {props.entry.providerName}
-              </div>
+              <div className="truncate text-xs text-muted-foreground">{props.entry.providerName}</div>
 
               {isDeprecated && (
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {props.entry.deprecation?.message}
-                </div>
+                <div className="mt-1 text-xs text-muted-foreground">{props.entry.deprecation?.message}</div>
               )}
             </div>
           </div>

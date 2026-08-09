@@ -27,16 +27,8 @@ import {
   Share2Icon,
   TrashIcon,
 } from "lucide-react";
-import {
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-  type ReactElement,
-} from "react";
-import { toast } from "sonner";
+import { Suspense, useCallback, useEffect, useMemo, useState, useTransition, type ReactElement } from "react";
+import { toast } from "@/components/ui/toast";
 
 import {
   AlertDialog,
@@ -94,10 +86,7 @@ type AccountThreadSort = {
 const THREADS_PAGE_SIZE = 15;
 const PAGE_WINDOW_SIZE = 3;
 const accountThreadsTableFeatures = tableFeatures({ rowSortingFeature });
-const accountThreadColumnHelper = createColumnHelper<
-  typeof accountThreadsTableFeatures,
-  AccountThread
->();
+const accountThreadColumnHelper = createColumnHelper<typeof accountThreadsTableFeatures, AccountThread>();
 
 type AccountThreadColumn = ColumnDef<typeof accountThreadsTableFeatures, AccountThread>;
 
@@ -175,8 +164,8 @@ function BulkDeleteDialog({ open, onOpenChange, threadIds, threadCount }: BulkDe
         <AlertDialogHeader className="gap-1">
           <AlertDialogTitle>Delete {threadCount} thread(s)?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete the selected thread(s) and
-            their messages.
+            This action cannot be undone. This will permanently delete the selected thread(s) and their
+            messages.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -446,10 +435,7 @@ function AccountThreadsTableBody({
     <tbody>
       {rowModel.rows.length === 0 ? (
         <tr>
-          <td
-            colSpan={columns.length}
-            className="px-3 py-4 text-center text-sm text-muted-foreground"
-          >
+          <td colSpan={columns.length} className="px-3 py-4 text-center text-sm text-muted-foreground">
             No threads found
           </td>
         </tr>
@@ -470,9 +456,7 @@ function AccountThreadsTableBody({
 
 export function AccountThreadsTable() {
   const [searchText, setSearchText] = useState<string>("");
-  const [sorting, setSorting] = useState<SortingState>(() => [
-    { id: "updatedAt", desc: true },
-  ]);
+  const [sorting, setSorting] = useState<SortingState>(() => [{ id: "updatedAt", desc: true }]);
   const [menuThreadId, setMenuThreadId] = useState<Id<"threads"> | null>(null);
   const [pendingTargetPageIndex, setPendingTargetPageIndex] = useState<number | null>(null);
   const [knownLastPageNumber, setKnownLastPageNumber] = useState<number | null>(null);
@@ -548,8 +532,7 @@ export function AccountThreadsTable() {
   );
   const lastVisiblePageNumber = visiblePageNumbers[visiblePageNumbers.length - 1] ?? currentPage;
 
-  const allSelected =
-    pageInfo.visibleIds.length > 0 && pageInfo.visibleIds.every((id) => selected.has(id));
+  const allSelected = pageInfo.visibleIds.length > 0 && pageInfo.visibleIds.every((id) => selected.has(id));
   const someSelected = pageInfo.visibleIds.some((id) => selected.has(id));
 
   function resetPaging() {
@@ -746,143 +729,143 @@ export function AccountThreadsTable() {
             );
           },
         }),
-      accountThreadColumnHelper.accessor("title", {
-        header: "Title",
-        cell: ({ getValue, row }) => {
-          const thread = row.original;
+        accountThreadColumnHelper.accessor("title", {
+          header: "Title",
+          cell: ({ getValue, row }) => {
+            const thread = row.original;
 
-          return (
-            <div className="flex min-w-0 items-center gap-2">
-              {thread.pinned && <PinIcon className="size-3 text-muted-foreground" />}
-              <Link
-                to="/threads/$threadId"
-                params={{ threadId: toUUID(thread._id) }}
-                title={thread.title}
-                className="w-[60ch] min-w-0 truncate underline-offset-4 hover:underline"
-              >
-                {getValue()}
-              </Link>
-            </div>
-          );
-        },
-      }),
-      accountThreadColumnHelper.accessor("pinned", {
-        header: "Pinned",
-        cell: ({ getValue }) => (getValue() ? "Yes" : "-"),
-      }),
-      accountThreadColumnHelper.accessor("shared", {
-        header: "Shared",
-        cell: ({ getValue }) => {
-          const isShared = getValue();
-          if (!isShared) return "-";
+            return (
+              <div className="flex min-w-0 items-center gap-2">
+                {thread.pinned && <PinIcon className="size-3 text-muted-foreground" />}
+                <Link
+                  to="/threads/$threadId"
+                  params={{ threadId: toUUID(thread._id) }}
+                  title={thread.title}
+                  className="w-[60ch] min-w-0 truncate underline-offset-4 hover:underline"
+                >
+                  {getValue()}
+                </Link>
+              </div>
+            );
+          },
+        }),
+        accountThreadColumnHelper.accessor("pinned", {
+          header: "Pinned",
+          cell: ({ getValue }) => (getValue() ? "Yes" : "-"),
+        }),
+        accountThreadColumnHelper.accessor("shared", {
+          header: "Shared",
+          cell: ({ getValue }) => {
+            const isShared = getValue();
+            if (!isShared) return "-";
 
-          return (
-            <span className="inline-flex items-center gap-1">
-              <Share2Icon className="size-3 text-muted-foreground" />
-              Yes
-            </span>
-          );
-        },
-      }),
-      accountThreadColumnHelper.accessor("messageCount", {
-        header: "Msgs",
-        cell: ({ getValue }) => format.number(getValue()),
-      }),
-      accountThreadColumnHelper.accessor("attachmentCount", {
-        header: "Atts",
-        cell: ({ getValue }) => format.number(getValue()),
-      }),
-      accountThreadColumnHelper.accessor("_creationTime", {
-        header: "Created",
-        cell: ({ getValue }) => format.date(getValue()),
-      }),
-      accountThreadColumnHelper.accessor("updatedAt", {
-        header: "Updated",
-        cell: ({ getValue }) => format.date(getValue()),
-      }),
-      accountThreadColumnHelper.accessor("status", {
-        header: "Status",
-        cell: ({ getValue }) => <StatusBadge status={getValue()} />,
-      }),
-      accountThreadColumnHelper.display({
-        id: "actions",
-        header: "Actions",
-        enableSorting: false,
-        cell: ({ row }) => {
-          const thread = row.original;
-          const open = menuThreadId === thread._id;
+            return (
+              <span className="inline-flex items-center gap-1">
+                <Share2Icon className="size-3 text-muted-foreground" />
+                Yes
+              </span>
+            );
+          },
+        }),
+        accountThreadColumnHelper.accessor("messageCount", {
+          header: "Msgs",
+          cell: ({ getValue }) => format.number(getValue()),
+        }),
+        accountThreadColumnHelper.accessor("attachmentCount", {
+          header: "Atts",
+          cell: ({ getValue }) => format.number(getValue()),
+        }),
+        accountThreadColumnHelper.accessor("_creationTime", {
+          header: "Created",
+          cell: ({ getValue }) => format.date(getValue()),
+        }),
+        accountThreadColumnHelper.accessor("updatedAt", {
+          header: "Updated",
+          cell: ({ getValue }) => format.date(getValue()),
+        }),
+        accountThreadColumnHelper.accessor("status", {
+          header: "Status",
+          cell: ({ getValue }) => <StatusBadge status={getValue()} />,
+        }),
+        accountThreadColumnHelper.display({
+          id: "actions",
+          header: "Actions",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const thread = row.original;
+            const open = menuThreadId === thread._id;
 
-          return (
-            <div className="flex justify-end">
-              <Menu.Root
-                open={open}
-                onOpenChange={(nextOpen) => setMenuThreadId(nextOpen ? thread._id : null)}
-              >
-                <Menu.Trigger className="inline-flex size-8 items-center justify-center rounded-md hover:bg-accent">
-                  <EllipsisIcon className="size-4" />
-                  <span className="sr-only">Thread actions</span>
-                </Menu.Trigger>
+            return (
+              <div className="flex justify-end">
+                <Menu.Root
+                  open={open}
+                  onOpenChange={(nextOpen) => setMenuThreadId(nextOpen ? thread._id : null)}
+                >
+                  <Menu.Trigger className="inline-flex size-8 items-center justify-center rounded-md hover:bg-accent">
+                    <EllipsisIcon className="size-4" />
+                    <span className="sr-only">Thread actions</span>
+                  </Menu.Trigger>
 
-                <Menu.Portal>
-                  <Menu.Positioner side="left" align="start" className="z-40 p-1" sideOffset={8}>
-                    <Menu.Popup className="flex w-max origin-(--transform-origin) flex-col overflow-hidden rounded-md border bg-card shadow-lg">
-                      <Menu.Item
-                        render={
-                          <Link
-                            preload={false}
-                            to="/threads/$threadId"
-                            params={{ threadId: toUUID(thread._id) }}
-                          />
-                        }
-                        className="inline-flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
-                      >
-                        <ExternalLinkIcon className="size-4" />
-                        Open
-                      </Menu.Item>
+                  <Menu.Portal>
+                    <Menu.Positioner side="left" align="start" className="z-40 p-1" sideOffset={8}>
+                      <Menu.Popup className="flex w-max origin-(--transform-origin) flex-col overflow-hidden rounded-md border bg-card shadow-lg">
+                        <Menu.Item
+                          render={
+                            <Link
+                              preload={false}
+                              to="/threads/$threadId"
+                              params={{ threadId: toUUID(thread._id) }}
+                            />
+                          }
+                          className="inline-flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
+                        >
+                          <ExternalLinkIcon className="size-4" />
+                          Open
+                        </Menu.Item>
 
-                      <Menu.Item
-                        onClick={() => {
-                          startTransition(async function () {
-                            await pinThread({ threadId: thread._id, pinned: !thread.pinned });
-                          });
-                        }}
-                        className="inline-flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
-                      >
-                        {thread.pinned ? (
-                          <>
-                            <PinOffIcon className="size-4" />
-                            Unpin
-                          </>
-                        ) : (
-                          <>
-                            <PinIcon className="size-4" />
-                            Pin
-                          </>
-                        )}
-                      </Menu.Item>
+                        <Menu.Item
+                          onClick={() => {
+                            startTransition(async function () {
+                              await pinThread({ threadId: thread._id, pinned: !thread.pinned });
+                            });
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
+                        >
+                          {thread.pinned ? (
+                            <>
+                              <PinOffIcon className="size-4" />
+                              Unpin
+                            </>
+                          ) : (
+                            <>
+                              <PinIcon className="size-4" />
+                              Pin
+                            </>
+                          )}
+                        </Menu.Item>
 
-                      <Menu.Item
-                        onClick={() => {
-                          setMenuThreadId(null);
-                          setSelected((prev) => {
-                            const next = new Set(prev);
-                            next.add(thread._id);
-                            return next;
-                          });
-                          setBulkDeleteOpen(true);
-                        }}
-                        className="inline-flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
-                      >
-                        <TrashIcon className="size-4" />
-                        Delete
-                      </Menu.Item>
-                    </Menu.Popup>
-                  </Menu.Positioner>
-                </Menu.Portal>
-              </Menu.Root>
-            </div>
-          );
-        },
+                        <Menu.Item
+                          onClick={() => {
+                            setMenuThreadId(null);
+                            setSelected((prev) => {
+                              const next = new Set(prev);
+                              next.add(thread._id);
+                              return next;
+                            });
+                            setBulkDeleteOpen(true);
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
+                        >
+                          <TrashIcon className="size-4" />
+                          Delete
+                        </Menu.Item>
+                      </Menu.Popup>
+                    </Menu.Positioner>
+                  </Menu.Portal>
+                </Menu.Root>
+              </div>
+            );
+          },
         }),
       ]),
     [

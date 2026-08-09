@@ -3,7 +3,7 @@ import { useLoaderData, useRouter } from "@tanstack/react-router";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { ChevronLeftIcon } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import {
   AlertDialog,
@@ -155,7 +155,7 @@ export function AccountSessionsCard() {
     startTransition(async () => {
       const promise = revokeAccountSession({ data: { sessionId } });
 
-      toast.promise(promise, {
+      void toast.promise(promise, {
         loading: "Revoking session...",
         success: "Session revoked",
         error: (err) => (err instanceof Error ? err.message : "Failed to revoke session"),

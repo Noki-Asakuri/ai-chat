@@ -1,5 +1,5 @@
 import { useEffectEvent, useLayoutEffect, useRef } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { ChatEditActionButtons } from "./action-buttons";
 import { ChatEditAttachmentsDisplay } from "./chat-edit-attachments-display";
@@ -13,10 +13,7 @@ import {
   updateStickyToBottomFromScroll,
 } from "@/lib/chat/scroll-stickiness";
 import { focusTextareaByIdAtEnd } from "@/lib/chat/focus-textarea";
-import {
-  getAttachmentRejectionMessage,
-  prepareAttachmentsForModel,
-} from "@/lib/chat/attachments";
+import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
 const EDITOR_VIEWPORT_MARGIN_PX = 16;
@@ -64,10 +61,7 @@ export function ChatEditTextarea() {
     const currentEditMessage = useChatStore.getState().editMessage;
     if (!currentEditMessage) return;
 
-    const { attachments, rejectedCount } = prepareAttachmentsForModel(
-      files,
-      currentEditMessage.model,
-    );
+    const { attachments, rejectedCount } = prepareAttachmentsForModel(files, currentEditMessage.model);
 
     if (attachments.length > 0) {
       chatStoreActions.addEditAttachments(attachments);

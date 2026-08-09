@@ -14,7 +14,7 @@ import {
 import type { Transition } from "motion/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import * as React from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { toRawFileUrl } from "@/lib/assets/urls";
 import { cn, format } from "@/lib/utils";
@@ -716,10 +716,7 @@ function resolvePrimaryActionUrl(img: LightboxImage): string {
 
 async function copyImage(img: LightboxImage) {
   if (!isClipboardImageWriteSupported()) {
-    return toast.error("Copying image is not supported in this browser.", {
-      position: "top-center",
-      duration: 3000,
-    });
+    return toast.error("Copying image is not supported in this browser.", { timeout: 3000 });
   }
 
   const fileUrl = resolveClipboardImageUrl(img);
@@ -740,7 +737,7 @@ async function copyImage(img: LightboxImage) {
       });
     }
   } catch {
-    toast.error("Failed to load image.", { position: "top-center", duration: 3000 });
+    toast.error("Failed to load image.", { timeout: 3000 });
     return;
   }
 
@@ -750,7 +747,7 @@ async function copyImage(img: LightboxImage) {
 
   const ctx = canvas.getContext("2d");
   if (!ctx) {
-    toast.error("Unable to create drawing context.", { position: "top-center", duration: 3000 });
+    toast.error("Unable to create drawing context.", { timeout: 3000 });
     return;
   }
 
@@ -761,7 +758,6 @@ async function copyImage(img: LightboxImage) {
   if (!blob) {
     toast.error(
       "Could not create image blob. If this is a cross-origin image, ensure the server allows CORS.",
-      { position: "top-center" },
     );
     return;
   }
@@ -769,7 +765,7 @@ async function copyImage(img: LightboxImage) {
   const clipboardItem = new ClipboardItem({ [blob.type]: blob });
 
   await navigator.clipboard.write([clipboardItem]);
-  toast.success("Image copied to clipboard", { position: "top-center", duration: 3000 });
+  toast.success("Image copied to clipboard", { timeout: 3000 });
   canvas.remove();
 }
 
@@ -790,7 +786,7 @@ async function downloadImage(img: LightboxImage) {
 
     // Revoke on next tick so the download can start.
     setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-    toast.success("Image downloaded", { position: "top-center", duration: 3000 });
+    toast.success("Image downloaded", { timeout: 3000 });
   } catch {
     triggerDownload(downloadUrl, name);
   }

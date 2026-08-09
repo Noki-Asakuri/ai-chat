@@ -29,7 +29,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { DefaultCatchBoundary } from "@/components/default-catch-boundary";
 import { DefaultNotFoundBoundary } from "@/components/default-not-found-boundary";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toast";
 import { VersionUpdateNotifier } from "@/components/version-update-notifier";
 
 import {

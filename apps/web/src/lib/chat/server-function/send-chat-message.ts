@@ -2,7 +2,7 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useConvex } from "convex/react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useShallow } from "zustand/shallow";
@@ -231,12 +231,10 @@ export function useSendChatMessage() {
       if (deprecatedModelError) {
         toast.error("Selected model is deprecated", {
           description: deprecatedModelError.message,
-          action: {
-            label: `Switch to ${deprecatedModelError.replacementModelName}`,
+          actionProps: {
+            children: `Switch to ${deprecatedModelError.replacementModelName}`,
             onClick: () => {
-              chatStoreActions.retainCompatibleAttachments(
-                deprecatedModelError.replacementModelId,
-              );
+              chatStoreActions.retainCompatibleAttachments(deprecatedModelError.replacementModelId);
               configStore.setConfig({
                 model: deprecatedModelError.replacementModelId,
                 defaultModel: deprecatedModelError.replacementModelId,

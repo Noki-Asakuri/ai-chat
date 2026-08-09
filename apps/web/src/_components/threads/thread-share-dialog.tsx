@@ -15,7 +15,7 @@ import {
   ZapIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { buttonVariants } from "../ui/button";
 import { Input } from "../ui/input";
@@ -36,12 +36,7 @@ type ThreadShareDialogProps = {
 type ShareVisibility = "public" | "private";
 type ShareMode = "snapshot" | "live";
 
-export function ThreadShareDialog({
-  threadId,
-  threadTitle,
-  open,
-  onOpenChange,
-}: ThreadShareDialogProps) {
+export function ThreadShareDialog({ threadId, threadTitle, open, onOpenChange }: ThreadShareDialogProps) {
   const upsertThreadShare = useMutation(api.functions.threadShares.upsertThreadShare);
   const disableThreadShare = useMutation(api.functions.threadShares.disableThreadShare);
   const [isSaving, startSaving] = useTransition();
@@ -54,10 +49,7 @@ export function ThreadShareDialog({
   const [copied, setCopied] = useState(false);
 
   const { data, isFetching, isPending } = useQuery({
-    ...convexSessionQuery(
-      api.functions.threadShares.getThreadShareSettings,
-      open ? { threadId } : "skip",
-    ),
+    ...convexSessionQuery(api.functions.threadShares.getThreadShareSettings, open ? { threadId } : "skip"),
   });
 
   useEffect(() => {
@@ -225,9 +217,7 @@ export function ThreadShareDialog({
                       <ZapIcon className="size-4" />
                       Live
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      Updates as new messages are added.
-                    </span>
+                    <span className="text-xs text-muted-foreground">Updates as new messages are added.</span>
                   </span>
                 </Label>
               </RadioGroup>
@@ -299,9 +289,7 @@ export function ThreadShareDialog({
                 </button>
               )}
 
-              <Dialog.Close className={cn(buttonVariants({ variant: "ghost" }))}>
-                Cancel
-              </Dialog.Close>
+              <Dialog.Close className={cn(buttonVariants({ variant: "ghost" }))}>Cancel</Dialog.Close>
 
               <button
                 type="button"

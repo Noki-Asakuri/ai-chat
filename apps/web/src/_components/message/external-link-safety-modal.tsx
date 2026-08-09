@@ -3,7 +3,7 @@ import type { LinkSafetyModalProps } from "streamdown";
 import { CopyIcon, ExternalLinkIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { Button } from "@/components/ui/button";
 
@@ -121,9 +121,7 @@ export function ExternalLinkSafetyModal({ isOpen, onClose, onConfirm, url }: Lin
             <ExternalLinkIcon className="size-5" />
             <span>Open external link?</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            You&apos;re about to visit an external website.
-          </p>
+          <p className="text-sm text-muted-foreground">You&apos;re about to visit an external website.</p>
         </div>
 
         <div className="rounded-md bg-muted p-3 font-mono text-sm break-all">{url}</div>

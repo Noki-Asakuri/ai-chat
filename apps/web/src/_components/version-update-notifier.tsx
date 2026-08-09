@@ -11,7 +11,7 @@ const SNOOZE_DURATION_MS = 30 * 60 * 1000;
 export function VersionUpdateNotifier() {
   const isNewVersionAvailable = useVersionWatcher();
 
-  const toastIdRef = useRef<string | number | null>(null);
+  const toastIdRef = useRef<string | null>(null);
   const snoozeTimeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {

@@ -61,7 +61,7 @@ An advanced AI chat application with streaming responses, thread organization, a
 - **TanStack Start** (SSR) + **TanStack Router** + **TanStack Query**
 - **Tailwind CSS v4**
 - **shadcn/ui** component system
-- **sonner** for toast notifications
+- **shadcn/ui Toast** with Base UI for toast notifications
 - **@dnd-kit** for drag & drop thread grouping
 - **streamdown + shiki** for streaming-friendly markdown + code rendering
 - **KaTeX** for math rendering

@@ -416,10 +416,6 @@
   @apply block w-full;
 }
 
-[data-sonner-toaster] {
-  @apply font-sans!;
-}
-
 ::view-transition-group(root),
 ::view-transition-old(root),
 ::view-transition-new(root) {

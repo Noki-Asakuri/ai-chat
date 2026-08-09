@@ -5,7 +5,7 @@ import { useLoaderData, useRouter } from "@tanstack/react-router";
 
 import { useMutation } from "convex/react";
 import { useEffect, useRef, useState, useTransition, type SubmitEvent } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -43,9 +43,7 @@ export function AccountProfileCard() {
   const [isEditingEmail, setIsEditingEmail] = useState<boolean>(false);
   const [emailDraft, setEmailDraft] = useState<string>("");
 
-  const existingAvatarKey = currentUser?.imageUrl
-    ? getImageAssetPathFromUrl(currentUser.imageUrl)
-    : null;
+  const existingAvatarKey = currentUser?.imageUrl ? getImageAssetPathFromUrl(currentUser.imageUrl) : null;
 
   const avatarUrl = avatarPreviewUrl ?? currentUser?.imageUrl ?? getUserAvatarUrl(user);
   const initials = getUserInitials(user);
@@ -93,7 +91,7 @@ export function AccountProfileCard() {
         }
       })();
 
-      toast.promise(promise, {
+      void toast.promise(promise, {
         loading: "Saving account...",
         success: "Account updated",
         error: (err) => (err instanceof Error ? err.message : "Failed to update account"),

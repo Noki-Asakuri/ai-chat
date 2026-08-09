@@ -5,7 +5,7 @@ import { useMutation } from "convex/react";
 
 import { ChevronDownIcon, LayersIcon, StarIcon } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { useShallow } from "zustand/shallow";
 
 import { useConfigStore } from "@/components/provider/config-provider";
@@ -23,12 +23,7 @@ import {
 import { Icons } from "@/components/ui/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-import {
-  SelectableModelIds,
-  prettifyProviderName,
-  tryGetModelData,
-  type Provider,
-} from "@/lib/chat/models";
+import { SelectableModelIds, prettifyProviderName, tryGetModelData, type Provider } from "@/lib/chat/models";
 import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
 import { chatStoreActions } from "@/lib/store/chat-store";
 import { cn, tryCatch } from "@/lib/utils";
@@ -134,23 +129,17 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
 
   const updateUserModelPreferences = useMutation(api.functions.users.updateUserModelPreferences);
 
-  const {
-    hiddenModels,
-    favoriteModels,
-    setFavoriteModels,
-    storeModel,
-    storeDefaultModel,
-    setConfig,
-  } = useConfigStore(
-    useShallow((state) => ({
-      hiddenModels: state.hiddenModels,
-      favoriteModels: state.favoriteModels,
-      setFavoriteModels: state.setFavoriteModels,
-      storeModel: state.model,
-      storeDefaultModel: state.defaultModel,
-      setConfig: state.setConfig,
-    })),
-  );
+  const { hiddenModels, favoriteModels, setFavoriteModels, storeModel, storeDefaultModel, setConfig } =
+    useConfigStore(
+      useShallow((state) => ({
+        hiddenModels: state.hiddenModels,
+        favoriteModels: state.favoriteModels,
+        setFavoriteModels: state.setFavoriteModels,
+        storeModel: state.model,
+        storeDefaultModel: state.defaultModel,
+        setConfig: state.setConfig,
+      })),
+    );
 
   const selectedModel =
     (value && value.length > 0 ? value : null) ??
@@ -277,12 +266,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
     }
 
     return next;
-  }, [
-    favoriteProviderModels,
-    providerModels,
-    allViewProviderModelsWithoutFavorites,
-    selectedSection,
-  ]);
+  }, [favoriteProviderModels, providerModels, allViewProviderModelsWithoutFavorites, selectedSection]);
 
   const emptyMessage = useMemo(() => {
     if (selectedSection === "all" && allViewModels.length === 0) {
@@ -341,9 +325,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
     return (
       <div className="flex min-w-0 items-center gap-2">
         <Icons.provider provider={modelData.provider} className="size-4 shrink-0" />
-        <span className="min-w-0 truncate">
-          {modelData.display.unique ?? modelData.display.name}
-        </span>
+        <span className="min-w-0 truncate">{modelData.display.unique ?? modelData.display.name}</span>
       </div>
     );
   }

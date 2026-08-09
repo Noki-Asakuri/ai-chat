@@ -28,7 +28,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { useDeferredValue, useMemo, useState, useTransition } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { ImageLightboxProvider, ImageLightboxTrigger } from "@/components/image-lightbox";
 import {
@@ -72,12 +72,7 @@ type AttachmentTypeFilter = "all" | "image" | "pdf";
 type AttachmentSortField = "createdAt" | "name" | "size";
 type SortDirection = "asc" | "desc";
 type AttachmentSortValue =
-  | "createdAt_desc"
-  | "createdAt_asc"
-  | "name_asc"
-  | "name_desc"
-  | "size_desc"
-  | "size_asc";
+  "createdAt_desc" | "createdAt_asc" | "name_asc" | "name_desc" | "size_desc" | "size_asc";
 
 const PAGE_SIZE = 20;
 const PAGE_WINDOW_SIZE = 3;
@@ -96,19 +91,15 @@ function getAttachmentFileUrl(path: string): string {
   return buildRawFileUrl(path);
 }
 
-const SOURCE_FILTER_OPTIONS: Record<SourceFilter, { label: string; Icon: typeof ArrowDownAZIcon }> =
-  {
-    all: { label: "All sources", Icon: LayersIcon },
-    user: { label: "User uploads", Icon: UserIcon },
-    assistant: { label: "Assistant generated", Icon: BotIcon },
-  };
+const SOURCE_FILTER_OPTIONS: Record<SourceFilter, { label: string; Icon: typeof ArrowDownAZIcon }> = {
+  all: { label: "All sources", Icon: LayersIcon },
+  user: { label: "User uploads", Icon: UserIcon },
+  assistant: { label: "Assistant generated", Icon: BotIcon },
+};
 
 const SOURCE_FILTER_ORDER: Array<SourceFilter> = ["all", "user", "assistant"];
 
-const TYPE_FILTER_OPTIONS: Record<
-  AttachmentTypeFilter,
-  { label: string; Icon: typeof ArrowDownAZIcon }
-> = {
+const TYPE_FILTER_OPTIONS: Record<AttachmentTypeFilter, { label: string; Icon: typeof ArrowDownAZIcon }> = {
   all: { label: "All types", Icon: PaperclipIcon },
   image: { label: "Images only", Icon: ImageIcon },
   pdf: { label: "PDFs only", Icon: FileTextIcon },
@@ -554,12 +545,7 @@ function AttachmentsPage() {
                   {bulkPending ? "Deleting..." : "Delete Selected"}
                 </Button>
 
-                <Button
-                  variant="outline"
-                  onClick={toggleSelectionMode}
-                  title="Cancel"
-                  aria-label="Cancel"
-                >
+                <Button variant="outline" onClick={toggleSelectionMode} title="Cancel" aria-label="Cancel">
                   <XIcon data-icon="inline-start" />
                   Cancel
                 </Button>
@@ -688,9 +674,7 @@ function AttachmentsPage() {
                     </div>
 
                     <div className="pointer-events-none absolute top-0 left-0 flex size-full items-end justify-between gap-2 p-2">
-                      <Badge
-                        variant={attachment.source === "assistant" ? "destructive" : "secondary"}
-                      >
+                      <Badge variant={attachment.source === "assistant" ? "destructive" : "secondary"}>
                         {attachment.source === "assistant" ? "AI" : "User"}
                       </Badge>
                     </div>
@@ -744,10 +728,10 @@ function AttachmentsPage() {
       {totalItems > 0 && (
         <div className="flex w-full flex-wrap items-center justify-between gap-2 border-t py-2 text-sm text-muted-foreground">
           <span className="leading-none">
-            <span className="font-medium text-foreground">{format.number(attachments.length)}</span>{" "}
-            ({format.size(currentPageBytes)}) /{" "}
-            <span className="font-medium text-foreground">{format.number(data.overallCount)}</span>{" "}
-            ({format.size(data.overallBytes)})
+            <span className="font-medium text-foreground">{format.number(attachments.length)}</span> (
+            {format.size(currentPageBytes)}) /{" "}
+            <span className="font-medium text-foreground">{format.number(data.overallCount)}</span> (
+            {format.size(data.overallBytes)})
           </span>
 
           <Pagination className="mx-0 ml-auto w-auto">
@@ -836,12 +820,7 @@ type DeleteAttachmentDialogProps = {
   attachmentId: Id<"attachments"> | null;
 };
 
-function DeleteAttachmentDialog({
-  open,
-  onOpenChange,
-  attachmentId,
-  name,
-}: DeleteAttachmentDialogProps) {
+function DeleteAttachmentDialog({ open, onOpenChange, attachmentId, name }: DeleteAttachmentDialogProps) {
   const [pending, startTransition] = useTransition();
   const deleteAttachment = useMutation(api.functions.attachments.deleteAttachment);
 
@@ -867,8 +846,8 @@ function DeleteAttachmentDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete file {name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete this file and remove it from
-            our servers and your chats!
+            This action cannot be undone. This will permanently delete this file and remove it from our
+            servers and your chats!
           </AlertDialogDescription>
         </AlertDialogHeader>
 

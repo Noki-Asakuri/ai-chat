@@ -8,7 +8,7 @@ import { useDebounce } from "@uidotdev/usehooks";
 import { useMutation } from "convex/react";
 import type { ComponentPropsWithoutRef, CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,20 +52,14 @@ function RouteComponent() {
   const updateUserPreferences = useMutation(api.functions.users.updateUserPreferences);
   const { uploadFile, deleteFile } = useStorage();
 
-  const [sendPreference, setSendPreference] = useState<SendPreference>(
-    data?.sendPreference ?? "enter",
-  );
-  const [notificationSound, setNotificationSound] = useState<boolean>(
-    data?.notifications?.sound ?? true,
-  );
+  const [sendPreference, setSendPreference] = useState<SendPreference>(data?.sendPreference ?? "enter");
+  const [notificationSound, setNotificationSound] = useState<boolean>(data?.notifications?.sound ?? true);
   const [desktopNotification, setDesktopNotification] = useState<boolean>(
     data?.notifications?.desktop ?? false,
   );
   const [uiFont, setUiFont] = useState(data?.fonts?.ui ?? DEFAULT_UI_FONT);
   const [codeFont, setCodeFont] = useState(data?.fonts?.code ?? DEFAULT_CODE_FONT);
-  const [backgroundImageId, setBackgroundImageId] = useState<string | null>(
-    data?.backgroundImage ?? null,
-  );
+  const [backgroundImageId, setBackgroundImageId] = useState<string | null>(data?.backgroundImage ?? null);
   const [saveRequestCount, setSaveRequestCount] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -324,9 +318,7 @@ function RouteComponent() {
         <Card className="rounded-md">
           <CardHeader>
             <CardTitle>System instruction</CardTitle>
-            <CardDescription>
-              A global instruction applied to the assistant across the app.
-            </CardDescription>
+            <CardDescription>A global instruction applied to the assistant across the app.</CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-2">

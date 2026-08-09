@@ -1,6 +1,6 @@
 import { ImagePlusIcon, TrashIcon } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,7 +52,7 @@ export function BackgroundCard(props: BackgroundCardProps) {
     startRemoveTransition(async () => {
       setBackgroundImage(null);
 
-      toast.promise(props.onRemoveExistingBackground(), {
+      void toast.promise(props.onRemoveExistingBackground(), {
         loading: "Removing background...",
         success: "Background removed",
         error: "Failed to remove background",
@@ -74,9 +74,7 @@ export function BackgroundCard(props: BackgroundCardProps) {
               Background image
             </Label>
 
-            <p className="text-sm text-muted-foreground">
-              Upload an image to use as your chat background.
-            </p>
+            <p className="text-sm text-muted-foreground">Upload an image to use as your chat background.</p>
 
             <p className="text-xs text-muted-foreground">
               {backgroundImage

@@ -8,7 +8,7 @@ import {
   XIcon,
 } from "lucide-react";
 import * as React from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { useShallow } from "zustand/shallow";
 
 import { useConfigStore } from "../provider/config-provider";
@@ -179,11 +179,7 @@ export function ChatEditSendButton({ isSaving, onSave }: ChatEditSendButtonProps
             onClick={onSave}
             disabled={isSaving}
           >
-            {isSaving ? (
-              <Loader2Icon className="size-4 animate-spin" />
-            ) : (
-              <SaveIcon className="size-4" />
-            )}
+            {isSaving ? <Loader2Icon className="size-4 animate-spin" /> : <SaveIcon className="size-4" />}
 
             <span>{isSaving ? "Saving" : "Save"}</span>
           </ButtonWithTip>
