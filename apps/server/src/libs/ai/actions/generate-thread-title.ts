@@ -5,8 +5,8 @@ import { generateText, type ModelMessage } from "ai";
 import { ConvexHttpClient } from "convex/browser";
 import dedent from "dedent";
 
-import { getLanguageModel } from "../registry";
 import { logger } from "../../axiom";
+import { getLanguageModel } from "../registry";
 
 export async function generateNewThreadTitleAndSave(
   convexClient: ConvexHttpClient,
@@ -18,8 +18,8 @@ export async function generateNewThreadTitleAndSave(
   const content = extractUserMessage(options.modelMessages[0]);
 
   const { text } = await generateText({
-    model: getLanguageModel("openai/gpt-5.4-mini"),
-    providerOptions: { openai: { reasoningEffort: "low" } },
+    reasoning: "medium",
+    model: getLanguageModel("openai/gpt-5.6-luna"),
 
     instructions:
       "You are a conversational assistant and you need to summarize the user's text into a title of 10 words or less. Do not add anything else.",
