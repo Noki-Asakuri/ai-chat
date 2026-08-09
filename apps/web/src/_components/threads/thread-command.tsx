@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import { Button } from "../ui/button";
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -104,30 +105,32 @@ function ThreadCommandDialog() {
 
   return (
     <CommandDialog open={threadCommandOpen} onOpenChange={threadStoreActions.setThreadCommandOpen}>
-      <CommandInput placeholder="Search threads..." value={query} onValueChange={setQuery} />
+      <Command>
+        <CommandInput placeholder="Search threads..." value={query} onValueChange={setQuery} />
 
-      <CommandList className="custom-scroll max-h-[400px]">
-        {isLoading && (
-          <CommandLoading className="py-6 text-center text-sm">
-            <div className="flex w-full items-center justify-center gap-2">
-              <LoaderIcon className="size-4 animate-spin" />
-              <span>Fetching threads...</span>
-            </div>
-          </CommandLoading>
-        )}
+        <CommandList className="custom-scroll max-h-[400px]">
+          {isLoading && (
+            <CommandLoading className="py-6 text-center text-sm">
+              <div className="flex w-full items-center justify-center gap-2">
+                <LoaderIcon className="size-4 animate-spin" />
+                <span>Fetching threads...</span>
+              </div>
+            </CommandLoading>
+          )}
 
-        {!isLoading && query.length > 1 && (
-          <>
-            <CommandEmpty>No results found for "{query}".</CommandEmpty>
+          {!isLoading && query.length > 1 && (
+            <>
+              <CommandEmpty>No results found for "{query}".</CommandEmpty>
 
-            <ThreadCommandGroup heading="Pinned" threads={groupedThreads.pinned} />
-            <ThreadCommandGroup heading="Today" threads={groupedThreads.today} />
-            <ThreadCommandGroup heading="Yesterday" threads={groupedThreads.yesterday} />
-            <ThreadCommandGroup heading="Last 7 days" threads={groupedThreads.sevenDaysAgo} />
-            <ThreadCommandGroup heading="Older" threads={groupedThreads.older} />
-          </>
-        )}
-      </CommandList>
+              <ThreadCommandGroup heading="Pinned" threads={groupedThreads.pinned} />
+              <ThreadCommandGroup heading="Today" threads={groupedThreads.today} />
+              <ThreadCommandGroup heading="Yesterday" threads={groupedThreads.yesterday} />
+              <ThreadCommandGroup heading="Last 7 days" threads={groupedThreads.sevenDaysAgo} />
+              <ThreadCommandGroup heading="Older" threads={groupedThreads.older} />
+            </>
+          )}
+        </CommandList>
+      </Command>
     </CommandDialog>
   );
 }

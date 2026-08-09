@@ -98,12 +98,19 @@ function compareAccountThreadRows(
 export const createThread = authenticatedMutation({
   args: {
     title: v.optional(v.string()),
+    groupId: v.nullable(v.id("groups")),
 
     latestModel: v.string(),
     latestModelParams: AISDKModelParams,
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
+
+    if (args.groupId) {
+      const group = await ctx.db.get("groups", args.groupId);
+      if (!group) throw new Error("Group not found");
+      if (group.userId !== user.userId) throw new Error("Not authorized");
+    }
 
     await ctx.runMutation(internal.functions.user_stats.incrementThreads, {
       userId: user.userId,
@@ -115,7 +122,7 @@ export const createThread = authenticatedMutation({
       status: "pending",
       userId: user.userId,
       updatedAt: Date.now() + 1,
-      groupId: null,
+      groupId: args.groupId,
       order: 0,
 
       latestModel: args.latestModel,

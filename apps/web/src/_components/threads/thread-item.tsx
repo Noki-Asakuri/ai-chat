@@ -3,9 +3,9 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import { Link, useParams } from "@tanstack/react-router";
 
 import {
+  CircleCheckIcon,
   DeleteIcon,
   GitBranchIcon,
-  GripVerticalIcon,
   Loader2Icon,
   PencilIcon,
   PinIcon,
@@ -16,11 +16,10 @@ import {
 import { useRef } from "react";
 import { toast } from "@/components/ui/toast";
 
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../ui/context-menu";
+import { Icons } from "../ui/icons";
 
+import { tryGetModelData } from "@/lib/chat/models";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { threadDialogStoreActions } from "@/lib/store/thread-dialog-store";
 import { regenerateThreadTitle } from "@/lib/trpc/client";
@@ -31,97 +30,77 @@ const convexClient = getConvexReactClient();
 
 type ThreadItemProps = {
   thread: Thread;
-  disabled?: boolean;
-  isOverlay?: boolean;
+  showMetadata?: boolean;
 };
 
-export function ThreadItem({ thread, disabled, isOverlay }: ThreadItemProps) {
+export function ThreadItem({ thread, showMetadata = false }: ThreadItemProps) {
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: thread._id,
-    disabled,
-    data: { type: "thread", threadId: thread._id, belongsTo: thread.groupId ?? null },
-  });
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging || isOverlay ? 0.5 : 1,
-  };
-
   const isStreaming = thread.status === "streaming" || thread.status === "pending";
   const isRecentlyCreated = thread._creationTime > Date.now() - 1000 * 60 * 60 * 24 * 2;
+  const modelData = showMetadata ? tryGetModelData(thread.latestModel) : null;
+  const modelName = modelData?.display.unique ?? modelData?.display.name ?? thread.latestModel;
+
+  const threadLink = (
+    <Link
+      preload={isRecentlyCreated || thread.pinned ? "viewport" : "intent"}
+      preloadDelay={100}
+      preloadIntentProximity={60}
+      title={thread.title}
+      to="/threads/$threadId"
+      params={{ threadId: toUUID(thread._id) }}
+      className={cn(
+        "flex w-full min-w-0 px-2",
+        showMetadata ? "flex-col gap-1.5 py-2" : "items-center gap-1.5 py-1.5",
+      )}
+    >
+      {showMetadata && (
+        <span className="flex w-full min-w-0 items-center justify-between gap-2">
+          <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+            {modelData ? (
+              <Icons.provider provider={modelData.provider} className="size-3.5 shrink-0" />
+            ) : (
+              <Icons.unknown className="size-3.5 shrink-0" />
+            )}
+            <span className="truncate">{modelName}</span>
+          </span>
+
+          <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-primary">
+            {isStreaming ? (
+              <>
+                <Loader2Icon className="size-3.5 animate-spin" />
+                Working
+              </>
+            ) : (
+              <>
+                <CircleCheckIcon className="size-3.5" />
+                Done
+              </>
+            )}
+          </span>
+        </span>
+      )}
+
+      {thread.branchedFrom && <GitBranchIcon className="size-3.5 shrink-0 rotate-180" />}
+      <span className="truncate text-sm font-medium">{thread.title}</span>
+    </Link>
+  );
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
       data-thread-id={thread._id}
       data-thread-active={params?.threadId === toUUID(thread._id)}
       data-thread-index={thread.order}
       data-thread-status={thread.status}
-      data-is-dragging={isDragging || isOverlay}
       data-slot="thread-item"
       className={cn(
-        "group/thread flex items-center justify-between gap-2 overflow-hidden rounded-md px-2",
+        "flex min-w-0 overflow-hidden rounded-lg",
         "text-sidebar-foreground transition-colors hover:bg-primary/30",
         "data-[thread-active=true]:bg-primary/30",
-        "data-[is-dragging=true]:bg-primary/30",
       )}
     >
-      {!(isDragging || disabled) ? (
-        <ThreadActions thread={thread} isStreaming={isStreaming}>
-          <Link
-            preload={isRecentlyCreated || thread.pinned ? "viewport" : "intent"}
-            preloadDelay={100}
-            preloadIntentProximity={60}
-            title={thread.title}
-            to="/threads/$threadId"
-            params={{ threadId: toUUID(thread._id) }}
-            className="flex w-full min-w-0 items-center gap-2 py-1.5"
-          >
-            {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
-            <span className="truncate text-sm">{thread.title}</span>
-          </Link>
-        </ThreadActions>
-      ) : (
-        <Link
-          preload={isRecentlyCreated || thread.pinned ? "viewport" : "intent"}
-          preloadDelay={100}
-          preloadIntentProximity={60}
-          title={thread.title}
-          to="/threads/$threadId"
-          params={{ threadId: toUUID(thread._id) }}
-          className="flex w-full min-w-0 items-center gap-2 py-1.5"
-        >
-          {thread.branchedFrom && <GitBranchIcon className="size-4 shrink-0 rotate-180" />}
-          <span className="truncate text-sm">{thread.title}</span>
-        </Link>
-      )}
-
-      <div className="flex items-center gap-2">
-        {isStreaming && (
-          <div className="inline-block">
-            <Loader2Icon className="size-4 animate-spin" />
-            <span className="sr-only">Streaming...</span>
-          </div>
-        )}
-
-        {!isStreaming && (
-          <div
-            data-slot="thread-dnd-handle"
-            {...attributes}
-            {...listeners}
-            className={cn(
-              "cursor-grab py-1.5 active:cursor-grabbing",
-              "hidden group-hover/thread:flex",
-              (isDragging || disabled) && "flex cursor-grabbing",
-            )}
-          >
-            <GripVerticalIcon className="size-4" />
-          </div>
-        )}
-      </div>
+      <ThreadActions thread={thread} isStreaming={isStreaming}>
+        {threadLink}
+      </ThreadActions>
     </div>
   );
 }

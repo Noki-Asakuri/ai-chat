@@ -2,20 +2,15 @@
 
 <!-- intent-skills:start -->
 
-# Skill mappings - when working in these areas, load the linked skill file into context.
+## Skill Loading
 
-skills:
+Before editing files for a substantial task:
 
-- task: "working on React Start app setup, document shell, or route generation"
-  load: "/home/asakuri/code/ai-chat/apps/web/node_modules/@tanstack/react-start/skills/react-start/SKILL.md"
-- task: "working on auth redirects and protected chat layouts"
-  load: "/home/asakuri/code/ai-chat/node_modules/.bun/@tanstack+router-core@1.167.4/node_modules/@tanstack/router-core/skills/router-core/auth-and-guards/SKILL.md"
-- task: "working on route loaders, preloading, or query-backed navigation"
-  load: "/home/asakuri/code/ai-chat/node_modules/.bun/@tanstack+router-core@1.167.4/node_modules/@tanstack/router-core/skills/router-core/data-loading/SKILL.md"
-- task: "working on TanStack Start server functions, cookies, or request handling"
-  load: "/home/asakuri/code/ai-chat/node_modules/.bun/@tanstack+start-client-core@1.166.12/node_modules/@tanstack/start-client-core/skills/start-core/server-functions/SKILL.md"
-- task: "working on Vite devtools setup in apps/web"
-  load: "/home/asakuri/code/ai-chat/apps/web/node_modules/@tanstack/devtools-vite/skills/devtools-vite-plugin/SKILL.md"
+- Run `bunx @tanstack/intent@latest list` from the workspace root to see available local skills.
+- If a listed skill matches the task, run `bunx @tanstack/intent@latest load <package>#<skill>` before changing files.
+- Use the loaded `SKILL.md` guidance while making the change.
+- Monorepos: when working across packages, run the skill check from the workspace root and prefer the local skill for the package being changed.
+- Multiple matches: prefer the most specific local skill for the package or concern you are changing; load additional skills only when the task spans multiple packages or concerns.
 
 <!-- intent-skills:end -->
 
@@ -24,31 +19,17 @@ skills:
 This part is for agents to know what is the most important thing to do.
 
 - Follow the user's instructions exactly. If you are not sure or the user is ambiguous, ask for clarification, NEVER guess or make assumptions.
-- Never use git unless the user explicitly asks. Focus on the task at hand, and leave the version control to the user.
-- Always use Conventional Commits with scope when committing.
-- If there is a change that are not from you, it could coming from other agent or the user. Do not modify or revert those changes, stop and ask for clarification if you are not sure about the change. Always assume good intent and communicate clearly with the user or other agents to resolve any conflicts or confusion.
+- If there is a change that are not from you, it could coming from other agent or the user. Do not modify or revert those changes, stop and ask for clarification if you are not sure about the change. Always assume good intent and communicate clearly with the user to resolve any conflicts or confusion.
 
 ### Docs lookup
 
-Use up-to-date docs and avoid using your training data knowledge, which may be outdated. Always look up the latest docs for any library or framework you're working with. This is crucial for ensuring that your code is using the most current best practices and APIs, and for avoiding bugs that may arise from using deprecated or changed features.
+Use up-to-date docs and avoid using your training data knowledge, which may be outdated. Always look up the latest docs for any library or framework you're working with.
+This is crucial for ensuring that your code is using the most current best practices and APIs, and for avoiding bugs that may arise from using deprecated or changed features.
 
 ### Shadcn UI
 
 The current codebase uses shadcn UI. So when adding a new component, ensure to use the Shadcn UI MCP.
-It allow you to look up the current components registry, list all the components, get their example usage, and etc.
-Then after you can use the shadcn cli to add it to the codebase. `bunx shadcn add <component-name>`
-
-Do not make any changes to the `components.json` file.
-
-## Scripts
-
-This repo uses Bun for install and run scripts. But only use scripts that you're allowed to run or asked to run.
-Any other scripts are forbidden to run by the agent. Same as manually run with `bunx`.
-
-These scripts are needed to be run everytime you finished the task.
-This is not required if the task contain no file changes.
-
-- `bun check`: Run lint, format and typecheck.
+It allow you to look up the current components registry, list all the components, get their example usage, and etc. Then after you can use the shadcn cli to add it to the codebase. `bunx shadcn add <component-name>`
 
 ## TypeScript conventions
 

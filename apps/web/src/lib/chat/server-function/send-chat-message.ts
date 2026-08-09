@@ -14,6 +14,7 @@ import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
+import { useThreadStore } from "@/lib/store/thread-store";
 import type { ChatRequestBody, UIChatMessage } from "@/lib/types";
 import { fromUUID, toUUID, tryCatch } from "@/lib/utils";
 
@@ -84,6 +85,7 @@ export function useSendChatMessage() {
 
     if (!threadId) {
       threadId = await convexClient.mutation(api.functions.threads.createThread, {
+        groupId: useThreadStore.getState().activeGroupId,
         latestModel: model,
         latestModelParams: modelParams,
       });

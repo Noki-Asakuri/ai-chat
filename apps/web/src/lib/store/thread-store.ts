@@ -5,10 +5,6 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import type { RemoveAllExceptFunctions } from "../types";
 
-type ActiveDraggingItem =
-  | { type: "thread"; item: Doc<"threads"> }
-  | { type: "group"; item: Doc<"groups"> };
-
 export type GroupedThreads = {
   groupedThreads: Record<
     Id<"groups"> | "none",
@@ -23,8 +19,8 @@ export type ThreadStore = {
   groupedThreads: GroupedThreads;
   setGroupedThreads: (groupedThreads: GroupedThreads) => void;
 
-  activeDraggingItem: ActiveDraggingItem | null;
-  setActiveDraggingItem: (item: ActiveDraggingItem | null) => void;
+  activeGroupId: Id<"groups"> | null;
+  setActiveGroupId: (groupId: Id<"groups"> | null) => void;
 
   threadCommandOpen: boolean;
   setThreadCommandOpen: (open: boolean | ((open: boolean) => boolean)) => void;
@@ -41,8 +37,8 @@ export const useThreadStore = create<ThreadStore>()(
       },
       setGroupedThreads: (groupedThreads) => set({ groupedThreads }),
 
-      activeDraggingItem: null,
-      setActiveDraggingItem: (item) => set({ activeDraggingItem: item }),
+      activeGroupId: null,
+      setActiveGroupId: (activeGroupId) => set({ activeGroupId }),
 
       threadCommandOpen: false,
       setThreadCommandOpen: (open) =>
@@ -55,7 +51,10 @@ export const useThreadStore = create<ThreadStore>()(
       version: 1,
       storage: createJSONStorage(() => localStorage),
 
-      partialize: (state) => ({ groupedThreads: state.groupedThreads }),
+      partialize: (state) => ({
+        groupedThreads: state.groupedThreads,
+        activeGroupId: state.activeGroupId,
+      }),
     },
   ),
 );

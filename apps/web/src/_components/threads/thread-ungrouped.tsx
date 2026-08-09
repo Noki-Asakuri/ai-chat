@@ -5,8 +5,6 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronLeftIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { useDroppable } from "@dnd-kit/core";
-
 import { SidebarGroup, SidebarGroupLabel } from "../ui/sidebar";
 
 import { ThreadItem } from "./thread-item";
@@ -20,13 +18,13 @@ import { groupByDate } from "@/lib/threads/group-by-date";
 
 const OLDER_THREADS_ESTIMATED_ITEM_HEIGHT_PX = 36;
 const OLDER_THREADS_OVERSCAN = 8;
-const THREAD_DND_CONTAINER_SELECTOR = "[data-slot='thread-dnd-container']";
-const THREAD_UNGROUPED_DROPZONE_SELECTOR = "[data-slot='thread-ungrouped-dropzone']";
+const THREAD_LIST_CONTAINER_SELECTOR = "[data-slot='thread-list-container']";
+const THREAD_UNGROUPED_LIST_SELECTOR = "[data-slot='thread-ungrouped-list']";
 
-function getThreadDndScrollElement(listElement: HTMLDivElement | null): HTMLDivElement | null {
+function getThreadListScrollElement(listElement: HTMLDivElement | null): HTMLDivElement | null {
   if (!listElement) return null;
 
-  const scrollElement = listElement.closest(THREAD_DND_CONTAINER_SELECTOR);
+  const scrollElement = listElement.closest(THREAD_LIST_CONTAINER_SELECTOR);
   if (!(scrollElement instanceof HTMLDivElement)) return null;
 
   return scrollElement;
@@ -44,7 +42,7 @@ function resolveVirtualizationElements(
 ): { listElement: HTMLDivElement; scrollElement: HTMLDivElement } | null {
   if (!listElement) return null;
 
-  const scrollElement = getThreadDndScrollElement(listElement);
+  const scrollElement = getThreadListScrollElement(listElement);
   if (!scrollElement) return null;
 
   return { listElement, scrollElement };
@@ -52,21 +50,13 @@ function resolveVirtualizationElements(
 
 type UngroupedThreadGroupProps = {
   threads: Doc<"threads">[];
-  hasGroups: boolean;
 };
 
-export function UngroupedThreadGroup({ threads, hasGroups }: UngroupedThreadGroupProps) {
-  const { setNodeRef: setDropRef } = useDroppable({
-    id: "none",
-    data: { type: "group", groupId: null, title: "Ungrouped" },
-  });
-
+export function UngroupedThreadGroup({ threads }: UngroupedThreadGroupProps) {
   const groupedThreads = groupByDate(threads);
 
   return (
-    <div ref={setDropRef} data-slot="thread-ungrouped-dropzone">
-      {hasGroups && <hr className="my-1.5 border-sidebar-border" />}
-
+    <div data-slot="thread-ungrouped-list">
       {Object.entries(groupedThreads).map(function renderItem([title, threads]) {
         const groupKey = `thread-ungrouped-group-${title}`;
         return (
@@ -100,6 +90,7 @@ function GroupByDateItem({ groupKey, title, threads }: GroupByDateItemProps) {
   const persistedKey = getUngroupedBucketKey(groupKey);
   const isOpen = useThreadGroupUIStore((state) => state.isOpenByKey[persistedKey] ?? true);
   const isOlderGroup = title === "older";
+  const showMetadata = title === "pinned" || title === "today" || title === "yesterday";
 
   if (threads.length === 0) return null;
   const beautifyTitle = keyToTitle[title as keyof typeof keyToTitle];
@@ -125,7 +116,7 @@ function GroupByDateItem({ groupKey, title, threads }: GroupByDateItemProps) {
             <VirtualizedOlderThreadList threads={threads} />
           ) : (
             threads.map(function renderItem(thread) {
-              return <ThreadItem key={thread._id} thread={thread} />;
+              return <ThreadItem key={thread._id} thread={thread} showMetadata={showMetadata} />;
             })
           )}
         </Collapsible.Panel>
@@ -145,7 +136,7 @@ function VirtualizedOlderThreadList({ threads }: VirtualizedOlderThreadListProps
   const virtualizer = useVirtualizer({
     count: threads.length,
     getScrollElement: function getScrollElement() {
-      return getThreadDndScrollElement(listElementRef.current);
+      return getThreadListScrollElement(listElementRef.current);
     },
     estimateSize: () => OLDER_THREADS_ESTIMATED_ITEM_HEIGHT_PX,
     overscan: OLDER_THREADS_OVERSCAN,
@@ -181,9 +172,9 @@ function VirtualizedOlderThreadList({ threads }: VirtualizedOlderThreadListProps
       resizeObserver.observe(listElement);
       resizeObserver.observe(scrollElement);
 
-      const ungroupedDropzone = listElement.closest(THREAD_UNGROUPED_DROPZONE_SELECTOR);
-      if (ungroupedDropzone instanceof HTMLDivElement) {
-        resizeObserver.observe(ungroupedDropzone);
+      const ungroupedList = listElement.closest(THREAD_UNGROUPED_LIST_SELECTOR);
+      if (ungroupedList instanceof HTMLDivElement) {
+        resizeObserver.observe(ungroupedList);
       }
 
       return function cleanupObserver() {

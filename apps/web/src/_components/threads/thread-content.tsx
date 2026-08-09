@@ -1,37 +1,36 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
-import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useQuery } from "@tanstack/react-query";
-import { ClientOnly, Link } from "@tanstack/react-router";
+import { ClientOnly, useNavigate, useParams } from "@tanstack/react-router";
 
 import { Dialog } from "@base-ui/react/dialog";
 import { useMutation } from "convex/react";
-import { Loader2Icon } from "lucide-react";
+import { FolderIcon, FolderPlusIcon, Loader2Icon, SearchIcon, SquarePenIcon } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 
-import {
-  closestCorners,
-  DndContext,
-  DragOverlay,
-  MouseSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragCancelEvent,
-  type DragEndEvent,
-  type DragOverEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
-import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-
 import { Button } from "../ui/button";
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "../ui/command";
 import { Input } from "../ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+} from "../ui/select";
 import { Skeleton } from "../ui/skeleton";
 
-import { ThreadGroup } from "./thread-group";
 import { ThreadDeleteDialog } from "./thread-delete-dialog";
-import { ThreadItem } from "./thread-item";
 import { ThreadShareDialog } from "./thread-share-dialog";
 import { UngroupedThreadGroup } from "./thread-ungrouped";
 
@@ -43,35 +42,18 @@ import {
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { buttonVariants } from "../ui/button";
-import { cn } from "@/lib/utils";
+import { cn, fromUUID } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
+const UNGROUPED_SELECT_VALUE = "ungrouped";
 
 export function ThreadContents() {
   return (
-    <>
-      <hr className="my-1 border-sidebar-border" />
-
-      <div className="grid w-full grid-cols-2">
-        <Button
-          size="sm"
-          variant="secondary"
-          className="rounded-l-md"
-          nativeButton={false}
-          render={<Link to="/" />}
-        >
-          New Chat
-        </Button>
-
-        <CreateGroupButton />
-      </div>
-
-      <hr className="my-1 border-sidebar-border" />
-
+    <div className="flex min-h-0 flex-1 flex-col">
       <ClientOnly fallback={<Skeleton className="h-full w-full" key="thread-list-skeleton" />}>
         <ThreadListWrapper />
       </ClientOnly>
-    </>
+    </div>
   );
 }
 
@@ -85,7 +67,8 @@ function CreateGroupButton() {
     const trimmedTitle = title.trim();
     if (trimmedTitle.length === 0) return;
 
-    await createGroup({ title: trimmedTitle });
+    const groupId = await createGroup({ title: trimmedTitle });
+    threadStoreActions.setActiveGroupId(groupId);
 
     setOpen(false);
     setTitle("");
@@ -93,8 +76,14 @@ function CreateGroupButton() {
 
   return (
     <>
-      <Button size="sm" variant="secondary" className="rounded-r-md" onClick={() => setOpen(true)}>
-        New Group
+      <Button
+        size="icon"
+        variant="outline"
+        aria-label="Create group"
+        title="Create group"
+        onClick={() => setOpen(true)}
+      >
+        <FolderPlusIcon />
       </Button>
 
       <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -139,6 +128,9 @@ function CreateGroupButton() {
 
 function ThreadListWrapper() {
   const localCache = useThreadStore((state) => state.groupedThreads);
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
+  const lastSyncedThreadIdRef = useRef<Id<"threads"> | null>(null);
+  const routeThreadId = fromUUID<Id<"threads">>(params?.threadId);
 
   const { data } = useQuery({
     ...convexSessionQuery(api.functions.groups.listGroups),
@@ -146,8 +138,24 @@ function ThreadListWrapper() {
   });
 
   useEffect(() => {
-    if (data) threadStoreActions.setGroupedThreads(data);
-  }, [data]);
+    if (!data) return;
+
+    threadStoreActions.setGroupedThreads(data);
+
+    if (routeThreadId && lastSyncedThreadIdRef.current !== routeThreadId) {
+      const routeThread = data.threads.find((thread) => thread._id === routeThreadId);
+      if (routeThread) {
+        threadStoreActions.setActiveGroupId(routeThread.groupId);
+        lastSyncedThreadIdRef.current = routeThreadId;
+        return;
+      }
+    }
+
+    const activeGroupId = useThreadStore.getState().activeGroupId;
+    if (activeGroupId && !data.groups.some((group) => group._id === activeGroupId)) {
+      threadStoreActions.setActiveGroupId(null);
+    }
+  }, [data, routeThreadId]);
 
   if (!data) {
     return <Skeleton className="h-full w-full" key="thread-list-skeleton" />;
@@ -156,44 +164,6 @@ function ThreadListWrapper() {
   return <ThreadList data={data} />;
 }
 
-type SortableData = {
-  sortable: {
-    containerId: `Sortable-${string}`;
-    index: number;
-    items: Array<Id<"threads">>;
-  };
-};
-export type ActiveThreadData = SortableData & {
-  type: "thread";
-  threadId: Id<"threads">;
-  belongsTo: Id<"groups"> | null;
-};
-export type ActiveGroupData = SortableData & {
-  type: "group";
-  groupId: Id<"groups"> | null;
-  title: string;
-};
-
-type PendingDropThread = {
-  type: "thread";
-  index: number;
-  toGroupId: Id<"groups"> | null;
-};
-
-type PendingDropGroup = {
-  type: "group";
-  index: number;
-};
-
-type PendingDrop = PendingDropThread | PendingDropGroup;
-
-type GroupThreads = Record<
-  Id<"groups"> | "none",
-  { group: Doc<"groups"> | null; threads: Doc<"threads">[] }
->;
-
-type Groups = Doc<"groups">[];
-
 type ListGroupData = (typeof api.functions.groups.listGroups)["_returnType"];
 
 type ThreadListProps = {
@@ -201,30 +171,21 @@ type ThreadListProps = {
 };
 
 function ThreadList({ data }: ThreadListProps) {
-  const removeGroupId = useMutation(api.functions.groups.removeGroupId);
-  const moveThreadToGroup = useMutation(api.functions.groups.moveThreadToGroup);
-  const reorderThread = useMutation(api.functions.groups.reorderThreadWithinGroup);
-  const moveGroupToIndex = useMutation(api.functions.groups.moveGroupToIndex);
-
-  // Optimistic local state for grouped threads while dragging
-  const snapshotRef = useRef<GroupThreads | null>(null);
-
-  const [optimisticGroups, setOptimisticGroups] = useState<Groups | null>(null);
-  const [optimisticGrouped, setOptimisticGrouped] = useState<GroupThreads | null>(null);
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [newChatOpen, setNewChatOpen] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [isSavingTitle, startSavingTitle] = useTransition();
   const activeDialog = useThreadDialogStore((state) => state.activeDialog);
   const dialogThread = useThreadDialogStore((state) => state.thread);
+  const activeGroupId = useThreadStore((state) => state.activeGroupId);
 
-  const pendingDropRef = useRef<PendingDrop | null>(null);
-
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 8, delay: 100, tolerance: 5 } }),
-    useSensor(PointerSensor, { activationConstraint: { distance: 8, delay: 100, tolerance: 5 } }),
-  );
-
-  const grouped = optimisticGrouped ?? data.groupedThreads;
-  const groups = optimisticGroups ?? data.groups;
+  const activeGroup = data.groups.find((group) => group._id === activeGroupId);
+  const activeThreads = data.groupedThreads[activeGroupId ?? "none"]?.threads ?? [];
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+  const filteredThreads = normalizedSearchQuery
+    ? activeThreads.filter((thread) => thread.title.toLocaleLowerCase().includes(normalizedSearchQuery))
+    : activeThreads;
 
   const isEditDialogOpen = activeDialog === "edit" && dialogThread !== null;
   const isDeleteDialogOpen = activeDialog === "delete" && dialogThread !== null;
@@ -254,258 +215,125 @@ function ThreadList({ data }: ThreadListProps) {
     });
   }
 
-  function handleDragStart(event: DragStartEvent) {
-    console.debug("[Thread] Drag start", event.active.id);
-
-    snapshotRef.current = optimisticGrouped ?? data.groupedThreads;
-    const activeData = event.active.data.current as ActiveThreadData | ActiveGroupData;
-
-    switch (activeData.type) {
-      case "thread": {
-        const thread = data.threads.find((t) => t._id === activeData.threadId)!;
-        threadStoreActions.setActiveDraggingItem({ type: "thread", item: thread });
-        break;
-      }
-
-      case "group": {
-        const group = data.groups.find((g) => g._id === activeData.groupId)!;
-        threadStoreActions.setActiveDraggingItem({ type: "group", item: group });
-        break;
-      }
+  function selectGroup(value: string | null): void {
+    if (value === UNGROUPED_SELECT_VALUE || value === null) {
+      threadStoreActions.setActiveGroupId(null);
+      return;
     }
+
+    const group = data.groups.find((item) => item._id === value);
+    if (group) threadStoreActions.setActiveGroupId(group._id);
   }
 
-  function handleDragOver(event: DragOverEvent) {
-    console.debug("[Thread] Drag over", event.over?.id, event.active.data, event.over?.data);
-
-    const activeId = event.active.id as Id<"threads">;
-    const overId = event.over?.id as Id<"threads"> | Id<"groups"> | "none" | undefined;
-
-    const activeData = event.active.data.current as ActiveThreadData | ActiveGroupData;
-    const overData = event.over?.data.current as ActiveThreadData | ActiveGroupData;
-
-    if (!overId || overId === activeId) return;
-
-    // Build a mutable draft of grouped threads for optimistic updates
-    const nextGrouped = structuredClone(optimisticGrouped ?? data.groupedThreads);
-    let nextGroups = [...(optimisticGroups ?? data.groups)];
-
-    const keyOf = (gid: Id<"groups"> | null): Id<"groups"> | "none" => gid ?? "none";
-
-    const ensureContainer = (key: Id<"groups"> | "none") => {
-      if (!nextGrouped[key]) {
-        const groupObj = key === "none" ? null : (data.groups.find((g) => g._id === key) ?? null);
-        nextGrouped[key] = { group: groupObj, threads: [] };
-      }
-      return nextGrouped[key];
-    };
-
-    reorderLogic: {
-      // Re-order within the same group
-      if (
-        activeData.type === "thread" &&
-        overData.type === "thread" &&
-        activeData.belongsTo === overData.belongsTo
-      ) {
-        console.debug("[Dnd]: Re-order within the same group");
-        pendingDropRef.current = {
-          type: "thread",
-          toGroupId: overData.belongsTo,
-          index: overData.sortable.index,
-        };
-
-        const key = keyOf(activeData.belongsTo);
-        const container = ensureContainer(key);
-
-        const fromIdx = container.threads.findIndex((t) => t._id === activeId);
-        if (fromIdx === -1) break reorderLogic;
-
-        const toIdx = overData.sortable.index;
-        container.threads = arrayMove(container.threads, fromIdx, toIdx);
-        container.threads = container.threads.map((t, i) => ({ ...t, order: i }));
-
-        break reorderLogic;
-      }
-
-      // Moving to a different group while dragging over a thread
-      if (
-        activeData.type === "thread" &&
-        overData.type === "thread" &&
-        activeData.belongsTo !== overData.belongsTo
-      ) {
-        console.debug("[Dnd]: Moving to a different group (over thread)");
-
-        const fromKey = keyOf(activeData.belongsTo);
-        const toKey = keyOf(overData.belongsTo);
-
-        const fromContainer = ensureContainer(fromKey);
-        const toContainer = ensureContainer(toKey);
-
-        const fromIdx = fromContainer.threads.findIndex((t) => t._id === activeId);
-        if (fromIdx === -1) break reorderLogic;
-
-        // If hovering the last item in the target, treat as append-to-end.
-        const baseIndex = overData.sortable.index;
-        const insertIndex =
-          toContainer.threads.length === 0
-            ? 0
-            : baseIndex >= toContainer.threads.length - 1
-              ? toContainer.threads.length
-              : baseIndex;
-
-        pendingDropRef.current = {
-          type: "thread",
-          index: insertIndex,
-          toGroupId: overData.belongsTo,
-        };
-
-        const [moved] = fromContainer.threads.splice(fromIdx, 1);
-        const movedUpdated = { ...moved, groupId: toKey === "none" ? null : toKey };
-        toContainer.threads.splice(insertIndex, 0, movedUpdated as Doc<"threads">);
-
-        fromContainer.threads = fromContainer.threads.map((t, i) => ({ ...t, order: i }));
-        toContainer.threads = toContainer.threads.map((t, i) => ({ ...t, order: i }));
-
-        break reorderLogic;
-      }
-
-      // Moving to a different group while dragging over a group container
-      if (
-        activeData.type === "thread" &&
-        overData.type === "group" &&
-        activeData.belongsTo !== overData.groupId
-      ) {
-        console.debug("[Dnd]: Moving to a different group (over container)");
-        pendingDropRef.current = {
-          index: 0,
-          type: "thread",
-          toGroupId: overData.groupId,
-        };
-
-        const fromKey = keyOf(activeData.belongsTo);
-        const toKey = keyOf(overData.groupId ?? null);
-
-        const fromContainer = ensureContainer(fromKey);
-        const toContainer = ensureContainer(toKey);
-
-        const fromIdx = fromContainer.threads.findIndex((t) => t._id === activeId);
-        if (fromIdx === -1) break reorderLogic;
-
-        const [moved] = fromContainer.threads.splice(fromIdx, 1);
-        const movedUpdated = { ...moved, groupId: toKey === "none" ? null : toKey };
-        toContainer.threads.splice(0, 0, movedUpdated as Doc<"threads">);
-
-        fromContainer.threads = fromContainer.threads.map((t, i) => ({ ...t, order: i }));
-        toContainer.threads = toContainer.threads.map((t, i) => ({ ...t, order: i }));
-
-        break reorderLogic;
-      }
-
-      if (
-        activeData.type === "group" &&
-        overData.type === "group" &&
-        activeData.sortable.index !== overData.sortable.index
-      ) {
-        console.debug("[Dnd]: Re-order groups");
-        pendingDropRef.current = {
-          type: "group",
-          index: overData.sortable.index,
-        };
-
-        const fromIdx = activeData.sortable.index;
-        const toIdx = overData.sortable.index;
-        nextGroups = arrayMove(nextGroups, fromIdx, toIdx);
-
-        break reorderLogic;
-      }
-    }
-
-    setOptimisticGrouped(nextGrouped);
-    setOptimisticGroups(nextGroups);
-  }
-
-  async function handleDragEnd(event: DragEndEvent) {
-    console.debug("[Thread] Drag end", event.active.id);
-
-    const pending = pendingDropRef.current;
-    if (!pending) return;
-
-    const activeItems = pending.type === "group" ? data.groups : data.threads;
-    const item = activeItems.find((t) => t._id === (event.active.id as Id<"groups" | "threads">));
-
-    if (!item) return;
-
-    console.log("[Dnd]: Reorder", pending, item);
-
-    if (pending.type === "thread" && "groupId" in item && pending.toGroupId === null) {
-      await removeGroupId({ threadId: item._id });
-    }
-    //
-    else if (pending.type === "thread" && "groupId" in item && pending.toGroupId === item.groupId) {
-      await reorderThread({ threadId: item._id, toIndex: pending.index });
-    }
-    //
-    else if (pending.type === "thread" && "groupId" in item && pending.toGroupId !== item.groupId) {
-      await moveThreadToGroup({
-        threadId: item._id,
-        toGroupId: pending.toGroupId,
-        toIndex: pending.index,
-      });
-    }
-    //
-    else if (pending.type === "group") {
-      await moveGroupToIndex({ groupId: item._id as Id<"groups">, toIndex: pending.index });
-    }
-
-    setOptimisticGrouped(null);
-    setOptimisticGroups(null);
-    threadStoreActions.setActiveDraggingItem(null);
-
-    pendingDropRef.current = null;
-    snapshotRef.current = null;
-  }
-
-  function handleDragCancel(_: DragCancelEvent) {
-    console.debug("[Thread] Drag cancel");
-    setOptimisticGrouped(null);
-    setOptimisticGroups(null);
-    threadStoreActions.setActiveDraggingItem(null);
-
-    pendingDropRef.current = null;
-    snapshotRef.current = null;
+  async function createNewChat(groupId: Id<"groups"> | null): Promise<void> {
+    threadStoreActions.setActiveGroupId(groupId);
+    setNewChatOpen(false);
+    await navigate({ to: "/" });
   }
 
   return (
-    <div
-      data-slot="thread-dnd-container"
-      className="custom-scroll flex flex-col overflow-y-auto pr-2.5"
-      style={{ scrollbarGutter: "stable both-edges" }}
-    >
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex items-center gap-1.5 px-2 pb-1.5">
+        <InputGroup className="rounded-md border-transparent bg-transparent shadow-none has-[[data-slot=input-group-control]:focus-visible]:bg-muted">
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+          <InputGroupInput
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search threads"
+            aria-label="Search threads in active group"
+            className="font-mono text-sm placeholder:text-muted-foreground"
+          />
+        </InputGroup>
+
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label="New chat"
+          title="New chat"
+          onClick={() => setNewChatOpen(true)}
+        >
+          <SquarePenIcon />
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-1.5 px-2 pb-1">
+        <Select value={activeGroupId ?? UNGROUPED_SELECT_VALUE} onValueChange={selectGroup}>
+          <SelectTrigger className="min-w-0 flex-1 rounded-md border-transparent px-2 font-mono text-sm hover:bg-muted">
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">{activeGroup?.title ?? "Ungrouped"}</span>
+            </span>
+          </SelectTrigger>
+
+          <SelectContent align="start" className="rounded-md bg-card">
+            <SelectGroup>
+              <SelectItem value={UNGROUPED_SELECT_VALUE}>
+                <FolderIcon className="size-4" />
+                Ungrouped
+              </SelectItem>
+
+              {data.groups.map((group) => (
+                <SelectItem key={group._id} value={group._id}>
+                  <FolderIcon className="size-4" />
+                  {group.title}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+
+        <CreateGroupButton />
+      </div>
+
+      <div
+        data-slot="thread-list-container"
+        className="custom-scroll flex min-h-0 flex-1 flex-col overflow-y-auto pr-2.5"
+        style={{ scrollbarGutter: "stable both-edges" }}
       >
-        <SortableContext items={groups.map((g) => g._id)} strategy={verticalListSortingStrategy}>
-          {groups.map(function renderContainer(group) {
-            const key = group._id;
-            const groupThreads = grouped[key]?.threads ?? [];
+        <UngroupedThreadGroup threads={filteredThreads} />
+      </div>
 
-            return (
-              <ThreadGroup key={key} group={group} threads={groupThreads} />
-            );
-          })}
-        </SortableContext>
+      <CommandDialog
+        open={newChatOpen}
+        onOpenChange={setNewChatOpen}
+        title="Create new chat"
+        description="Choose which group the new chat belongs to."
+        className="h-[min(36rem,calc(100dvh-4rem))] rounded-lg sm:max-w-3xl"
+      >
+        <Command>
+          <CommandInput placeholder="Choose a group..." />
+          <CommandList className="max-h-none flex-1">
+            <CommandEmpty>No groups found.</CommandEmpty>
+            <CommandGroup heading="Groups">
+              <CommandItem
+                value="Ungrouped"
+                onSelect={() => {
+                  void createNewChat(null);
+                }}
+              >
+                <FolderIcon />
+                <span>Ungrouped</span>
+              </CommandItem>
 
-        <UngroupedThreadGroup
-          threads={grouped.none?.threads ?? []}
-          hasGroups={groups.length > 0}
-        />
-        <ThreadDraggingOverlay />
-      </DndContext>
+              {data.groups.map((group) => (
+                <CommandItem
+                  key={group._id}
+                  value={group.title}
+                  onSelect={() => {
+                    void createNewChat(group._id);
+                  }}
+                >
+                  <FolderIcon />
+                  <span>{group.title}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </CommandDialog>
 
       {isEditDialogOpen && (
         <Dialog.Root
@@ -576,21 +404,5 @@ function ThreadList({ data }: ThreadListProps) {
         />
       )}
     </div>
-  );
-}
-
-function ThreadDraggingOverlay() {
-  const activeDraggingItem = useThreadStore((state) => state.activeDraggingItem);
-
-  return (
-    <DragOverlay modifiers={[restrictToFirstScrollableAncestor, restrictToVerticalAxis]}>
-      {activeDraggingItem && activeDraggingItem.type === "thread" && (
-        <ThreadItem thread={activeDraggingItem.item} disabled isOverlay />
-      )}
-
-      {activeDraggingItem && activeDraggingItem.type === "group" && (
-        <ThreadGroup group={activeDraggingItem.item} threads={[]} disabled isOverlay />
-      )}
-    </DragOverlay>
   );
 }
