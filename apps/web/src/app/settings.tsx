@@ -20,7 +20,7 @@ export const Route = createFileRoute("/settings")({
     const auth = await getAuth();
     if (!auth.user) {
       const path = location.pathname;
-      throw redirect({ to: "/auth/login", search: { rt: path } });
+      throw redirect({ to: "/auth/login", search: { rt: path }, reloadDocument: true });
     }
 
     await context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser));

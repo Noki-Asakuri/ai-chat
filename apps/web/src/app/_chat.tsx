@@ -49,7 +49,8 @@ export const Route = createFileRoute("/_chat")({
     if (!auth.user) {
       const path = location.pathname;
       console.debug("[Chat] No user found, redirect to login");
-      throw redirect({ to: "/auth/login", search: { rt: path } });
+
+      throw redirect({ to: "/auth/login", search: { rt: path }, reloadDocument: true });
     }
 
     const promises: Promise<unknown>[] = [];

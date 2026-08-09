@@ -21,7 +21,7 @@ import { type ConvexQueryClient } from "@convex-dev/react-query";
 import { getAuthAction } from "@workos/authkit-tanstack-react-start";
 import { AuthKitProvider, useAccessToken, useAuth } from "@workos/authkit-tanstack-react-start/client";
 import { SessionProvider } from "convex-helpers/react/sessions";
-import { ConvexProviderWithAuth } from "convex/react";
+import { ConvexProviderWithAuth, type ConvexReactClient } from "convex/react";
 import { useCallback, useMemo } from "react";
 
 import { Analytics } from "@vercel/analytics/react";
@@ -36,7 +36,6 @@ import {
   CHAT_NAVIGATE_TO_THREAD_EVENT,
   type NavigateToThreadEventDetail,
 } from "@/lib/chat/notification-navigation";
-import { getConvexReactClient } from "@/lib/convex/client";
 import { sessionUseCookie } from "@/lib/hooks/use-cookie";
 import { useWindowEvent } from "@/lib/hooks/use-window-event";
 import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
@@ -45,6 +44,7 @@ import { fromUUID, toUUID } from "@/lib/utils";
 type RootContext = {
   queryClient: QueryClient;
   convexClient: ConvexQueryClient;
+  convexReactClient: ConvexReactClient;
 };
 
 export const Route = createRootRouteWithContext<RootContext>()({
@@ -125,11 +125,10 @@ export function RootLayout() {
   );
 }
 
-const convex = getConvexReactClient();
-
 function RootDocument({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const loaderData = Route.useLoaderData();
+  const { convexReactClient } = Route.useRouteContext();
 
   useWindowEvent<CustomEvent<NavigateToThreadEventDetail>>(
     CHAT_NAVIGATE_TO_THREAD_EVENT,
@@ -159,7 +158,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
       <body className="dark isolate max-h-svh overflow-hidden font-sans">
         <AuthKitProvider initialAuth={loaderData.auth}>
-          <ConvexProviderWithAuth client={convex} useAuth={useAuthFromWorkOS}>
+          <ConvexProviderWithAuth client={convexReactClient} useAuth={useAuthFromWorkOS}>
             <SessionProvider useStorage={sessionUseCookie}>{children}</SessionProvider>
           </ConvexProviderWithAuth>
         </AuthKitProvider>

@@ -2,12 +2,14 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLoaderData, useLocation, useSearch } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeftIcon, LogOutIcon } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+import { logout } from "@/lib/authkit/logout";
 import { getUserAvatarUrl, getUserDisplayName, getUserInitials } from "@/lib/authkit/user";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
@@ -59,14 +61,13 @@ function ReturnToChatButton() {
 }
 
 function SignOutButton() {
-  const location = useLocation();
+  const logoutUser = useServerFn(logout);
 
   return (
     <Button
       variant="destructive"
       className="mt-auto w-full"
-      nativeButton={false}
-      render={<Link to="/auth/logout" search={{ rt: location.pathname }} />}
+      onClick={() => logoutUser()}
     >
       <LogOutIcon />
       Sign out

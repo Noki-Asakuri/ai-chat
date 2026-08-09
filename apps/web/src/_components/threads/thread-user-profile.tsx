@@ -2,6 +2,7 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLoaderData, useParams } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 
 import {
   BrainIcon,
@@ -19,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Menu } from "../ui/menu";
 import { Skeleton } from "../ui/skeleton";
 
+import { logout } from "@/lib/authkit/logout";
 import { getUserAvatarUrl, getUserDisplayName, getUserInitials } from "@/lib/authkit/user";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
@@ -26,16 +28,14 @@ import { cn } from "@/lib/utils";
 
 export function ThreadUserProfile() {
   const { user } = useLoaderData({ from: "/_chat" });
-  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
+  const logoutUser = useServerFn(logout);
 
   if (!user) return null;
 
   const initials = getUserInitials(user);
   const username = getUserDisplayName(user);
   const avatarUrl = currentUser?.imageUrl ?? getUserAvatarUrl(user);
-
-  const rt = params?.threadId ? `/threads/${params.threadId}` : "/";
 
   return (
     <Menu.Root>
@@ -99,9 +99,8 @@ export function ThreadUserProfile() {
             <Menu.Separator className="my-1 h-px bg-primary/30" />
 
             <Menu.Item
-              nativeButton={false}
               className="flex w-full cursor-pointer items-center justify-start gap-1.5 rounded-md px-1.5 py-1 text-sm text-destructive transition-colors hover:bg-destructive/20"
-              render={<Link to="/auth/logout" search={{ rt }} />}
+              onClick={() => logoutUser()}
             >
               <LogOutIcon className="size-5" />
               Logout

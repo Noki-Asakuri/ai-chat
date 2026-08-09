@@ -15,9 +15,8 @@ import { getConvexReactClient } from "./lib/convex/client";
 
 import { routeTree } from "./routeTree.gen";
 
-const convexClient = getConvexReactClient();
-
 export async function getRouter() {
+  const convexClient = getConvexReactClient();
   const convexQueryClient = new ConvexQueryClient(convexClient);
   await ensureAuthSSRConvexClient(convexClient, convexQueryClient);
 
@@ -30,7 +29,7 @@ export async function getRouter() {
 
   const router = createRouter({
     routeTree,
-    context: { queryClient, convexClient: convexQueryClient },
+    context: { queryClient, convexClient: convexQueryClient, convexReactClient: convexClient },
     defaultPreload: "intent",
     scrollRestoration: true,
     defaultErrorComponent: DefaultCatchBoundary,
