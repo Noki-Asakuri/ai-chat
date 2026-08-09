@@ -7,8 +7,8 @@ import { TRPCError } from "@trpc/server";
 import type { TextPart } from "ai";
 import { z } from "zod/v4";
 
-import { generateNewThreadTitleAndSave } from "@/libs/ai/actions/generate-thread-title";
-import { createServerConvexClient } from "@/libs/convex";
+import { generateNewThreadTitleAndSave } from "../../libs/ai/actions/generate-thread-title";
+import { createServerConvexClient } from "../../libs/convex";
 
 import { protectedProcedure, router } from "../index";
 

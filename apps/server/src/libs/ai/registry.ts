@@ -8,7 +8,7 @@ import { createMoonshotAI } from "@ai-sdk/moonshotai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
-import { env } from "@/env";
+import { env } from "../../env";
 
 const providerOptions = { baseURL: env.PROXY_URL, apiKey: env.PROXY_KEY };
 

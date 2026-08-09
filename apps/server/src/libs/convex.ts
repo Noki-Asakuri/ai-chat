@@ -1,7 +1,7 @@
 import { ConvexHttpClient } from "convex/browser";
 import type { Context } from "hono";
 
-import { env } from "@/env";
+import { env } from "../env";
 
 export async function createServerConvexClient(ctx: Context) {
   const auth = ctx.get("auth");

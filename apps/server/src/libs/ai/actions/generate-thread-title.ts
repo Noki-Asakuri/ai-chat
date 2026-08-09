@@ -6,7 +6,7 @@ import { ConvexHttpClient } from "convex/browser";
 import dedent from "dedent";
 
 import { getLanguageModel } from "../registry";
-import { logger } from "@/libs/axiom";
+import { logger } from "../../axiom";
 
 export async function generateNewThreadTitleAndSave(
   convexClient: ConvexHttpClient,
