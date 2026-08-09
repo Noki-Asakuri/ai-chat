@@ -64,6 +64,7 @@ export const checkAndIncrement = authenticatedMutation({
 
 export const refundRequest = authenticatedMutation({
   args: { amount: v.number() },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const user = ctx.user;
 
@@ -72,8 +73,9 @@ export const refundRequest = authenticatedMutation({
       .withIndex("by_userId", (q) => q.eq("userId", user.userId))
       .unique();
 
-    if (!usage) return;
-    await ctx.db.patch(usage._id, { used: usage.used - args.amount });
+    if (!usage) return null;
+    await ctx.db.patch(usage._id, { used: Math.max(0, usage.used - args.amount) });
+    return null;
   },
 });
 

@@ -14,23 +14,33 @@ type RefundReservedUsageOptions = {
 
 export function createReservedUsageRefunder(ctx: Context) {
   let usageRefunded = false;
+  let refundInFlight: Promise<void> | null = null;
 
-  return async function refundReservedUsage(options: RefundReservedUsageOptions): Promise<void> {
-    if (usageRefunded) return;
+  return function refundReservedUsage(options: RefundReservedUsageOptions): Promise<void> {
+    if (usageRefunded) return Promise.resolve();
+    if (refundInFlight) return refundInFlight;
 
-    const result = await refundUserPoints(ctx);
-    if (result.isOk()) {
-      usageRefunded = true;
-      return;
-    }
+    refundInFlight = (async function refundUsage(): Promise<void> {
+      try {
+        const result = await refundUserPoints(ctx);
+        if (result.isOk()) {
+          usageRefunded = true;
+          return;
+        }
 
-    logger.error("[Chat Error]: Failed to refund usage", {
-      userId: options.userId,
-      requestId: options.requestId,
-      threadId: options.threadId,
-      reason: options.reason,
-      error: options.error,
-      refundError: result.error,
-    });
+        logger.error("[Chat Error]: Failed to refund usage", {
+          userId: options.userId,
+          requestId: options.requestId,
+          threadId: options.threadId,
+          reason: options.reason,
+          error: options.error,
+          refundError: result.error,
+        });
+      } finally {
+        refundInFlight = null;
+      }
+    })();
+
+    return refundInFlight;
   };
 }
