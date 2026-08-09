@@ -29,9 +29,7 @@ const math = createMathPlugin({ singleDollarTextMath: true, errorColor: "var(--d
 const passthroughCodeFenceLanguages = new Set(["mermaid"]);
 
 export const StreamDownWrapper = memo(function StreamDownWrapper({
-  role,
   children,
-  isAnimating,
   className,
   ...props
 }: MarkdownProps) {

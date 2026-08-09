@@ -131,9 +131,9 @@ const dateFormat = new Intl.DateTimeFormat("en-US", {
 });
 
 export const format = {
-  number: numberFormat.format,
-  time: timeFormat.format,
-  date: dateFormat.format,
+  number: (value: number) => numberFormat.format(value),
+  time: (value: number) => timeFormat.format(value),
+  date: (value: number | Date) => dateFormat.format(value),
   size: formatBytes,
 };
 

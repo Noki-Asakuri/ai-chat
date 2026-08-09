@@ -18,7 +18,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
 import { type ConvexQueryClient } from "@convex-dev/react-query";
-import { getAuth, getAuthAction } from "@workos/authkit-tanstack-react-start";
+import { getAuthAction } from "@workos/authkit-tanstack-react-start";
 import { AuthKitProvider, useAccessToken, useAuth } from "@workos/authkit-tanstack-react-start/client";
 import { SessionProvider } from "convex-helpers/react/sessions";
 import { ConvexProviderWithAuth } from "convex/react";
