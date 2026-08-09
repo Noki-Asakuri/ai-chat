@@ -59,7 +59,7 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
       enabled: true,
       renderModal: (modalProps) => <ExternalLinkSafetyModal {...modalProps} />,
     },
-    className: cn("chat-markdown", className),
+    className: cn("typeset typeset-docs max-w-[37em]", className),
     remarkPlugins: [...Object.values(defaultRemarkPlugins), remarkBreaks],
     ...props,
   };
