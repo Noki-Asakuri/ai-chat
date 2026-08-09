@@ -5,7 +5,7 @@ import {
   createAuthService,
   sessionEncryption,
 } from "@workos/authkit-session";
-import { Result, TaggedError, matchError, type Result as BetterResult } from "better-result";
+import { Result, TaggedError, type Result as BetterResult } from "better-result";
 import { createMiddleware } from "hono/factory";
 import { decodeJwt } from "jose";
 
@@ -295,7 +295,7 @@ async function refreshAccessTokenResult(
 }
 
 function getAuthErrorStatus(error: AuthContextError): 401 | 500 {
-  return matchError<AuthContextError, 401 | 500>(error, {
+  return error.match<AuthContextError, 401 | 500>({
     UnauthenticatedError: function getUnauthenticatedStatus() {
       return 401;
     },
@@ -309,7 +309,7 @@ function getAuthErrorStatus(error: AuthContextError): 401 | 500 {
 }
 
 function getAuthErrorSetCookieHeader(error: AuthContextError): string | null {
-  return matchError(error, {
+  return error.match({
     UnauthenticatedError: function getUnauthenticatedHeader(unauthenticatedError) {
       return unauthenticatedError.clearSessionHeader;
     },
@@ -323,7 +323,7 @@ function getAuthErrorSetCookieHeader(error: AuthContextError): string | null {
 }
 
 function getAuthErrorResponseMessage(error: AuthContextError): string {
-  return matchError(error, {
+  return error.match({
     UnauthenticatedError: function getUnauthenticatedMessage() {
       return "Error: Unauthenticated!";
     },
@@ -337,7 +337,7 @@ function getAuthErrorResponseMessage(error: AuthContextError): string {
 }
 
 function getAuthLogMessage(error: AuthContextError): string {
-  return matchError(error, {
+  return error.match({
     UnauthenticatedError: function getUnauthenticatedLogMessage() {
       return "Unauthenticated";
     },
@@ -351,7 +351,7 @@ function getAuthLogMessage(error: AuthContextError): string {
 }
 
 function getAccessTokenErrorSetCookieHeader(error: AccessTokenError): string | null {
-  return matchError(error, {
+  return error.match({
     RefreshAccessTokenError: function getRefreshHeader(refreshError) {
       return refreshError.clearSessionHeader;
     },

@@ -1,7 +1,6 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { APICallError, createUIMessageStreamResponse, toUIMessageStream } from "ai";
-import { matchError } from "better-result";
 import { Hono } from "hono";
 
 import { authenticate } from "@/middlewares/workos-authenticate";
@@ -117,7 +116,7 @@ chatRouter.post("/chat", async function (ctx) {
   const refundReservedUsage = createReservedUsageRefunder(ctx);
 
   if (userPointsResult.isErr()) {
-    const limitMessage: string = matchError(userPointsResult.error, {
+    const limitMessage: string = userPointsResult.error.match({
       UserMessageLimitReachedError: function (limitError) {
         return limitError.message;
       },

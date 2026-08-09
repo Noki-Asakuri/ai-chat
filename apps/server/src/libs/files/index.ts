@@ -98,74 +98,100 @@ export async function serverUploadFileR2(
   const convexClient = await createServerConvexClient(ctx);
   const attachmentMetadata = createAttachmentMetadata(fileAttachmentId, data.mediaType);
 
-  const attachmentResult = await Result.tryPromise({
-    try: () =>
-      convexClient.mutation(api.functions.attachments.createAttachment, {
-        id: fileAttachmentId,
-        name: attachmentMetadata.name,
+  return Result.gen(async function* () {
+    const { docId } = yield* Result.await(
+      Result.tryPromise({
+        try: () =>
+          convexClient.mutation(api.functions.attachments.createAttachment, {
+            id: fileAttachmentId,
+            name: attachmentMetadata.name,
 
-        threadId: data.threadId,
-        size: data.buffer.length,
-        mimeType: data.mediaType,
+            threadId: data.threadId,
+            size: data.buffer.length,
+            mimeType: data.mediaType,
 
-        type: attachmentMetadata.type,
-        source: "assistant",
+            type: attachmentMetadata.type,
+            source: "assistant",
+          }),
+        catch: (cause) =>
+          new CreateAttachmentError({
+            message: "Failed to create attachment document for file upload.",
+            threadId: data.threadId,
+            mediaType: data.mediaType,
+            fileAttachmentId,
+            cause,
+          }),
       }),
-    catch: (cause) =>
-      new CreateAttachmentError({
-        message: "Failed to create attachment document for file upload.",
-        threadId: data.threadId,
-        mediaType: data.mediaType,
-        fileAttachmentId,
-        cause,
+    );
+
+    logger.info("[Chat] Attachment created", {
+      fileAttachmentId,
+      threadId: data.threadId,
+      type: data.mediaType,
+    });
+
+    const { key, url } = yield* Result.await(
+      Result.tryPromise({
+        try: () =>
+          convexClient.mutation(api.functions.files.generateAttachmentUploadUrl, {
+            fileId: fileAttachmentId,
+            threadId: data.threadId,
+            mimeType: data.mediaType,
+          }),
+        catch: (cause) =>
+          new GenerateAttachmentUploadUrlError({
+            message: "Failed to generate attachment upload URL.",
+            threadId: data.threadId,
+            mediaType: data.mediaType,
+            fileAttachmentId,
+            attachmentDocId: docId,
+            cause,
+          }),
       }),
-  });
+    );
 
-  if (attachmentResult.isErr()) return Result.err(attachmentResult.error);
-
-  const { docId } = attachmentResult.value;
-
-  logger.info("[Chat] Attachment created", {
-    fileAttachmentId,
-    threadId: data.threadId,
-    type: data.mediaType,
-  });
-
-  const uploadUrlResult = await Result.tryPromise({
-    try: () =>
-      convexClient.mutation(api.functions.files.generateAttachmentUploadUrl, {
-        fileId: fileAttachmentId,
-        threadId: data.threadId,
-        mimeType: data.mediaType,
+    const response = yield* Result.await(
+      Result.tryPromise({
+        try: () =>
+          fetch(url, {
+            method: "PUT",
+            headers: { "Content-Type": data.mediaType },
+            body: data.buffer,
+          }),
+        catch: (cause) =>
+          new UploadFileToR2RequestError({
+            message: "Failed to send file upload request to R2.",
+            threadId: data.threadId,
+            mediaType: data.mediaType,
+            fileAttachmentId,
+            attachmentDocId: docId,
+            filePathname: key,
+            cause,
+          }),
       }),
-    catch: (cause) =>
-      new GenerateAttachmentUploadUrlError({
-        message: "Failed to generate attachment upload URL.",
-        threadId: data.threadId,
-        mediaType: data.mediaType,
-        fileAttachmentId,
-        attachmentDocId: docId,
-        cause,
-      }),
-  });
+    );
 
-  if (uploadUrlResult.isErr()) return Result.err(uploadUrlResult.error);
+    if (!response.ok) {
+      const responseBody = yield* Result.await(
+        Result.tryPromise({
+          try: () => response.text(),
+          catch: (cause) =>
+            new UploadFileToR2RequestError({
+              message: "Failed to read the rejected R2 upload response.",
+              threadId: data.threadId,
+              mediaType: data.mediaType,
+              fileAttachmentId,
+              attachmentDocId: docId,
+              filePathname: key,
+              cause,
+            }),
+        }),
+      );
+      const message = `Failed to upload image: ${response.status} ${response.statusText} - ${responseBody}`;
 
-  const { key, url } = uploadUrlResult.value;
-  const response = await fetch(url, {
-    method: "PUT",
-    headers: { "Content-Type": data.mediaType },
-    body: data.buffer,
-  });
+      logger.error("[Chat Error]: Upload failed!", { docId, threadId: data.threadId, error: message });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    const message = `Failed to upload image: ${response.status} ${response.statusText} - ${errorText}`;
-
-    logger.error("[Chat Error]: Upload failed!", { docId, threadId: data.threadId, error: message });
-
-    return Result.err(
-      new UploadFileToR2ResponseError({
+      yield* new UploadFileToR2ResponseError({
         message,
         threadId: data.threadId,
         mediaType: data.mediaType,
@@ -174,15 +200,30 @@ export async function serverUploadFileR2(
         filePathname: key,
         status: response.status,
         statusText: response.statusText,
-        responseBody: errorText,
-      }),
+        responseBody,
+      });
+    }
+
+    yield* Result.await(
+      Result.tryPromise(
+        {
+          try: () => convexClient.mutation(api.functions.files.syncMetadata, { key }),
+          catch: (cause) =>
+            new SyncAttachmentMetadataError({
+              message: "Failed to synchronize attachment metadata after uploading to R2.",
+              threadId: data.threadId,
+              mediaType: data.mediaType,
+              fileAttachmentId,
+              attachmentDocId: docId,
+              filePathname: key,
+              cause,
+            }),
+        },
+        { retry: { times: 5, backoff: "linear", delayMs: 5000 } },
+      ),
     );
-  }
 
-  await Result.tryPromise(async () => convexClient.mutation(api.functions.files.syncMetadata, { key }), {
-    retry: { times: 5, backoff: "linear", delayMs: 5000 },
+    logger.info("[Chat] File uploaded to R2", { docId, threadId: data.threadId });
+    return Result.ok({ attachmentDocId: docId, filePathname: key });
   });
-
-  logger.info("[Chat] File uploaded to R2", { docId, threadId: data.threadId });
-  return Result.ok({ attachmentDocId: docId, filePathname: key });
 }

@@ -1,7 +1,7 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { chatRequestBodySchema, type ChatRequestBody } from "@ai-chat/shared/chat/request";
 
-import { matchError, Result } from "better-result";
+import { Result } from "better-result";
 import { z } from "zod/v4";
 
 import { RequestBodySchemaError, type ChatRequestValidationError } from "./errors";
@@ -75,7 +75,7 @@ type ValidationErrorResponse = {
 };
 
 function getValidationErrorResponse(error: ChatRequestValidationError): ValidationErrorResponse {
-  return matchError<ChatRequestValidationError, ValidationErrorResponse>(error, {
+  return error.match<ChatRequestValidationError, ValidationErrorResponse>({
     DeprecatedModelError: function getDeprecatedModelMessage(deprecatedModelError) {
       return {
         message: `This model is no longer available. Please switch to ${deprecatedModelError.details.replacementModelName} and try again.`,
