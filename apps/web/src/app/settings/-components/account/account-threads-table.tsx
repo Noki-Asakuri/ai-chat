@@ -6,11 +6,13 @@ import { useMutation } from "convex/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
+  createColumnHelper,
+  rowSortingFeature,
+  tableFeatures,
+  useTable,
   type ColumnDef,
   type SortingState,
+  type Updater,
 } from "@tanstack/react-table";
 
 import {
@@ -91,6 +93,13 @@ type AccountThreadSort = {
 
 const THREADS_PAGE_SIZE = 15;
 const PAGE_WINDOW_SIZE = 3;
+const accountThreadsTableFeatures = tableFeatures({ rowSortingFeature });
+const accountThreadColumnHelper = createColumnHelper<
+  typeof accountThreadsTableFeatures,
+  AccountThread
+>();
+
+type AccountThreadColumn = ColumnDef<typeof accountThreadsTableFeatures, AccountThread>;
 
 function getVisiblePageNumbers(currentPage: number, maxPageNumber: number): Array<number> {
   const start = Math.max(1, currentPage - PAGE_WINDOW_SIZE);
@@ -328,7 +337,7 @@ type AccountThreadsTableBodyProps = {
   searchText: string;
   cursor: string | null;
   sorting: SortingState;
-  columns: Array<ColumnDef<AccountThread>>;
+  columns: Array<AccountThreadColumn>;
   onResolved: (info: AccountThreadsTablePageInfo) => void;
 };
 
@@ -421,12 +430,15 @@ function AccountThreadsTableBody({
     });
   }, [data.continueCursor, data.isDone, onResolved, rows.length, visibleIds]);
 
-  const table = useReactTable({
-    data: rows,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualSorting: true,
-  });
+  const table = useTable(
+    {
+      features: accountThreadsTableFeatures,
+      data: rows,
+      columns,
+      manualSorting: true,
+    },
+    () => null,
+  );
 
   const rowModel = table.getRowModel();
 
@@ -444,9 +456,9 @@ function AccountThreadsTableBody({
       ) : (
         rowModel.rows.map((row) => (
           <tr key={row.id} className="m-0 p-0 transition-colors hover:bg-muted/40">
-            {row.getVisibleCells().map((cell) => (
+            {row.getAllCells().map((cell) => (
               <td key={cell.id} className="px-3 py-1.5 text-left text-sm">
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                <table.FlexRender cell={cell} />
               </td>
             ))}
           </tr>
@@ -458,7 +470,9 @@ function AccountThreadsTableBody({
 
 export function AccountThreadsTable() {
   const [searchText, setSearchText] = useState<string>("");
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>(() => [
+    { id: "updatedAt", desc: true },
+  ]);
   const [menuThreadId, setMenuThreadId] = useState<Id<"threads"> | null>(null);
   const [pendingTargetPageIndex, setPendingTargetPageIndex] = useState<number | null>(null);
   const [knownLastPageNumber, setKnownLastPageNumber] = useState<number | null>(null);
@@ -554,6 +568,13 @@ export function AccountThreadsTable() {
 
   function onSearchTextChange(next: string) {
     setSearchText(next);
+    setSelected(new Set());
+    resetPaging();
+  }
+
+  function onSortingChange(updater: Updater<SortingState>) {
+    setSorting(updater);
+    setMenuThreadId(null);
     setSelected(new Set());
     resetPaging();
   }
@@ -693,41 +714,41 @@ export function AccountThreadsTable() {
 
   const selectedIds = useMemo(() => Array.from(selected), [selected]);
 
-  const columns = useMemo<Array<ColumnDef<AccountThread>>>(
-    () => [
-      {
-        id: "select",
-        enableSorting: false,
-        header: () => (
-          <div className="flex items-center">
-            <Checkbox
-              aria-label="Select all"
-              checked={allSelected ? true : someSelected ? undefined : false}
-              indeterminate={someSelected}
-              onCheckedChange={(value) => setAllVisibleSelection(value === true)}
-              disabled={isLoadingPage}
-              className="size-5"
-            />
-          </div>
-        ),
-        cell: ({ row }) => {
-          const thread = row.original;
-          const checked = selected.has(thread._id);
+  const columns = useMemo<Array<AccountThreadColumn>>(
+    () =>
+      accountThreadColumnHelper.columns([
+        accountThreadColumnHelper.display({
+          id: "select",
+          enableSorting: false,
+          header: () => (
+            <div className="flex items-center">
+              <Checkbox
+                aria-label="Select all"
+                checked={allSelected ? true : someSelected ? undefined : false}
+                indeterminate={someSelected}
+                onCheckedChange={(value) => setAllVisibleSelection(value === true)}
+                disabled={isLoadingPage}
+                className="size-5"
+              />
+            </div>
+          ),
+          cell: ({ row }) => {
+            const thread = row.original;
+            const checked = selected.has(thread._id);
 
-          return (
-            <Checkbox
-              aria-label={`Select ${thread.title}`}
-              checked={checked}
-              onCheckedChange={() => toggleRowSelection(thread._id)}
-              className="size-5"
-            />
-          );
-        },
-      },
-      {
-        accessorKey: "title",
+            return (
+              <Checkbox
+                aria-label={`Select ${thread.title}`}
+                checked={checked}
+                onCheckedChange={() => toggleRowSelection(thread._id)}
+                className="size-5"
+              />
+            );
+          },
+        }),
+      accountThreadColumnHelper.accessor("title", {
         header: "Title",
-        cell: ({ row }) => {
+        cell: ({ getValue, row }) => {
           const thread = row.original;
 
           return (
@@ -739,22 +760,20 @@ export function AccountThreadsTable() {
                 title={thread.title}
                 className="w-[60ch] min-w-0 truncate underline-offset-4 hover:underline"
               >
-                {thread.title}
+                {getValue()}
               </Link>
             </div>
           );
         },
-      },
-      {
-        accessorKey: "pinned",
+      }),
+      accountThreadColumnHelper.accessor("pinned", {
         header: "Pinned",
-        cell: ({ row }) => (row.original.pinned ? "Yes" : "-"),
-      },
-      {
-        accessorKey: "shared",
+        cell: ({ getValue }) => (getValue() ? "Yes" : "-"),
+      }),
+      accountThreadColumnHelper.accessor("shared", {
         header: "Shared",
-        cell: ({ row }) => {
-          const isShared = row.original.shared;
+        cell: ({ getValue }) => {
+          const isShared = getValue();
           if (!isShared) return "-";
 
           return (
@@ -764,33 +783,28 @@ export function AccountThreadsTable() {
             </span>
           );
         },
-      },
-      {
-        accessorKey: "messageCount",
+      }),
+      accountThreadColumnHelper.accessor("messageCount", {
         header: "Msgs",
-        cell: ({ row }) => format.number(row.original.messageCount),
-      },
-      {
-        accessorKey: "attachmentCount",
+        cell: ({ getValue }) => format.number(getValue()),
+      }),
+      accountThreadColumnHelper.accessor("attachmentCount", {
         header: "Atts",
-        cell: ({ row }) => format.number(row.original.attachmentCount),
-      },
-      {
-        accessorKey: "_creationTime",
+        cell: ({ getValue }) => format.number(getValue()),
+      }),
+      accountThreadColumnHelper.accessor("_creationTime", {
         header: "Created",
-        cell: ({ row }) => format.date(row.original._creationTime),
-      },
-      {
-        accessorKey: "updatedAt",
+        cell: ({ getValue }) => format.date(getValue()),
+      }),
+      accountThreadColumnHelper.accessor("updatedAt", {
         header: "Updated",
-        cell: ({ row }) => format.date(row.original.updatedAt),
-      },
-      {
-        accessorKey: "status",
+        cell: ({ getValue }) => format.date(getValue()),
+      }),
+      accountThreadColumnHelper.accessor("status", {
         header: "Status",
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
-      },
-      {
+        cell: ({ getValue }) => <StatusBadge status={getValue()} />,
+      }),
+      accountThreadColumnHelper.display({
         id: "actions",
         header: "Actions",
         enableSorting: false,
@@ -869,8 +883,8 @@ export function AccountThreadsTable() {
             </div>
           );
         },
-      },
-    ],
+        }),
+      ]),
     [
       allSelected,
       isLoadingPage,
@@ -883,15 +897,19 @@ export function AccountThreadsTable() {
     ],
   );
 
-  const headerTable = useReactTable({
-    data: [],
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    manualSorting: true,
-    enableMultiSort: false,
-  });
+  const headerTable = useTable(
+    {
+      features: accountThreadsTableFeatures,
+      data: [],
+      columns,
+      state: { sorting },
+      onSortingChange,
+      manualSorting: true,
+      enableMultiSort: false,
+      enableSortingRemoval: false,
+    },
+    () => null,
+  );
 
   async function bulkPin(nextPinned: boolean) {
     const results = await Promise.all(
@@ -989,13 +1007,13 @@ export function AccountThreadsTable() {
                           onClick={header.column.getToggleSortingHandler()}
                           className="inline-flex items-center gap-2"
                         >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          <headerTable.FlexRender header={header} />
                           <span className="text-xs text-muted-foreground">
                             {sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : ""}
                           </span>
                         </button>
                       ) : (
-                        flexRender(header.column.columnDef.header, header.getContext())
+                        <headerTable.FlexRender header={header} />
                       )}
                     </th>
                   );
