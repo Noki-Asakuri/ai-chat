@@ -1,5 +1,4 @@
 import { Icons } from "../ui/icons";
-import { Shimmer } from "../ui/ai-elements/shimmer";
 
 import { tryGetModelData, type Provider } from "@/lib/chat/models";
 import type { ChatMessage } from "@/lib/types";
@@ -15,9 +14,7 @@ export function MessagePending({ metadata }: MessagePendingProps) {
 
   const effort = metadata?.modelParams?.effort;
   const showEffort =
-    modelData?.capabilities.reasoning?.type === "selectable" &&
-    effort !== undefined &&
-    effort !== "medium";
+    modelData?.capabilities.reasoning?.type === "selectable" && effort !== undefined && effort !== "medium";
 
   const modelName = modelData?.display.name ?? "Model";
   const provider: Provider = modelData?.provider ?? "openai";
@@ -48,9 +45,7 @@ export function MessagePending({ metadata }: MessagePendingProps) {
             {modelName}
 
             {showEffort && (
-              <span className="ml-1 text-xs font-medium text-muted-foreground capitalize">
-                ({effort})
-              </span>
+              <span className="ml-1 text-xs font-medium text-muted-foreground capitalize">({effort})</span>
             )}
           </p>
 
@@ -66,11 +61,7 @@ export function MessagePending({ metadata }: MessagePendingProps) {
         <div className="mt-1 flex items-center gap-2 text-sm text-foreground/80">
           <Icons.loading className="size-5 fill-primary stroke-primary text-primary" />
 
-          <span className="motion-reduce:hidden">
-            <Shimmer duration={1.2}>Thinking…</Shimmer>
-          </span>
-
-          <span className="hidden font-medium motion-reduce:block">Thinking…</span>
+          <span className="shimmer font-medium shimmer-duration-1200">Thinking…</span>
         </div>
       </div>
     </div>

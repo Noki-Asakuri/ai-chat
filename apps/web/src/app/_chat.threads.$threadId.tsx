@@ -109,5 +109,5 @@ function ChatHistory() {
     }
   }, [data, dataUpdatedAt]);
 
-  return <MessageHistory />;
+  return <MessageHistory insetBelowHeader />;
 }

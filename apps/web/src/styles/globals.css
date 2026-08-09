@@ -90,6 +90,7 @@
 }
 
 @import "tailwindcss";
+@import "shadcn/tailwind.css";
 @import "./typeset.css";
 
 .typeset-docs {

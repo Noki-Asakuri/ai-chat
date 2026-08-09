@@ -9,16 +9,20 @@ import {
 } from "@/lib/chat/scroll-stickiness";
 import { useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
+import { cn } from "@/lib/utils";
 
 type MessageHistoryProps = {
   readOnly?: boolean;
   showUserAvatar?: boolean;
   bottomPaddingPx?: number;
+  insetBelowHeader?: boolean;
 };
+
 export function MessageHistory({
   readOnly = false,
   showUserAvatar = true,
   bottomPaddingPx,
+  insetBelowHeader = false,
 }: MessageHistoryProps) {
   const textareaHeight = useChatStore((state) => state.textareaHeight);
   const resolvedBottomPadding = bottomPaddingPx ?? textareaHeight;
@@ -85,13 +89,19 @@ export function MessageHistory({
     <div
       ref={scrollAreaRef}
       id="messages-scrollarea"
-      className="custom-scroll absolute inset-0 overflow-y-scroll"
+      className={cn(
+        "custom-scroll absolute right-0 bottom-0 left-0 scroll-fade-t overflow-y-scroll",
+        insetBelowHeader ? "top-10" : "top-0",
+      )}
       style={{ scrollbarGutter: "stable both-edges" }}
     >
       <div
         ref={contentRef}
         data-slot="message-history"
-        className="mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 pt-12 [overflow-anchor:none]"
+        className={cn(
+          "mx-auto min-h-full max-w-[calc(56rem+32px)] space-y-4 px-4 [overflow-anchor:none]",
+          insetBelowHeader ? "pt-2" : "pt-12",
+        )}
         style={{ paddingBottom: `${resolvedBottomPadding}px` }}
       >
         <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />

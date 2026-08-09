@@ -8,7 +8,6 @@ import { createContext, memo, use, useEffect, useState } from "react";
 
 import { StreamDownWrapper } from "@/components/message/message-markdown";
 
-import { Shimmer } from "./shimmer";
 
 import { cn } from "@/lib/utils";
 
@@ -94,7 +93,7 @@ export type ReasoningTriggerProps = ComponentProps<typeof Collapsible.Trigger> &
 
 const defaultGetThinkingMessage = (isStreaming: boolean) => {
   if (isStreaming) {
-    return <Shimmer duration={1}>Thinking...</Shimmer>;
+    return <span className="shimmer shimmer-duration-1000">Thinking...</span>;
   }
 
   return <p>Thought process</p>;
@@ -149,9 +148,7 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
       )}
       {...props}
     >
-      <StreamDownWrapper className="w-full max-w-none" role="assistant">
-        {children}
-      </StreamDownWrapper>
+      <StreamDownWrapper role="assistant">{children}</StreamDownWrapper>
     </Collapsible.Panel>
   );
 });
