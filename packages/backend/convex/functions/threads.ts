@@ -112,7 +112,7 @@ export const createThread = authenticatedMutation({
       if (group.userId !== user.userId) throw new Error("Not authorized");
     }
 
-    await ctx.runMutation(internal.functions.user_stats.incrementThreads, {
+    await ctx.runMutation(internal.functions.userStats.incrementThreads, {
       userId: user.userId,
     });
 

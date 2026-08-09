@@ -147,7 +147,7 @@ export const migrateUserStatsFromMessages = internalAction({
   args: { userId: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const userStatsId = await ctx.runMutation(internal.functions.user_stats.resetUserStats, {
+    const userStatsId = await ctx.runMutation(internal.functions.userStats.resetUserStats, {
       userId: args.userId,
     });
 
@@ -199,7 +199,7 @@ export const migrateUserStatsFromMessages = internalAction({
 
     userStats.threadsCount = uniqueThreadIds.size;
 
-    await ctx.runMutation(internal.functions.user_stats.patchUserStats, {
+    await ctx.runMutation(internal.functions.userStats.patchUserStats, {
       userStatsId,
       updates: userStats,
     });

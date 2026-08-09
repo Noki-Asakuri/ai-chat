@@ -534,7 +534,7 @@ export const addMessagesToThread = authenticatedMutation({
       );
     }
 
-    await ctx.runMutation(internal.functions.user_stats.incrementOnUserMessage, {
+    await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
       userId: user.userId,
       threadId: args.threadId,
       createdAt: now,
@@ -619,7 +619,7 @@ export const applyAssistantCompletionTracking = internalMutation({
     const trackedAt = message.statsTrackedAt ?? 0;
     if (trackedAt > 0) return null;
 
-    await ctx.runMutation(internal.functions.user_stats.incrementOnAssistantComplete, {
+    await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
       userId: args.tracking.userId,
       modelUniqueId: args.tracking.modelUniqueId,
       ...(args.tracking.profileId ? { profileId: args.tracking.profileId } : {}),

@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { listAccountSessions, revokeAccountSession } from "@/lib/authkit/accountServerFunctions";
+import { listAccountSessions, revokeAccountSession } from "@/lib/authkit/account-server-functions";
 import { cn } from "@/lib/utils";
 
 type AccountSessionRow = {

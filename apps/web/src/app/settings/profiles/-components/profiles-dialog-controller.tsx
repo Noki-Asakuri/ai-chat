@@ -2,7 +2,7 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useCallback, useEffect, useImperativeHandle, useState } from "react";
 
-import { uploadAiProfileImage } from "@/lib/convex/uploadFiles";
+import { uploadAiProfileImage } from "@/lib/convex/upload-files";
 
 import { ProfileDialog } from "./profile-dialog";
 

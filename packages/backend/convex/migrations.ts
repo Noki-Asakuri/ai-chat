@@ -116,7 +116,7 @@ export const finalizeStreamingMessageParts = migrations.define({
 export const backfillUserStatsFromMessages = migrations.define({
   table: "users",
   migrateOne: async (ctx, user) => {
-    await ctx.scheduler.runAfter(0, internal.functions.user_stats.migrateUserStatsFromMessages, {
+    await ctx.scheduler.runAfter(0, internal.functions.userStats.migrateUserStatsFromMessages, {
       userId: user.userId,
     });
   },

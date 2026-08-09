@@ -2,7 +2,7 @@ import type { Doc } from "../_generated/dataModel";
 import { authKit } from "../components";
 
 import { DEFAULT_BASE } from "./usages";
-import { DEFAULT_USER_STATS } from "./user_stats";
+import { DEFAULT_USER_STATS } from "./userStats";
 import { DEFAULT_USER_PREFERENCES } from "./users";
 
 function isCustomAvatarUrl(imageUrl: string | null, userId: string): boolean {

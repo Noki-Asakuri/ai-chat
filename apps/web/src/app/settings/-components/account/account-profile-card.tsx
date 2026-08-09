@@ -18,7 +18,7 @@ import {
   confirmAccountEmailChange,
   startAccountEmailChange,
   updateAccountProfile,
-} from "@/lib/authkit/accountServerFunctions";
+} from "@/lib/authkit/account-server-functions";
 import { getUserAvatarUrl, getUserInitials } from "@/lib/authkit/user";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { censorEmail } from "@/lib/email";

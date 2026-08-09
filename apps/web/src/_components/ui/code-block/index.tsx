@@ -163,4 +163,4 @@ function HighlightedCodeBlock({ language, displayLanguage, code }: HighlightedCo
   );
 }
 
-export { InlineCodeBlock } from "./inline-codeblock";
+export { InlineCodeBlock } from "./inline-code-block";
