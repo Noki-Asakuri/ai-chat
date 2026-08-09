@@ -3,24 +3,46 @@ import { useShallow } from "zustand/shallow";
 
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 import { ButtonWithTip } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 import { BaseChatAttachmentsButton, ChatAttachmentsButton } from "./attachments-display";
 import { ChatEffortSelector, EffortSelector } from "./effort-selector";
 import { ChatModelSelector, ModelSelector } from "./model-selector";
 
-import { tryGetModelData } from "@/lib/chat/models";
+import { getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
 import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
 import { cn } from "@/lib/utils";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
 export function ChatActionButtons() {
+  const model = useConfigStore((state) => state.model);
+  const modelData = tryGetModelData(model);
+  const supportsReasoning = modelData ? getReasoningOptions(modelData).length > 0 : false;
+  const supportsWebSearch = modelData?.capabilities.toolCalling ?? false;
+  const supportsAttachments =
+    modelData?.modalities.input.some((modality) => modality === "image" || modality === "pdf") ?? false;
+
   return (
     <div className="flex items-center justify-center gap-2">
       <ChatModelSelector />
-      <ChatEffortSelector />
-
-      <WebSearchButton />
-      <ChatAttachmentsButton />
+      {supportsReasoning && (
+        <>
+          <ActionButtonSeparator />
+          <ChatEffortSelector />
+        </>
+      )}
+      {supportsWebSearch && (
+        <>
+          <ActionButtonSeparator />
+          <WebSearchButton />
+        </>
+      )}
+      {supportsAttachments && (
+        <>
+          <ActionButtonSeparator />
+          <ChatAttachmentsButton />
+        </>
+      )}
     </div>
   );
 }
@@ -28,6 +50,12 @@ export function ChatActionButtons() {
 export function ChatEditActionButtons() {
   const editMessage = useChatStore((state) => state.editMessage);
   if (!editMessage) return null;
+
+  const modelData = tryGetModelData(editMessage.model);
+  const supportsReasoning = modelData ? getReasoningOptions(modelData).length > 0 : false;
+  const supportsWebSearch = modelData?.capabilities.toolCalling ?? false;
+  const supportsAttachments =
+    modelData?.modalities.input.some((modality) => modality === "image" || modality === "pdf") ?? false;
 
   return (
     <div className="flex items-center justify-center gap-2">
@@ -40,34 +68,51 @@ export function ChatEditActionButtons() {
         triggerId="button-edit-model-selector-trigger"
       />
 
-      <EffortSelector
-        model={editMessage.model}
-        value={editMessage.modelParams.effort ?? "medium"}
-        onChange={(effort) =>
-          chatStoreActions.updateEditMessage({
-            modelParams: { webSearch: editMessage.modelParams.webSearch, effort },
-          })
-        }
-      />
-
-      <BaseWebSearchButton
-        model={editMessage.model}
-        webSearch={editMessage.modelParams.webSearch ?? false}
-        setWebSearch={(value) =>
-          chatStoreActions.updateEditMessage({
-            modelParams: { webSearch: value, effort: editMessage.modelParams.effort },
-          })
-        }
-      />
-
-      <BaseChatAttachmentsButton
-        model={editMessage.model}
-        handleAddAttachments={(attachments) => {
-          chatStoreActions.addEditAttachments(attachments);
-        }}
-      />
+      {supportsReasoning && (
+        <>
+          <ActionButtonSeparator />
+          <EffortSelector
+            model={editMessage.model}
+            value={editMessage.modelParams.effort ?? "medium"}
+            onChange={(effort) =>
+              chatStoreActions.updateEditMessage({
+                modelParams: { webSearch: editMessage.modelParams.webSearch, effort },
+              })
+            }
+          />
+        </>
+      )}
+      {supportsWebSearch && (
+        <>
+          <ActionButtonSeparator />
+          <BaseWebSearchButton
+            model={editMessage.model}
+            webSearch={editMessage.modelParams.webSearch ?? false}
+            setWebSearch={(value) =>
+              chatStoreActions.updateEditMessage({
+                modelParams: { webSearch: value, effort: editMessage.modelParams.effort },
+              })
+            }
+          />
+        </>
+      )}
+      {supportsAttachments && (
+        <>
+          <ActionButtonSeparator />
+          <BaseChatAttachmentsButton
+            model={editMessage.model}
+            handleAddAttachments={(attachments) => {
+              chatStoreActions.addEditAttachments(attachments);
+            }}
+          />
+        </>
+      )}
     </div>
   );
+}
+
+function ActionButtonSeparator() {
+  return <Separator orientation="vertical" className="h-5 self-auto" />;
 }
 
 export function BaseWebSearchButton({
@@ -87,11 +132,11 @@ export function BaseWebSearchButton({
       variant="ghost"
       hidden={!canDoWebSearch}
       data-active={webSearch}
-      className="surface-edge size-9 cursor-pointer border border-border px-2 py-1.5 text-xs data-[active=true]:border-blue-400"
+      className="surface-edge size-9 cursor-pointer border border-border px-2 py-1.5 text-xs data-[active=true]:border-primary"
       onMouseDown={() => setWebSearch(!webSearch)}
       title={webSearch ? "Disable Web Search" : "Enable Web Search"}
     >
-      <GlobeIcon className={cn("transition-colors", { "stroke-blue-400": webSearch })} />
+      <GlobeIcon className={cn("transition-colors", { "stroke-primary": webSearch })} />
       <span className="sr-only">{webSearch ? "Disable Web Search" : "Enable Web Search"}</span>
     </ButtonWithTip>
   );
