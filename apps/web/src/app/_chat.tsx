@@ -4,13 +4,12 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Outlet, redirect, useParams } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useParams } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { getAuth } from "@workos/authkit-tanstack-react-start";
-import { PlusIcon } from "lucide-react";
 import { Suspense, type CSSProperties } from "react";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
@@ -20,11 +19,11 @@ import { ThreadTitle } from "@/components/chat/top-thread-title";
 import { ConfigStoreProvider } from "@/components/provider/config-provider";
 import { ThreadProfileSidebar } from "@/components/threads/profile/profile-sidebar";
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
-import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 
 import { buildImageAssetUrl } from "@/lib/assets/urls";
 import { convexSessionQuery } from "@/lib/convex/helpers";
-import { fromUUID } from "@/lib/utils";
+import { cn, fromUUID } from "@/lib/utils";
 
 const DEFAULT_UI_FONT = "Space Grotesk";
 const DEFAULT_CODE_FONT = "JetBrains Mono";
@@ -85,6 +84,10 @@ function RouteComponent() {
       className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat font-sans"
       style={customStyle}
     >
+      <SidebarTrigger
+        size="icon-lg"
+        className="fixed top-1.5 left-3.5 z-60 [&_svg]:size-5!"
+      />
       <ThreadSidebar />
 
       <ChatLayoutConfig />
@@ -107,6 +110,7 @@ function getCustomizationStyle(
 }
 
 function ChatLayoutConfig() {
+  const { isMobile, state: sidebarState } = useSidebar();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const threadId = fromUUID<Id<"threads">>(params?.threadId);
   const { data: defaultUserPreferences } = useSuspenseQuery(
@@ -138,14 +142,12 @@ function ChatLayoutConfig() {
       }}
     >
       <GlobalDropzone data-slot="chat" className="relative inset-0 h-dvh w-screen overflow-hidden border-x">
-        <div className="absolute top-0 z-10 flex h-10 w-full max-w-full items-center gap-2 border-b bg-sidebar/80 px-4 text-sm backdrop-blur-md backdrop-saturate-150 group-data-[performance-mode=true]/sidebar-provider:bg-sidebar">
-          <SidebarTrigger />
-
-          <Link to="/" className="rounded-md p-1.5 text-center transition-colors hover:bg-primary/20">
-            <PlusIcon className="size-4" />
-            <span className="sr-only">Create new thread</span>
-          </Link>
-
+        <div
+          className={cn(
+            "absolute top-0 z-10 flex h-12 w-full max-w-full items-center border-b bg-sidebar/80 px-4 text-base backdrop-blur-md backdrop-saturate-150 transition-[padding] duration-200 ease-linear group-data-[performance-mode=true]/sidebar-provider:bg-sidebar motion-reduce:transition-none",
+            (isMobile || sidebarState === "collapsed") && "pl-16",
+          )}
+        >
           <ThreadTitle />
         </div>
 

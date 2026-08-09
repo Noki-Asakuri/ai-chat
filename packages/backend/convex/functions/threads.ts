@@ -379,18 +379,28 @@ export const getThreadTitle = authenticatedQuery({
   args: { threadId: v.optional(v.id("threads")) },
   handler: async (ctx, args) => {
     const user = ctx.user;
-    if (!args.threadId) return { title: null, pinned: false, isShared: false };
+    if (!args.threadId) return { title: null, groupTitle: null, pinned: false, isShared: false };
 
     const thread = await ctx.db.get("threads", args.threadId);
-    if (!thread) return { title: null, pinned: false, isShared: false };
-    if (thread.userId !== user.userId) return { title: null, pinned: false, isShared: false };
+    if (!thread) return { title: null, groupTitle: null, pinned: false, isShared: false };
+    if (thread.userId !== user.userId) {
+      return { title: null, groupTitle: null, pinned: false, isShared: false };
+    }
 
-    const threadShare = await ctx.db
-      .query("threadShares")
-      .withIndex("by_threadId", (q) => q.eq("threadId", thread._id))
-      .unique();
+    const [group, threadShare] = await Promise.all([
+      thread.groupId ? ctx.db.get("groups", thread.groupId) : null,
+      ctx.db
+        .query("threadShares")
+        .withIndex("by_threadId", (q) => q.eq("threadId", thread._id))
+        .unique(),
+    ]);
 
-    return { title: thread.title, pinned: thread.pinned, isShared: threadShare !== null };
+    return {
+      title: thread.title,
+      groupTitle: group?.userId === user.userId ? group.title : null,
+      pinned: thread.pinned,
+      isShared: threadShare !== null,
+    };
   },
 });
 

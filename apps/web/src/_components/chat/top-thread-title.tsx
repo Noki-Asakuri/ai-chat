@@ -3,7 +3,7 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
-import { PinIcon, PinOffIcon, Share2Icon } from "lucide-react";
+import { FolderIcon, PinIcon, PinOffIcon, Share2Icon } from "lucide-react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
     }),
   });
 
-  if (isFetching || isSkeleton) return <Skeleton className="h-4 w-80" />;
+  if (isFetching || isSkeleton) return <Skeleton className="h-4 w-80 max-w-full" />;
   if (!params?.threadId || !data?.title) return null;
 
   const threadData = data;
@@ -48,38 +48,51 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
     <>
       <title>{threadData.title + " - AI Chat"}</title>
 
-      <div className="hidden min-w-0 items-center gap-1 md:flex">
-        <Button
-          variant="ghost"
-          title={threadData.pinned ? "Unpin Thread" : "Pin Thread"}
-          className="size-7 cursor-pointer rounded-md border px-0"
-          onClick={toggleThreadPin}
-        >
-          {threadData.pinned ? <PinOffIcon className="size-4" /> : <PinIcon className="size-4" />}
-          <span className="sr-only">{threadData.pinned ? "Unpin Thread" : "Pin Thread"}</span>
-        </Button>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 font-mono">
+          <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
+          <span className="max-w-40 truncate text-muted-foreground">
+            {threadData.groupTitle ?? "Ungrouped"}
+          </span>
+          <span aria-hidden="true" className="shrink-0 text-muted-foreground">
+            /
+          </span>
+          <span className="truncate font-semibold">{threadData.title}</span>
+        </div>
 
-        <Button
-          variant="ghost"
-          title="Share Thread"
-          className="size-7 cursor-pointer rounded-md border px-0"
-          onClick={() => setShareOpen(true)}
-        >
-          <Share2Icon className="size-4" />
-          <span className="sr-only">Share Thread</span>
-        </Button>
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {threadData.isShared && (
+            <Badge
+              variant="secondary"
+              className="hidden h-6 items-center gap-1 rounded-md border-border px-2 py-0 tracking-wide uppercase sm:flex"
+            >
+              <Share2Icon className="size-3" />
+              Shared
+            </Badge>
+          )}
 
-        <p className="truncate text-sm text-muted-foreground">{threadData.title}</p>
-
-        {threadData.isShared && (
-          <Badge
-            variant="secondary"
-            className="h-6 items-center gap-1 rounded-md border-border px-2 py-0 tracking-wide uppercase"
+          <Button
+            variant="ghost"
+            size="icon-lg"
+            className="[&_svg]:size-5!"
+            title="Share Thread"
+            aria-label="Share Thread"
+            onClick={() => setShareOpen(true)}
           >
-            <Share2Icon className="size-3" />
-            Shared
-          </Badge>
-        )}
+            <Share2Icon />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon-lg"
+            className="[&_svg]:size-5!"
+            title={threadData.pinned ? "Unpin Thread" : "Pin Thread"}
+            aria-label={threadData.pinned ? "Unpin Thread" : "Pin Thread"}
+            onClick={toggleThreadPin}
+          >
+            {threadData.pinned ? <PinOffIcon /> : <PinIcon />}
+          </Button>
+        </div>
       </div>
 
       {threadId && (

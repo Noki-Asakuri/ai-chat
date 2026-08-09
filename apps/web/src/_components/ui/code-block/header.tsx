@@ -30,7 +30,7 @@ export function CodeBlockHeader() {
   const calculateShouldStickyHeader = useCallback(() => {
     if (!expanded) return false;
 
-    const availableViewportPx = window.innerHeight - textareaHeight - 40;
+    const availableViewportPx = window.innerHeight - textareaHeight - 48;
     if (availableViewportPx <= 0) return false;
 
     return containerHeightPx > availableViewportPx;
@@ -42,7 +42,7 @@ export function CodeBlockHeader() {
     <div
       className={cn(
         "flex items-center justify-between border-b px-3 py-1",
-        shouldStickyHeader && "sticky top-10 z-30 backdrop-blur-md",
+        shouldStickyHeader && "sticky top-12 z-30 backdrop-blur-md",
       )}
     >
       <div className="flex items-center justify-center gap-1.5">

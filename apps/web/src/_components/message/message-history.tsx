@@ -25,12 +25,14 @@ type MessageHistoryProps = {
   readOnly?: boolean;
   showUserAvatar?: boolean;
   bottomPaddingPx?: number;
+  topPaddingPx?: number;
 };
 
 export function MessageHistory({
   readOnly = false,
   showUserAvatar = true,
   bottomPaddingPx,
+  topPaddingPx = 48,
 }: MessageHistoryProps) {
   const textareaHeight = useChatStore((state) => state.textareaHeight);
   const resolvedBottomPadding = bottomPaddingPx ?? textareaHeight;
@@ -47,8 +49,8 @@ export function MessageHistory({
         >
           <MessageScrollerContent
             data-slot="message-history"
-            className="mx-auto min-h-full w-full max-w-[calc(56rem+32px)] gap-4 px-4 pt-12"
-            style={{ paddingBottom: `${resolvedBottomPadding}px` }}
+            className="mx-auto min-h-full w-full max-w-[calc(56rem+32px)] gap-4 px-4"
+            style={{ paddingTop: `${topPaddingPx}px`, paddingBottom: `${resolvedBottomPadding}px` }}
           >
             <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />
           </MessageScrollerContent>

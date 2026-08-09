@@ -16,13 +16,13 @@ export function ThreadSidebar() {
         <div className="h-1/2 w-full bg-linear-to-t from-sidebar/80 from-5% to-transparent to-80%" />
       </div>
 
-      <SidebarHeader className="px-4 py-0">
-        <Link to="/" className="text-center text-xl">
+      <SidebarHeader className="-mt-2 h-12 shrink-0 justify-center px-4 py-0 pl-20">
+        <Link to="/" className="truncate text-xl">
           AI Chat
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="flex flex-1 flex-col px-2 md:px-0">
+      <SidebarContent className="mt-2 flex flex-1 flex-col px-2 md:px-0">
         <ThreadContents />
       </SidebarContent>
 
