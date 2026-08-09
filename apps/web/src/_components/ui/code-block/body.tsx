@@ -100,10 +100,7 @@ export const CodeBlockContent = memo(
     }, [result.bg, result.fg, result.rootStyle, virtualPaddingBottomPx, virtualPaddingTopPx]);
 
     const boundedStartLineIndex = Math.max(0, startLineIndex);
-    const boundedEndLineIndex = Math.min(
-      result.tokens.length,
-      Math.max(boundedStartLineIndex, endLineIndex),
-    );
+    const boundedEndLineIndex = Math.min(result.tokens.length, Math.max(boundedStartLineIndex, endLineIndex));
 
     const lineNumberGutterWidthCh = String(Math.max(1, boundedEndLineIndex)).length + 1;
     const renderedRows = useMemo(() => {
@@ -190,11 +187,10 @@ export const CodeBlockContent = memo(
           className={cn(
             className,
             "font-mono",
+            "not-typeset",
             "bg-[var(--sdm-bg,inherit)]",
             "dark:bg-[var(--shiki-dark-bg,var(--sdm-bg,inherit))]",
-            wrapline
-              ? "w-full wrap-anywhere whitespace-pre-wrap"
-              : "w-max min-w-full whitespace-pre",
+            wrapline ? "w-full wrap-anywhere whitespace-pre-wrap" : "w-max min-w-full whitespace-pre",
           )}
           style={preStyle}
         >
@@ -231,10 +227,7 @@ export function CodeBlockBody({ result }: { result: HighlightResult }) {
   return (
     <div className="relative">
       <div
-        className={cn(
-          "custom-scroll px-3 py-2",
-          isCollapsed ? "overflow-auto pb-10" : "overflow-x-auto",
-        )}
+        className={cn("custom-scroll px-3 py-2", isCollapsed ? "overflow-auto pb-10" : "overflow-x-auto")}
         data-should-wrap={wrapline ? "true" : "false"}
         style={{ maxHeight: containerMaxHeight }}
       >
