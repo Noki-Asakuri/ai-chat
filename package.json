@@ -62,6 +62,9 @@
   "dependencies": {
     "@vercel/config": "^0.5.6"
   },
+  "overrides": {
+    "srvx": "0.11.22"
+  },
   "devDependencies": {
     "@prettier/plugin-oxc": "^0.2.2",
     "@typescript/native-preview": "catalog:tooling",

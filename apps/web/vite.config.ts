@@ -18,8 +18,8 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: [
     devtools({ consolePiping: { levels: ["log"] } }),
-    nitro({ compatibilityDate: "latest" }),
     tanstackStart({ srcDirectory: "src", router: { routesDirectory: "app" } }),
+    nitro({ compatibilityDate: "latest" }),
     tailwindcss(),
 
     viteReact(),
