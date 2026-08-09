@@ -39,6 +39,7 @@ export const EFFORT_OPTIONS: Record<ReasoningEffort, { label: string; icon: type
   medium: { label: "Medium", icon: SignalMediumIcon },
   high: { label: "High", icon: SignalHighIcon },
   xhigh: { label: "XHigh", icon: SignalIcon },
+  max: { label: "Max", icon: SignalIcon },
 };
 
 type EffortSelectorBaseInnerProps = EffortSelectorProps & {

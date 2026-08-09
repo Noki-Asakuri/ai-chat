@@ -9,7 +9,11 @@ import { Icons } from "@/components/ui/icons";
 import { Menu, MenuArrow } from "@/components/ui/menu";
 
 import { EFFORT_OPTIONS } from "../chat-textarea/effort-selector";
-import { PROVIDER_ORDER, createEmptyProviderModels } from "../chat-textarea/model-selector";
+import {
+  PROVIDER_ORDER,
+  compareModelLabelsNewestFirst,
+  createEmptyProviderModels,
+} from "../chat-textarea/model-selector";
 
 import {
   SelectableModelIds,
@@ -21,7 +25,7 @@ import {
 } from "@/lib/chat/models";
 import { useRetryChatMessage } from "@/lib/chat/server-function/retry-chat-message";
 import { useMessageStore } from "@/lib/store/messages-store";
-import type { ChatMessage, ReasoningEffort } from "@/lib/types";
+import { reasoningEffortValues, type ChatMessage, type ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type RetryModelPopupProps = React.ComponentPropsWithoutRef<typeof Button> & {
@@ -52,21 +56,15 @@ type EffortOption = {
   icon: (typeof EFFORT_OPTIONS)[ReasoningEffort]["icon"];
 };
 
-const EFFORT_ORDER: Array<ReasoningEffort> = ["none", "minimal", "low", "medium", "high", "xhigh"];
-
-function sortEntriesByLabel(a: RetryModelEntry, b: RetryModelEntry): number {
-  return a.label.localeCompare(b.label);
-}
-
 function groupProviderModels(models: Array<RetryModelEntry>): ProviderModels {
-  const grouped = createEmptyProviderModels<ProviderModels>();
+  const grouped = createEmptyProviderModels<RetryModelEntry>();
 
   for (const model of models) {
     grouped[model.provider].push(model);
   }
 
   for (const provider of PROVIDER_ORDER) {
-    grouped[provider].sort(sortEntriesByLabel);
+    grouped[provider].sort(compareModelLabelsNewestFirst);
   }
 
   return grouped;
@@ -98,7 +96,7 @@ function getValidReasoningEffortOptions(model: ModelData): Array<EffortOption> {
   const allowedEffortSet = new Set<ReasoningEffort>(getReasoningOptions(model));
   const options: Array<EffortOption> = [];
 
-  for (const effort of EFFORT_ORDER) {
+  for (const effort of reasoningEffortValues) {
     const effortOption = EFFORT_OPTIONS[effort];
     if (!effortOption) continue;
 
@@ -158,7 +156,7 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
       });
     }
 
-    next.sort(sortEntriesByLabel);
+    next.sort(compareModelLabelsNewestFirst);
     return next;
   }, []);
 

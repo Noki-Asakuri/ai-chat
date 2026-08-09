@@ -1,6 +1,20 @@
 import type { ModelData, ModelIdKey } from "..";
 
 export const zai: Record<ModelIdKey, ModelData> = {
+  "zai/glm-5.2": {
+    display: { name: "ZAI GLM 5.2" },
+    id: "zai/glm-5.2",
+    provider: "zai",
+    modalities: { input: ["text"], output: ["text"] },
+    capabilities: {
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "max",
+        levels: ["none", "minimal", "low", "medium", "high", "xhigh", "max"],
+      },
+      toolCalling: true,
+    },
+  },
   "zai/glm-5.1": {
     display: { name: "ZAI GLM 5.1" },
     id: "zai/glm-5.1",

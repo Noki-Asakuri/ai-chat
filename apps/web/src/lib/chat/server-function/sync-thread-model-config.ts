@@ -6,6 +6,7 @@ import { useShallow } from "zustand/shallow";
 import { useConfigStore } from "@/components/provider/config-provider";
 
 import { syncThreadModelConfig } from "@/lib/trpc/client";
+import type { ReasoningEffort } from "@/lib/types";
 import { fromUUID, tryCatch } from "@/lib/utils";
 
 type SyncThreadModelConfigOptions = {
@@ -13,7 +14,7 @@ type SyncThreadModelConfigOptions = {
   model?: string;
   modelParams?: Partial<{
     webSearch: boolean;
-    effort: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+    effort: ReasoningEffort;
     profile?: Id<"profiles"> | null;
   }>;
 };

@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 
 import type { UIDataTypes, UIMessage, UITools } from "./ui";
 
-export const reasoningEffortValues = ["none", "minimal", "low", "medium", "high", "xhigh"] as const;
+export const reasoningEffortValues = ["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
 
 export const reasoningEffortSchema = z.enum(reasoningEffortValues);
 

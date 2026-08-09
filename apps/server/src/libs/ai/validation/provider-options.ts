@@ -10,16 +10,21 @@ import type { ChatProviderOptions } from "./types";
 
 export function buildProviderOptions(modelInfo: ModelData, reasoning: ReasoningEffort): ChatProviderOptions {
   const reasoningProviderOptions: ChatProviderOptions = {
-    openai: buildOpenAIProviderOptions(modelInfo),
+    openai: buildOpenAIProviderOptions(modelInfo, reasoning),
     deepseek: {},
     google: { safetySettings },
     moonshotai:
-      modelInfo.provider === "kimi" && modelInfo.capabilities.reasoning?.type === "selectable"
-        ? { thinking: { type: reasoning === "none" ? "disabled" : "enabled" } }
-        : {},
+      modelInfo.id === "kimi/kimi-k3"
+        ? { reasoningEffort: "max" }
+        : modelInfo.provider === "kimi" && modelInfo.capabilities.reasoning?.type === "selectable"
+          ? { thinking: { type: reasoning === "none" ? "disabled" : "enabled" } }
+          : {},
     zai:
       modelInfo.provider === "zai"
-        ? { thinking: { type: reasoning === "none" ? "disabled" : "enabled" } }
+        ? {
+            thinking: { type: reasoning === "none" ? "disabled" : "enabled" },
+            ...(modelInfo.id === "zai/glm-5.2" ? { reasoningEffort: reasoning } : {}),
+          }
         : {},
   };
 
@@ -33,13 +38,17 @@ export function buildProviderOptions(modelInfo: ModelData, reasoning: ReasoningE
   };
 }
 
-function buildOpenAIProviderOptions(modelInfo: ModelData): ChatProviderOptions["openai"] {
+function buildOpenAIProviderOptions(
+  modelInfo: ModelData,
+  reasoning: ReasoningEffort,
+): ChatProviderOptions["openai"] {
   if (!modelInfo.capabilities.reasoning) {
     return { store: false };
   }
 
   return {
     store: false,
+    ...(reasoning === "max" ? { reasoningEffort: reasoning } : {}),
     reasoningSummary: "detailed",
     include: ["reasoning.encrypted_content"],
   };

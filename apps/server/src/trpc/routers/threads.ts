@@ -1,5 +1,6 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import type { ReasoningEffort } from "@ai-chat/shared/chat/metadata";
 import { chatModelParamsSchema } from "@ai-chat/shared/chat/request";
 
 import { TRPCError } from "@trpc/server";
@@ -28,7 +29,7 @@ export const threadRouter = router({
         model: input.model,
         modelParams: input.modelParams as {
           webSearch: boolean;
-          effort: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+          effort: ReasoningEffort;
           profile: Id<"profiles"> | null;
         },
       };

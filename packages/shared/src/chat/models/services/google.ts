@@ -53,6 +53,10 @@ export const google: Record<ModelIdKey, ModelData> = {
     modalities: { input: ["image", "pdf", "text"], output: ["image", "text"] },
     capabilities: {
     },
+    deprecation: {
+      message: "Gemini 2.5 Flash Image is deprecated by Google. Please switch to Gemini 3.1 Flash Image.",
+      replacementModelId: "google/gemini-3.1-flash-image",
+    },
   },
   "google/gemini-2.5-pro-thinking": {
     display: { name: "Gemini 2.5 Pro" },
@@ -104,6 +108,10 @@ export const google: Record<ModelIdKey, ModelData> = {
       toolCalling: true,
       reasoning: { type: "selectable", defaultLevel: "low", levels: ["low", "high"] },
     },
+    deprecation: {
+      message: "Gemini 3 Pro Preview is deprecated by Google. Please switch to Gemini 3.1 Pro.",
+      replacementModelId: "google/gemini-3.1-pro",
+    },
   },
   "google/gemini-3.1-pro": {
     display: { name: "Gemini 3.1 Pro" },
@@ -122,7 +130,7 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-3.1-flash-image",
     altModelIds: ["google/gemini-3.1-flash-image-preview"],
     provider: "google",
-    runtime: { modelId: "gemini-3.1-flash-image-preview" },
+    runtime: { modelId: "gemini-3.1-flash-image" },
     modalities: { input: ["image", "pdf", "text"], output: ["image", "text"] },
     capabilities: {
       toolCalling: true,
@@ -134,11 +142,81 @@ export const google: Record<ModelIdKey, ModelData> = {
     id: "google/gemini-3-pro-image",
     altModelIds: ["google/gemini-3-pro-image-preview"],
     provider: "google",
-    runtime: { modelId: "gemini-3-pro-image-preview" },
+    runtime: { modelId: "gemini-3-pro-image" },
     modalities: { input: ["image", "pdf", "text"], output: ["image", "text"] },
     capabilities: {
       toolCalling: true,
       reasoning: { type: "fixed", level: "high" },
+    },
+  },
+  "google/gemini-3.1-flash-lite": {
+    display: { name: "Gemini 3.1 Flash Lite" },
+    id: "google/gemini-3.1-flash-lite",
+    provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["minimal", "low", "medium", "high"],
+      },
+    },
+    deprecation: {
+      message: "Gemini 3.1 Flash Lite is deprecated by Google. Please switch to Gemini 3.5 Flash Lite.",
+      replacementModelId: "google/gemini-3.5-flash-lite",
+    },
+  },
+  "google/gemini-3.1-flash-lite-image": {
+    display: { name: "Gemini 3.1 Flash Lite (Image)", unique: "Gemini 3.1 Flash Lite (Image)" },
+    id: "google/gemini-3.1-flash-lite-image",
+    provider: "google",
+    modalities: { input: ["image", "text"], output: ["image", "text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "minimal", levels: ["minimal", "high"] },
+    },
+  },
+  "google/gemini-3.5-flash": {
+    display: { name: "Gemini 3.5 Flash" },
+    id: "google/gemini-3.5-flash",
+    provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["minimal", "low", "medium", "high"],
+      },
+    },
+  },
+  "google/gemini-3.5-flash-lite": {
+    display: { name: "Gemini 3.5 Flash Lite" },
+    id: "google/gemini-3.5-flash-lite",
+    provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "minimal",
+        levels: ["minimal", "low", "medium", "high"],
+      },
+    },
+  },
+  "google/gemini-3.6-flash": {
+    display: { name: "Gemini 3.6 Flash" },
+    id: "google/gemini-3.6-flash",
+    provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["minimal", "low", "medium", "high"],
+      },
     },
   },
 };

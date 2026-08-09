@@ -68,6 +68,7 @@ async function validateRequestBody(
   const sdkReasoning =
     modelInfo.provider === "kimi" ||
     modelInfo.provider === "zai" ||
+    reasoning === "max" ||
     modelInfo.capabilities.reasoning?.type !== "selectable"
       ? undefined
       : reasoning;

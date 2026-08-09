@@ -1,6 +1,11 @@
 import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { metadataSchema, type ReasoningEffort, type UIChatMessage } from "@ai-chat/shared/chat/metadata";
+import {
+  metadataSchema,
+  reasoningEffortValues,
+  type ReasoningEffort,
+  type UIChatMessage,
+} from "@ai-chat/shared/chat/metadata";
 import type { ChatRequestBody } from "@ai-chat/shared/chat/request";
 
 type Thread = Doc<"threads">;
@@ -31,4 +36,4 @@ export type {
   UserAttachment,
 };
 
-export { metadataSchema };
+export { metadataSchema, reasoningEffortValues };

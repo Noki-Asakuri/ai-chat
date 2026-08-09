@@ -11,6 +11,7 @@ export const effort = v.union(
   v.literal("medium"),
   v.literal("high"),
   v.literal("xhigh"),
+  v.literal("max"),
 );
 
 export const status = v.union(

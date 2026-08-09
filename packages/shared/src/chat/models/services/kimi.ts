@@ -10,6 +10,40 @@ export const kimi: Record<ModelIdKey, ModelData> = {
       reasoning: { type: "selectable", defaultLevel: "medium", levels: ["none", "medium"] },
       toolCalling: true,
     },
+    deprecation: {
+      message: "Kimi K2.5 is being sunset by Moonshot AI. Please switch to Kimi K3.",
+      replacementModelId: "kimi/kimi-k3",
+    },
+  },
+  "kimi/kimi-k2.6": {
+    display: { name: "Kimi K2.6" },
+    id: "kimi/kimi-k2.6",
+    provider: "kimi",
+    modalities: { input: ["image", "text"], output: ["text"] },
+    capabilities: {
+      reasoning: { type: "selectable", defaultLevel: "medium", levels: ["none", "medium"] },
+      toolCalling: true,
+    },
+  },
+  "kimi/kimi-k2.7-code": {
+    display: { name: "Kimi K2.7 Code" },
+    id: "kimi/kimi-k2.7-code",
+    provider: "kimi",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      reasoning: { type: "fixed", level: "high" },
+      toolCalling: true,
+    },
+  },
+  "kimi/kimi-k3": {
+    display: { name: "Kimi K3" },
+    id: "kimi/kimi-k3",
+    provider: "kimi",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      reasoning: { type: "fixed", level: "max" },
+      toolCalling: true,
+    },
   },
 
   "kimi/kimi-k2-thinking": {
@@ -19,6 +53,10 @@ export const kimi: Record<ModelIdKey, ModelData> = {
 
     modalities: { input: ["text"], output: ["text"] },
     capabilities: { reasoning: { type: "fixed", level: "high" }, toolCalling: true },
+    deprecation: {
+      message: "Kimi K2 Thinking is deprecated by Moonshot AI. Please switch to Kimi K3.",
+      replacementModelId: "kimi/kimi-k3",
+    },
   },
   "kimi/kimi-k2-0905": {
     display: { name: "Kimi K2 0905" },
@@ -28,6 +66,10 @@ export const kimi: Record<ModelIdKey, ModelData> = {
 
     modalities: { input: ["text"], output: ["text"] },
     capabilities: { toolCalling: true },
+    deprecation: {
+      message: "Kimi K2 0905 is deprecated by Moonshot AI. Please switch to Kimi K3.",
+      replacementModelId: "kimi/kimi-k3",
+    },
   },
   "kimi/kimi-k2-0711": {
     display: { name: "Kimi K2 0711" },
@@ -37,6 +79,10 @@ export const kimi: Record<ModelIdKey, ModelData> = {
 
     modalities: { input: ["text"], output: ["text"] },
     capabilities: { toolCalling: true },
+    deprecation: {
+      message: "Kimi K2 0711 is deprecated by Moonshot AI. Please switch to Kimi K3.",
+      replacementModelId: "kimi/kimi-k3",
+    },
   },
 
   "kimi/kimi-k2-thinking-turbo": {
@@ -46,6 +92,10 @@ export const kimi: Record<ModelIdKey, ModelData> = {
 
     modalities: { input: ["text"], output: ["text"] },
     capabilities: { reasoning: { type: "fixed", level: "high" }, toolCalling: true },
+    deprecation: {
+      message: "Kimi K2 Thinking Turbo is deprecated by Moonshot AI. Please switch to Kimi K3.",
+      replacementModelId: "kimi/kimi-k3",
+    },
   },
   "kimi/kimi-k2-turbo": {
     display: { name: "Kimi K2 Turbo" },
@@ -55,5 +105,9 @@ export const kimi: Record<ModelIdKey, ModelData> = {
 
     modalities: { input: ["text"], output: ["text"] },
     capabilities: { toolCalling: true },
+    deprecation: {
+      message: "Kimi K2 Turbo is deprecated by Moonshot AI. Please switch to Kimi K3.",
+      replacementModelId: "kimi/kimi-k3",
+    },
   },
 };

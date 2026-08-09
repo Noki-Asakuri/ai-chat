@@ -53,23 +53,29 @@ type ModelGroup = {
 
 export const PROVIDER_ORDER: Array<Provider> = ["google", "openai", "deepseek", "kimi", "zai"];
 
-export function createEmptyProviderModels<T extends Record<Provider, unknown[]>>(): T {
-  return { google: [], openai: [], deepseek: [], kimi: [], zai: [] } as unknown as T;
+export function createEmptyProviderModels<T>(): Record<Provider, Array<T>> {
+  return { google: [], openai: [], deepseek: [], kimi: [], zai: [] };
 }
 
-function sortEntriesByLabel(a: VisibleModelEntry, b: VisibleModelEntry): number {
-  return a.label.localeCompare(b.label);
+export function compareModelLabelsNewestFirst(a: { label: string }, b: { label: string }): number {
+  const aVersion = Number.parseFloat(a.label.match(/\d+(?:\.\d+)?/)?.[0] ?? "0");
+  const bVersion = Number.parseFloat(b.label.match(/\d+(?:\.\d+)?/)?.[0] ?? "0");
+  const versionDifference = bVersion - aVersion;
+
+  if (versionDifference !== 0) return versionDifference;
+
+  return b.label.localeCompare(a.label, undefined, { numeric: true, sensitivity: "base" });
 }
 
 export function groupProviderModels(models: Array<VisibleModelEntry>): ProviderModels {
-  const grouped = createEmptyProviderModels<ProviderModels>();
+  const grouped = createEmptyProviderModels<VisibleModelEntry>();
 
   for (const model of models) {
     grouped[model.provider].push(model);
   }
 
   for (const provider of PROVIDER_ORDER) {
-    grouped[provider].sort(sortEntriesByLabel);
+    grouped[provider].sort(compareModelLabelsNewestFirst);
   }
 
   return grouped;
@@ -162,7 +168,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
       });
     }
 
-    next.sort(sortEntriesByLabel);
+    next.sort(compareModelLabelsNewestFirst);
     return next;
   }, []);
 
@@ -223,7 +229,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   }, [allViewModels]);
 
   const allViewProviderModelsWithoutFavorites = useMemo(() => {
-    const grouped = createEmptyProviderModels<ProviderModels>();
+    const grouped = createEmptyProviderModels<VisibleModelEntry>();
 
     for (const provider of PROVIDER_ORDER) {
       const models = allViewProviderModels[provider];

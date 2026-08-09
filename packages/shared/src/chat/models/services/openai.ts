@@ -18,8 +18,8 @@ export const openai: Record<ModelIdKey, ModelData> = {
     modalities: { input: ["image", "pdf", "text"], output: ["text"] },
     capabilities: {},
     deprecation: {
-      message: "ChatGPT 4o is deprecated and can no longer be used. Please switch to GPT 5.2.",
-      replacementModelId: "openai/gpt-5.2",
+      message: "ChatGPT 4o is deprecated by OpenAI. Please switch to GPT 5.6 Sol.",
+      replacementModelId: "openai/gpt-5.6-sol",
     },
   },
   "openai/gpt-4o": {
@@ -29,10 +29,6 @@ export const openai: Record<ModelIdKey, ModelData> = {
     runtime: { api: "chat" },
     modalities: { input: ["image", "pdf", "text"], output: ["text"] },
     capabilities: {},
-    deprecation: {
-      message: "GPT 4o is deprecated and can no longer be used. Please switch to GPT 5.2.",
-      replacementModelId: "openai/gpt-5.2",
-    },
   },
 
   "openai/o3": {
@@ -55,6 +51,10 @@ export const openai: Record<ModelIdKey, ModelData> = {
       toolCalling: true,
       reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
     },
+    deprecation: {
+      message: "o3 Mini is deprecated by OpenAI. Please switch to GPT 5.6 Sol.",
+      replacementModelId: "openai/gpt-5.6-sol",
+    },
   },
   "openai/o4-mini": {
     display: { name: "o4 Mini" },
@@ -64,6 +64,10 @@ export const openai: Record<ModelIdKey, ModelData> = {
     capabilities: {
       toolCalling: true,
       reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
+    },
+    deprecation: {
+      message: "o4 Mini is deprecated by OpenAI. Please switch to GPT 5.6 Terra.",
+      replacementModelId: "openai/gpt-5.6-terra",
     },
   },
 
@@ -109,6 +113,10 @@ export const openai: Record<ModelIdKey, ModelData> = {
     capabilities: {
       toolCalling: true,
     },
+    deprecation: {
+      message: "GPT 5 Chat is deprecated by OpenAI. Please switch to GPT 5.6 Sol.",
+      replacementModelId: "openai/gpt-5.6-sol",
+    },
   },
   "openai/gpt-5-codex": {
     display: { name: "GPT 5 Codex" },
@@ -118,6 +126,10 @@ export const openai: Record<ModelIdKey, ModelData> = {
     capabilities: {
       toolCalling: true,
       reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
+    },
+    deprecation: {
+      message: "GPT 5 Codex is deprecated by OpenAI. Please switch to GPT 5.6 Sol.",
+      replacementModelId: "openai/gpt-5.6-sol",
     },
   },
   "openai/gpt-5-pro": {
@@ -151,6 +163,10 @@ export const openai: Record<ModelIdKey, ModelData> = {
     capabilities: {
       toolCalling: true,
     },
+    deprecation: {
+      message: "GPT 5.1 Chat is deprecated by OpenAI. Please switch to GPT 5.6 Sol.",
+      replacementModelId: "openai/gpt-5.6-sol",
+    },
   },
 
   "openai/gpt-5.1-codex": {
@@ -162,6 +178,10 @@ export const openai: Record<ModelIdKey, ModelData> = {
       toolCalling: true,
       reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
     },
+    deprecation: {
+      message: "GPT 5.1 Codex is deprecated by OpenAI. Please switch to GPT 5.6 Sol.",
+      replacementModelId: "openai/gpt-5.6-sol",
+    },
   },
 
   "openai/gpt-5.1-codex-mini": {
@@ -172,6 +192,10 @@ export const openai: Record<ModelIdKey, ModelData> = {
     capabilities: {
       toolCalling: true,
       reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
+    },
+    deprecation: {
+      message: "GPT 5.1 Codex Mini is deprecated by OpenAI. Please switch to GPT 5.6 Terra.",
+      replacementModelId: "openai/gpt-5.6-terra",
     },
   },
 
@@ -194,6 +218,10 @@ export const openai: Record<ModelIdKey, ModelData> = {
     capabilities: {
       toolCalling: true,
     },
+    deprecation: {
+      message: "GPT 5.2 Chat is deprecated by OpenAI. Please switch to GPT 5.6 Sol.",
+      replacementModelId: "openai/gpt-5.6-sol",
+    },
   },
   "openai/gpt-5.2-pro": {
     display: { name: "GPT 5.2 Pro" },
@@ -214,6 +242,10 @@ export const openai: Record<ModelIdKey, ModelData> = {
       toolCalling: true,
       reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
     },
+    deprecation: {
+      message: "GPT 5.2 Codex is deprecated by OpenAI. Please switch to GPT 5.6 Sol.",
+      replacementModelId: "openai/gpt-5.6-sol",
+    },
   },
 
   "openai/gpt-5.3-chat": {
@@ -224,6 +256,10 @@ export const openai: Record<ModelIdKey, ModelData> = {
     modalities: { input: ["image", "pdf", "text"], output: ["text"] },
     capabilities: {
       toolCalling: true,
+    },
+    deprecation: {
+      message: "GPT 5.3 Chat is deprecated by OpenAI. Please switch to GPT 5.6 Sol.",
+      replacementModelId: "openai/gpt-5.6-sol",
     },
   },
   "openai/gpt-5.3-codex": {
@@ -296,6 +332,49 @@ export const openai: Record<ModelIdKey, ModelData> = {
     capabilities: {
       toolCalling: true,
       reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
+    },
+  },
+
+  "openai/gpt-5.6-sol": {
+    display: { name: "GPT 5.6 Sol" },
+    id: "openai/gpt-5.6-sol",
+    provider: "openai",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["none", "low", "medium", "high", "xhigh", "max"],
+      },
+    },
+  },
+  "openai/gpt-5.6-terra": {
+    display: { name: "GPT 5.6 Terra" },
+    id: "openai/gpt-5.6-terra",
+    provider: "openai",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["none", "low", "medium", "high", "xhigh", "max"],
+      },
+    },
+  },
+  "openai/gpt-5.6-luna": {
+    display: { name: "GPT 5.6 Luna" },
+    id: "openai/gpt-5.6-luna",
+    provider: "openai",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["none", "low", "medium", "high", "xhigh", "max"],
+      },
     },
   },
 };
