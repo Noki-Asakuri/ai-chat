@@ -1,4 +1,4 @@
-import { Experimental_Agent, stepCountIs } from "ai";
+import { isStepCount, ToolLoopAgent, type ToolSet } from "ai";
 
 import { registry } from "@/libs/ai/registry";
 import type { ValidatedChatRequestBody } from "@/libs/ai/validation";
@@ -12,16 +12,16 @@ type BuildChatAgentOptions = {
   providerOptions: ValidatedChatRequestBody["providerOptions"];
 };
 
-export function buildChatAgent(options: BuildChatAgentOptions): Experimental_Agent {
+export function buildChatAgent(options: BuildChatAgentOptions): ToolLoopAgent<never, ToolSet> {
   const { modelId, systemInstruction, providerOptions, tools } = options;
 
-  return new Experimental_Agent({
+  return new ToolLoopAgent({
     model: registry(modelId),
     instructions: systemInstruction,
     tools,
     maxRetries: 5,
     providerOptions,
-    stopWhen: stepCountIs(20),
+    stopWhen: isStepCount(20),
     experimental_download: handleImagesCaching,
   });
 }

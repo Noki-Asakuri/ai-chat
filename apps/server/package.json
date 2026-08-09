@@ -12,7 +12,6 @@
     "@ai-sdk/moonshotai": "catalog:shared",
     "@ai-sdk/openai": "catalog:shared",
     "@ai-sdk/openai-compatible": "catalog:shared",
-    "@exalabs/ai-sdk": "^2.1.0",
     "@axiomhq/js": "catalog:shared",
     "@axiomhq/logging": "catalog:shared",
     "@hono/trpc-server": "^0.4.2",

@@ -13,6 +13,15 @@ export function finalizeStreamParts(message: UIChatMessage): UIChatMessage["part
         part.text = content;
         if (part.type === "reasoning") part.providerMetadata = undefined;
         part.state = "done";
+        out.push(part);
+        break;
+      }
+
+      case "reasoning-file": {
+        // Reasoning files belong to the private reasoning trace. Preserve them
+        // in message history without treating them as user-visible attachments.
+        out.push(part);
+        break;
       }
 
       default:

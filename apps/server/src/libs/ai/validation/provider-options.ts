@@ -1,12 +1,12 @@
-import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
+import type { GoogleLanguageModelOptions } from "@ai-sdk/google";
 import { openai } from "@ai-sdk/openai";
-import { webSearch } from "@exalabs/ai-sdk";
 import type { ToolSet } from "ai";
 
 import type { ReasoningEffort } from "@ai-chat/shared/chat/metadata";
 import type { ModelData, Provider } from "@ai-chat/shared/chat/models";
 import { safetySettings, type ChatRequestBody } from "@ai-chat/shared/chat/request";
 
+import { webSearch } from "../tools/web-search";
 import type { ChatProviderOptions } from "./types";
 
 const reasoningMapping = {
@@ -114,7 +114,7 @@ function buildGoogleThinkingConfig(input: {
   modelInfo: ModelData;
   requestedId: string;
   effort: ReasoningEffort;
-}): NonNullable<GoogleGenerativeAIProviderOptions["thinkingConfig"]> {
+}): NonNullable<GoogleLanguageModelOptions["thinkingConfig"]> {
   const { modelInfo, requestedId, effort } = input;
 
   if (!modelInfo.capabilities.reasoning) {
@@ -168,10 +168,7 @@ function buildWebSearchTools(modelInfo: ModelData): ToolSet {
   if (!modelInfo.capabilities.webSearch) return {};
 
   return {
-    web_search: webSearch({
-      numResults: 10,
-      contents: { text: { maxCharacters: 1500 }, livecrawlTimeout: 10000 },
-    }),
+    web_search: webSearch,
   };
 }
 

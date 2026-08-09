@@ -4,7 +4,7 @@ import { createProviderRegistry, customProvider, wrapLanguageModel } from "ai";
 
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createGoogle } from "@ai-sdk/google";
 import { createMoonshotAI } from "@ai-sdk/moonshotai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -27,7 +27,7 @@ export function createModelRegistry(options: CreateModelRegistryOptions) {
     name: "zai",
     includeUsage: true,
   });
-  const baseGoogle = createGoogleGenerativeAI({
+  const baseGoogle = createGoogle({
     ...providerOptions,
     baseURL: providerOptions.baseURL + "/v1beta/",
   });

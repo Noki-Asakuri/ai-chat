@@ -14,14 +14,14 @@ export async function generateNewThreadTitleAndSave(
 ) {
   if (!options.modelMessages[0]) return;
 
-  logger.debug("[Server] Updating thread title", options.threadId);
+  logger.debug("[Server] Updating thread title", { threadId: options.threadId });
   const content = extractUserMessage(options.modelMessages[0]);
 
   const { text } = await generateText({
     model: registry("openai/gpt-5.4-mini"),
     providerOptions: { openai: { reasoningEffort: "low" } },
 
-    system:
+    instructions:
       "You are a conversational assistant and you need to summarize the user's text into a title of 10 words or less. Do not add anything else.",
     messages: [
       {

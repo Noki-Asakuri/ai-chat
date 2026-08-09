@@ -52,9 +52,7 @@ export function createMessageMetadataHandler({
           metadata.usages.outputTokens;
 
         metadata.usages.reasoningTokens =
-          part.usage.reasoningTokens ??
-          part.usage.outputTokenDetails?.reasoningTokens ??
-          metadata.usages.reasoningTokens;
+          part.usage.outputTokenDetails.reasoningTokens ?? metadata.usages.reasoningTokens;
         break;
 
       case "finish":

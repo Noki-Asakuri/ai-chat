@@ -1,6 +1,6 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
-import { APICallError } from "ai";
+import { APICallError, createUIMessageStreamResponse, toUIMessageStream } from "ai";
 import { matchError } from "better-result";
 import { Hono } from "hono";
 
@@ -194,7 +194,9 @@ chatRouter.post("/chat", async function (ctx) {
 
     void generateNewThreadTitleAndSave(convexClient, validatedBody);
 
-    return stream.toUIMessageStreamResponse({
+    const uiMessageStream = toUIMessageStream({
+      stream: stream.stream,
+      tools: agent.tools,
       generateMessageId: () => requestId,
       originalMessages: validatedBody.messages,
 
@@ -202,22 +204,7 @@ chatRouter.post("/chat", async function (ctx) {
       sendSources: true,
       sendReasoning: true,
 
-      status: 200,
-      headers: getStreamResponseHeaders(requestId),
-
       messageMetadata: messageMetadataHandler,
-      consumeSseStream: async function ({ stream }) {
-        logger.debug("[Chat] Creating resumable stream", { userId, requestId });
-
-        await Promise.allSettled([
-          streamHandle.startStream(stream),
-          convexClient.mutation(api.functions.messages.updateMessageById, {
-            messageId: validatedBody.assistantMessageId,
-            updates: { status: "streaming", resumableStreamId: requestId, metadata },
-          }),
-        ]);
-      },
-
       onError: function (rawError) {
         void redisStreamClient.cancelStreamForUser({ requestId, userId: auth.userId });
         void refundReservedUsage({
@@ -238,7 +225,7 @@ chatRouter.post("/chat", async function (ctx) {
         return "An error has occurred while processing your request. Please try again.";
       },
 
-      onFinish: async function ({ responseMessage, isAborted }) {
+      onEnd: async function ({ responseMessage, isAborted }) {
         await redisStreamClient.cancelStreamForUser({ requestId, userId: auth.userId });
 
         if (isAborted) {
@@ -259,6 +246,23 @@ chatRouter.post("/chat", async function (ctx) {
             messageId: validatedBody.assistantMessageId,
           });
         }
+      },
+    });
+
+    return createUIMessageStreamResponse({
+      stream: uiMessageStream,
+      status: 200,
+      headers: getStreamResponseHeaders(requestId),
+      consumeSseStream: async function ({ stream }) {
+        logger.debug("[Chat] Creating resumable stream", { userId, requestId });
+
+        await Promise.allSettled([
+          streamHandle.startStream(stream),
+          convexClient.mutation(api.functions.messages.updateMessageById, {
+            messageId: validatedBody.assistantMessageId,
+            updates: { status: "streaming", resumableStreamId: requestId, metadata },
+          }),
+        ]);
       },
     });
   } catch (error) {
