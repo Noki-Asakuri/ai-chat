@@ -56,7 +56,6 @@ async function ensureAuthSSRConvexClient(
   if (!isServer) return;
 
   const auth = await getAuth();
-  console.log("[Server] Setting up auth for server", auth.user);
 
   convexClient.setAuth(async function () {
     const auth = await getAuth();

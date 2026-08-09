@@ -1,10 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getAuth, getAuthkit } from "@workos/authkit-tanstack-react-start";
+import {
+  checkRecentAuth,
+  getAuth,
+  getAuthkit,
+} from "@workos/authkit-tanstack-react-start";
+
+import { env } from "@/env";
+
+const RECENT_AUTH_MAX_AGE_SECONDS = 300;
 
 type UpdateAccountProfileInput = {
   firstName: string;
   lastName: string;
-  email: string;
 };
 
 function cleanFormString(value: string): string {
@@ -55,17 +62,82 @@ export const updateAccountProfile = createServerFn({ method: "POST" })
 
     const firstName = normalizeEmptyToUndefined(data.firstName);
     const lastName = normalizeEmptyToUndefined(data.lastName);
-    const email = cleanFormString(data.email);
-
     const authKit = await getAuthkit();
     const updatedUser = await authKit.getWorkOS().userManagement.updateUser({
       userId: auth.user.id,
-      email,
       firstName,
       lastName,
     });
 
     return { user: updatedUser };
+  });
+
+type StartEmailChangeInput = {
+  email: string;
+};
+
+export const startAccountEmailChange = createServerFn({ method: "POST" })
+  .validator((data: StartEmailChangeInput) => data)
+  .handler(async ({ data }) => {
+    const auth = await getAuth();
+    if (!auth.user) throw new Error("Not authenticated");
+
+    const recentAuth = await checkRecentAuth({ data: { maxAge: RECENT_AUTH_MAX_AGE_SECONDS } });
+    if (recentAuth.isStale) return { status: "reauth_required" };
+
+    const email = cleanFormString(data.email);
+    if (email.length === 0 || email === auth.user.email) {
+      throw new Error("Enter a different email address");
+    }
+
+    const response = await fetch(
+      `https://api.workos.com/user_management/users/${encodeURIComponent(auth.user.id)}/email_change/send`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.WORKOS_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ new_email: email }),
+      },
+    );
+
+    if (!response.ok) throw new Error("Failed to send email change code");
+
+    return { status: "code_sent" };
+  });
+
+type ConfirmEmailChangeInput = {
+  code: string;
+};
+
+export const confirmAccountEmailChange = createServerFn({ method: "POST" })
+  .validator((data: ConfirmEmailChangeInput) => data)
+  .handler(async ({ data }) => {
+    const auth = await getAuth();
+    if (!auth.user) throw new Error("Not authenticated");
+
+    const recentAuth = await checkRecentAuth({ data: { maxAge: RECENT_AUTH_MAX_AGE_SECONDS } });
+    if (recentAuth.isStale) return { status: "reauth_required" };
+
+    const code = cleanFormString(data.code);
+    if (code.length === 0) throw new Error("Enter the verification code");
+
+    const response = await fetch(
+      `https://api.workos.com/user_management/users/${encodeURIComponent(auth.user.id)}/email_change/confirm`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.WORKOS_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+      },
+    );
+
+    if (!response.ok) throw new Error("Invalid or expired email change code");
+
+    return { status: "email_changed" };
   });
 
 export type AccountSession = {
@@ -105,7 +177,7 @@ export const listAccountSessions = createServerFn({ method: "GET" }).handler(asy
     const authKit = await getAuthkit();
     const sessions = await authKit
       .getWorkOS()
-      .userManagement.listSessions(auth.user.id, { limit: 50 });
+      .userManagement.listSessions(auth.user.id, { limit: 100 });
 
     const data: Array<AccountSession> = [];
     for (const session of sessions.data) {
@@ -160,8 +232,19 @@ export const revokeAccountSession = createServerFn({ method: "POST" })
       throw new Error("Cannot revoke the current session");
     }
 
+    const recentAuth = await checkRecentAuth({ data: { maxAge: RECENT_AUTH_MAX_AGE_SECONDS } });
+    if (recentAuth.isStale) return { status: "reauth_required" };
+
     const authKit = await getAuthkit();
+    const sessions = await authKit
+      .getWorkOS()
+      .userManagement.listSessions(auth.user.id, { limit: 100 });
+    const ownsSession = sessions.data.some(
+      (session) => session.id === data.sessionId && session.userId === auth.user.id,
+    );
+    if (!ownsSession) throw new Error("Session not found");
+
     await authKit.getWorkOS().userManagement.revokeSession({ sessionId: data.sessionId });
 
-    return { ok: true };
+    return { status: "revoked" };
   });

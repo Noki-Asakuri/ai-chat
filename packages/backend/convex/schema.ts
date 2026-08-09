@@ -467,15 +467,6 @@ export default defineSchema(
       resetType: v.optional(v.union(v.literal("monthly"), v.literal("daily"))),
     }).index("by_userId", ["userId"]),
 
-    session: defineTable({
-      userId: v.string(),
-      sessionId: v.string(),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-    })
-      .index("by_userId", ["userId"])
-      .index("by_sessionId", ["sessionId"]),
-
     user_stats: defineTable({
       userId: v.string(),
 

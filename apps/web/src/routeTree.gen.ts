@@ -13,6 +13,7 @@ import { Route as ChatRouteImport } from './app/_chat'
 import { Route as SettingsRouteImport } from './app/settings'
 import { Route as ChatIndexRouteImport } from './app/_chat.index'
 import { Route as ChatThreadsRouteRouteImport } from './app/_chat.threads.route'
+import { Route as AuthErrorRouteImport } from './app/auth.error'
 import { Route as AuthLoginRouteImport } from './app/auth.login'
 import { Route as AuthLogoutRouteImport } from './app/auth.logout'
 import { Route as SettingsAccountRouteImport } from './app/settings/account'
@@ -44,6 +45,11 @@ const ChatThreadsRouteRoute = ChatThreadsRouteRouteImport.update({
   id: '/threads',
   path: '/threads',
   getParentRoute: () => ChatRoute,
+} as any)
+const AuthErrorRoute = AuthErrorRouteImport.update({
+  id: '/auth/error',
+  path: '/auth/error',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/settings/models': typeof SettingsModelsRouteRoute
   '/settings/profiles': typeof SettingsProfilesRouteRoute
   '/settings/statistics': typeof SettingsStatisticsRouteRoute
+  '/auth/error': typeof AuthErrorRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/settings/account': typeof SettingsAccountRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/settings/models': typeof SettingsModelsRouteRoute
   '/settings/profiles': typeof SettingsProfilesRouteRoute
   '/settings/statistics': typeof SettingsStatisticsRouteRoute
+  '/auth/error': typeof AuthErrorRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/settings/account': typeof SettingsAccountRoute
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/settings/models': typeof SettingsModelsRouteRoute
   '/settings/profiles': typeof SettingsProfilesRouteRoute
   '/settings/statistics': typeof SettingsStatisticsRouteRoute
+  '/auth/error': typeof AuthErrorRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/settings/account': typeof SettingsAccountRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/profiles'
     | '/settings/statistics'
+    | '/auth/error'
     | '/auth/login'
     | '/auth/logout'
     | '/settings/account'
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/profiles'
     | '/settings/statistics'
+    | '/auth/error'
     | '/auth/login'
     | '/auth/logout'
     | '/settings/account'
@@ -206,6 +217,7 @@ export interface FileRouteTypes {
     | '/settings/models'
     | '/settings/profiles'
     | '/settings/statistics'
+    | '/auth/error'
     | '/auth/login'
     | '/auth/logout'
     | '/settings/account'
@@ -219,6 +231,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   ChatRoute: typeof ChatRouteWithChildren
   SettingsRoute: typeof SettingsRouteWithChildren
+  AuthErrorRoute: typeof AuthErrorRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLogoutRoute: typeof AuthLogoutRoute
   ShareShareIdRoute: typeof ShareShareIdRoute
@@ -254,6 +267,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/threads'
       preLoaderRoute: typeof ChatThreadsRouteRouteImport
       parentRoute: typeof ChatRoute
+    }
+    '/auth/error': {
+      id: '/auth/error'
+      path: '/auth/error'
+      fullPath: '/auth/error'
+      preLoaderRoute: typeof AuthErrorRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/auth/login': {
       id: '/auth/login'
@@ -392,6 +412,7 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   ChatRoute: ChatRouteWithChildren,
   SettingsRoute: SettingsRouteWithChildren,
+  AuthErrorRoute: AuthErrorRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthLogoutRoute: AuthLogoutRoute,
   ShareShareIdRoute: ShareShareIdRoute,

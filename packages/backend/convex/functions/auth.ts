@@ -80,31 +80,4 @@ export const { authKitEvent } = authKit.events({
 
     await ctx.db.delete(user._id);
   },
-
-  // Handle any event type
-  "session.created": async (ctx, event) => {
-    const { userId, id } = event.data;
-
-    await ctx.db.insert("session", {
-      userId,
-      sessionId: id,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-  },
-
-  "session.revoked": async (ctx, event) => {
-    const { id } = event.data;
-    const session = await ctx.db
-      .query("session")
-      .withIndex("by_sessionId", (q) => q.eq("sessionId", id))
-      .unique();
-
-    if (!session) {
-      console.warn(`Session not found: ${id}`);
-      return;
-    }
-
-    await ctx.db.delete(session._id);
-  },
 });

@@ -153,18 +153,20 @@ export function AccountSessionsCard() {
     if (!sessionId) return;
 
     startTransition(async () => {
-      const promise = revokeAccountSession({ data: { sessionId } });
+      try {
+        const result = await revokeAccountSession({ data: { sessionId } });
+        if (result.status === "reauth_required") {
+          window.location.href = "/auth/login?rt=%2Fsettings%2Faccount&maxAge=300";
+          return;
+        }
 
-      void toast.promise(promise, {
-        loading: "Revoking session...",
-        success: "Session revoked",
-        error: (err) => (err instanceof Error ? err.message : "Failed to revoke session"),
-      });
-
-      await promise;
-      closeRevokeDialog();
-      await refetch();
-      await router.invalidate();
+        toast.success("Session revoked");
+        closeRevokeDialog();
+        await refetch();
+        await router.invalidate();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to revoke session");
+      }
     });
   }
 

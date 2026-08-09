@@ -16,7 +16,7 @@ import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store
 type SharedQueryResult = (typeof api.functions.threadShares.getSharedThread)["_returnType"];
 const getSharedThreadRef = makeFunctionReference<
   "query",
-  { shareId: string; sessionId?: string },
+  { shareId: string },
   SharedQueryResult
 >("functions/threadShares:getSharedThread");
 

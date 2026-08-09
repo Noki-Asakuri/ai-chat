@@ -16,5 +16,5 @@ export function getSafeAuthReturnPath(value: string | null | undefined): string 
 }
 
 export const authReturnSearchSchema = z
-  .object({ rt: z.string().optional() })
-  .transform(({ rt }) => ({ rt: getSafeAuthReturnPath(rt) }));
+  .object({ rt: z.string().optional(), maxAge: z.literal("300").optional() })
+  .transform(({ rt, maxAge }) => ({ rt: getSafeAuthReturnPath(rt), maxAge }));

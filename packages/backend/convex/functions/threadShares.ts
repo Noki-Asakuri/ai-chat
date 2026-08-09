@@ -418,10 +418,8 @@ export const disableThreadShare = authenticatedMutation({
 });
 
 export const getSharedThread = query({
-  args: { shareId: v.string(), sessionId: v.optional(v.string()) },
+  args: { shareId: v.string() },
   handler: async (ctx, args) => {
-    const sessionId = args.sessionId;
-
     const share = await ctx.db
       .query("threadShares")
       .withIndex("by_shareId", (q) => q.eq("shareId", args.shareId))
@@ -434,18 +432,12 @@ export const getSharedThread = query({
 
     let viewerUser: Doc<"users"> | null = null;
 
-    if (sessionId) {
-      const session = await ctx.db
-        .query("session")
-        .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity) {
+      viewerUser = await ctx.db
+        .query("users")
+        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
         .unique();
-
-      if (session) {
-        viewerUser = await ctx.db
-          .query("users")
-          .withIndex("by_userId", (q) => q.eq("userId", session.userId))
-          .unique();
-      }
     }
 
     if (share.visibility === "private") {

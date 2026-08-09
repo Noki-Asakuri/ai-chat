@@ -14,7 +14,6 @@ export const r2 = new R2(components.r2);
 export const retrier = new ActionRetrier(components.actionRetrier);
 export const authKit = new AuthKit<DataModel>(components.workOSAuthKit, {
   authFunctions,
-  additionalEventTypes: ["session.created", "session.revoked"],
 });
 
 export const authenticatedQuery = customQuery(query, {

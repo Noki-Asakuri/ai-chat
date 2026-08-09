@@ -101,11 +101,11 @@ bun install
 
 This monorepo has two app env validation entry points and one shared Convex package:
 
-- `apps/web/src/env.js` for the fullstack web app.
+- `apps/web/src/env.ts` for the fullstack web app.
 - `apps/server/src/env.ts` for the dedicated AI API server.
 - `packages/backend` for Convex functions and generated types.
 
-#### Web app env (`apps/web/src/env.js`)
+#### Web app env (`apps/web/src/env.ts`)
 
 Server-side:
 
@@ -119,6 +119,10 @@ Server-side:
 - `WORKOS_CLIENT_ID`
 - `WORKOS_REDIRECT_URI`
 - `WORKOS_COOKIE_PASSWORD`
+- `WORKOS_COOKIE_NAME` (optional, defaults to `wos-session`)
+- `WORKOS_COOKIE_DOMAIN` (optional; use the same value in both apps when sharing sessions)
+- `WORKOS_COOKIE_MAX_AGE` (optional)
+- `WORKOS_COOKIE_SAME_SITE` (optional, defaults to `lax`; use the same value in both apps)
 
 Client-side (must be prefixed with `VITE_`):
 
@@ -143,6 +147,9 @@ Required for `bun dev:server` and `bun start:server`:
 - `WORKOS_REDIRECT_URI`
 - `WORKOS_COOKIE_PASSWORD`
 - `WORKOS_COOKIE_NAME` (optional, defaults to `wos-session`)
+- `WORKOS_COOKIE_DOMAIN` (optional; must match the web app when sharing sessions)
+- `WORKOS_COOKIE_MAX_AGE` (optional)
+- `WORKOS_COOKIE_SAME_SITE` (optional, defaults to `lax`; must match the web app)
 - `WEB_APP_ORIGIN` (used for CORS, e.g. `http://localhost:3000`)
 - `CONVEX_URL`
 - `AXIOM_TOKEN`
@@ -150,7 +157,7 @@ Required for `bun dev:server` and `bun start:server`:
 - `PUBLIC_ASSET_BASE_URL`
 - `RAW_FILE_BASE_URL`
 
-The dedicated API server does not import `apps/web/src/env.js`, so it no longer requires
+The dedicated API server does not import `apps/web/src/env.ts`, so it no longer requires
 fullstack-only env validation.
 
 ### Run (dev)

@@ -14,7 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { buildImageAssetUrl, getImageAssetPathFromUrl } from "@/lib/assets/urls";
-import { updateAccountProfile } from "@/lib/authkit/accountServerFunctions";
+import {
+  confirmAccountEmailChange,
+  startAccountEmailChange,
+  updateAccountProfile,
+} from "@/lib/authkit/accountServerFunctions";
 import { getUserAvatarUrl, getUserInitials } from "@/lib/authkit/user";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { censorEmail } from "@/lib/email";
@@ -42,6 +46,8 @@ export function AccountProfileCard() {
   const userEmail = user.email ?? "";
   const [isEditingEmail, setIsEditingEmail] = useState<boolean>(false);
   const [emailDraft, setEmailDraft] = useState<string>("");
+  const [emailChangeCode, setEmailChangeCode] = useState<string>("");
+  const [emailChangeCodeSent, setEmailChangeCodeSent] = useState<boolean>(false);
 
   const existingAvatarKey = currentUser?.imageUrl ? getImageAssetPathFromUrl(currentUser.imageUrl) : null;
 
@@ -67,9 +73,6 @@ export function AccountProfileCard() {
     const firstName = typeof firstNameRaw === "string" ? firstNameRaw : "";
     const lastName = typeof lastNameRaw === "string" ? lastNameRaw : "";
 
-    const emailCandidate = emailDraft.trim();
-    const email = emailCandidate.length > 0 ? emailCandidate : userEmail;
-
     startTransition(async () => {
       const promise = (async () => {
         let avatarKey: string | undefined;
@@ -79,7 +82,7 @@ export function AccountProfileCard() {
         }
 
         await updateAccountProfile({
-          data: { firstName, lastName, email },
+          data: { firstName, lastName },
         });
 
         if (avatarKey) {
@@ -99,9 +102,51 @@ export function AccountProfileCard() {
 
       await promise;
       setAvatarPreviewUrl(null);
-      setIsEditingEmail(false);
-      setEmailDraft("");
       await router.invalidate();
+    });
+  }
+
+  function reauthenticate() {
+    window.location.href = "/auth/login?rt=%2Fsettings%2Faccount&maxAge=300";
+  }
+
+  function startEmailChange() {
+    const email = emailDraft.trim();
+
+    startTransition(async () => {
+      try {
+        const result = await startAccountEmailChange({ data: { email } });
+        if (result.status === "reauth_required") {
+          reauthenticate();
+          return;
+        }
+
+        setEmailChangeCodeSent(true);
+        toast.success("Verification code sent");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to send verification code");
+      }
+    });
+  }
+
+  function confirmEmailChange() {
+    startTransition(async () => {
+      try {
+        const result = await confirmAccountEmailChange({ data: { code: emailChangeCode } });
+        if (result.status === "reauth_required") {
+          reauthenticate();
+          return;
+        }
+
+        setEmailChangeCodeSent(false);
+        setEmailChangeCode("");
+        setEmailDraft("");
+        setIsEditingEmail(false);
+        toast.success("Email changed");
+        await router.invalidate();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to change email");
+      }
     });
   }
 
@@ -182,30 +227,70 @@ export function AccountProfileCard() {
 
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type={isEditingEmail ? "email" : "text"}
-                  autoComplete="off"
-                  className="bg-input/30"
-                  disabled={pending}
-                  value={
-                    isEditingEmail
-                      ? emailDraft
-                      : censorEmail(emailDraft.trim().length > 0 ? emailDraft : userEmail)
-                  }
-                  placeholder={isEditingEmail ? "Enter a new email" : undefined}
-                  onFocus={() => {
-                    if (pending) return;
-                    setIsEditingEmail(true);
-                  }}
-                  onBlur={() => {
-                    setIsEditingEmail(false);
-                  }}
-                  onChange={(event) => {
-                    setEmailDraft(event.currentTarget.value);
-                  }}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="email"
+                    name="email"
+                    type={isEditingEmail ? "email" : "text"}
+                    autoComplete="email"
+                    className="bg-input/30"
+                    disabled={pending || emailChangeCodeSent}
+                    value={
+                      isEditingEmail
+                        ? emailDraft
+                        : censorEmail(emailDraft.trim().length > 0 ? emailDraft : userEmail)
+                    }
+                    placeholder={isEditingEmail ? "Enter a new email" : undefined}
+                    onFocus={() => {
+                      if (pending || emailChangeCodeSent) return;
+                      setIsEditingEmail(true);
+                    }}
+                    onBlur={() => {
+                      setIsEditingEmail(false);
+                    }}
+                    onChange={(event) => {
+                      setEmailDraft(event.currentTarget.value);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={pending || emailChangeCodeSent || emailDraft.trim().length === 0}
+                    onClick={startEmailChange}
+                  >
+                    Send code
+                  </Button>
+                </div>
+              </div>
+
+              {emailChangeCodeSent ? (
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="email-change-code">Verification code</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="email-change-code"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      className="bg-input/30"
+                      disabled={pending}
+                      value={emailChangeCode}
+                      onChange={(event) => setEmailChangeCode(event.currentTarget.value)}
+                    />
+                    <Button
+                      type="button"
+                      disabled={pending || emailChangeCode.trim().length === 0}
+                      onClick={confirmEmailChange}
+                    >
+                      Confirm email
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="sm:col-span-2">
+                <p className="text-xs text-muted-foreground">
+                  Changing your email requires recent authentication and a code sent to the new address.
+                </p>
               </div>
 
               <div className="col-span-2 flex w-full items-end justify-end">

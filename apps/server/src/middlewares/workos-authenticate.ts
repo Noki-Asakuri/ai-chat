@@ -105,8 +105,8 @@ function getAuthSessionConfig(): AuthKitConfig {
     cookieDomain: env.WORKOS_COOKIE_DOMAIN,
     cookieMaxAge: env.WORKOS_COOKIE_MAX_AGE ?? DEFAULT_AUTH_SESSION_COOKIE_MAX_AGE,
     cookieName: env.WORKOS_COOKIE_NAME ?? DEFAULT_AUTH_SESSION_COOKIE_NAME,
-    cookieSameSite: env.WORKOS_COOKIE_SAME_SITE,
-    redirectUri: "",
+    cookieSameSite: env.WORKOS_COOKIE_SAME_SITE ?? "lax",
+    redirectUri: env.WORKOS_REDIRECT_URI,
     apiHttps: true,
   };
 }

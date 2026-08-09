@@ -36,6 +36,19 @@ app.use(
   }),
 );
 
+app.use("/api/*", async function enforceSameOrigin(ctx, next) {
+  if (["GET", "HEAD", "OPTIONS"].includes(ctx.req.method)) {
+    await next();
+    return;
+  }
+
+  if (ctx.req.header("Origin") !== env.WEB_APP_ORIGIN) {
+    return ctx.json({ error: { message: "Cross-origin request rejected" } }, 403);
+  }
+
+  await next();
+});
+
 app.get("/health", (ctx) => ctx.text("OK"));
 app.get("/", function (ctx) {
   return ctx.json({ status: "ok", uptimeSeconds: Math.round(process.uptime()) });
