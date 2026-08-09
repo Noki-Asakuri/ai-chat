@@ -1,18 +1,9 @@
-import {
-  Message,
-  MessageAvatar,
-  MessageContent as MessageContentElement,
-} from "../ui/ai-elements/message";
+import { Message, MessageAvatar, MessageContent as MessageContentElement } from "../ui/ai-elements/message";
 
 import { MessageAttachmentsDisplay } from "./message-attachments-display";
 import { StreamDownWrapper } from "./message-markdown";
 import { MessageReasoning } from "./message-reasoning";
-import {
-  MessageStepDivider,
-  MessageToolParts,
-  isToolPart,
-  type ToolPart,
-} from "./message-tool-parts";
+import { MessageStepDivider, MessageToolParts, isToolPart, type ToolPart } from "./message-tool-parts";
 
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
@@ -150,9 +141,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
   const parts = message.parts ?? [];
 
   if (message.status === "error") {
-    const error = message.error?.length
-      ? message.error
-      : "An error have occurred. Please try again.";
+    const error = message.error?.length ? message.error : "An error have occurred. Please try again.";
 
     return <MessageError message={error} />;
   }
@@ -174,10 +163,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
 
   return (
     <>
-      <Message
-        from={message.role}
-        className="relative flex-col items-end [.is-assistant]:items-start"
-      >
+      <Message from={message.role} className="relative flex-col items-end [.is-assistant]:items-start">
         <MessageAttachmentsDisplay
           parts={fileParts}
           attachments={message.attachments}
@@ -220,10 +206,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
                       key={`${message._id}-${block.key}-${index}`}
                       className="surface-edge backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
                     >
-                      <StreamDownWrapper
-                        isAnimating={part.state === "streaming"}
-                        role={message.role}
-                      >
+                      <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>
                         {part.text}
                       </StreamDownWrapper>
                     </MessageContentElement>
@@ -262,9 +245,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
             )}
 
             {shouldRenderUserAvatar && (
-              <MessageAvatar
-                className={cn("shrink-0", userTextParts.length === 0 && "self-start")}
-              />
+              <MessageAvatar className={cn("shrink-0", userTextParts.length === 0 && "self-start")} />
             )}
           </div>
         )}

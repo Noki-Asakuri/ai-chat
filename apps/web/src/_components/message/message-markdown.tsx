@@ -57,7 +57,7 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
       enabled: true,
       renderModal: (modalProps) => <ExternalLinkSafetyModal {...modalProps} />,
     },
-    className: cn("typeset typeset-docs max-w-[37em]", className),
+    className: cn("typeset typeset-docs w-full min-w-0", className),
     remarkPlugins: [...Object.values(defaultRemarkPlugins), remarkBreaks],
     ...props,
   };
