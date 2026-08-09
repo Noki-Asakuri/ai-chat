@@ -14,25 +14,25 @@ import { cn } from "@/lib/utils";
 
 const EFFORT_SYNC_DEBOUNCE_MS = 1_000;
 
-type EffortSelectorProps = {
+type ReasoningPickerProps = {
   value: ReasoningEffort;
   model: string;
   onChange?: (effort: ReasoningEffort) => void;
   className?: string;
 };
 
-export function ChatEffortSelector() {
+export function ChatReasoningPicker() {
   const config = useConfigStore(
     useShallow((state) => ({ effort: state.modelParams.effort, model: state.model })),
   );
-  return <EffortSelectorBase value={config.effort} model={config.model} />;
+  return <ReasoningPickerBase value={config.effort} model={config.model} />;
 }
 
-export function EffortSelector(props: EffortSelectorProps) {
-  return <EffortSelectorBase {...props} />;
+export function ReasoningPicker(props: ReasoningPickerProps) {
+  return <ReasoningPickerBase {...props} />;
 }
 
-export const EFFORT_OPTIONS: Record<ReasoningEffort, { label: string; icon: typeof SignalLowIcon }> = {
+export const REASONING_OPTIONS: Record<ReasoningEffort, { label: string; icon: typeof SignalLowIcon }> = {
   none: { label: "None", icon: SignalZeroIcon },
   minimal: { label: "Minimal", icon: SignalLowIcon },
   low: { label: "Low", icon: SignalLowIcon },
@@ -42,25 +42,24 @@ export const EFFORT_OPTIONS: Record<ReasoningEffort, { label: string; icon: type
   max: { label: "Max", icon: SignalIcon },
 };
 
-type EffortSelectorBaseInnerProps = EffortSelectorProps & {
+type ReasoningPickerBaseInnerProps = ReasoningPickerProps & {
   modelData: NonNullable<ReturnType<typeof tryGetModelData>>;
 };
 
-export function EffortSelectorBase(props: EffortSelectorProps) {
+export function ReasoningPickerBase(props: ReasoningPickerProps) {
   const modelData = tryGetModelData(props.model);
   if (!modelData) return null;
 
-  return <EffortSelectorBaseInner {...props} modelData={modelData} />;
+  return <ReasoningPickerBaseInner {...props} modelData={modelData} />;
 }
 
-function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInnerProps) {
+function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseInnerProps) {
   const configStore = useConfigStoreState();
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
 
   const [pendingSyncEffort, setPendingSyncEffort] = useState<ReasoningEffort | null>(null);
   const debouncedSyncEffort = useDebounce(pendingSyncEffort, EFFORT_SYNC_DEBOUNCE_MS);
 
-  const TriggerIcon = EFFORT_OPTIONS[props.value].icon;
   const validOptions = getReasoningOptions(modelData);
 
   const handleChange = useEffectEvent((effort: ReasoningEffort) => {
@@ -103,7 +102,6 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
           props.className,
         )}
       >
-        <TriggerIcon className="size-4" />
         {props.value}
       </PopoverTrigger>
 
@@ -115,17 +113,18 @@ function EffortSelectorBaseInner({ modelData, ...props }: EffortSelectorBaseInne
         <PopoverArrow className="fill-card" />
 
         <div className="flex flex-col gap-1">
+          <p className="px-2 py-1.5 text-sm text-muted-foreground">Reasoning</p>
+
           {validOptions.map((key) => {
-            const { label, icon: Icon } = EFFORT_OPTIONS[key];
+            const { label } = REASONING_OPTIONS[key];
             return (
               <Button
-                key={`effort-selector-${key}`}
+                key={`reasoning-picker-${key}`}
                 variant="ghost"
                 size="default"
                 className="w-full cursor-pointer justify-start"
                 onClick={() => handleChange(key)}
               >
-                <Icon className="size-4" />
                 {label}
               </Button>
             );

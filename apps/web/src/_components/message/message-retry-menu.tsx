@@ -8,7 +8,7 @@ import { buttonVariants, ButtonWithTip, type Button } from "@/components/ui/butt
 import { Icons } from "@/components/ui/icons";
 import { Menu, MenuArrow } from "@/components/ui/menu";
 
-import { EFFORT_OPTIONS } from "../chat-textarea/effort-selector";
+import { REASONING_OPTIONS } from "../chat-textarea/reasoning-picker";
 import {
   PROVIDER_ORDER,
   compareModelLabelsNewestFirst,
@@ -53,7 +53,7 @@ type ModelGroup = {
 type EffortOption = {
   effort: ReasoningEffort;
   label: string;
-  icon: (typeof EFFORT_OPTIONS)[ReasoningEffort]["icon"];
+  icon: (typeof REASONING_OPTIONS)[ReasoningEffort]["icon"];
 };
 
 function groupProviderModels(models: Array<RetryModelEntry>): ProviderModels {
@@ -97,7 +97,7 @@ function getValidReasoningEffortOptions(model: ModelData): Array<EffortOption> {
   const options: Array<EffortOption> = [];
 
   for (const effort of reasoningEffortValues) {
-    const effortOption = EFFORT_OPTIONS[effort];
+    const effortOption = REASONING_OPTIONS[effort];
     if (!effortOption) continue;
 
     if (!allowedEffortSet.has(effort)) continue;

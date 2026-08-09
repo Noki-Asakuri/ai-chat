@@ -6,8 +6,8 @@ import { ButtonWithTip } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 import { BaseChatAttachmentsButton, ChatAttachmentsButton } from "./attachments-display";
-import { ChatEffortSelector, EffortSelector } from "./effort-selector";
 import { ChatModelSelector, ModelSelector } from "./model-selector";
+import { ChatReasoningPicker, ReasoningPicker } from "./reasoning-picker";
 
 import { getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
 import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
@@ -28,7 +28,7 @@ export function ChatActionButtons() {
       {supportsReasoning && (
         <>
           <ActionButtonSeparator />
-          <ChatEffortSelector />
+          <ChatReasoningPicker />
         </>
       )}
       {supportsWebSearch && (
@@ -71,7 +71,7 @@ export function ChatEditActionButtons() {
       {supportsReasoning && (
         <>
           <ActionButtonSeparator />
-          <EffortSelector
+          <ReasoningPicker
             model={editMessage.model}
             value={editMessage.modelParams.effort ?? "medium"}
             onChange={(effort) =>
