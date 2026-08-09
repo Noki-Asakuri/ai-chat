@@ -149,7 +149,9 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
       )}
       {...props}
     >
-      <StreamDownWrapper role="assistant">{children}</StreamDownWrapper>
+      <StreamDownWrapper className="w-full max-w-none" role="assistant">
+        {children}
+      </StreamDownWrapper>
     </Collapsible.Panel>
   );
 });
