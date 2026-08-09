@@ -1,4 +1,5 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import { ChevronDownIcon } from "lucide-react";
 
 import { Message } from "./message";
 
@@ -57,10 +58,15 @@ export function MessageHistory({
         </MessageScrollerViewport>
 
         <MessageScrollerButton
-          title="Scroll to Bottom"
-          className="bg-background/80 text-muted-foreground backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-card"
+          title="Scroll to end"
+          variant="outline"
+          size="default"
+          className="rounded-full bg-background/90 px-3 font-mono font-normal text-muted-foreground backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-card hover:bg-muted motion-reduce:transition-none"
           style={{ bottom: `${resolvedBottomPadding + 8}px` }}
-        />
+        >
+          <ChevronDownIcon data-icon="inline-start" />
+          Scroll to end
+        </MessageScrollerButton>
       </MessageScroller>
     </MessageScrollerProvider>
   );
