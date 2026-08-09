@@ -1,10 +1,14 @@
-import { Message, MessageAvatar, MessageContent as MessageContentElement } from "../ui/ai-elements/message";
+import { MessageContent as MessageBubble, MessageAvatar as UserAvatar } from "../ui/ai-elements/message";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Icons } from "../ui/icons";
+import { Message, MessageAvatar, MessageContent as MessageLayoutContent } from "../ui/message";
 
 import { MessageAttachmentsDisplay } from "./message-attachments-display";
 import { StreamDownWrapper } from "./message-markdown";
 import { MessageReasoning } from "./message-reasoning";
 import { MessageStepDivider, MessageToolParts, isToolPart, type ToolPart } from "./message-tool-parts";
 
+import { tryGetModelData } from "@/lib/chat/models";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -139,12 +143,7 @@ function buildAssistantFlowBlocks(parts: MessagePart[]): AssistantFlowBlock[] {
 export function MessageContent({ message, showUserAvatar = true }: MessageContentProps) {
   const isMobile = useIsMobile();
   const parts = message.parts ?? [];
-
-  if (message.status === "error") {
-    const error = message.error?.length ? message.error : "An error have occurred. Please try again.";
-
-    return <MessageError message={error} />;
-  }
+  const error = message.error?.length ? message.error : "An error have occurred. Please try again.";
 
   const fileParts = parts.filter(isFilePart);
   const userTextParts = message.role === "user" ? parts.filter(isTextPart) : [];
@@ -152,31 +151,55 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
 
   const shouldRenderUserAvatar = showUserAvatar && message.role === "user";
   const hasRenderableContent =
+    message.status === "error" ||
     fileParts.length > 0 ||
     (message.role === "assistant" ? assistantBlocks.length > 0 : userTextParts.length > 0);
 
   const shouldRenderUserMessageBody =
     message.role === "user" && (userTextParts.length > 0 || shouldRenderUserAvatar);
   const shouldReserveUserAvatarSpace = shouldRenderUserAvatar && userTextParts.length > 0;
+  const modelId = message.metadata?.model.request;
+  const modelData = modelId ? tryGetModelData(modelId) : null;
 
   if (!hasRenderableContent && !shouldRenderUserAvatar) return null;
 
   return (
-    <>
-      <Message from={message.role} className="relative flex-col items-end [.is-assistant]:items-start">
-        <MessageAttachmentsDisplay
-          parts={fileParts}
-          attachments={message.attachments}
-          role={message.role}
-          messageId={message._id}
-          className={cn(
-            shouldRenderUserAvatar && "self-end",
-            shouldReserveUserAvatarSpace && "max-w-[calc(100%-3.25rem)]",
-            isMobile && shouldRenderUserAvatar && "mr-13",
-          )}
-        />
+    <Message
+      align={message.role === "user" ? "end" : "start"}
+      className={cn("relative text-base", message.role === "user" ? "is-user" : "is-assistant")}
+    >
+      {message.role === "assistant" && (
+        <MessageAvatar className="self-start rounded-md bg-transparent">
+          <Avatar className="size-11 ring-1 ring-border">
+            <AvatarFallback className="bg-background/75">
+              {modelData ? (
+                <Icons.provider provider={modelData.provider} className="size-7" />
+              ) : (
+                <Icons.unknown className="size-7" />
+              )}
+            </AvatarFallback>
+          </Avatar>
+        </MessageAvatar>
+      )}
 
-        {message.role === "assistant" && assistantBlocks.length > 0 && (
+      <MessageLayoutContent className="items-end group-data-[align=start]/message:items-start">
+        {message.status === "error" ? (
+          <MessageError message={error} />
+        ) : (
+          <MessageAttachmentsDisplay
+            parts={fileParts}
+            attachments={message.attachments}
+            role={message.role}
+            messageId={message._id}
+            className={cn(
+              shouldRenderUserAvatar && "self-end",
+              shouldReserveUserAvatarSpace && "max-w-[calc(100%-3.25rem)]",
+              isMobile && shouldRenderUserAvatar && "mr-13",
+            )}
+          />
+        )}
+
+        {message.status !== "error" && message.role === "assistant" && assistantBlocks.length > 0 && (
           <div className="flex w-full min-w-0 flex-col gap-1.5">
             {assistantBlocks.map((block) => {
               if (block.kind === "step-divider") {
@@ -202,14 +225,14 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
               return (
                 <div className="flex min-w-0 flex-col gap-1.5" key={block.key}>
                   {block.parts.map((part, index) => (
-                    <MessageContentElement
+                    <MessageBubble
                       key={`${message._id}-${block.key}-${index}`}
-                      className="surface-edge backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
+                      className="surface-edge bg-background/75 backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
                     >
                       <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>
                         {part.text}
                       </StreamDownWrapper>
-                    </MessageContentElement>
+                    </MessageBubble>
                   ))}
                 </div>
               );
@@ -217,7 +240,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
           </div>
         )}
 
-        {shouldRenderUserMessageBody && (
+        {message.status !== "error" && shouldRenderUserMessageBody && (
           <div
             className={cn("relative flex items-start gap-2", {
               "w-full": message.role === "assistant",
@@ -232,25 +255,29 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
                 })}
               >
                 {userTextParts.map((part, i) => (
-                  <MessageContentElement
+                  <MessageBubble
                     key={`${message._id}-${i}`}
-                    className="surface-edge backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
+                    className="surface-edge bg-background/75 backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
                   >
                     <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>
                       {part.text}
                     </StreamDownWrapper>
-                  </MessageContentElement>
+                  </MessageBubble>
                 ))}
               </div>
             )}
 
             {shouldRenderUserAvatar && (
-              <MessageAvatar className={cn("shrink-0", userTextParts.length === 0 && "self-start")} />
+              <MessageAvatar
+                className={cn("shrink-0 rounded-none", userTextParts.length === 0 && "self-start")}
+              >
+                <UserAvatar />
+              </MessageAvatar>
             )}
           </div>
         )}
-      </Message>
-    </>
+      </MessageLayoutContent>
+    </Message>
   );
 }
 
