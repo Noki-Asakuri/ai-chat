@@ -8,7 +8,6 @@ import { createContext, memo, use, useEffect, useState } from "react";
 
 import { StreamDownWrapper } from "@/components/message/message-markdown";
 
-
 import { cn } from "@/lib/utils";
 
 type ReasoningContextValue = {
@@ -143,12 +142,14 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
     <Collapsible.Panel
       className={cn(
         "mt-2 text-sm",
-        "text-muted-foreground outline-none group-data-closed:animate-out group-data-closed:fade-out-0 group-data-closed:slide-out-to-top-2 group-data-open:animate-in group-data-open:slide-in-from-top-2",
+        "text-muted-foreground outline-none group-data-open:animate-in group-data-open:slide-in-from-top-2 group-data-closed:animate-out group-data-closed:fade-out-0 group-data-closed:slide-out-to-top-2",
         className,
       )}
       {...props}
     >
-      <StreamDownWrapper role="assistant">{children}</StreamDownWrapper>
+      <StreamDownWrapper className="w-full max-w-none" role="assistant">
+        {children}
+      </StreamDownWrapper>
     </Collapsible.Panel>
   );
 });
