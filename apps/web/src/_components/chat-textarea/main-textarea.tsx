@@ -22,7 +22,7 @@ import { useConfigStore } from "../provider/config-provider";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { convexSessionQuery } from "@/lib/convex/helpers";
-import { fromUUID, tryCatch } from "@/lib/utils";
+import { cn, fromUUID, tryCatch } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
 
@@ -53,13 +53,13 @@ export function ChatTextarea() {
       <form ref={parentRef} className="mx-auto space-y-2">
         <SettledThreadNotice />
 
-        <div className="surface-edge pointer-events-auto relative mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150">
+        <div className="surface-edge pointer-events-auto relative mx-auto max-w-4xl space-y-2 overflow-hidden rounded-xl border border-border/80 bg-background/80 shadow-lg backdrop-blur-md backdrop-saturate-150 transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-primary/45 focus-within:bg-background/85 focus-within:ring-2 focus-within:ring-primary/15 motion-reduce:transition-none">
           <ChatAttachmentsDisplay />
 
           <div>
             <InputChatTextArea />
 
-            <div className="flex items-end justify-between border-t px-2.5 py-2">
+            <div className="flex items-end justify-between px-3 pt-1 pb-3">
               <ChatActionButtons />
               <ChatSendButton />
             </div>
@@ -136,6 +136,7 @@ function InputChatTextArea() {
       setInput={chatStoreActions.setInput}
       handleAddAttachments={handleAddAttachments}
       onConfirm={sendChatRequest}
+      className="text-[15px] leading-6 placeholder:text-muted-foreground/90 md:text-[15px]"
     />
   );
 }
@@ -165,6 +166,7 @@ export function BaseInputTextArea({
   handleAddAttachments,
   onConfirm,
   onKeyDown,
+  className,
   ...props
 }: BaseInputTextAreaProps) {
   const shouldSend = useShouldSend();
@@ -184,7 +186,10 @@ export function BaseInputTextArea({
         data-slot={props.id}
         value={input}
         onChange={(event) => setInput(event.target.value)}
-        className="max-h-62.5 w-full resize-none rounded-none border-0 bg-transparent! p-0 ring-0!"
+        className={cn(
+          "max-h-62.5 w-full resize-none rounded-none border-0 bg-transparent! p-0 caret-primary ring-0!",
+          className,
+        )}
         onPaste={(event) => {
           const { items } = event.clipboardData;
           const files = Array.from(items).reduce<Array<File>>((result, item) => {
