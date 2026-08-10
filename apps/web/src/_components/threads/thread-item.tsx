@@ -5,6 +5,8 @@ import { Link, useParams } from "@tanstack/react-router";
 import {
   CircleCheckIcon,
   DeleteIcon,
+  FolderIcon,
+  FolderInputIcon,
   GitBranchIcon,
   Loader2Icon,
   PencilIcon,
@@ -16,12 +18,22 @@ import {
 import { useRef } from "react";
 import { toast } from "@/components/ui/toast";
 
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../ui/context-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "../ui/context-menu";
 import { Icons } from "../ui/icons";
 
 import { tryGetModelData } from "@/lib/chat/models";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { threadDialogStoreActions } from "@/lib/store/thread-dialog-store";
+import { useThreadStore } from "@/lib/store/thread-store";
 import { regenerateThreadTitle } from "@/lib/trpc/client";
 import type { Thread } from "@/lib/types";
 import { cn, toUUID, tryCatch } from "@/lib/utils";
@@ -118,6 +130,9 @@ type ThreadActionsProps = {
 
 function ThreadActions({ thread, isStreaming, children }: ThreadActionsProps) {
   const menuTriggerRef = useRef<HTMLDivElement>(null);
+  const groups = useThreadStore((state) => state.groupedThreads.groups);
+  const destinationGroups = groups.filter((group) => group._id !== thread.groupId);
+  const canMoveThread = thread.groupId !== null || destinationGroups.length > 0;
 
   function toggleThreadPin() {
     console.debug("[Thread] Pin thread", thread);
@@ -133,6 +148,34 @@ function ThreadActions({ thread, isStreaming, children }: ThreadActionsProps) {
 
     console.error("[Thread] Regenerate title error:", error);
     toast.error(error.message);
+  }
+
+  async function moveThread(toGroupId: (typeof groups)[number]["_id"] | null) {
+    const destinationTitle =
+      toGroupId === null ? "Ungrouped" : destinationGroups.find((group) => group._id === toGroupId)?.title;
+    if (!destinationTitle) return;
+
+    const toIndex =
+      toGroupId === null
+        ? 0
+        : (useThreadStore.getState().groupedThreads.groupedThreads[toGroupId]?.threads.length ?? 0);
+    const [, error] = await tryCatch(
+      convexClient.mutation(api.functions.groups.moveThreadToGroup, {
+        threadId: thread._id,
+        toGroupId,
+        toIndex,
+      }),
+    );
+
+    if (error) {
+      console.error("[Thread] Move thread error:", error);
+      toast.error("Failed to move thread", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+      return;
+    }
+
+    toast.success(`Thread moved to ${destinationTitle}`);
   }
 
   return (
@@ -177,6 +220,44 @@ function ThreadActions({ thread, isStreaming, children }: ThreadActionsProps) {
             <PencilIcon className="size-4" />
             <span className="pointer-events-none">Edit Thread</span>
           </ContextMenuItem>
+
+          <ContextMenuSub>
+            <ContextMenuSubTrigger title="Move Thread" disabled={!canMoveThread}>
+              <FolderInputIcon className="size-4" />
+              <span className="pointer-events-none">Move to group</span>
+            </ContextMenuSubTrigger>
+
+            {canMoveThread && (
+              <ContextMenuSubContent>
+                <ContextMenuGroup>
+                  {thread.groupId !== null && (
+                    <ContextMenuItem
+                      title="Ungrouped"
+                      onClick={() => {
+                        void moveThread(null);
+                      }}
+                    >
+                      <FolderIcon className="size-4" />
+                      <span className="pointer-events-none truncate">Ungrouped</span>
+                    </ContextMenuItem>
+                  )}
+
+                  {destinationGroups.map((group) => (
+                    <ContextMenuItem
+                      key={group._id}
+                      title={group.title}
+                      onClick={() => {
+                        void moveThread(group._id);
+                      }}
+                    >
+                      <FolderIcon className="size-4" />
+                      <span className="pointer-events-none truncate">{group.title}</span>
+                    </ContextMenuItem>
+                  ))}
+                </ContextMenuGroup>
+              </ContextMenuSubContent>
+            )}
+          </ContextMenuSub>
 
           <ContextMenuItem
             title="Share Thread"
