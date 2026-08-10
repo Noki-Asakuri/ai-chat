@@ -144,7 +144,7 @@ function ChatLayoutConfig() {
       <GlobalDropzone data-slot="chat" className="relative inset-0 h-dvh w-screen overflow-hidden border-x">
         <div
           className={cn(
-            "absolute top-0 z-10 flex h-12 w-full max-w-full items-center border-b bg-sidebar/80 px-4 text-base backdrop-blur-md backdrop-saturate-150 transition-[padding] duration-200 ease-linear group-data-[performance-mode=true]/sidebar-provider:bg-sidebar motion-reduce:transition-none",
+            "absolute top-0 z-10 flex h-12 w-full max-w-full items-center border-b bg-background/80 px-4 text-base backdrop-blur-md backdrop-saturate-150 transition-[padding] duration-200 ease-linear group-data-[performance-mode=true]/sidebar-provider:bg-background motion-reduce:transition-none",
             (isMobile || sidebarState === "collapsed") && "pl-16",
           )}
         >
