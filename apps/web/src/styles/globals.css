@@ -229,7 +229,7 @@
   --popover: color-mix(in srgb, var(--background) 94%, var(--color-white));
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.72 0.19 320);
+  --primary: oklch(0.65 0.18 285);
   --primary-foreground: var(--color-neutral-950);
 
   --secondary: rgb(255 255 255 / 4%);
