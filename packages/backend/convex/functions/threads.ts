@@ -37,6 +37,7 @@ type AccountThreadSortField =
 type AccountThreadSortDirection = "asc" | "desc";
 
 const MAX_ACCOUNT_THREADS_PAGE_SIZE = 15;
+const SETTLE_INACTIVE_THREADS_PAGE_SIZE = 100;
 
 const threadValidator = v.object({
   _id: v.id("threads"),
@@ -577,6 +578,43 @@ export const settleThread = authenticatedMutation({
 
     await ctx.db.patch(args.threadId, { pinned: false, settled: true });
     return null;
+  },
+});
+
+export const settleInactiveThreads = authenticatedMutation({
+  args: {
+    before: v.number(),
+    cursor: v.union(v.string(), v.null()),
+  },
+  returns: v.object({
+    settledCount: v.number(),
+    isDone: v.boolean(),
+    continueCursor: v.union(v.string(), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    const pageResult = await ctx.db
+      .query("threads")
+      .withIndex("by_userId_updatedAt", (q) => q.eq("userId", user.userId).lte("updatedAt", args.before))
+      .paginate({
+        numItems: SETTLE_INACTIVE_THREADS_PAGE_SIZE,
+        cursor: args.cursor,
+      });
+
+    let settledCount = 0;
+
+    for (const thread of pageResult.page) {
+      if (thread.settled !== true && (thread.status === "complete" || thread.status === "error")) {
+        await ctx.db.patch(thread._id, { pinned: false, settled: true });
+        settledCount += 1;
+      }
+    }
+
+    return {
+      settledCount,
+      isDone: pageResult.isDone,
+      continueCursor: pageResult.isDone ? null : pageResult.continueCursor,
+    };
   },
 });
 
