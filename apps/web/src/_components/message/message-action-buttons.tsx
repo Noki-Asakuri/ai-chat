@@ -1,19 +1,23 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
+import { toast } from "@/components/ui/toast";
+import { useCopyToClipboard } from "@uidotdev/usehooks";
 import { useMutation } from "convex/react";
 import {
   BugPlayIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  CopyIcon,
+  EllipsisIcon,
   Loader2Icon,
   PencilIcon,
+  RefreshCcwIcon,
   SplitIcon,
   Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
 import * as React from "react";
-import { toast } from "@/components/ui/toast";
 import { useShallow } from "zustand/shallow";
 
 import { CopyButton } from "../copy-button";
@@ -29,13 +33,21 @@ import {
   AlertDialogMedia,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
-import { ButtonWithTip } from "../ui/button";
+import { Button, ButtonWithTip } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { MessageRetryMenu } from "./message-retry-menu";
 
 import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
+import { useRetryChatMessage } from "@/lib/chat/server-function/retry-chat-message";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
@@ -137,37 +149,138 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
     .join("\n\n");
 
   return (
-    <div className="flex items-center gap-0.5 rounded-md border bg-background/80 p-1 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0">
-      {isFinished && (
-        <>
-          <CopyButton
-            side="bottom"
-            className="size-8"
-            content={message.status === "error" ? message.error || "" : content}
-          />
-
-          {message.role === "assistant" && (
-            <ButtonWithTip
-              variant="ghost"
+    <>
+      <div className="hidden items-center gap-0.5 rounded-md border bg-background/80 p-1 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0 lg:flex">
+        {isFinished && (
+          <>
+            <CopyButton
               side="bottom"
               className="size-8"
-              onMouseDown={() => branchThread(message._id)}
-              title="Branch off at this message"
-              disabled={message.status === "pending" || message.status === "streaming"}
-            >
-              <SplitIcon className="size-4 rotate-180" />
-            </ButtonWithTip>
-          )}
+              content={message.status === "error" ? message.error || "" : content}
+            />
 
-          {canRetry && retryUserMessageId && (
-            <MessageRetryMenu userMessageId={retryUserMessageId} message={message} className="size-8" />
-          )}
-        </>
-      )}
+            {message.role === "assistant" && (
+              <ButtonWithTip
+                variant="ghost"
+                side="bottom"
+                className="size-8"
+                onMouseDown={() => branchThread(message._id)}
+                title="Branch off at this message"
+                disabled={message.status === "pending" || message.status === "streaming"}
+              >
+                <SplitIcon className="size-4 rotate-180" />
+              </ButtonWithTip>
+            )}
 
-      {isFinished && <DeleteButton message={message} />}
-      <EditButton message={message} />
-      <DebugButton messageId={message._id} />
+            {canRetry && retryUserMessageId && (
+              <MessageRetryMenu userMessageId={retryUserMessageId} message={message} className="size-8" />
+            )}
+          </>
+        )}
+
+        {isFinished && <DeleteButton message={message} />}
+        <EditButton message={message} />
+        <DebugButton messageId={message._id} />
+      </div>
+
+      <MobileMessageActionsMenu
+        canRetry={canRetry}
+        content={message.status === "error" ? message.error || "" : content}
+        isFinished={isFinished}
+        message={message}
+        retryUserMessageId={retryUserMessageId}
+      />
+    </>
+  );
+}
+
+type MobileMessageActionsMenuProps = {
+  canRetry: boolean;
+  content: string;
+  isFinished: boolean;
+  message: ChatMessage;
+  retryUserMessageId: Id<"messages"> | null;
+};
+
+function MobileMessageActionsMenu({
+  canRetry,
+  content,
+  isFinished,
+  message,
+  retryUserMessageId,
+}: MobileMessageActionsMenuProps) {
+  const { branchThread } = useBranchThread();
+  const { retryChatMessage } = useRetryChatMessage();
+  const [copyPending, startCopyTransition] = React.useTransition();
+  const [retryPending, startRetryTransition] = React.useTransition();
+  const [, copyToClipboard] = useCopyToClipboard();
+
+  function handleCopyMessage(): void {
+    startCopyTransition(async () => {
+      await copyToClipboard(content.trim());
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    });
+  }
+
+  function handleRetryMessage(): void {
+    if (!retryUserMessageId) return;
+
+    startRetryTransition(async () => {
+      await retryChatMessage({ userMessageId: retryUserMessageId });
+    });
+  }
+
+  if (!isFinished && message.role !== "user" && import.meta.env.PROD) return null;
+
+  return (
+    <div className="lg:hidden">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="ghost" size="icon" aria-label="Message actions" title="Message actions">
+              <EllipsisIcon />
+            </Button>
+          }
+        />
+
+        <DropdownMenuContent
+          align={message.role === "user" ? "end" : "start"}
+          className="w-48 bg-card"
+          side="top"
+        >
+          <DropdownMenuGroup>
+            {isFinished && (
+              <DropdownMenuItem disabled={copyPending} onClick={handleCopyMessage}>
+                <CopyIcon />
+                Copy message
+              </DropdownMenuItem>
+            )}
+
+            {isFinished && message.role === "assistant" && (
+              <DropdownMenuItem
+                disabled={message.status === "pending" || message.status === "streaming"}
+                onClick={() => {
+                  void branchThread(message._id);
+                }}
+              >
+                <SplitIcon />
+                Branch off at this message
+              </DropdownMenuItem>
+            )}
+
+            {isFinished && canRetry && retryUserMessageId && (
+              <DropdownMenuItem disabled={retryPending} onClick={handleRetryMessage}>
+                <RefreshCcwIcon />
+                Retry message
+              </DropdownMenuItem>
+            )}
+
+            {isFinished && <DeleteButton menu message={message} />}
+            <EditButton menu message={message} />
+            <DebugButton menu messageId={message._id} />
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -176,7 +289,7 @@ export function MessageVariantPager({ message }: { message: ChatMessage }) {
   return <VariantPager message={message} />;
 }
 
-function DebugButton({ messageId }: { messageId: Id<"messages"> }) {
+function DebugButton({ menu = false, messageId }: { menu?: boolean; messageId: Id<"messages"> }) {
   const message = useMessageStore(useShallow((state) => state.messagesById[messageId]!));
   if (import.meta.env.PROD) return null;
 
@@ -188,6 +301,15 @@ function DebugButton({ messageId }: { messageId: Id<"messages"> }) {
     }
   }
 
+  if (menu) {
+    return (
+      <DropdownMenuItem onClick={handleDebug}>
+        <BugPlayIcon />
+        Debug
+      </DropdownMenuItem>
+    );
+  }
+
   return (
     <ButtonWithTip variant="ghost" side="bottom" className="size-8" title="Debug" onClick={handleDebug}>
       <BugPlayIcon className="size-4" />
@@ -196,7 +318,7 @@ function DebugButton({ messageId }: { messageId: Id<"messages"> }) {
   );
 }
 
-function EditButton({ message }: { message: ChatMessage }) {
+function EditButton({ menu = false, message }: { menu?: boolean; message: ChatMessage }) {
   const configModel = useConfigStore((state) => state.model);
   const configModelParams = useConfigStore((state) => state.modelParams);
 
@@ -226,6 +348,15 @@ function EditButton({ message }: { message: ChatMessage }) {
   );
 
   if (!canEdit) return null;
+
+  if (menu) {
+    return (
+      <DropdownMenuItem disabled={isPending} onClick={handleEditMessage}>
+        <PencilIcon />
+        Edit message
+      </DropdownMenuItem>
+    );
+  }
 
   function handleEditMessage() {
     chatStoreActions.setEditMessage({
@@ -260,7 +391,7 @@ function EditButton({ message }: { message: ChatMessage }) {
   );
 }
 
-function DeleteButton({ message }: { message: ChatMessage }) {
+function DeleteButton({ menu = false, message }: { menu?: boolean; message: ChatMessage }) {
   const [pending, startTransition] = React.useTransition();
 
   const [open, setOpen] = React.useState(false);
@@ -499,17 +630,24 @@ function DeleteButton({ message }: { message: ChatMessage }) {
 
   return (
     <>
-      <ButtonWithTip
-        variant="ghost"
-        side="bottom"
-        className="size-8"
-        onClick={() => handleOpenChange(true)}
-        disabled={disabled}
-        title={deleteButtonTitle}
-      >
-        <Trash2Icon className="size-4" />
-        <span className="sr-only">{deleteButtonSrLabel}</span>
-      </ButtonWithTip>
+      {menu ? (
+        <DropdownMenuItem disabled={disabled} onClick={() => handleOpenChange(true)} variant="destructive">
+          <Trash2Icon />
+          {deleteButtonTitle}
+        </DropdownMenuItem>
+      ) : (
+        <ButtonWithTip
+          variant="ghost"
+          side="bottom"
+          className="size-8"
+          onClick={() => handleOpenChange(true)}
+          disabled={disabled}
+          title={deleteButtonTitle}
+        >
+          <Trash2Icon className="size-4" />
+          <span className="sr-only">{deleteButtonSrLabel}</span>
+        </ButtonWithTip>
+      )}
 
       <AlertDialog open={open} onOpenChange={handleOpenChange}>
         <AlertDialogContent className="gap-3 p-4">

@@ -15,7 +15,6 @@ import {
 import { Icons } from "@/components/ui/icons";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-import { tryGetModelData } from "@/lib/chat/models";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
@@ -29,30 +28,15 @@ type MessageMetadataProps = {
 export function MessageMetadata({ metadata, rightAccessory }: MessageMetadataProps) {
   if (!metadata) return null;
 
-  const modelData = tryGetModelData(metadata.model.request);
-  if (!modelData) return null;
-
   const hasFullMetadata = metadata.usages.inputTokens > 0;
-
-  const showEffort =
-    modelData.capabilities.reasoning?.type === "selectable" &&
-    metadata.modelParams.effort &&
-    metadata.modelParams.effort !== "medium";
+  if (!rightAccessory && !hasFullMetadata) return null;
 
   return (
     <div className="flex h-full w-full items-center justify-between">
-      <div className="flex h-10.5 items-center justify-center gap-2 rounded-md border bg-background/80 p-2 backdrop-blur-md backdrop-saturate-150">
-        <Icons.provider provider={modelData?.provider} className="size-4 rounded-md" />
-        {modelData?.display.name}{" "}
-        {showEffort && <span className="text-sm capitalize">({metadata.modelParams.effort})</span>}
+      <div className="ml-auto flex items-center gap-2">
+        {rightAccessory}
+        {hasFullMetadata && <PopoverInfo metadata={metadata} />}
       </div>
-
-      {(rightAccessory || hasFullMetadata) && (
-        <div className="flex items-center gap-2">
-          {rightAccessory}
-          {hasFullMetadata && <PopoverInfo metadata={metadata} />}
-        </div>
-      )}
     </div>
   );
 }

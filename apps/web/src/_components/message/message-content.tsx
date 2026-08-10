@@ -1,7 +1,12 @@
 import { MessageContent as MessageBubble, MessageAvatar as UserAvatar } from "../ui/ai-elements/message";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { Icons } from "../ui/icons";
-import { Message, MessageAvatar, MessageContent as MessageLayoutContent } from "../ui/message";
+import {
+  Message,
+  MessageAvatar,
+  MessageContent as MessageLayoutContent,
+  MessageHeader,
+} from "../ui/message";
 
 import { MessageAttachmentsDisplay } from "./message-attachments-display";
 import { StreamDownWrapper } from "./message-markdown";
@@ -183,6 +188,12 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
       )}
 
       <MessageLayoutContent className="items-end group-data-[align=start]/message:items-start">
+        {message.role === "assistant" && modelData && (
+          <MessageHeader className="px-0 text-base leading-5 text-foreground">
+            {modelData.display.name}
+          </MessageHeader>
+        )}
+
         {message.status === "error" ? (
           <MessageError message={error} />
         ) : (
