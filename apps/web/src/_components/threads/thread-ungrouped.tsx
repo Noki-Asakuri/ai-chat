@@ -1,6 +1,8 @@
-import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
+import { api } from "@ai-chat/backend/convex/_generated/api";
+import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { ChevronRightIcon } from "lucide-react";
+import { usePaginatedQuery } from "convex/react";
+import { ChevronRightIcon, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "../ui/button";
@@ -11,20 +13,25 @@ import { ThreadItem } from "./thread-item";
 
 type UngroupedThreadGroupProps = {
   threads: Doc<"threads">[];
+  groupId: Id<"groups"> | null;
+  searchQuery: string;
 };
 
-export function UngroupedThreadGroup({ threads }: UngroupedThreadGroupProps) {
+const SETTLED_THREADS_PAGE_SIZE = 10;
+
+export function UngroupedThreadGroup({ threads, groupId, searchQuery }: UngroupedThreadGroupProps) {
   const [now, setNow] = useState(() => Date.now());
-  const activeThreads = threads.filter((thread) => thread.settled !== true);
-  const settledThreads = threads
-    .filter((thread) => thread.settled === true)
-    .sort((a, b) => b.updatedAt - a.updatedAt);
-  const pinnedThreads = activeThreads
-    .filter((thread) => thread.pinned)
-    .sort((a, b) => b.updatedAt - a.updatedAt);
-  const recentThreads = activeThreads
-    .filter((thread) => !thread.pinned)
-    .sort((a, b) => b.updatedAt - a.updatedAt);
+  const {
+    results: settledThreads,
+    status,
+    loadMore,
+  } = usePaginatedQuery(
+    api.functions.threads.listSettledThreads,
+    { groupId, query: searchQuery },
+    { initialNumItems: SETTLED_THREADS_PAGE_SIZE },
+  );
+  const pinnedThreads = threads.filter((thread) => thread.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
+  const recentThreads = threads.filter((thread) => !thread.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 60_000);
@@ -59,10 +66,23 @@ export function UngroupedThreadGroup({ threads }: UngroupedThreadGroupProps) {
             <ChevronRightIcon className="transition-transform group-data-panel-open:rotate-90" />
           </CollapsibleTrigger>
 
-          <CollapsibleContent className="flex h-[var(--collapsible-panel-height)] flex-col overflow-hidden transition-[height] duration-150 ease-out [&[hidden]:not([hidden='until-found'])]:hidden data-ending-style:h-0 data-starting-style:h-0">
+          <CollapsibleContent className="flex h-[var(--collapsible-panel-height)] flex-col overflow-hidden transition-[height] duration-150 ease-out data-ending-style:h-0 data-starting-style:h-0 [&[hidden]:not([hidden='until-found'])]:hidden">
             {settledThreads.map((thread) => (
               <ThreadItem key={thread._id} thread={thread} now={now} />
             ))}
+
+            {(status === "CanLoadMore" || status === "LoadingMore") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start px-2 text-muted-foreground"
+                disabled={status === "LoadingMore"}
+                onClick={() => loadMore(SETTLED_THREADS_PAGE_SIZE)}
+              >
+                <PlusIcon data-icon="inline-start" />
+                {status === "LoadingMore" ? "Loading..." : "Show more"}
+              </Button>
+            )}
           </CollapsibleContent>
         </Collapsible>
       )}

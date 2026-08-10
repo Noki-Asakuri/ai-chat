@@ -195,6 +195,9 @@ function ThreadListWrapper() {
     ...convexSessionQuery(api.functions.groups.listGroups),
     initialData: localCache,
   });
+  const { data: routeThreadTitle } = useQuery(
+    convexSessionQuery(api.functions.threads.getThreadTitle, { threadId: routeThreadId }),
+  );
 
   useEffect(() => {
     if (!data) return;
@@ -208,13 +211,19 @@ function ThreadListWrapper() {
         lastSyncedThreadIdRef.current = routeThreadId;
         return;
       }
+
+      if (routeThreadTitle && routeThreadTitle.title !== null) {
+        threadStoreActions.setActiveGroupId(routeThreadTitle.groupId);
+        lastSyncedThreadIdRef.current = routeThreadId;
+        return;
+      }
     }
 
     const activeGroupId = useThreadStore.getState().activeGroupId;
     if (activeGroupId && !data.groups.some((group) => group._id === activeGroupId)) {
       threadStoreActions.setActiveGroupId(null);
     }
-  }, [data, routeThreadId]);
+  }, [data, routeThreadId, routeThreadTitle]);
 
   useEffect(() => {
     if (!data || !routeThreadId) return;
@@ -252,7 +261,9 @@ function ThreadList({ data }: ThreadListProps) {
   const activeGroupId = useThreadStore((state) => state.activeGroupId);
 
   const activeGroup = data.groups.find((group) => group._id === activeGroupId);
-  const activeThreads = data.groupedThreads[activeGroupId ?? "none"]?.threads ?? [];
+  const activeThreads = (data.groupedThreads[activeGroupId ?? "none"]?.threads ?? []).filter(
+    (thread) => thread.settled !== true,
+  );
   const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
   const filteredThreads = normalizedSearchQuery
     ? activeThreads.filter((thread) => thread.title.toLocaleLowerCase().includes(normalizedSearchQuery))
@@ -384,7 +395,11 @@ function ThreadList({ data }: ThreadListProps) {
         className="custom-scroll flex min-h-0 flex-1 flex-col overflow-y-auto pr-2.5 pl-2"
         style={{ scrollbarGutter: "stable both-edges" }}
       >
-        <UngroupedThreadGroup threads={filteredThreads} />
+        <UngroupedThreadGroup
+          threads={filteredThreads}
+          groupId={activeGroupId}
+          searchQuery={normalizedSearchQuery}
+        />
       </div>
 
       <CommandDialog

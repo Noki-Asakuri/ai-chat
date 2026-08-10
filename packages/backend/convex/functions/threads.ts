@@ -1,4 +1,4 @@
-import { paginationOptsValidator } from "convex/server";
+import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
@@ -37,6 +37,23 @@ type AccountThreadSortField =
 type AccountThreadSortDirection = "asc" | "desc";
 
 const MAX_ACCOUNT_THREADS_PAGE_SIZE = 15;
+
+const threadValidator = v.object({
+  _id: v.id("threads"),
+  _creationTime: v.number(),
+  title: v.string(),
+  userId: v.string(),
+  updatedAt: v.number(),
+  lastViewedAt: v.optional(v.number()),
+  pinned: v.boolean(),
+  settled: v.optional(v.boolean()),
+  branchedFrom: v.optional(v.id("threads")),
+  latestModel: v.string(),
+  latestModelParams: AISDKModelParams,
+  groupId: v.nullable(v.id("groups")),
+  order: v.number(),
+  status,
+});
 
 function compareAccountThreadRows(
   left: AccountThreadRow,
@@ -264,6 +281,36 @@ export const getAllThreads = authenticatedQuery({
       .take(limit);
 
     return [...pinnedMatches, ...nonPinnedMatches];
+  },
+});
+
+export const listSettledThreads = authenticatedQuery({
+  args: {
+    groupId: v.nullable(v.id("groups")),
+    query: v.string(),
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: paginationResultValidator(threadValidator),
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    const search = args.query.trim();
+
+    if (search.length > 0) {
+      return await ctx.db
+        .query("threads")
+        .withSearchIndex("search_title_by_userId_settled_groupId", (q) =>
+          q.search("title", search).eq("userId", user.userId).eq("settled", true).eq("groupId", args.groupId),
+        )
+        .paginate(args.paginationOpts);
+    }
+
+    return await ctx.db
+      .query("threads")
+      .withIndex("by_userId_settled_groupId_updatedAt", (q) =>
+        q.eq("userId", user.userId).eq("settled", true).eq("groupId", args.groupId),
+      )
+      .order("desc")
+      .paginate(args.paginationOpts);
   },
 });
 

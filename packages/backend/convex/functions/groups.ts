@@ -19,11 +19,12 @@ export const listGroups = authenticatedQuery({
 
     const threadsPromise = ctx.db
       .query("threads")
-      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.userId))
+      .withIndex("by_userId_settled_groupId_order", (q) => q.eq("userId", user.userId).lt("settled", true))
       .order("asc")
       .collect();
 
     const [groups, threads] = await Promise.all([groupsPromise, threadsPromise]);
+    threads.sort((left, right) => left.order - right.order);
 
     const groupedThreads = threads.reduce(
       (acc, thread) => {
@@ -34,10 +35,7 @@ export const listGroups = authenticatedQuery({
 
         return acc;
       },
-      {} as Record<
-        Id<"groups"> | "none",
-        { group: Doc<"groups"> | null; threads: Doc<"threads">[] }
-      >,
+      {} as Record<Id<"groups"> | "none", { group: Doc<"groups"> | null; threads: Doc<"threads">[] }>,
     );
 
     for (const group of groups) {
@@ -91,9 +89,7 @@ export const deleteGroup = authenticatedMutation({
     // Move threads from this group to ungrouped with increasing order
     const threadsInGroup = await ctx.db
       .query("threads")
-      .withIndex("by_userId_groupId_order", (q) =>
-        q.eq("userId", user.userId).eq("groupId", args.groupId),
-      )
+      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.userId).eq("groupId", args.groupId))
       .order("asc")
       .collect();
 
@@ -139,9 +135,7 @@ export const reorderThreadWithinGroup = authenticatedMutation({
 
     const threadsInGroup = await ctx.db
       .query("threads")
-      .withIndex("by_userId_groupId_order", (q) =>
-        q.eq("userId", user.userId).eq("groupId", thread.groupId),
-      )
+      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.userId).eq("groupId", thread.groupId))
       .order("asc")
       .collect();
 
@@ -176,9 +170,7 @@ export const removeGroupId = authenticatedMutation({
 
     const threadsInOldGroup = await ctx.db
       .query("threads")
-      .withIndex("by_userId_groupId_order", (q) =>
-        q.eq("userId", user.userId).eq("groupId", thread.groupId),
-      )
+      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.userId).eq("groupId", thread.groupId))
       .order("asc")
       .collect();
 
@@ -211,17 +203,13 @@ export const moveThreadToGroup = authenticatedMutation({
 
     const threadsInOldGroupPromise = ctx.db
       .query("threads")
-      .withIndex("by_userId_groupId_order", (q) =>
-        q.eq("userId", user.userId).eq("groupId", oldGroupId),
-      )
+      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.userId).eq("groupId", oldGroupId))
       .order("asc")
       .collect();
 
     const threadsInNewGroupPromise = ctx.db
       .query("threads")
-      .withIndex("by_userId_groupId_order", (q) =>
-        q.eq("userId", user.userId).eq("groupId", args.toGroupId),
-      )
+      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.userId).eq("groupId", args.toGroupId))
       .order("asc")
       .collect();
 

@@ -364,9 +364,15 @@ export default defineSchema(
     })
       .index("by_userId", ["userId"])
       .index("by_userId_updatedAt", ["userId", "updatedAt"])
+      .index("by_userId_settled_groupId_order", ["userId", "settled", "groupId", "order"])
+      .index("by_userId_settled_groupId_updatedAt", ["userId", "settled", "groupId", "updatedAt"])
       .index("by_userId_groupId_order", ["userId", "groupId", "order"])
       .index("by_userId_pinned_updatedAt", ["userId", "pinned", "updatedAt"])
-      .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "pinned"] }),
+      .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "pinned"] })
+      .searchIndex("search_title_by_userId_settled_groupId", {
+        searchField: "title",
+        filterFields: ["userId", "settled", "groupId"],
+      }),
 
     threadShares: defineTable({
       threadId: v.id("threads"),
