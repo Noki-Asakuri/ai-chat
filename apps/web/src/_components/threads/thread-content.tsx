@@ -43,9 +43,111 @@ const UNGROUPED_SELECT_VALUE = "ungrouped";
 export function ThreadContents() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ClientOnly fallback={<Skeleton className="h-full w-full" key="thread-list-skeleton" />}>
+      <ClientOnly fallback={<ThreadListSkeleton key="thread-list-skeleton" />}>
         <ThreadListWrapper />
       </ClientOnly>
+    </div>
+  );
+}
+
+function ThreadListSkeleton() {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col" role="status" aria-label="Loading conversations">
+      <span className="sr-only">Loading conversations</span>
+
+      <div aria-hidden="true" className="flex min-h-0 flex-1 flex-col">
+        <div className="flex items-center gap-1.5 px-2 pb-1.5">
+          <Skeleton className="h-10 min-w-0 flex-1 bg-input/60" />
+          <Skeleton className="size-10 shrink-0 bg-input/60" />
+        </div>
+
+        <div className="flex items-center gap-1.5 px-2 pb-1">
+          <Skeleton className="h-10 min-w-0 flex-1 bg-input/60" />
+          <Skeleton className="size-10 shrink-0 bg-input/60" />
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden pr-2.5">
+          <ThreadGroupSkeleton labelWidth="w-14">
+            <ThreadSkeleton titleWidth="w-[82%]" showMetadata />
+          </ThreadGroupSkeleton>
+
+          <ThreadGroupSkeleton labelWidth="w-20">
+            <ThreadSkeleton titleWidth="w-[46%]" showMetadata />
+            <ThreadSkeleton titleWidth="w-[74%]" showMetadata />
+          </ThreadGroupSkeleton>
+
+          <ThreadGroupSkeleton labelWidth="w-12">
+            <ThreadSkeleton titleWidth="w-[42%]" />
+            <ThreadSkeleton titleWidth="w-[84%]" />
+            <ThreadSkeleton titleWidth="w-[76%]" />
+            <ThreadSkeleton titleWidth="w-[68%]" />
+            <ThreadSkeleton titleWidth="w-[88%]" />
+            <ThreadSkeleton titleWidth="w-[54%]" />
+            <ThreadSkeleton titleWidth="w-[72%]" />
+            <ThreadSkeleton titleWidth="w-[64%]" />
+            <ThreadSkeleton titleWidth="w-[46%]" />
+            <ThreadSkeleton titleWidth="w-[82%]" />
+            <ThreadSkeleton titleWidth="w-[68%]" />
+            <ThreadSkeleton titleWidth="w-[76%]" />
+            <ThreadSkeleton titleWidth="w-[54%]" />
+          </ThreadGroupSkeleton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ThreadGroupSkeleton({
+  children,
+  labelWidth,
+}: {
+  children: React.ReactNode;
+  labelWidth: "w-12" | "w-14" | "w-20";
+}) {
+  return (
+    <div className="flex flex-col">
+      <div className="flex h-8 items-center justify-between px-2">
+        <Skeleton className={cn("h-3", labelWidth)} />
+        <Skeleton className="size-3" />
+      </div>
+      <div className="flex flex-col gap-1">{children}</div>
+    </div>
+  );
+}
+
+function ThreadSkeleton({
+  titleWidth,
+  showMetadata = false,
+}: {
+  titleWidth:
+    | "w-[42%]"
+    | "w-[46%]"
+    | "w-[54%]"
+    | "w-[64%]"
+    | "w-[68%]"
+    | "w-[72%]"
+    | "w-[74%]"
+    | "w-[76%]"
+    | "w-[82%]"
+    | "w-[84%]"
+    | "w-[88%]";
+  showMetadata?: boolean;
+}) {
+  return (
+    <div className={showMetadata ? "flex flex-col gap-2 px-2 py-2" : "flex h-8 items-center px-2"}>
+      {showMetadata && (
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <Skeleton className="size-3.5 shrink-0 rounded-full" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Skeleton className="size-3.5 rounded-full" />
+            <Skeleton className="h-3 w-10" />
+          </div>
+        </div>
+      )}
+      <Skeleton className={cn("h-3.5", titleWidth)} />
     </div>
   );
 }
@@ -154,7 +256,7 @@ function ThreadListWrapper() {
   }, [data, routeThreadId]);
 
   if (!data) {
-    return <Skeleton className="h-full w-full" key="thread-list-skeleton" />;
+    return <ThreadListSkeleton key="thread-list-skeleton" />;
   }
 
   return <ThreadList data={data} />;
