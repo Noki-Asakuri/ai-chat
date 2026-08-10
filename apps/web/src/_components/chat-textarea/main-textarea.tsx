@@ -74,6 +74,7 @@ function SettledThreadNotice() {
   const [isUnsettling, startUnsettling] = useTransition();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const threadId = fromUUID<Id<"threads">>(params?.threadId);
+
   const { data } = useQuery({
     enabled: threadId !== undefined,
     ...convexSessionQuery(api.functions.threads.getThreadTitle, { threadId }),
@@ -83,6 +84,8 @@ function SettledThreadNotice() {
 
   function handleUnsettle(): void {
     startUnsettling(async () => {
+      if (!threadId) return;
+
       const [, error] = await tryCatch(
         convexClient.mutation(api.functions.threads.unsettleThread, { threadId }),
       );
