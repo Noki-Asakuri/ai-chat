@@ -59,7 +59,7 @@ export function ThreadUserProfile() {
 
       <Menu.Portal>
         <Menu.Positioner align="end" side="right" className="isolate z-50 outline-none" sideOffset={8}>
-          <Menu.Popup className="flex max-h-(--available-height) w-72 origin-(--transform-origin) flex-col overflow-hidden rounded-xl bg-popover/95 p-1.5 text-popover-foreground shadow-2xl ring-1 ring-foreground/10 backdrop-blur-xl transition-[transform,scale,opacity] duration-150 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+          <Menu.Popup className="flex max-h-(--available-height) w-72 origin-(--transform-origin) flex-col overflow-hidden rounded-xl bg-background/80 p-1.5 text-popover-foreground shadow-2xl ring-1 ring-foreground/10 backdrop-blur-md backdrop-saturate-150 transition-[transform,scale,opacity] duration-150 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
             <div className="m-1 rounded-lg bg-muted/70 p-3">
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar className="size-11 rounded-lg ring-1 ring-foreground/10">
