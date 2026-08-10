@@ -4,12 +4,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import { convexQuery } from "@convex-dev/react-query";
-import { MessageSquarePlusIcon } from "lucide-react";
-import { useState } from "react";
 import { toast } from "@/components/ui/toast";
 
-import { ButtonWithTip } from "../ui/button";
 import { useConfigStore } from "../provider/config-provider";
+
+import { MessageSelectionAction } from "./message-selection-action";
 
 import {
   computeIsAtBottom,
@@ -28,19 +27,6 @@ import { threadStoreActions } from "@/lib/store/thread-store";
 const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
 const MODEL_SELECTOR_KEYBOARD_SHORTCUT = "m";
-const MAX_SELECTED_CONTEXT_LENGTH = 4000;
-const MESSAGE_HISTORY_SELECTOR = "[data-slot='message-history']";
-const ASSISTANT_MESSAGE_SELECTOR = "[data-slot='message'][data-role='assistant']";
-const SELECTION_ACTION_WIDTH_PX = 132;
-const SELECTION_ACTION_HEIGHT_PX = 28;
-const SELECTION_ACTION_GAP_PX = 8;
-
-type SelectionActionState = {
-  text: string;
-  left: number;
-  top: number;
-};
-
 function getIsEditMessage(): boolean {
   return useChatStore.getState().editMessage !== null;
 }
@@ -57,122 +43,11 @@ function getStatusAndThreadId() {
   };
 }
 
-function getSelectedTextContext(): string | null {
-  const selectedText = window.getSelection()?.toString().trim();
-  if (!selectedText) return null;
-
-  return selectedText.length > MAX_SELECTED_CONTEXT_LENGTH
-    ? `${selectedText.slice(0, MAX_SELECTED_CONTEXT_LENGTH).trimEnd()}...`
-    : selectedText;
-}
-
-function getSelectionElement(node: Node | null): HTMLElement | null {
-  if (!node) return null;
-  if (node instanceof HTMLElement) return node;
-
-  return node.parentElement;
-}
-
-function getSelectionAssistantMessage(selection: Selection): HTMLElement | null {
-  const anchorElement = getSelectionElement(selection.anchorNode);
-  const focusElement = getSelectionElement(selection.focusNode);
-  if (!anchorElement || !focusElement) return null;
-
-  const anchorMessage = anchorElement.closest(ASSISTANT_MESSAGE_SELECTOR);
-  const focusMessage = focusElement.closest(ASSISTANT_MESSAGE_SELECTOR);
-  if (!(anchorMessage instanceof HTMLElement)) return null;
-
-  return anchorMessage === focusMessage ? anchorMessage : null;
-}
-
-function getSelectionRect(selection: Selection): DOMRect | null {
-  if (selection.rangeCount === 0) return null;
-
-  const range = selection.getRangeAt(0);
-  const rect = range.getBoundingClientRect();
-  if (rect.width > 0 || rect.height > 0) return rect;
-
-  const firstRect = range.getClientRects().item(0);
-  return firstRect;
-}
-
-function getSelectionActionState(): SelectionActionState | null {
-  const selection = window.getSelection();
-  if (!selection || selection.isCollapsed) return null;
-
-  const text = getSelectedTextContext();
-  if (!text) return null;
-
-  const assistantMessage = getSelectionAssistantMessage(selection);
-  if (!assistantMessage) return null;
-
-  const rect = getSelectionRect(selection);
-  if (!rect) return null;
-
-  const historyElement = assistantMessage.closest(MESSAGE_HISTORY_SELECTOR);
-  if (!(historyElement instanceof HTMLElement)) return null;
-
-  const historyRect = historyElement.getBoundingClientRect();
-  const minLeft = historyRect.left + SELECTION_ACTION_WIDTH_PX / 2 + SELECTION_ACTION_GAP_PX;
-  const maxLeft = historyRect.right - SELECTION_ACTION_WIDTH_PX / 2 - SELECTION_ACTION_GAP_PX;
-  const minTop = historyRect.top + SELECTION_ACTION_GAP_PX;
-  const maxTop = historyRect.bottom - SELECTION_ACTION_HEIGHT_PX - SELECTION_ACTION_GAP_PX;
-  const preferredTop = rect.bottom + SELECTION_ACTION_GAP_PX;
-
-  return {
-    text,
-    left: Math.min(Math.max(rect.left + rect.width / 2, minLeft), maxLeft),
-    top: Math.min(Math.max(preferredTop, minTop), maxTop),
-  };
-}
-
-function formatSelectedTextBlockquote(text: string): string {
-  return text
-    .split(/\r?\n/)
-    .map((line) => `> ${line}`)
-    .join("\n");
-}
-
-function appendSelectedTextBlockquote(input: string, text: string): string {
-  const blockquote = formatSelectedTextBlockquote(text);
-  if (!input.trim()) return `${blockquote}\n\n`;
-
-  return `${input.trimEnd()}\n\n${blockquote}\n\n`;
-}
-
 export function RegisterEventHandlers() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { abortChatStream } = useAbortChatStream();
   const model = useConfigStore((state) => state.model);
-  const [selectionAction, setSelectionAction] = useState<SelectionActionState | null>(null);
-
-  function updateSelectionAction() {
-    if (getIsEditMessage()) {
-      setSelectionAction(null);
-      return;
-    }
-
-    setSelectionAction(getSelectionActionState());
-  }
-
-  function handleAddSelectedTextContext() {
-    if (!selectionAction) return;
-
-    const input = useChatStore.getState().input;
-    chatStoreActions.setInput(appendSelectedTextBlockquote(input, selectionAction.text));
-    chatStoreActions.setSelectedBlockquoteContext({ text: selectionAction.text });
-
-    setSelectionAction(null);
-    window.getSelection()?.removeAllRanges();
-    focusTextareaByIdAtEnd("textarea-chat-input");
-  }
-
-  useWindowEvent("selectionchange", updateSelectionAction);
-  useWindowEvent("mouseup", updateSelectionAction);
-  useWindowEvent("keyup", updateSelectionAction);
-  useWindowEvent("scroll", () => setSelectionAction(null), { capture: true });
-
   // Handle global paste events
   useWindowEvent("paste", function handlePaste(event) {
     // Handle pasted files
@@ -260,18 +135,8 @@ export function RegisterEventHandlers() {
           chatStoreActions.updateEditMessage({ input: `${editMessage.input}${event.key}` });
         }
       } else {
-        const selectedTextContext = getSelectionActionState();
         const input = useChatStore.getState().input;
-        const inputWithSelectedContext = selectedTextContext
-          ? appendSelectedTextBlockquote(input, selectedTextContext.text)
-          : input;
-
-        chatStoreActions.setInput(`${inputWithSelectedContext}${event.key}`);
-        if (selectedTextContext) {
-          chatStoreActions.setSelectedBlockquoteContext({ text: selectedTextContext.text });
-          setSelectionAction(null);
-          window.getSelection()?.removeAllRanges();
-        }
+        chatStoreActions.setInput(`${input}${event.key}`);
       }
 
       const textareaId = isEditMessage ? "textarea-user-message-edit" : "textarea-chat-input";
@@ -355,27 +220,5 @@ export function RegisterEventHandlers() {
     }
   });
 
-  return (
-    <>
-      {selectionAction ? (
-        <ButtonWithTip
-          variant="outline"
-          size="sm"
-          side="top"
-          title="Add selected text to chat"
-          className="fixed z-50 h-7 gap-1.5 rounded-md border border-border bg-popover px-2 text-xs text-popover-foreground opacity-100 shadow-md hover:bg-muted dark:bg-input dark:hover:bg-input/80"
-          style={{
-            left: selectionAction.left,
-            top: selectionAction.top,
-            transform: "translateX(-50%)",
-          }}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={handleAddSelectedTextContext}
-        >
-          <MessageSquarePlusIcon className="size-3.5" />
-          Add to chat
-        </ButtonWithTip>
-      ) : null}
-    </>
-  );
+  return <MessageSelectionAction />;
 }

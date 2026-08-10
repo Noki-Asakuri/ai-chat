@@ -13,6 +13,7 @@ import { StreamDownWrapper } from "./message-markdown";
 import { MessageReasoning } from "./message-reasoning";
 import { MessageStepDivider, MessageToolParts, isToolPart, type ToolPart } from "./message-tool-parts";
 
+import { clearMessageSelection, selectMessageText } from "@/lib/chat/message-selection";
 import { tryGetModelData } from "@/lib/chat/models";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
@@ -239,6 +240,16 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
                     <MessageBubble
                       key={`${message._id}-${block.key}-${index}`}
                       className="surface-edge bg-background/75 backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
+                      onMouseDown={clearMessageSelection}
+                      onMouseUp={(event) =>
+                        selectMessageText(
+                          event.currentTarget,
+                          event.target,
+                          event.detail,
+                          event.clientX,
+                          event.clientY,
+                        )
+                      }
                     >
                       <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>
                         {part.text}
