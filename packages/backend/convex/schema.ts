@@ -351,6 +351,7 @@ export default defineSchema(
       updatedAt: v.number(),
       lastViewedAt: v.optional(v.number()),
       pinned: v.boolean(),
+      settled: v.optional(v.boolean()),
       branchedFrom: v.optional(v.id("threads")),
 
       latestModel: v.string(),

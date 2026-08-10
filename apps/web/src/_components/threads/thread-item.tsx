@@ -15,7 +15,7 @@ import {
   RefreshCwIcon,
   Share2Icon,
 } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useTransition } from "react";
 import { toast } from "@/components/ui/toast";
 
 import {
@@ -29,6 +29,7 @@ import {
   ContextMenuTrigger,
 } from "../ui/context-menu";
 import { Icons } from "../ui/icons";
+import { Button } from "../ui/button";
 
 import { tryGetModelData } from "@/lib/chat/models";
 import { getConvexReactClient } from "@/lib/convex/client";
@@ -65,9 +66,12 @@ function formatRelativeTime(timestamp: number, now: number): string {
 }
 
 export function ThreadItem({ thread, now }: ThreadItemProps) {
+  const [isSettling, startSettling] = useTransition();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const isActive = params?.threadId === toUUID(thread._id);
   const isStreaming = thread.status === "streaming" || thread.status === "pending";
+  const isSettled = thread.settled === true;
+  const canSettle = thread.status === "complete" || thread.status === "error";
   const isRecentlyCreated = thread._creationTime > Date.now() - 1000 * 60 * 60 * 24 * 2;
   const hasUnreadCompletion =
     !isActive &&
@@ -75,6 +79,28 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
     (thread.lastViewedAt === undefined || thread.updatedAt > thread.lastViewedAt);
   const modelData = tryGetModelData(thread.latestModel);
   const modelName = modelData?.display.unique ?? modelData?.display.name ?? thread.latestModel;
+  const threadUpdatedTime = (
+    <time
+      className={cn(isSettled && "shrink-0 text-xs text-muted-foreground")}
+      dateTime={new Date(thread.updatedAt).toISOString()}
+      title={new Date(thread.updatedAt).toLocaleString()}
+    >
+      {formatRelativeTime(thread.updatedAt, now)}
+    </time>
+  );
+
+  function settleThread(): void {
+    startSettling(async () => {
+      const [, error] = await tryCatch(
+        convexClient.mutation(api.functions.threads.settleThread, { threadId: thread._id }),
+      );
+
+      if (!error) return;
+
+      console.error("[Thread] Settle thread error:", error);
+      toast.error("Failed to settle thread", { description: error.message });
+    });
+  }
 
   const threadLink = (
     <Link
@@ -84,46 +110,63 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
       title={thread.title}
       to="/threads/$threadId"
       params={{ threadId: toUUID(thread._id) }}
-      className="flex w-full min-w-0 flex-col gap-1.5 px-2 py-2"
+      className={cn(
+        "flex w-full min-w-0 px-2 py-2",
+        isSettled ? "items-center gap-2" : "flex-col gap-1.5",
+      )}
     >
-      <span className="flex w-full min-w-0 items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+      {isSettled ? (
+        <>
           {modelData ? (
             <Icons.provider provider={modelData.provider} className="size-3.5 shrink-0" />
           ) : (
             <Icons.unknown className="size-3.5 shrink-0" />
           )}
-          <span className="truncate">{modelName}</span>
-        </span>
-
-        <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
-          {thread.pinned && <PinIcon className="size-3.5" aria-hidden="true" />}
-
-          {isStreaming ? (
-            <span className="flex items-center gap-1 font-medium text-primary">
-              <Loader2Icon className="size-3.5 animate-spin" />
-              Working
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">{thread.title}</span>
+          {threadUpdatedTime}
+        </>
+      ) : (
+        <>
+          <span className="flex w-full min-w-0 items-center justify-between gap-2">
+            <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+              {modelData ? (
+                <Icons.provider provider={modelData.provider} className="size-3.5 shrink-0" />
+              ) : (
+                <Icons.unknown className="size-3.5 shrink-0" />
+              )}
+              <span className="truncate">{modelName}</span>
             </span>
-          ) : hasUnreadCompletion ? (
-            <span className="flex items-center gap-1 font-medium text-success">
-              <CircleCheckIcon className="size-3.5" />
-              Done
-            </span>
-          ) : (
-            <time
-              dateTime={new Date(thread.updatedAt).toISOString()}
-              title={new Date(thread.updatedAt).toLocaleString()}
+
+            <span
+              className={cn(
+                "flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground",
+                canSettle && "group-focus-within/thread:opacity-0 group-hover/thread:opacity-0",
+              )}
             >
-              {formatRelativeTime(thread.updatedAt, now)}
-            </time>
-          )}
-        </span>
-      </span>
+              {thread.pinned && <PinIcon className="size-3.5" aria-hidden="true" />}
 
-      <span className="flex min-w-0 items-center gap-1.5">
-        {thread.branchedFrom && <GitBranchIcon className="size-3.5 shrink-0 rotate-180" />}
-        <span className="truncate text-sm font-medium">{thread.title}</span>
-      </span>
+              {isStreaming ? (
+                <span className="flex items-center gap-1 font-medium text-primary">
+                  <Loader2Icon className="size-3.5 animate-spin" />
+                  Working
+                </span>
+              ) : hasUnreadCompletion ? (
+                <span className="flex items-center gap-1 font-medium text-success">
+                  <CircleCheckIcon className="size-3.5" />
+                  Done
+                </span>
+              ) : (
+                threadUpdatedTime
+              )}
+            </span>
+          </span>
+
+          <span className="flex min-w-0 items-center gap-1.5">
+            {thread.branchedFrom && <GitBranchIcon className="size-3.5 shrink-0 rotate-180" />}
+            <span className="truncate text-sm font-medium">{thread.title}</span>
+          </span>
+        </>
+      )}
     </Link>
   );
 
@@ -135,14 +178,29 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
       data-thread-status={thread.status}
       data-slot="thread-item"
       className={cn(
-        "flex min-w-0 overflow-hidden rounded-lg",
+        "group/thread relative flex min-w-0 overflow-hidden rounded-lg",
         "text-sidebar-foreground transition-colors hover:bg-primary/30",
         "data-[thread-active=true]:bg-primary/30",
+        isSettled && "opacity-50 hover:opacity-70",
       )}
     >
       <ThreadActions thread={thread} isStreaming={isStreaming}>
         {threadLink}
       </ThreadActions>
+
+      {!isSettled && canSettle && (
+        <Button
+          variant="none"
+          size="none"
+          className="absolute top-2 right-2 h-4 gap-1 text-xs font-medium text-sidebar-foreground opacity-0 transition-none [&_svg]:size-3.5 group-focus-within/thread:opacity-100 group-hover/thread:opacity-100"
+          aria-label={`Settle ${thread.title}`}
+          disabled={isSettling}
+          onClick={settleThread}
+        >
+          <CircleCheckIcon data-icon="inline-start" />
+          {isSettling ? "Settling" : "Settle"}
+        </Button>
+      )}
     </div>
   );
 }

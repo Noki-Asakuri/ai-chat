@@ -120,6 +120,7 @@ export const createThread = authenticatedMutation({
     return await ctx.db.insert("threads", {
       title: args.title ?? "New Chat",
       pinned: false,
+      settled: false,
       status: "pending",
       userId: user.userId,
       updatedAt: now + 1,
@@ -189,6 +190,7 @@ export const branchThread = authenticatedMutation({
       userId: user.userId,
       status: "complete",
       pinned: false,
+      settled: false,
       title: thread.title,
       branchedFrom: args.threadId,
       groupId: null,
@@ -488,6 +490,24 @@ export const pinThread = authenticatedMutation({
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
     await ctx.db.patch(args.threadId, { pinned: args.pinned });
+  },
+});
+
+export const settleThread = authenticatedMutation({
+  args: { threadId: v.id("threads") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+
+    const thread = await ctx.db.get("threads", args.threadId);
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
+    if (thread.status !== "complete" && thread.status !== "error") {
+      throw new Error("Only completed or failed threads can be settled");
+    }
+
+    await ctx.db.patch(args.threadId, { pinned: false, settled: true });
+    return null;
   },
 });
 
