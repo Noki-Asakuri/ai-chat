@@ -1,6 +1,14 @@
-import { useEffect, useEffectEvent, useRef } from "react";
+import { api } from "@ai-chat/backend/convex/_generated/api";
+import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+
+import { useQuery } from "@tanstack/react-query";
+import { useParams } from "@tanstack/react-router";
+import { CircleCheckIcon } from "lucide-react";
+import { useEffect, useEffectEvent, useRef, useTransition } from "react";
 import { toast } from "@/components/ui/toast";
 
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
+import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
 import { ChatActionButtons } from "./action-buttons";
@@ -12,6 +20,11 @@ import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib
 import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message";
 import { useConfigStore } from "../provider/config-provider";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
+import { getConvexReactClient } from "@/lib/convex/client";
+import { convexSessionQuery } from "@/lib/convex/helpers";
+import { fromUUID, tryCatch } from "@/lib/utils";
+
+const convexClient = getConvexReactClient();
 
 export function ChatTextarea() {
   const parentRef = useRef<HTMLFormElement>(null);
@@ -38,6 +51,8 @@ export function ChatTextarea() {
   return (
     <div data-slot="chat-textarea" className="pointer-events-none absolute bottom-2 w-full px-4">
       <form ref={parentRef} className="mx-auto space-y-2">
+        <SettledThreadNotice />
+
         <div className="surface-edge pointer-events-auto relative mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150">
           <ChatAttachmentsDisplay />
 
@@ -52,6 +67,43 @@ export function ChatTextarea() {
         </div>
       </form>
     </div>
+  );
+}
+
+function SettledThreadNotice() {
+  const [isUnsettling, startUnsettling] = useTransition();
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
+  const threadId = fromUUID<Id<"threads">>(params?.threadId);
+  const { data } = useQuery({
+    enabled: threadId !== undefined,
+    ...convexSessionQuery(api.functions.threads.getThreadTitle, { threadId }),
+  });
+
+  if (!threadId || data?.settled !== true) return null;
+
+  function handleUnsettle(): void {
+    startUnsettling(async () => {
+      const [, error] = await tryCatch(
+        convexClient.mutation(api.functions.threads.unsettleThread, { threadId }),
+      );
+      if (!error) return;
+
+      console.error("[Thread] Unsettle thread error:", error);
+      toast.error("Failed to unsettle thread", { description: error.message });
+    });
+  }
+
+  return (
+    <Alert className="pointer-events-auto mx-auto max-w-4xl border-primary/50 bg-background/80 backdrop-blur-md backdrop-saturate-150">
+      <CircleCheckIcon className="text-primary" aria-hidden="true" />
+      <AlertTitle>This thread is settled</AlertTitle>
+      <AlertDescription>Sending a message moves it back to Active in the sidebar.</AlertDescription>
+      <AlertAction className="top-1/2 -translate-y-1/2">
+        <Button type="button" variant="outline" size="sm" disabled={isUnsettling} onClick={handleUnsettle}>
+          {isUnsettling ? "Un-settling" : "Un-settle"}
+        </Button>
+      </AlertAction>
+    </Alert>
   );
 }
 

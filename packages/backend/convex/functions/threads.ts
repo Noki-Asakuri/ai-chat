@@ -402,15 +402,36 @@ export const getThreadTitle = authenticatedQuery({
   handler: async (ctx, args) => {
     const user = ctx.user;
     if (!args.threadId) {
-      return { title: null, groupId: null, groupTitle: null, pinned: false, isShared: false };
+      return {
+        title: null,
+        groupId: null,
+        groupTitle: null,
+        pinned: false,
+        settled: false,
+        isShared: false,
+      };
     }
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) {
-      return { title: null, groupId: null, groupTitle: null, pinned: false, isShared: false };
+      return {
+        title: null,
+        groupId: null,
+        groupTitle: null,
+        pinned: false,
+        settled: false,
+        isShared: false,
+      };
     }
     if (thread.userId !== user.userId) {
-      return { title: null, groupId: null, groupTitle: null, pinned: false, isShared: false };
+      return {
+        title: null,
+        groupId: null,
+        groupTitle: null,
+        pinned: false,
+        settled: false,
+        isShared: false,
+      };
     }
 
     const [group, threadShare] = await Promise.all([
@@ -426,6 +447,7 @@ export const getThreadTitle = authenticatedQuery({
       groupId: group?.userId === user.userId ? group._id : null,
       groupTitle: group?.userId === user.userId ? group.title : null,
       pinned: thread.pinned,
+      settled: thread.settled === true,
       isShared: threadShare !== null,
     };
   },
@@ -507,6 +529,21 @@ export const settleThread = authenticatedMutation({
     }
 
     await ctx.db.patch(args.threadId, { pinned: false, settled: true });
+    return null;
+  },
+});
+
+export const unsettleThread = authenticatedMutation({
+  args: { threadId: v.id("threads") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+
+    const thread = await ctx.db.get("threads", args.threadId);
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
+
+    await ctx.db.patch(args.threadId, { settled: false });
     return null;
   },
 });

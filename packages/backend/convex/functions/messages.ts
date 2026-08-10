@@ -287,9 +287,7 @@ export const getAllMessagesFromThread = authenticatedQuery({
 
     const messages = await ctx.db
       .query("messages")
-      .withIndex("by_userId_threadId", (q) =>
-        q.eq("userId", user.userId).eq("threadId", args.threadId),
-      )
+      .withIndex("by_userId_threadId", (q) => q.eq("userId", user.userId).eq("threadId", args.threadId))
       .order("asc")
       .collect();
 
@@ -410,9 +408,7 @@ export const getAllMessagesWithoutAttachments = authenticatedQuery({
 
     const messages = await ctx.db
       .query("messages")
-      .withIndex("by_userId_threadId", (q) =>
-        q.eq("userId", user.userId).eq("threadId", args.threadId),
-      )
+      .withIndex("by_userId_threadId", (q) => q.eq("userId", user.userId).eq("threadId", args.threadId))
       .order("asc")
       .collect();
 
@@ -475,6 +471,10 @@ export const addMessagesToThread = authenticatedMutation({
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
+
+    if (thread.settled === true) {
+      await ctx.db.patch(args.threadId, { settled: false });
+    }
 
     const [userMessage, assistantMessage] = args.messages as [
       (typeof args.messages)[0],
@@ -688,8 +688,7 @@ export const updateMessageById = authenticatedMutation({
     if (message.userId !== user.userId) throw new Error("User not authorized");
     if (message.status === "error") return;
 
-    const isAbortedCompletion =
-      message.status === "complete" && message.metadata?.finishReason === "aborted";
+    const isAbortedCompletion = message.status === "complete" && message.metadata?.finishReason === "aborted";
     if (isAbortedCompletion && args.updates.status === "streaming") return;
 
     if (args.updates.status === "complete") {
@@ -780,9 +779,7 @@ export const retryChatMessage = authenticatedMutation({
 
     const messages = await ctx.db
       .query("messages")
-      .withIndex("by_userId_threadId", (q) =>
-        q.eq("userId", user.userId).eq("threadId", args.threadId),
-      )
+      .withIndex("by_userId_threadId", (q) => q.eq("userId", user.userId).eq("threadId", args.threadId))
       .order("asc")
       .collect();
 
@@ -902,8 +899,7 @@ export const setActiveAssistantVariant = authenticatedMutation({
 
     const assistantMessage = await ctx.db.get("messages", args.assistantMessageId);
     if (!assistantMessage) throw new Error("Assistant message not found");
-    if (assistantMessage.role !== "assistant")
-      throw new Error("Target assistant message is invalid");
+    if (assistantMessage.role !== "assistant") throw new Error("Target assistant message is invalid");
     if (assistantMessage.threadId !== args.threadId) {
       throw new Error("Assistant message is not in thread");
     }
@@ -913,9 +909,7 @@ export const setActiveAssistantVariant = authenticatedMutation({
     if (!resolvedUserMessageId) {
       const messages = await ctx.db
         .query("messages")
-        .withIndex("by_userId_threadId", (q) =>
-          q.eq("userId", user.userId).eq("threadId", args.threadId),
-        )
+        .withIndex("by_userId_threadId", (q) => q.eq("userId", user.userId).eq("threadId", args.threadId))
         .order("asc")
         .collect();
 
@@ -969,9 +963,7 @@ export const deleteMessageAndBelow = authenticatedMutation({
 
     const messages = await ctx.db
       .query("messages")
-      .withIndex("by_userId_threadId", (q) =>
-        q.eq("userId", user.userId).eq("threadId", args.threadId),
-      )
+      .withIndex("by_userId_threadId", (q) => q.eq("userId", user.userId).eq("threadId", args.threadId))
       .order("asc")
       .collect();
 
@@ -982,9 +974,7 @@ export const deleteMessageAndBelow = authenticatedMutation({
     const targetUserMessageId = resolveUserMessageIdForMessage(graph, args.messageId);
     if (!targetUserMessageId) throw new Error("Failed to resolve target user turn");
 
-    const targetUserTurnIndex = graph.users.findIndex(
-      (message) => message._id === targetUserMessageId,
-    );
+    const targetUserTurnIndex = graph.users.findIndex((message) => message._id === targetUserMessageId);
     if (targetUserTurnIndex === -1) throw new Error("Failed to resolve target user turn");
 
     const messagesToDeleteMap: Record<Id<"messages">, MessageDoc> = {};
@@ -1092,9 +1082,7 @@ export const deleteMessageAndBelow = authenticatedMutation({
       await ctx.db.delete(message._id);
     }
 
-    const remainingUserMessages = graph.users.filter(
-      (message) => !deletedMessageIds.has(message._id),
-    );
+    const remainingUserMessages = graph.users.filter((message) => !deletedMessageIds.has(message._id));
 
     const userMessagePatchPayloads: Array<{
       userMessageId: Id<"messages">;
