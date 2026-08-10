@@ -178,7 +178,7 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
       data-thread-status={thread.status}
       data-slot="thread-item"
       className={cn(
-        "group/thread relative flex min-w-0 overflow-hidden rounded-lg",
+        "group/thread relative flex min-w-0 overflow-hidden rounded-md",
         "text-sidebar-foreground transition-colors hover:bg-primary/30",
         "data-[thread-active=true]:bg-primary/30",
         isSettled && "opacity-50 hover:opacity-70",

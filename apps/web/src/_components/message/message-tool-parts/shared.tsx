@@ -123,46 +123,46 @@ export function ToolStateBadge({ part }: { part: ToolPart }) {
   switch (part.state) {
     case "input-streaming":
       return (
-        <span className="inline-flex items-center gap-1 rounded border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
           <CircleDashedIcon className="size-3 animate-spin" />
           Calling
         </span>
       );
     case "input-available":
       return (
-        <span className="inline-flex items-center gap-1 rounded border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
           Input ready
         </span>
       );
     case "approval-requested":
       return (
-        <span className="inline-flex items-center gap-1 rounded border border-amber-600/60 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-500">
+        <span className="inline-flex items-center gap-1 rounded-md border border-amber-600/60 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-500">
           Awaiting approval
         </span>
       );
     case "approval-responded":
       return (
-        <span className="inline-flex items-center gap-1 rounded border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
           Approval sent
         </span>
       );
     case "output-available":
       return (
-        <span className="inline-flex items-center gap-1 rounded border border-emerald-600/60 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-500">
+        <span className="inline-flex items-center gap-1 rounded-md border border-emerald-600/60 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-500">
           <CheckIcon className="size-3" />
           Completed
         </span>
       );
     case "output-error":
       return (
-        <span className="inline-flex items-center gap-1 rounded border border-destructive/60 bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
+        <span className="inline-flex items-center gap-1 rounded-md border border-destructive/60 bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
           <XIcon className="size-3" />
           Error
         </span>
       );
     case "output-denied":
       return (
-        <span className="inline-flex items-center gap-1 rounded border border-amber-600/60 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-500">
+        <span className="inline-flex items-center gap-1 rounded-md border border-amber-600/60 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-500">
           Denied
         </span>
       );

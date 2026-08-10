@@ -82,7 +82,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
           </CardFooter>
         </Card>
 
-        <details className="group rounded-lg border bg-card px-4 py-3">
+        <details className="group rounded-md border bg-card px-4 py-3">
           <summary className="cursor-pointer list-none text-sm font-medium text-muted-foreground transition-colors group-open:text-foreground">
             Technical details
           </summary>

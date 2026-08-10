@@ -652,7 +652,7 @@ function AttachmentsPage() {
                           <input
                             type="checkbox"
                             aria-label={`Select ${attachment.name}`}
-                            className="pointer-events-auto size-5 cursor-pointer rounded border bg-background"
+                            className="pointer-events-auto size-5 cursor-pointer rounded-md border bg-background"
                             checked={isSelected}
                             onChange={() => toggleSelect(attachment._id)}
                           />

@@ -170,7 +170,7 @@ function PrivateShareGate({ shareId }: { shareId: string }) {
 
   return (
     <div className="flex min-h-dvh items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-lg border bg-card p-6 text-center">
+      <div className="w-full max-w-md rounded-md border bg-card p-6 text-center">
         <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-muted">
           <LockIcon className="size-5" />
         </div>
@@ -197,7 +197,7 @@ function PrivateShareGate({ shareId }: { shareId: string }) {
 function ShareNotFound() {
   return (
     <div className="flex min-h-dvh items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-lg border bg-card p-6 text-center">
+      <div className="w-full max-w-md rounded-md border bg-card p-6 text-center">
         <h1 className="text-lg font-semibold">Shared thread not found</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           This share link might be invalid or no longer available.

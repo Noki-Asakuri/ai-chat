@@ -64,7 +64,7 @@ export function LoadingCustomizationSkeleton() {
                     Choose the keyboard shortcut used to send a message.
                   </p>
                 </div>
-                <Skeleton className="h-8 w-56 rounded-none" />
+                <Skeleton className="h-8 w-56 rounded-md" />
               </div>
 
               <Separator className="-mx-4" />

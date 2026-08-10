@@ -100,7 +100,7 @@ export function ExternalLinkSafetyModal({ isOpen, onClose, onConfirm, url }: Lin
         aria-label="Open external link"
         aria-modal="true"
         className={cn(
-          "relative flex w-full max-w-md flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg transition-opacity duration-300 ease-out",
+          "relative flex w-full max-w-md flex-col gap-4 rounded-md border bg-background p-6 shadow-lg transition-opacity duration-300 ease-out",
           isVisible ? "opacity-100" : "opacity-0",
         )}
         onClick={(event) => event.stopPropagation()}

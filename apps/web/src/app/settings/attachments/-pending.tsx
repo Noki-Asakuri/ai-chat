@@ -17,7 +17,7 @@ export function LoadingAttachmentsSkeleton() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {Array.from({ length: 10 }).map((_, i) => (
           <div key={i} className="flex w-full flex-col rounded-md border">
-            <Skeleton className="relative aspect-square size-full rounded-none" />
+            <Skeleton className="relative aspect-square size-full rounded-t-md" />
 
             <div className="flex flex-col gap-1 border-t p-2">
               <div className="flex items-center justify-between gap-2">

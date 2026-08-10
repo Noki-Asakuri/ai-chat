@@ -131,7 +131,7 @@ function WebSearchResultCard({ result }: { result: ParsedWebSearchResult }) {
       href={result.url}
       target="_blank"
       rel="noreferrer"
-      className="block rounded border border-border/70 bg-background/80 px-2 py-1.5 transition-colors hover:bg-muted/35"
+      className="block rounded-md border border-border/70 bg-background/80 px-2 py-1.5 transition-colors hover:bg-muted/35"
     >
       <div className="flex min-w-0 items-start gap-2">
         {result.favicon ? (
@@ -161,20 +161,20 @@ export function WebSearchOutputView({ output }: { output: ParsedWebSearchOutput 
   const requestId = output.requestId;
 
   return (
-    <div className="mt-1 rounded bg-background/80 px-2 py-1.5">
+    <div className="mt-1 rounded-md bg-background/80 px-2 py-1.5">
       <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground uppercase">
-        <span className="rounded border border-border/70 bg-muted/40 px-1.5 py-0.5">
+        <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5">
           {resultCount} {resultCount === 1 ? "result" : "results"}
         </span>
 
         {searchType && (
-          <span className="rounded border border-border/70 bg-muted/40 px-1.5 py-0.5">
+          <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5">
             {searchType}
           </span>
         )}
 
         {requestId && (
-          <span className="truncate rounded border border-border/70 bg-muted/40 px-1.5 py-0.5">
+          <span className="truncate rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5">
             req {requestId.slice(0, 10)}
           </span>
         )}
@@ -200,7 +200,7 @@ export function WebSearchHeaderIcons({ output }: { output: ParsedWebSearchOutput
         <span
           key={icon.key}
           title={icon.title}
-          className="-mr-1 flex size-4 items-center justify-center rounded border border-background bg-muted"
+          className="-mr-1 flex size-4 items-center justify-center rounded-md border border-background bg-muted"
         >
           {icon.favicon ? (
             <img alt="" src={icon.favicon} className="size-3 rounded-[2px]" />

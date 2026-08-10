@@ -291,7 +291,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
 
             {shouldRenderUserAvatar && (
               <MessageAvatar
-                className={cn("shrink-0 rounded-none", userTextParts.length === 0 && "self-start")}
+                className={cn("shrink-0 rounded-md", userTextParts.length === 0 && "self-start")}
               >
                 <UserAvatar />
               </MessageAvatar>

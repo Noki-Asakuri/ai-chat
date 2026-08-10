@@ -23,7 +23,7 @@ export function MessagePending({ metadata }: MessagePendingProps) {
     <div
       data-slot="message-pending"
       className={cn(
-        "flex w-full shrink-0 items-center gap-3 rounded-xl border px-4 py-3 text-foreground",
+        "flex w-full shrink-0 items-center gap-3 rounded-md border px-4 py-3 text-foreground",
         "bg-background/80",
         "shadow-sm",
         "backdrop-blur-md backdrop-saturate-150",
@@ -32,7 +32,7 @@ export function MessagePending({ metadata }: MessagePendingProps) {
     >
       <div
         className={cn(
-          "flex size-10 items-center justify-center rounded-xl",
+          "flex size-10 items-center justify-center rounded-md",
           "bg-primary/20 ring-1 ring-primary/25",
         )}
       >

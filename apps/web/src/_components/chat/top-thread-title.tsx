@@ -58,7 +58,7 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
           <Link
             to="/"
             title={`New chat in ${groupTitle}`}
-            className="flex max-w-48 min-w-0 shrink-0 items-center gap-2 rounded-sm text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex max-w-48 min-w-0 shrink-0 items-center gap-2 rounded-md text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
             onClick={() => {
               threadStoreActions.setActiveGroupId(groupId);
             }}

@@ -145,7 +145,7 @@ function CreateGroupButton() {
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
           <Dialog.Backdrop className="data-ending-style:opacity-0ata-[starting-style]:opacity-0 fixed inset-0 z-40 bg-black opacity-20 transition-opacity duration-150 dark:opacity-70" />
-          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,36rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-8 shadow-lg transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+          <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,36rem)] -translate-x-1/2 -translate-y-1/2 rounded-md border bg-background p-8 shadow-lg transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
             <div className="mb-2">
               <h2 className="text-lg font-semibold">Create group</h2>
               <p className="text-sm text-muted-foreground">Enter a group name.</p>
@@ -392,7 +392,7 @@ function ThreadList({ data }: ThreadListProps) {
         onOpenChange={setNewChatOpen}
         title="Create new chat"
         description="Choose which group the new chat belongs to."
-        className="h-[min(36rem,calc(100dvh-4rem))] rounded-lg sm:max-w-3xl"
+        className="h-[min(36rem,calc(100dvh-4rem))] rounded-md sm:max-w-3xl"
       >
         <Command
           className="[&_[data-slot=command-input-wrapper]]:p-2 [&_[data-slot=command-input-wrapper]_svg]:size-5! [&_[data-slot=command-input]]:text-sm! [&_[data-slot=input-group]]:h-12!"
@@ -467,7 +467,7 @@ function ThreadList({ data }: ThreadListProps) {
         >
           <Dialog.Portal>
             <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 dark:opacity-70" />
-            <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+            <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-md border bg-background p-6 shadow-lg transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
               <div className="mb-2">
                 <h2 className="text-lg font-semibold">Edit thread</h2>
                 <p className="text-sm text-muted-foreground">Update the thread title.</p>

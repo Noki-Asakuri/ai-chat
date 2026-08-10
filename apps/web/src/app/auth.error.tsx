@@ -15,7 +15,7 @@ function AuthErrorPage() {
 
   return (
     <main className="flex min-h-dvh items-center justify-center px-4">
-      <div className="w-full max-w-3xl rounded-lg border bg-card p-6 text-center">
+      <div className="w-full max-w-3xl rounded-md border bg-card p-6 text-center">
         <h1 className="text-lg font-semibold">Sign-in failed</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           The sign-in request could not be completed. Try again or return home.

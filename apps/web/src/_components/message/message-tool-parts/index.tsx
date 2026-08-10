@@ -143,7 +143,7 @@ function MessageToolPart({ part }: { part: ToolPart }) {
       {isOpen && webSearchOutput && <WebSearchOutputView output={webSearchOutput} />}
 
       {detail && detailValue.length > 0 && (
-        <div className="mt-1 rounded bg-background/80 px-2 py-1.5">
+        <div className="mt-1 rounded-md bg-background/80 px-2 py-1.5">
           <div className="mb-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
             {detail.label}
           </div>
