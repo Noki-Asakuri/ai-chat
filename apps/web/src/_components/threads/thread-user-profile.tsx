@@ -7,6 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   BrainIcon,
   ChartNoAxesColumnIcon,
+  ChevronRightIcon,
   CircleUserRoundIcon,
   Columns3CogIcon,
   LogOutIcon,
@@ -18,6 +19,7 @@ import type { ComponentProps } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Menu } from "../ui/menu";
+import { Progress } from "../ui/progress";
 import { Skeleton } from "../ui/skeleton";
 
 import { logout } from "@/lib/authkit/logout";
@@ -39,71 +41,100 @@ export function ThreadUserProfile() {
 
   return (
     <Menu.Root>
-      <Menu.Trigger className="flex gap-2 rounded-md border border-transparent p-2 transition-colors hover:border-primary/30 hover:bg-primary/20 data-popup-open:border-primary/30 data-popup-open:bg-primary/20">
-        <Avatar className="size-11 rounded-md">
+      <Menu.Trigger className="group flex w-full items-center gap-3 rounded-lg bg-sidebar-accent/60 p-2.5 text-left shadow-sm ring-1 ring-sidebar-border transition-[background-color,box-shadow,transform] outline-none hover:bg-sidebar-accent hover:ring-foreground/10 focus-visible:ring-2 focus-visible:ring-sidebar-ring/60 active:scale-[0.99] data-popup-open:bg-sidebar-accent data-popup-open:ring-primary/30">
+        <Avatar className="size-10 shrink-0 rounded-lg ring-1 ring-foreground/10">
           <AvatarImage src={avatarUrl} alt={`${username} avatar`} />
-          <AvatarFallback className="bg-primary text-sm text-primary-foreground">
+          <AvatarFallback className="rounded-lg bg-primary text-sm text-primary-foreground">
             {initials}
           </AvatarFallback>
         </Avatar>
 
-        <div className="ml-1 flex h-full w-full flex-col justify-center text-left">
-          <p className="font-medium capitalize">{username}</p>
-          <UserQuota />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium capitalize">{username}</p>
+          <UserQuota variant="trigger" />
         </div>
+
+        <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-data-popup-open:translate-x-0.5 group-data-popup-open:text-primary" />
       </Menu.Trigger>
 
       <Menu.Portal>
-        <Menu.Positioner
-          align="end"
-          side="right"
-          className="isolate z-50 outline-none"
-          sideOffset={8}
-        >
-          <Menu.Popup className="flex max-h-(--available-height) origin-(--transform-origin) flex-col gap-0.5 rounded-md border border-primary/30 bg-[#342e4a] p-2 text-card-foreground transition-[transform,scale,opacity] data-ending-style:scale-90 data-ending-style:opacity-0 data-starting-style:scale-90 data-starting-style:opacity-0">
-            <UserMenuSettingItem href="/settings/account">
-              <CircleUserRoundIcon className="size-5" />
-              Account
-            </UserMenuSettingItem>
+        <Menu.Positioner align="end" side="right" className="isolate z-50 outline-none" sideOffset={8}>
+          <Menu.Popup className="flex max-h-(--available-height) w-72 origin-(--transform-origin) flex-col overflow-hidden rounded-xl bg-popover/95 p-1.5 text-popover-foreground shadow-2xl ring-1 ring-foreground/10 backdrop-blur-xl transition-[transform,scale,opacity] duration-150 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+            <div className="m-1 rounded-lg bg-muted/70 p-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar className="size-11 rounded-lg ring-1 ring-foreground/10">
+                  <AvatarImage src={avatarUrl} alt={`${username} avatar`} />
+                  <AvatarFallback className="rounded-lg bg-primary text-sm text-primary-foreground">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
 
-            <UserMenuSettingItem href="/settings/threads">
-              <MessagesSquareIcon className="size-5" />
-              Threads
-            </UserMenuSettingItem>
+                <div className="min-w-0">
+                  <p className="truncate font-medium capitalize">{username}</p>
+                  <p className="truncate text-xs text-muted-foreground blur-xs transition-[filter] hover:blur-none">
+                    {user.email}
+                  </p>
+                </div>
+              </div>
 
-            <UserMenuSettingItem href="/settings/customization">
-              <Columns3CogIcon className="size-5" />
-              Customize
-            </UserMenuSettingItem>
+              <UserQuota variant="panel" />
+            </div>
 
-            <UserMenuSettingItem href="/settings/statistics">
-              <ChartNoAxesColumnIcon className="size-5" />
-              Statistics
-            </UserMenuSettingItem>
+            <Menu.Group className="mt-1">
+              <Menu.GroupLabel className="px-2.5 py-1.5 text-[0.65rem] font-medium tracking-widest text-muted-foreground uppercase">
+                Account
+              </Menu.GroupLabel>
 
-            <UserMenuSettingItem href="/settings/attachments">
-              <PaperclipIcon className="size-5" />
-              Attachments
-            </UserMenuSettingItem>
+              <UserMenuSettingItem href="/settings/account">
+                <CircleUserRoundIcon />
+                Account
+              </UserMenuSettingItem>
 
-            <UserMenuSettingItem href="/settings/models">
-              <BrainIcon className="size-5" />
-              Models
-            </UserMenuSettingItem>
+              <UserMenuSettingItem href="/settings/customization">
+                <Columns3CogIcon />
+                Customize
+              </UserMenuSettingItem>
 
-            <UserMenuSettingItem href="/settings/profiles">
-              <UserRoundPenIcon className="size-5" />
-              Profiles
-            </UserMenuSettingItem>
+              <UserMenuSettingItem href="/settings/profiles">
+                <UserRoundPenIcon />
+                Profiles
+              </UserMenuSettingItem>
+            </Menu.Group>
 
-            <Menu.Separator className="my-1 h-px bg-primary/30" />
+            <Menu.Group className="mt-1">
+              <Menu.GroupLabel className="px-2.5 py-1.5 text-[0.65rem] font-medium tracking-widest text-muted-foreground uppercase">
+                Workspace
+              </Menu.GroupLabel>
+
+              <UserMenuSettingItem href="/settings/threads">
+                <MessagesSquareIcon />
+                Threads
+              </UserMenuSettingItem>
+
+              <UserMenuSettingItem href="/settings/statistics">
+                <ChartNoAxesColumnIcon />
+                Statistics
+              </UserMenuSettingItem>
+
+              <UserMenuSettingItem href="/settings/attachments">
+                <PaperclipIcon />
+                Attachments
+              </UserMenuSettingItem>
+
+              <UserMenuSettingItem href="/settings/models">
+                <BrainIcon />
+                Models
+              </UserMenuSettingItem>
+            </Menu.Group>
+
+            <Menu.Separator className="mx-1 my-1.5 h-px bg-border" />
 
             <Menu.Item
-              className="flex w-full cursor-pointer items-center justify-start gap-1.5 rounded-md px-1.5 py-1 text-sm text-destructive transition-colors hover:bg-destructive/20"
+              className="flex w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-2.5 py-2 text-sm text-destructive transition-colors outline-none data-highlighted:bg-destructive/10"
               onClick={() => logoutUser()}
             >
-              <LogOutIcon className="size-5" />
-              Logout
+              <LogOutIcon className="size-4" />
+              Sign out
             </Menu.Item>
           </Menu.Popup>
         </Menu.Positioner>
@@ -123,7 +154,7 @@ function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSe
   return (
     <Menu.Item
       className={cn(
-        "flex w-full cursor-pointer items-center justify-start gap-1.5 rounded-md px-1.5 py-1 text-sm transition-colors hover:bg-primary/20",
+        "group flex w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground [&>svg:first-child]:size-4 [&>svg:first-child]:shrink-0 [&>svg:first-child]:text-muted-foreground data-highlighted:[&>svg:first-child]:text-primary",
         className,
       )}
       {...props}
@@ -137,20 +168,59 @@ function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSe
       }
     >
       {children}
+      <ChevronRightIcon className="ml-auto size-3.5 text-muted-foreground/50 transition-transform group-data-highlighted:translate-x-0.5 group-data-highlighted:text-muted-foreground" />
     </Menu.Item>
   );
 }
 
-function UserQuota() {
+function UserQuota({ variant }: { variant: "panel" | "trigger" }) {
   const { data, isPending } = useQuery(convexSessionQuery(api.functions.usages.getUserUsages));
-  if (isPending) return <Skeleton className="h-3.5 w-24" />;
-  if (!data) return <span className="text-sm">0 / 0 (0%)</span>;
+  if (isPending) {
+    if (variant === "panel") {
+      return (
+        <div className="mt-3 flex flex-col gap-2">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-1 w-full" />
+        </div>
+      );
+    }
 
-  const percentage = (data.used / data.base) * 100;
+    return (
+      <div className="mt-2 flex items-center gap-2">
+        <Skeleton className="h-1 flex-1" />
+        <Skeleton className="h-2.5 w-12" />
+      </div>
+    );
+  }
+
+  const used = data?.used ?? 0;
+  const base = data?.base ?? 0;
+  const percentage = data ? (used / base) * 100 : 0;
+
+  if (variant === "trigger") {
+    return (
+      <div className="mt-1.5 flex items-center gap-2">
+        <Progress
+          className="min-w-0 flex-1 gap-0"
+          value={percentage}
+          aria-label={`${percentage.toFixed(2)}% of message quota used`}
+        />
+        <span className="font-mono text-[0.65rem] leading-none text-muted-foreground tabular-nums">
+          {used}/{base}
+        </span>
+      </div>
+    );
+  }
 
   return (
-    <span className="text-sm">
-      {data.used} / {data.base} ({percentage.toFixed(2)}%)
-    </span>
+    <div className="mt-3 flex flex-col gap-2">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-muted-foreground">Message usage</span>
+        <span className="font-mono text-[0.7rem] tabular-nums">
+          {used} / {base}
+        </span>
+      </div>
+      <Progress value={percentage} aria-label={`${percentage.toFixed(2)}% of message quota used`} />
+    </div>
   );
 }
