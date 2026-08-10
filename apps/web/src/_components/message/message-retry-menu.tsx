@@ -53,7 +53,6 @@ type ModelGroup = {
 type EffortOption = {
   effort: ReasoningEffort;
   label: string;
-  icon: (typeof REASONING_OPTIONS)[ReasoningEffort]["icon"];
 };
 
 function groupProviderModels(models: Array<RetryModelEntry>): ProviderModels {
@@ -102,7 +101,7 @@ function getValidReasoningEffortOptions(model: ModelData): Array<EffortOption> {
 
     if (!allowedEffortSet.has(effort)) continue;
 
-    options.push({ effort, label: effortOption.label, icon: effortOption.icon });
+    options.push({ effort, label: effortOption.label });
   }
 
   return options;
@@ -541,18 +540,17 @@ function RetryModelItem({
             >
               <MenuArrow className="fill-card" />
 
-              {effortOptions.map(({ effort, label, icon: Icon }) => (
+              {effortOptions.map(({ effort, label }) => (
                 <Menu.Item
                   key={`retry-effort-${model.id}-${effort}`}
                   disabled={disabled}
                   className={cn(
                     buttonVariants({ variant: "ghost" }),
-                    "w-full cursor-pointer justify-start gap-2.5 px-2.5 py-2 text-xs",
+                    "w-full cursor-pointer justify-start px-2.5 py-2 text-xs",
                     "disabled:cursor-not-allowed disabled:opacity-50",
                   )}
                   onClick={() => onSelectEffort(effort)}
                 >
-                  <Icon className="size-4" />
                   {label}
                 </Menu.Item>
               ))}
