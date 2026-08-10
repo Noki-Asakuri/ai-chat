@@ -3,8 +3,8 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import { useParams } from "@tanstack/react-router";
 import { useMutation } from "convex/react";
 
-import { ChevronDownIcon, LayersIcon, StarIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ChevronDownIcon, LayersIcon, SearchIcon, StarIcon } from "lucide-react";
+import { useId, useMemo, useState } from "react";
 import { toast } from "@/components/ui/toast";
 import { useShallow } from "zustand/shallow";
 
@@ -12,15 +12,8 @@ import { useConfigStore } from "@/components/provider/config-provider";
 
 import { ModelCapability } from "@/components/capability-icon";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Icons } from "@/components/ui/icons";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { SelectableModelIds, prettifyProviderName, tryGetModelData, type Provider } from "@/lib/chat/models";
@@ -132,6 +125,9 @@ function toggleFavoriteModels(favoriteModels: string[], modelId: string): string
 function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelectorProps) {
   const [selectedSection, setSelectedSection] = useState<PickerSectionKey>("all");
   const [isSavingFavorites, setIsSavingFavorites] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeModelId, setActiveModelId] = useState<string | null>(null);
+  const listId = useId();
 
   const updateUserModelPreferences = useMutation(api.functions.users.updateUserModelPreferences);
 
@@ -286,6 +282,31 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
     return "No models match your search.";
   }, [allViewModels.length, favoriteVisibleModels.length, selectedSection]);
 
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+  const filteredGroups: Array<ModelGroup> = [];
+
+  for (const group of groups) {
+    if (!normalizedSearchQuery) {
+      filteredGroups.push(group);
+      continue;
+    }
+
+    const models = group.models.filter((model) => {
+      const providerName = prettifyProviderName(model.provider);
+      return `${model.id} ${model.label} ${model.provider} ${providerName}`
+        .toLocaleLowerCase()
+        .includes(normalizedSearchQuery);
+    });
+
+    if (models.length > 0) {
+      filteredGroups.push({ ...group, models });
+    }
+  }
+  const filteredModels = filteredGroups.flatMap((group) => group.models);
+  const highlightedModelId = filteredModels.some((model) => model.id === activeModelId)
+    ? activeModelId
+    : (filteredModels.find((model) => model.id === selectedModel)?.id ?? filteredModels[0]?.id ?? null);
+
   function handleChange(model: string) {
     if (onChange) {
       onChange(model);
@@ -294,6 +315,31 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
 
     chatStoreActions.retainCompatibleAttachments(model);
     setConfig({ model });
+  }
+
+  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (filteredModels.length === 0) return;
+
+    const activeIndex = filteredModels.findIndex((model) => model.id === highlightedModelId);
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      const nextIndex = activeIndex < filteredModels.length - 1 ? activeIndex + 1 : 0;
+      setActiveModelId(filteredModels[nextIndex]?.id ?? null);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      const nextIndex = activeIndex > 0 ? activeIndex - 1 : filteredModels.length - 1;
+      setActiveModelId(filteredModels[nextIndex]?.id ?? null);
+      return;
+    }
+
+    if (event.key === "Enter" && highlightedModelId) {
+      event.preventDefault();
+      handleChange(highlightedModelId);
+    }
   }
 
   async function handleToggleFavorite(modelId: string) {
@@ -337,7 +383,13 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   }
 
   return (
-    <Popover>
+    <Popover
+      onOpenChange={(open) => {
+        if (open) return;
+        setSearchQuery("");
+        setActiveModelId(null);
+      }}
+    >
       <PopoverTrigger
         id={triggerId}
         aria-label="Select model"
@@ -357,19 +409,37 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
         includeArrow={false}
         className={cn(
           "w-[min(28rem,calc(100vw-1rem))] p-0",
-          "rounded-md border border-border bg-card text-card-foreground shadow-lg ring-1 ring-foreground/10",
+          "rounded-lg border border-border bg-card text-card-foreground shadow-md ring-1 ring-foreground/8",
         )}
       >
-        <Command loop className="rounded-md bg-transparent text-popover-foreground">
-          <div className="flex items-center justify-between gap-3 border-b border-border px-3 pt-2 pb-1.5">
-            <div className="min-w-0 text-xs font-medium text-foreground">Models</div>
-            <div className="shrink-0 text-[11px] text-muted-foreground">Type to search</div>
+        <div className="flex size-full flex-col overflow-hidden rounded-lg bg-transparent text-popover-foreground">
+          <div className="border-b border-border px-3 py-2.5">
+            <InputGroup className="h-9 border-input bg-background/70 shadow-none! *:data-[slot=input-group-addon]:pl-2.5!">
+              <InputGroupInput
+                autoFocus
+                role="combobox"
+                aria-expanded="true"
+                aria-controls={listId}
+                aria-activedescendant={highlightedModelId ? `${listId}-${highlightedModelId}` : undefined}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="Search models..."
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setActiveModelId(null);
+                }}
+                onKeyDown={handleSearchKeyDown}
+                className="h-9 w-full text-xs outline-hidden placeholder:text-muted-foreground"
+              />
+              <InputGroupAddon>
+                <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
+              </InputGroupAddon>
+            </InputGroup>
           </div>
 
-          <CommandInput placeholder="Search models..." className="h-9" />
-
-          <div className="flex h-[min(26rem,calc(100vh-12rem))] min-h-[18rem]">
-            <div className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-border px-1.5 py-2">
+          <div className="flex h-[min(27rem,calc(100vh-11rem))] min-h-[18rem]">
+            <div className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-border bg-muted/15 px-1.5 py-2.5">
               <PickerSectionButton
                 active={selectedSection === "all"}
                 onClick={() => setSelectedSection("all")}
@@ -398,32 +468,49 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
               ))}
             </div>
 
-            <CommandList
-              className="h-full max-h-none min-h-0 min-w-0 flex-1 px-1.5 py-2"
-              style={{ scrollbarGutter: "stable both-edges" }}
+            <div
+              id={listId}
+              role="listbox"
+              aria-label="Models"
+              className="h-full max-h-none min-h-0 min-w-0 flex-1 px-2 py-2.5"
+              style={{ scrollbarGutter: "stable both-edges", overflowY: "auto" }}
             >
-              <CommandEmpty className="px-2 py-6 text-center text-xs text-muted-foreground">
-                {emptyMessage}
-              </CommandEmpty>
+              {filteredGroups.length === 0 ? (
+                <div className="px-2 py-6 text-center text-xs text-muted-foreground">{emptyMessage}</div>
+              ) : null}
 
-              {groups.map((group) => (
-                <CommandGroup key={group.key} heading={group.title}>
+              {filteredGroups.map((group) => (
+                <div
+                  key={group.key}
+                  role="group"
+                  aria-labelledby={`${listId}-group-${group.key}`}
+                  className="overflow-hidden text-foreground not-first:mt-2"
+                >
+                  <div
+                    id={`${listId}-group-${group.key}`}
+                    className="px-2 py-1.5 text-[11px] font-medium text-muted-foreground"
+                  >
+                    {group.title}
+                  </div>
                   {group.models.map((model) => (
                     <ModelItem
                       key={model.id}
+                      optionId={`${listId}-${model.id}`}
                       modelId={model.id}
                       selected={model.id === selectedModel}
+                      active={model.id === highlightedModelId}
                       favorite={favoriteModelsSet.has(model.id)}
                       pendingFavorite={isSavingFavorites}
                       onChange={handleChange}
+                      onActiveChange={setActiveModelId}
                       onToggleFavorite={handleToggleFavorite}
                     />
                   ))}
-                </CommandGroup>
+                </div>
               ))}
-            </CommandList>
+            </div>
           </div>
-        </Command>
+        </div>
       </PopoverContent>
     </Popover>
   );
@@ -448,9 +535,9 @@ function PickerSectionButton({
       data-active={active}
       onClick={onClick}
       className={cn(
-        "flex size-8 cursor-pointer items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors",
-        "hover:bg-primary/10 hover:text-foreground",
-        "data-[active=true]:border-primary/30 data-[active=true]:bg-primary/12 data-[active=true]:text-foreground",
+        "flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors",
+        "hover:bg-muted hover:text-foreground",
+        "ring-inset data-[active=true]:bg-primary/12 data-[active=true]:text-primary data-[active=true]:ring-1 data-[active=true]:ring-primary/25",
       )}
     >
       {children}
@@ -493,17 +580,23 @@ export function ModelSelector(props: ModelSelectorProps) {
 
 function ModelItem({
   selected,
+  active,
+  optionId,
   modelId,
   favorite,
   pendingFavorite,
   onChange,
+  onActiveChange,
   onToggleFavorite,
 }: {
   selected: boolean;
+  active: boolean;
+  optionId: string;
   modelId: string;
   favorite: boolean;
   pendingFavorite: boolean;
   onChange?: (id: string) => void;
+  onActiveChange: (id: string) => void;
   onToggleFavorite: (id: string) => void;
 }) {
   const data = tryGetModelData(modelId);
@@ -527,27 +620,29 @@ function ModelItem({
   }
 
   return (
-    <CommandItem
-      value={modelId}
-      keywords={[displayName, data.provider, prettifyProviderName(data.provider)]}
-      onSelect={handleSelect}
+    <div
+      id={optionId}
+      role="option"
+      aria-selected={selected}
+      onClick={handleSelect}
+      onPointerEnter={() => onActiveChange(modelId)}
       data-model-selected={selected}
+      data-active={active}
       title={displayName}
       className={cn(
-        "mt-1 w-full cursor-pointer items-center justify-between gap-3 px-2.5 py-2 outline-none select-none first:mt-0",
+        "mt-0.5 flex w-full cursor-pointer items-center justify-between gap-3 px-2.5 py-2.5 outline-none select-none first:mt-0",
         "rounded-md border border-transparent",
-        "data-selected:bg-muted/70 data-selected:text-foreground",
-        "data-[model-selected=true]:bg-primary/10 data-[model-selected=true]:text-foreground data-[model-selected=true]:ring-1 data-[model-selected=true]:ring-primary/20",
-        "[&>svg:last-child]:hidden",
+        "data-[active=true]:bg-muted/70 data-[active=true]:text-foreground",
+        "data-[model-selected=true]:bg-primary/10 data-[model-selected=true]:text-foreground data-[model-selected=true]:ring-1 data-[model-selected=true]:ring-primary/15",
       )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <Icons.provider provider={data.provider} className="size-4 shrink-0" />
-        <span className="min-w-0 truncate text-xs">{displayName}</span>
+        <span className="min-w-0 truncate text-xs font-medium">{displayName}</span>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        <ModelCapability model={data} />
+        <ModelCapability model={data} tooltip={false} />
 
         <button
           type="button"
@@ -557,7 +652,7 @@ function ModelItem({
           aria-label={favorite ? `Remove ${displayName} from favorites` : `Favorite ${displayName}`}
           className={cn(
             "flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors",
-            "hover:bg-primary/12 hover:text-foreground",
+            "hover:bg-muted hover:text-foreground",
             "disabled:cursor-not-allowed disabled:opacity-50",
             favorite && "text-amber-400",
           )}
@@ -565,6 +660,6 @@ function ModelItem({
           <StarIcon className={cn("size-3.5", favorite && "fill-amber-400")} />
         </button>
       </div>
-    </CommandItem>
+    </div>
   );
 }
