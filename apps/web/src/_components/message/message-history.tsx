@@ -44,7 +44,7 @@ export function MessageHistory({
         <MessageScrollerEvents />
         <MessageScrollerViewport
           id="messages-scrollarea"
-          className="custom-scroll overflow-y-scroll"
+          className="overflow-y-scroll"
           style={{ scrollbarGutter: "stable both-edges" }}
           onScroll={(event) => updateStickyToBottomFromScroll(event.currentTarget)}
         >
@@ -53,7 +53,11 @@ export function MessageHistory({
             className="mx-auto min-h-full w-full max-w-[calc(56rem+32px)] gap-4 px-4"
             style={{ paddingTop: `${topPaddingPx}px`, paddingBottom: `${resolvedBottomPadding}px` }}
           >
-            <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />
+            <Messages
+              readOnly={readOnly}
+              showUserAvatar={showUserAvatar}
+              topPaddingPx={topPaddingPx}
+            />
           </MessageScrollerContent>
         </MessageScrollerViewport>
 
@@ -92,9 +96,11 @@ function MessageScrollerEvents() {
 function Messages({
   readOnly = false,
   showUserAvatar = true,
+  topPaddingPx,
 }: {
   readOnly?: boolean;
   showUserAvatar?: boolean;
+  topPaddingPx: number;
 }) {
   const messages = useMessageStore((state) => state.messageIds);
 
@@ -106,6 +112,7 @@ function Messages({
       total={messages.length}
       readOnly={readOnly}
       showUserAvatar={showUserAvatar}
+      topPaddingPx={topPaddingPx}
     />
   ));
 }
@@ -116,6 +123,7 @@ type MessageHistoryItemProps = {
   total: number;
   readOnly: boolean;
   showUserAvatar: boolean;
+  topPaddingPx: number;
 };
 
 function MessageHistoryItem(props: MessageHistoryItemProps) {

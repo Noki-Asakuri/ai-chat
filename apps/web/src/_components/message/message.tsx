@@ -21,6 +21,7 @@ type MessageProps = {
   total: number;
   readOnly?: boolean;
   showUserAvatar?: boolean;
+  topPaddingPx: number;
 };
 
 export function Message({
@@ -29,6 +30,7 @@ export function Message({
   total,
   readOnly = false,
   showUserAvatar = true,
+  topPaddingPx,
 }: MessageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const message = useMessageStore(useShallow((state) => state.messagesById[messageId]!));
@@ -46,8 +48,7 @@ export function Message({
 
   const minHeight =
     isLast && message.role === "assistant"
-      ? // 100vh - 48px (padding top) - textarea height - user message height - (16px) separator between messages
-        `${window.innerHeight - 48 - textareaHeight - userMessageHeight - 16}px`
+      ? `${window.innerHeight - topPaddingPx - textareaHeight - userMessageHeight - 16}px`
       : "auto";
 
   const containerStyle: CSSProperties = { minHeight };
