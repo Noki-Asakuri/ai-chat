@@ -14,6 +14,7 @@ import {
   PinOffIcon,
   RefreshCwIcon,
   Share2Icon,
+  Undo2Icon,
 } from "lucide-react";
 import { useRef, useTransition } from "react";
 import { toast } from "@/components/ui/toast";
@@ -66,7 +67,7 @@ function formatRelativeTime(timestamp: number, now: number): string {
 }
 
 export function ThreadItem({ thread, now }: ThreadItemProps) {
-  const [isSettling, startSettling] = useTransition();
+  const [isUpdatingSettled, startUpdatingSettled] = useTransition();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const isActive = params?.threadId === toUUID(thread._id);
   const isStreaming = thread.status === "streaming" || thread.status === "pending";
@@ -81,7 +82,10 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
   const modelName = modelData?.display.unique ?? modelData?.display.name ?? thread.latestModel;
   const threadUpdatedTime = (
     <time
-      className={cn(isSettled && "shrink-0 text-xs text-muted-foreground")}
+      className={cn(
+        isSettled &&
+          "shrink-0 text-xs text-muted-foreground group-focus-within/thread:opacity-0 group-hover/thread:opacity-0",
+      )}
       dateTime={new Date(thread.updatedAt).toISOString()}
       title={new Date(thread.updatedAt).toLocaleString()}
     >
@@ -89,16 +93,20 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
     </time>
   );
 
-  function settleThread(): void {
-    startSettling(async () => {
+  function toggleThreadSettled(): void {
+    startUpdatingSettled(async () => {
       const [, error] = await tryCatch(
-        convexClient.mutation(api.functions.threads.settleThread, { threadId: thread._id }),
+        convexClient.mutation(
+          isSettled ? api.functions.threads.unsettleThread : api.functions.threads.settleThread,
+          { threadId: thread._id },
+        ),
       );
 
       if (!error) return;
 
-      console.error("[Thread] Settle thread error:", error);
-      toast.error("Failed to settle thread", { description: error.message });
+      const action = isSettled ? "unsettle" : "settle";
+      console.error(`[Thread] ${action} thread error:`, error);
+      toast.error(`Failed to ${action} thread`, { description: error.message });
     });
   }
 
@@ -110,10 +118,7 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
       title={thread.title}
       to="/threads/$threadId"
       params={{ threadId: toUUID(thread._id) }}
-      className={cn(
-        "flex w-full min-w-0 px-2 py-2",
-        isSettled ? "items-center gap-2" : "flex-col gap-1.5",
-      )}
+      className={cn("flex w-full min-w-0 px-2 py-2", isSettled ? "items-center gap-2" : "flex-col gap-1.5")}
     >
       {isSettled ? (
         <>
@@ -184,23 +189,40 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
         isSettled && "opacity-50 hover:opacity-70",
       )}
     >
-      <ThreadActions thread={thread} isStreaming={isStreaming}>
+      <ThreadActions
+        thread={thread}
+        isStreaming={isStreaming}
+        isUpdatingSettled={isUpdatingSettled}
+        onToggleSettled={toggleThreadSettled}
+      >
         {threadLink}
       </ThreadActions>
 
-      {!isSettled && canSettle && (
+      {isSettled ? (
+        <Button
+          variant="none"
+          size="icon"
+          className="absolute top-1/2 right-1 size-7 -translate-y-1/2 opacity-0 transition-none group-focus-within/thread:opacity-100 group-hover/thread:opacity-100"
+          aria-label={`Unsettle ${thread.title}`}
+          title="Unsettle thread"
+          disabled={isUpdatingSettled}
+          onClick={toggleThreadSettled}
+        >
+          <Undo2Icon />
+        </Button>
+      ) : canSettle ? (
         <Button
           variant="none"
           size="none"
-          className="absolute top-2 right-2 h-4 gap-1 text-xs font-medium text-sidebar-foreground opacity-0 transition-none [&_svg]:size-3.5 group-focus-within/thread:opacity-100 group-hover/thread:opacity-100"
+          className="absolute top-2 right-2 h-4 gap-1 text-xs font-medium text-sidebar-foreground opacity-0 transition-none group-focus-within/thread:opacity-100 group-hover/thread:opacity-100 [&_svg]:size-3.5"
           aria-label={`Settle ${thread.title}`}
-          disabled={isSettling}
-          onClick={settleThread}
+          disabled={isUpdatingSettled}
+          onClick={toggleThreadSettled}
         >
           <CircleCheckIcon data-icon="inline-start" />
-          {isSettling ? "Settling" : "Settle"}
+          {isUpdatingSettled ? "Settling" : "Settle"}
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -208,14 +230,24 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
 type ThreadActionsProps = {
   thread: Thread;
   isStreaming: boolean;
+  isUpdatingSettled: boolean;
+  onToggleSettled: () => void;
   children: React.ReactNode;
 };
 
-function ThreadActions({ thread, isStreaming, children }: ThreadActionsProps) {
+function ThreadActions({
+  thread,
+  isStreaming,
+  isUpdatingSettled,
+  onToggleSettled,
+  children,
+}: ThreadActionsProps) {
   const menuTriggerRef = useRef<HTMLDivElement>(null);
   const groups = useThreadStore((state) => state.groupedThreads.groups);
   const destinationGroups = groups.filter((group) => group._id !== thread.groupId);
   const canMoveThread = thread.groupId !== null || destinationGroups.length > 0;
+  const isSettled = thread.settled === true;
+  const canSettle = thread.status === "complete" || thread.status === "error";
 
   function toggleThreadPin() {
     console.debug("[Thread] Pin thread", thread);
@@ -289,10 +321,21 @@ function ThreadActions({ thread, isStreaming, children }: ThreadActionsProps) {
             </ContextMenuItem>
           )}
 
-          <ContextMenuItem title="Regenerate Title" onClick={regenerateTitle}>
-            <RefreshCwIcon className="size-4" />
-            <span className="pointer-events-none">Regenerate Title</span>
+          <ContextMenuItem
+            title={isSettled ? "Unsettle Thread" : "Settle Thread"}
+            disabled={isUpdatingSettled || (!isSettled && !canSettle)}
+            onClick={onToggleSettled}
+          >
+            {isSettled ? <Undo2Icon className="size-4" /> : <CircleCheckIcon className="size-4" />}
+            <span className="pointer-events-none">{isSettled ? "Unsettle Thread" : "Settle Thread"}</span>
           </ContextMenuItem>
+
+          {!isSettled && (
+            <ContextMenuItem title="Regenerate Title" onClick={regenerateTitle}>
+              <RefreshCwIcon className="size-4" />
+              <span className="pointer-events-none">Regenerate Title</span>
+            </ContextMenuItem>
+          )}
 
           <ContextMenuItem
             title="Edit Thread"
@@ -342,15 +385,17 @@ function ThreadActions({ thread, isStreaming, children }: ThreadActionsProps) {
             )}
           </ContextMenuSub>
 
-          <ContextMenuItem
-            title="Share Thread"
-            onClick={() => {
-              threadDialogStoreActions.openShareThread(thread);
-            }}
-          >
-            <Share2Icon className="size-4" />
-            <span className="pointer-events-none">Share Thread</span>
-          </ContextMenuItem>
+          {!isSettled && (
+            <ContextMenuItem
+              title="Share Thread"
+              onClick={() => {
+                threadDialogStoreActions.openShareThread(thread);
+              }}
+            >
+              <Share2Icon className="size-4" />
+              <span className="pointer-events-none">Share Thread</span>
+            </ContextMenuItem>
+          )}
 
           <ContextMenuItem
             title="Delete Thread"
