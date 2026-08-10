@@ -30,7 +30,6 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { DefaultCatchBoundary } from "@/components/default-catch-boundary";
 import { DefaultNotFoundBoundary } from "@/components/default-not-found-boundary";
 import { Toaster } from "@/components/ui/toast";
-import { VersionUpdateNotifier } from "@/components/version-update-notifier";
 
 import {
   CHAT_NAVIGATE_TO_THREAD_EVENT,
@@ -165,7 +164,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
         <Scripts />
         <Toaster />
-        <VersionUpdateNotifier />
 
         {import.meta.env.PROD && (
           <>

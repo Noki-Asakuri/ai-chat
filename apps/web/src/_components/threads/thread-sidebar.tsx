@@ -3,7 +3,9 @@ import { Link } from "@tanstack/react-router";
 import { ThreadContents } from "./thread-content";
 import { ThreadUserProfile } from "./thread-user-profile";
 
+import { Separator } from "@/components/ui/separator";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
+import { VersionUpdateNotifier } from "@/components/version-update-notifier";
 
 export function ThreadSidebar() {
   return (
@@ -27,7 +29,8 @@ export function ThreadSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
-        <hr className="border-sidebar-accent" />
+        <VersionUpdateNotifier />
+        <Separator className="bg-sidebar-accent" />
         <ThreadUserProfile />
       </SidebarFooter>
     </Sidebar>
