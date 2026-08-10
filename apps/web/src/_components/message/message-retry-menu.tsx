@@ -420,7 +420,7 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
               </div>
 
               <div
-                className="custom-scroll flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto px-1.5 py-2"
+                className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto px-1.5 py-2"
                 style={{ scrollbarGutter: "stable both-edges" }}
               >
                 {groups.length === 0 ? (
@@ -533,7 +533,7 @@ function RetryModelItem({
           <Menu.Positioner side="right" align="center" className="p-1" sideOffset={8}>
             <Menu.Popup
               className={cn(
-                "custom-scroll flex max-h-[min(18rem,calc(100vh-6rem))] w-[min(14rem,calc(100vw-1rem))] origin-(--transform-origin) flex-col gap-1 overflow-y-auto rounded-md border border-border bg-card p-1 text-card-foreground shadow-lg ring-1 ring-foreground/10",
+                "flex max-h-[min(18rem,calc(100vh-6rem))] w-[min(14rem,calc(100vw-1rem))] origin-(--transform-origin) flex-col gap-1 overflow-y-auto rounded-md border border-border bg-card p-1 text-card-foreground shadow-lg ring-1 ring-foreground/10",
                 "transition-[transform,scale,opacity] data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
               )}
               style={{ scrollbarGutter: "stable both-edges" }}

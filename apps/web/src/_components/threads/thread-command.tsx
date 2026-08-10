@@ -108,7 +108,7 @@ function ThreadCommandDialog() {
       <Command>
         <CommandInput placeholder="Search threads..." value={query} onValueChange={setQuery} />
 
-        <CommandList className="custom-scroll max-h-[400px]">
+        <CommandList className="max-h-[400px]">
           {isLoading && (
             <CommandLoading className="py-6 text-center text-sm">
               <div className="flex w-full items-center justify-center gap-2">

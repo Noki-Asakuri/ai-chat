@@ -356,39 +356,30 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply scrollbar-thin scrollbar-thumb-ring scrollbar-track-transparent scrollbar-gutter-both border-border outline-ring/50;
+  }
+
+  *::-webkit-scrollbar {
+    @apply size-1.5;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-ring);
+    border-radius: 0.5rem;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ring);
   }
 
   body {
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
   }
-}
-
-.custom-scroll,
-#textarea-chat-input {
-  @apply scrollbar-thin scrollbar-thumb-ring scrollbar-track-transparent scrollbar-gutter-both;
-}
-
-.custom-scroll::-webkit-scrollbar,
-#textarea-chat-input::-webkit-scrollbar {
-  @apply size-1.5;
-}
-
-.custom-scroll::-webkit-scrollbar-track,
-#textarea-chat-input::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scroll::-webkit-scrollbar-thumb,
-#textarea-chat-input::-webkit-scrollbar-thumb {
-  background: var(--color-ring);
-  border-radius: 0.5rem;
-}
-
-.custom-scroll::-webkit-scrollbar-thumb:hover,
-#textarea-chat-input::-webkit-scrollbar-thumb:hover {
-  background: var(--color-ring);
 }
 
 .appearance-none::-webkit-inner-spin-button,

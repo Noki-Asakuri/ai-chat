@@ -41,7 +41,7 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   console.error("DefaultCatchBoundary Error:", error);
 
   return (
-    <main className="custom-scroll mx-auto flex min-h-svh w-full flex-1 items-center justify-center overflow-y-auto px-6 py-4">
+    <main className="mx-auto flex min-h-svh w-full flex-1 items-center justify-center overflow-y-auto px-6 py-4">
       <div className="w-full max-w-3xl space-y-4">
         <div className="flex flex-col items-center gap-1 text-center">
           <h2 className="text-2xl font-bold">Something went wrong</h2>

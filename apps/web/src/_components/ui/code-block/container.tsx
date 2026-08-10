@@ -30,7 +30,7 @@ export function CodeBlockContainer({ children }: { children: React.ReactNode }) 
       ref={rootRef}
       data-language={language}
       data-slot="code-block-container"
-      className="custom-scroll rounded-md border bg-background/80 text-foreground"
+      className="rounded-md border bg-background/80 text-foreground"
       style={{
         contentVisibility: "auto",
         containIntrinsicSize: `auto ${expanded ? "auto" : "350px"}`,

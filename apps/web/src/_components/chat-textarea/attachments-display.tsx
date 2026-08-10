@@ -105,7 +105,7 @@ export function ChatAttachmentsDisplay() {
     <div
       data-visible={!!preview}
       data-slot="attachment-display"
-      className="custom-scroll flex items-center justify-start gap-2 overflow-x-auto border-b p-2.5 data-[visible=false]:hidden"
+      className="flex items-center justify-start gap-2 overflow-x-auto border-b p-2.5 data-[visible=false]:hidden"
     >
       <ImageLightboxProvider
         images={imageList.map((p) => ({ src: p.url, name: p.file.name, bytes: p.file.size }))}

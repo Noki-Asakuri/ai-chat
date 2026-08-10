@@ -214,7 +214,7 @@ function compareByProviderThenName(a: ModelEntry, b: ModelEntry): number {
 function getModelsScrollElement(listElement: HTMLDivElement | null): HTMLElement | null {
   if (!listElement) return null;
 
-  const scrollElement = listElement.closest(".custom-scroll");
+  const scrollElement = listElement.closest("[data-models-scroll-container]");
   if (scrollElement instanceof HTMLElement) return scrollElement;
 
   return null;

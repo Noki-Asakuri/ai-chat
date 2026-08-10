@@ -227,7 +227,7 @@ export function CodeBlockBody({ result }: { result: HighlightResult }) {
   return (
     <div className="relative">
       <div
-        className={cn("custom-scroll px-3 py-2", isCollapsed ? "overflow-auto pb-10" : "overflow-x-auto")}
+        className={cn("px-3 py-2", isCollapsed ? "overflow-auto pb-10" : "overflow-x-auto")}
         data-should-wrap={wrapline ? "true" : "false"}
         style={{ maxHeight: containerMaxHeight }}
       >

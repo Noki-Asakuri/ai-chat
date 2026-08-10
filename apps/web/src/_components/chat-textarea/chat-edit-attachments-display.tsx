@@ -84,7 +84,7 @@ export function ChatEditAttachmentsDisplay() {
   return (
     <div
       data-slot="attachment-display"
-      className="custom-scroll flex items-center justify-start gap-2 overflow-x-auto border-b p-2.5"
+      className="flex items-center justify-start gap-2 overflow-x-auto border-b p-2.5"
     >
       <ImageLightboxProvider images={imageList}>
         {existingPreview.map((attachment) => {

@@ -392,7 +392,7 @@ function ThreadList({ data }: ThreadListProps) {
 
       <div
         data-slot="thread-list-container"
-        className="custom-scroll flex min-h-0 flex-1 flex-col overflow-y-auto pr-2.5 pl-2"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-2.5 pl-2"
         style={{ scrollbarGutter: "stable both-edges" }}
       >
         <UngroupedThreadGroup
