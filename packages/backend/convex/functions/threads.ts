@@ -105,6 +105,7 @@ export const createThread = authenticatedMutation({
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
+    const now = Date.now();
 
     if (args.groupId) {
       const group = await ctx.db.get("groups", args.groupId);
@@ -121,7 +122,8 @@ export const createThread = authenticatedMutation({
       pinned: false,
       status: "pending",
       userId: user.userId,
-      updatedAt: Date.now() + 1,
+      updatedAt: now + 1,
+      lastViewedAt: now,
       groupId: args.groupId,
       order: 0,
 
@@ -164,6 +166,7 @@ export const branchThread = authenticatedMutation({
   args: { threadId: v.id("threads"), assistantMessageId: v.id("messages") },
   handler: async (ctx, args) => {
     const user = ctx.user;
+    const now = Date.now();
 
     const thread = await ctx.db.get(args.threadId);
     if (!thread) throw new Error("Thread not found");
@@ -181,7 +184,8 @@ export const branchThread = authenticatedMutation({
       .collect();
 
     const newThreadId = await ctx.db.insert("threads", {
-      updatedAt: Date.now() + 1,
+      updatedAt: now + 1,
+      lastViewedAt: now + 1,
       userId: user.userId,
       status: "complete",
       pinned: false,
@@ -224,9 +228,7 @@ export const getAllThreads = authenticatedQuery({
     if (!args.query || args.query.trim() === "") {
       const pinned = await ctx.db
         .query("threads")
-        .withIndex("by_userId_pinned_updatedAt", (q) =>
-          q.eq("userId", user.userId).eq("pinned", true),
-        )
+        .withIndex("by_userId_pinned_updatedAt", (q) => q.eq("userId", user.userId).eq("pinned", true))
         .order("desc")
         .collect();
 
@@ -260,6 +262,24 @@ export const getAllThreads = authenticatedQuery({
       .take(limit);
 
     return [...pinnedMatches, ...nonPinnedMatches];
+  },
+});
+
+export const markThreadViewed = authenticatedMutation({
+  args: { threadId: v.id("threads") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = ctx.user;
+    const thread = await ctx.db.get("threads", args.threadId);
+
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== user.userId) throw new Error("Not authorized");
+
+    await ctx.db.patch(args.threadId, {
+      lastViewedAt: Math.max(Date.now(), thread.updatedAt),
+    });
+
+    return null;
   },
 });
 

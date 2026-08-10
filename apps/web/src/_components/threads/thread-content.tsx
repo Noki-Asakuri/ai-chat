@@ -61,63 +61,29 @@ function ThreadListSkeleton() {
           <Skeleton className="size-10 shrink-0 bg-input/60" />
         </div>
 
-        <div className="flex items-center gap-1.5 px-2 pb-1">
+        <div className="flex items-center gap-1.5 px-2 pb-2">
           <Skeleton className="h-10 min-w-0 flex-1 bg-input/60" />
           <Skeleton className="size-10 shrink-0 bg-input/60" />
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden pr-2.5">
-          <ThreadGroupSkeleton labelWidth="w-14">
-            <ThreadSkeleton titleWidth="w-[82%]" showMetadata />
-          </ThreadGroupSkeleton>
-
-          <ThreadGroupSkeleton labelWidth="w-20">
-            <ThreadSkeleton titleWidth="w-[46%]" showMetadata />
-            <ThreadSkeleton titleWidth="w-[74%]" showMetadata />
-          </ThreadGroupSkeleton>
-
-          <ThreadGroupSkeleton labelWidth="w-12">
-            <ThreadSkeleton titleWidth="w-[42%]" />
-            <ThreadSkeleton titleWidth="w-[84%]" />
-            <ThreadSkeleton titleWidth="w-[76%]" />
-            <ThreadSkeleton titleWidth="w-[68%]" />
-            <ThreadSkeleton titleWidth="w-[88%]" />
-            <ThreadSkeleton titleWidth="w-[54%]" />
-            <ThreadSkeleton titleWidth="w-[72%]" />
-            <ThreadSkeleton titleWidth="w-[64%]" />
-            <ThreadSkeleton titleWidth="w-[46%]" />
-            <ThreadSkeleton titleWidth="w-[82%]" />
-            <ThreadSkeleton titleWidth="w-[68%]" />
-            <ThreadSkeleton titleWidth="w-[76%]" />
-            <ThreadSkeleton titleWidth="w-[54%]" />
-          </ThreadGroupSkeleton>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden pr-2.5 pl-2">
+          <ThreadSkeleton titleWidth="w-[82%]" />
+          <ThreadSkeleton titleWidth="w-[46%]" />
+          <ThreadSkeleton titleWidth="w-[74%]" />
+          <ThreadSkeleton titleWidth="w-[42%]" />
+          <ThreadSkeleton titleWidth="w-[84%]" />
+          <ThreadSkeleton titleWidth="w-[76%]" />
+          <ThreadSkeleton titleWidth="w-[68%]" />
+          <ThreadSkeleton titleWidth="w-[88%]" />
+          <ThreadSkeleton titleWidth="w-[54%]" />
         </div>
       </div>
-    </div>
-  );
-}
-
-function ThreadGroupSkeleton({
-  children,
-  labelWidth,
-}: {
-  children: React.ReactNode;
-  labelWidth: "w-12" | "w-14" | "w-20";
-}) {
-  return (
-    <div className="flex flex-col">
-      <div className="flex h-8 items-center justify-between px-2">
-        <Skeleton className={cn("h-3", labelWidth)} />
-        <Skeleton className="size-3" />
-      </div>
-      <div className="flex flex-col gap-1">{children}</div>
     </div>
   );
 }
 
 function ThreadSkeleton({
   titleWidth,
-  showMetadata = false,
 }: {
   titleWidth:
     | "w-[42%]"
@@ -131,22 +97,16 @@ function ThreadSkeleton({
     | "w-[82%]"
     | "w-[84%]"
     | "w-[88%]";
-  showMetadata?: boolean;
 }) {
   return (
-    <div className={showMetadata ? "flex flex-col gap-2 px-2 py-2" : "flex h-8 items-center px-2"}>
-      {showMetadata && (
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            <Skeleton className="size-3.5 shrink-0 rounded-full" />
-            <Skeleton className="h-3 w-20" />
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Skeleton className="size-3.5 rounded-full" />
-            <Skeleton className="h-3 w-10" />
-          </div>
+    <div className="flex flex-col gap-2 px-2 py-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <Skeleton className="size-3.5 shrink-0 rounded-full" />
+          <Skeleton className="h-3 w-20" />
         </div>
-      )}
+        <Skeleton className="h-3 w-10 shrink-0" />
+      </div>
       <Skeleton className={cn("h-3.5", titleWidth)} />
     </div>
   );
@@ -229,6 +189,7 @@ function ThreadListWrapper() {
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const lastSyncedThreadIdRef = useRef<Id<"threads"> | null>(null);
   const routeThreadId = fromUUID<Id<"threads">>(params?.threadId);
+  const markThreadViewed = useMutation(api.functions.threads.markThreadViewed);
 
   const { data } = useQuery({
     ...convexSessionQuery(api.functions.groups.listGroups),
@@ -254,6 +215,18 @@ function ThreadListWrapper() {
       threadStoreActions.setActiveGroupId(null);
     }
   }, [data, routeThreadId]);
+
+  useEffect(() => {
+    if (!data || !routeThreadId) return;
+
+    const routeThread = data.threads.find((thread) => thread._id === routeThreadId);
+    if (!routeThread || routeThread.status !== "complete") return;
+    if (routeThread.lastViewedAt !== undefined && routeThread.lastViewedAt >= routeThread.updatedAt) return;
+
+    void markThreadViewed({ threadId: routeThreadId }).catch((error: unknown) => {
+      console.error("[Thread] Mark thread viewed error:", error);
+    });
+  }, [data, markThreadViewed, routeThreadId]);
 
   if (!data) {
     return <ThreadListSkeleton key="thread-list-skeleton" />;
@@ -377,7 +350,7 @@ function ThreadList({ data }: ThreadListProps) {
         </Button>
       </div>
 
-      <div className="flex items-center gap-1.5 px-2 pb-1">
+      <div className="flex items-center gap-1.5 px-2 pb-2">
         <Select value={activeGroupId ?? UNGROUPED_SELECT_VALUE} onValueChange={selectGroup}>
           <SelectTrigger className="min-w-0 flex-1 rounded-md border-transparent bg-input/30 px-2.5 font-mono text-sm hover:bg-input/50 data-[size=default]:h-10">
             <span className="flex min-w-0 flex-1 items-center gap-2">
@@ -408,7 +381,7 @@ function ThreadList({ data }: ThreadListProps) {
 
       <div
         data-slot="thread-list-container"
-        className="custom-scroll flex min-h-0 flex-1 flex-col overflow-y-auto pr-2.5"
+        className="custom-scroll flex min-h-0 flex-1 flex-col overflow-y-auto pr-2.5 pl-2"
         style={{ scrollbarGutter: "stable both-edges" }}
       >
         <UngroupedThreadGroup threads={filteredThreads} />

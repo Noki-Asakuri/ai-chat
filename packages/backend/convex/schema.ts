@@ -349,6 +349,7 @@ export default defineSchema(
       title: v.string(),
       userId: v.string(),
       updatedAt: v.number(),
+      lastViewedAt: v.optional(v.number()),
       pinned: v.boolean(),
       branchedFrom: v.optional(v.id("threads")),
 

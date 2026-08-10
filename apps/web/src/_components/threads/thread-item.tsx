@@ -42,14 +42,38 @@ const convexClient = getConvexReactClient();
 
 type ThreadItemProps = {
   thread: Thread;
-  showMetadata?: boolean;
+  now: number;
 };
 
-export function ThreadItem({ thread, showMetadata = false }: ThreadItemProps) {
+function formatRelativeTime(timestamp: number, now: number): string {
+  const elapsedSeconds = Math.max(0, Math.floor((now - timestamp) / 1000));
+  if (elapsedSeconds < 60) return "now";
+
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) return `${elapsedMinutes}m`;
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `${elapsedHours}h`;
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  if (elapsedDays < 30) return `${elapsedDays}d`;
+
+  const elapsedMonths = Math.floor(elapsedDays / 30);
+  if (elapsedMonths < 12) return `${elapsedMonths}mo`;
+
+  return `${Math.floor(elapsedDays / 365)}y`;
+}
+
+export function ThreadItem({ thread, now }: ThreadItemProps) {
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
+  const isActive = params?.threadId === toUUID(thread._id);
   const isStreaming = thread.status === "streaming" || thread.status === "pending";
   const isRecentlyCreated = thread._creationTime > Date.now() - 1000 * 60 * 60 * 24 * 2;
-  const modelData = showMetadata ? tryGetModelData(thread.latestModel) : null;
+  const hasUnreadCompletion =
+    !isActive &&
+    thread.status === "complete" &&
+    (thread.lastViewedAt === undefined || thread.updatedAt > thread.lastViewedAt);
+  const modelData = tryGetModelData(thread.latestModel);
   const modelName = modelData?.display.unique ?? modelData?.display.name ?? thread.latestModel;
 
   const threadLink = (
@@ -60,52 +84,53 @@ export function ThreadItem({ thread, showMetadata = false }: ThreadItemProps) {
       title={thread.title}
       to="/threads/$threadId"
       params={{ threadId: toUUID(thread._id) }}
-      className={cn(
-        "flex w-full min-w-0 px-2",
-        showMetadata ? "flex-col gap-1.5 py-2" : "items-center gap-1.5 py-1.5",
-      )}
+      className="flex w-full min-w-0 flex-col gap-1.5 px-2 py-2"
     >
-      {showMetadata && (
-        <span className="flex w-full min-w-0 items-center justify-between gap-2">
-          <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-            {modelData ? (
-              <Icons.provider provider={modelData.provider} className="size-3.5 shrink-0" />
-            ) : (
-              <Icons.unknown className="size-3.5 shrink-0" />
-            )}
-            <span className="truncate">{modelName}</span>
-          </span>
-
-          <span
-            className={cn(
-              "flex shrink-0 items-center gap-1 px-1.5 py-0.5 text-sm font-medium",
-              isStreaming ? "text-primary" : "text-success",
-            )}
-          >
-            {isStreaming ? (
-              <>
-                <Loader2Icon className="size-3.5 animate-spin" />
-                Working
-              </>
-            ) : (
-              <>
-                <CircleCheckIcon className="size-3.5" />
-                Done
-              </>
-            )}
-          </span>
+      <span className="flex w-full min-w-0 items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          {modelData ? (
+            <Icons.provider provider={modelData.provider} className="size-3.5 shrink-0" />
+          ) : (
+            <Icons.unknown className="size-3.5 shrink-0" />
+          )}
+          <span className="truncate">{modelName}</span>
         </span>
-      )}
 
-      {thread.branchedFrom && <GitBranchIcon className="size-3.5 shrink-0 rotate-180" />}
-      <span className="truncate text-sm font-medium">{thread.title}</span>
+        <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+          {thread.pinned && <PinIcon className="size-3.5" aria-hidden="true" />}
+
+          {isStreaming ? (
+            <span className="flex items-center gap-1 font-medium text-primary">
+              <Loader2Icon className="size-3.5 animate-spin" />
+              Working
+            </span>
+          ) : hasUnreadCompletion ? (
+            <span className="flex items-center gap-1 font-medium text-success">
+              <CircleCheckIcon className="size-3.5" />
+              Done
+            </span>
+          ) : (
+            <time
+              dateTime={new Date(thread.updatedAt).toISOString()}
+              title={new Date(thread.updatedAt).toLocaleString()}
+            >
+              {formatRelativeTime(thread.updatedAt, now)}
+            </time>
+          )}
+        </span>
+      </span>
+
+      <span className="flex min-w-0 items-center gap-1.5">
+        {thread.branchedFrom && <GitBranchIcon className="size-3.5 shrink-0 rotate-180" />}
+        <span className="truncate text-sm font-medium">{thread.title}</span>
+      </span>
     </Link>
   );
 
   return (
     <div
       data-thread-id={thread._id}
-      data-thread-active={params?.threadId === toUUID(thread._id)}
+      data-thread-active={isActive}
       data-thread-index={thread.order}
       data-thread-status={thread.status}
       data-slot="thread-item"
