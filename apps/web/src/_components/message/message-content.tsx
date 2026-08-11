@@ -1,21 +1,18 @@
+import { useLoaderData } from "@tanstack/react-router";
+
 import { MessageContent as MessageBubble, MessageAvatar as UserAvatar } from "../ui/ai-elements/message";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { Icons } from "../ui/icons";
-import {
-  Message,
-  MessageAvatar,
-  MessageContent as MessageLayoutContent,
-  MessageHeader,
-} from "../ui/message";
+import { Message, MessageAvatar, MessageContent as MessageLayoutContent, MessageHeader } from "../ui/message";
 
 import { MessageAttachmentsDisplay } from "./message-attachments-display";
 import { StreamDownWrapper } from "./message-markdown";
 import { MessageReasoning } from "./message-reasoning";
 import { MessageStepDivider, MessageToolParts, isToolPart, type ToolPart } from "./message-tool-parts";
 
+import { getUserDisplayName } from "@/lib/authkit/user";
 import { clearMessageSelection, selectMessageText } from "@/lib/chat/message-selection";
 import { tryGetModelData } from "@/lib/chat/models";
-import { useIsMobile } from "@/lib/hooks/use-mobile";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -147,7 +144,6 @@ function buildAssistantFlowBlocks(parts: MessagePart[]): AssistantFlowBlock[] {
 }
 
 export function MessageContent({ message, showUserAvatar = true }: MessageContentProps) {
-  const isMobile = useIsMobile();
   const parts = message.parts ?? [];
   const error = message.error?.length ? message.error : "An error have occurred. Please try again.";
 
@@ -161,9 +157,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
     fileParts.length > 0 ||
     (message.role === "assistant" ? assistantBlocks.length > 0 : userTextParts.length > 0);
 
-  const shouldRenderUserMessageBody =
-    message.role === "user" && (userTextParts.length > 0 || shouldRenderUserAvatar);
-  const shouldReserveUserAvatarSpace = shouldRenderUserAvatar && userTextParts.length > 0;
+  const shouldRenderUserMessageBody = message.role === "user" && userTextParts.length > 0;
   const modelId = message.metadata?.model.request;
   const modelData = modelId ? tryGetModelData(modelId) : null;
 
@@ -188,12 +182,20 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
         </MessageAvatar>
       )}
 
+      {shouldRenderUserAvatar && (
+        <MessageAvatar className="self-start rounded-md bg-transparent">
+          <UserAvatar />
+        </MessageAvatar>
+      )}
+
       <MessageLayoutContent className="items-end group-data-[align=start]/message:items-start">
         {message.role === "assistant" && modelData && (
           <MessageHeader className="px-0 text-base leading-5 text-foreground">
             {modelData.display.name}
           </MessageHeader>
         )}
+
+        {shouldRenderUserAvatar && <UserMessageHeader />}
 
         {message.status === "error" ? (
           <MessageError message={error} />
@@ -203,11 +205,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
             attachments={message.attachments}
             role={message.role}
             messageId={message._id}
-            className={cn(
-              shouldRenderUserAvatar && "self-end",
-              shouldReserveUserAvatarSpace && "max-w-[calc(100%-3.25rem)]",
-              isMobile && shouldRenderUserAvatar && "mr-13",
-            )}
+            className={cn(shouldRenderUserAvatar && "self-end")}
           />
         )}
 
@@ -263,19 +261,9 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
         )}
 
         {message.status !== "error" && shouldRenderUserMessageBody && (
-          <div
-            className={cn("relative flex items-start gap-2", {
-              "w-full": message.role === "assistant",
-              "max-w-full justify-end self-end": message.role === "user",
-            })}
-          >
+          <div className="relative flex max-w-full items-start justify-end gap-2 self-end">
             {userTextParts.length > 0 && (
-              <div
-                className={cn("flex min-w-0 flex-col gap-1.5", {
-                  "w-full": message.role === "assistant",
-                  "max-w-[calc(100%-3.25rem)]": shouldReserveUserAvatarSpace,
-                })}
-              >
+              <div className="flex min-w-0 flex-col gap-1.5">
                 {userTextParts.map((part, i) => (
                   <MessageBubble
                     key={`${message._id}-${i}`}
@@ -288,18 +276,20 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
                 ))}
               </div>
             )}
-
-            {shouldRenderUserAvatar && (
-              <MessageAvatar
-                className={cn("shrink-0 rounded-md", userTextParts.length === 0 && "self-start")}
-              >
-                <UserAvatar />
-              </MessageAvatar>
-            )}
           </div>
         )}
       </MessageLayoutContent>
     </Message>
+  );
+}
+
+function UserMessageHeader() {
+  const { user } = useLoaderData({ from: "/_chat" });
+
+  return (
+    <MessageHeader className="px-0 text-base leading-5 text-foreground">
+      {getUserDisplayName(user)}
+    </MessageHeader>
   );
 }
 
