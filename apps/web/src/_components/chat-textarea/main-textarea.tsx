@@ -49,7 +49,7 @@ export function ChatTextarea() {
   }, []);
 
   return (
-    <div data-slot="chat-textarea" className="pointer-events-none absolute bottom-2 w-full px-4">
+    <div data-slot="chat-textarea" className="pointer-events-none absolute bottom-2 w-full px-2 sm:px-4">
       <form ref={parentRef} className="mx-auto space-y-2">
         <SettledThreadNotice />
 
@@ -59,7 +59,7 @@ export function ChatTextarea() {
           <div>
             <InputChatTextArea />
 
-            <div className="flex items-end justify-between px-3 pt-1 pb-3">
+            <div className="flex items-end gap-2 px-2 pt-1 pb-2.5 sm:px-3 sm:pb-3">
               <ChatActionButtons />
               <ChatSendButton />
             </div>

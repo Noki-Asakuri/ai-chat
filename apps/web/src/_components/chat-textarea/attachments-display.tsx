@@ -16,18 +16,14 @@ type BaseChatAttachmentsButtonProps = React.ComponentPropsWithoutRef<typeof Butt
   handleAddAttachments: (files: UserAttachment[]) => void;
 };
 
-export function BaseChatAttachmentsButton({
+export function useChatAttachmentInput({
   model,
   handleAddAttachments,
-  ...props
-}: BaseChatAttachmentsButtonProps) {
-  const modelData = tryGetModelData(model);
-  const acceptedAttachmentTypes = modelData?.modalities?.input.filter(
+}: Pick<BaseChatAttachmentsButtonProps, "model" | "handleAddAttachments">) {
+  const inputId = useId();
+  const acceptedAttachmentTypes = tryGetModelData(model)?.modalities.input.filter(
     (modality) => modality === "image" || modality === "pdf",
   );
-  const inputId = useId();
-
-  if (!acceptedAttachmentTypes || acceptedAttachmentTypes.length === 0) return null;
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -41,6 +37,28 @@ export function BaseChatAttachmentsButton({
     // allow re-uploading the same file
     event.target.value = "";
   }
+
+  return {
+    accept: acceptedAttachmentTypes
+      ?.map((modality) => (modality === "image" ? "image/*" : "application/pdf"))
+      .join(","),
+    handleChange,
+    inputId,
+    supportsAttachments: !!acceptedAttachmentTypes?.length,
+  };
+}
+
+export function BaseChatAttachmentsButton({
+  model,
+  handleAddAttachments,
+  ...props
+}: BaseChatAttachmentsButtonProps) {
+  const { accept, handleChange, inputId, supportsAttachments } = useChatAttachmentInput({
+    model,
+    handleAddAttachments,
+  });
+
+  if (!supportsAttachments) return null;
 
   return (
     <>
@@ -56,15 +74,7 @@ export function BaseChatAttachmentsButton({
         </label>
       </ButtonWithTip>
 
-      <input
-        type="file"
-        id={inputId}
-        accept={acceptedAttachmentTypes
-          .map((modality) => (modality === "image" ? "image/*" : "application/pdf"))
-          .join(",")}
-        onChange={handleChange}
-        className="hidden"
-      />
+      <input type="file" id={inputId} accept={accept} onChange={handleChange} className="hidden" />
     </>
   );
 }

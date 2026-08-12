@@ -79,7 +79,7 @@ export function ChatSendButton() {
     <Menu.Root open={open} onOpenChange={setOpen}>
       <div
         data-streaming={isInFlight}
-        className="surface-edge group flex h-9 items-center gap-2 overflow-hidden rounded-md border border-primary bg-primary px-2 text-primary-foreground transition-colors hover:bg-primary/85 data-[streaming=true]:border-destructive data-[streaming=true]:bg-destructive/60 data-[streaming=true]:pr-3 data-[streaming=true]:text-foreground data-[streaming=true]:hover:bg-destructive/70 md:pr-0 md:pl-3"
+        className="surface-edge group flex h-9 shrink-0 items-center gap-2 overflow-hidden rounded-md border border-primary bg-primary px-2 text-primary-foreground transition-colors hover:bg-primary/85 data-[streaming=true]:border-destructive data-[streaming=true]:bg-destructive/60 data-[streaming=true]:pr-3 data-[streaming=true]:text-foreground data-[streaming=true]:hover:bg-destructive/70 md:pr-0 md:pl-3"
       >
         <ButtonWithTip
           size="none"

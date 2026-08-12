@@ -570,6 +570,7 @@ export function ChatModelSelector() {
       value={storeModel}
       onChange={handleChange}
       triggerId="button-chat-model-selector-trigger"
+      className="min-w-15 shrink sm:shrink-0"
     />
   );
 }
