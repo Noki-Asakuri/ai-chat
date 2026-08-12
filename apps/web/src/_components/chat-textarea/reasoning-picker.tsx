@@ -38,7 +38,7 @@ export const REASONING_OPTIONS: Record<ReasoningEffort, { label: string }> = {
   low: { label: "Low" },
   medium: { label: "Medium" },
   high: { label: "High" },
-  xhigh: { label: "XHigh" },
+  xhigh: { label: "Extra High" },
   max: { label: "Max" },
 };
 
