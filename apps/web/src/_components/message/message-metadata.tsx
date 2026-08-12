@@ -2,15 +2,7 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useQuery } from "@tanstack/react-query";
-import {
-  BoltIcon,
-  BrainIcon,
-  ClockIcon,
-  HourglassIcon,
-  InfoIcon,
-  QuoteIcon,
-  ZapIcon,
-} from "lucide-react";
+import { BoltIcon, BrainIcon, ClockIcon, HourglassIcon, InfoIcon, QuoteIcon, ZapIcon } from "lucide-react";
 
 import { Icons } from "@/components/ui/icons";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -54,16 +46,11 @@ function PopoverInfo({ metadata }: PopoverInfoProps) {
 
   return (
     <Popover>
-      <PopoverTrigger className="flex size-8 shrink-0 items-center justify-center rounded-full border bg-background/80 p-0 backdrop-blur-md backdrop-saturate-150">
+      <PopoverTrigger className="flex size-10 shrink-0 items-center justify-center rounded-full border bg-background/80 p-0 backdrop-blur-md backdrop-saturate-150">
         <InfoIcon className="size-4" />
       </PopoverTrigger>
 
-      <PopoverContent
-        className="w-max bg-card p-2 text-sm"
-        align="end"
-        sideOffset={12}
-        includeArrow={false}
-      >
+      <PopoverContent className="w-max bg-card p-2 text-sm" align="end" sideOffset={12} includeArrow={false}>
         <PopoverArrow className="fill-card" />
 
         <div className="grid grid-cols-1 gap-x-4 gap-y-2">
@@ -111,11 +98,7 @@ function PopoverInfo({ metadata }: PopoverInfoProps) {
             </span>
           </div>
 
-          <div
-            data-slot="metadata-ai-profile"
-            className="flex items-center gap-2"
-            hidden={!profile}
-          >
+          <div data-slot="metadata-ai-profile" className="flex items-center gap-2" hidden={!profile}>
             <Icons.provider provider="openai" className="size-4" />
             <span>Profile: {profile?.name}</span>
           </div>

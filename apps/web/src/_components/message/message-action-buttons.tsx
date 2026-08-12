@@ -43,6 +43,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Label } from "../ui/label";
+import { MenuArrow } from "../ui/menu";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { MessageRetryMenu } from "./message-retry-menu";
 
@@ -237,7 +238,13 @@ function MobileMessageActionsMenu({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="icon" aria-label="Message actions" title="Message actions">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-10 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150"
+              aria-label="Message actions"
+              title="Message actions"
+            >
               <EllipsisIcon />
             </Button>
           }
@@ -245,9 +252,12 @@ function MobileMessageActionsMenu({
 
         <DropdownMenuContent
           align={message.role === "user" ? "end" : "start"}
-          className="w-48 bg-card"
+          className="w-48 bg-card p-1"
           side="top"
+          sideOffset={8}
         >
+          <MenuArrow className="fill-card" />
+
           <DropdownMenuGroup>
             {isFinished && (
               <DropdownMenuItem disabled={copyPending} onClick={handleCopyMessage}>
