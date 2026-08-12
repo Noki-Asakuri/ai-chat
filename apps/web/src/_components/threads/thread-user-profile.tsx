@@ -1,7 +1,7 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLoaderData, useParams } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
 import {
@@ -23,17 +23,24 @@ import { Progress } from "../ui/progress";
 import { Skeleton } from "../ui/skeleton";
 
 import { logout } from "@/lib/authkit/logout";
-import { getUserAvatarUrl, getUserDisplayName, getUserInitials } from "@/lib/authkit/user";
+import {
+  getUserAvatarUrl,
+  getUserDisplayName,
+  getUserInitials,
+  type WorkOSUserLike,
+} from "@/lib/authkit/user";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
 import { cn } from "@/lib/utils";
 
-export function ThreadUserProfile() {
-  const { user } = useLoaderData({ from: "/_chat" });
+type ThreadUserProfileProps = {
+  user: WorkOSUserLike;
+  returnThreadId?: string;
+};
+
+export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfileProps) {
   const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
   const logoutUser = useServerFn(logout);
-
-  if (!user) return null;
 
   const initials = getUserInitials(user);
   const username = getUserDisplayName(user);
@@ -85,17 +92,17 @@ export function ThreadUserProfile() {
                 Account
               </Menu.GroupLabel>
 
-              <UserMenuSettingItem href="/settings/account">
+              <UserMenuSettingItem href="/settings/account" returnThreadId={returnThreadId}>
                 <CircleUserRoundIcon />
                 Account
               </UserMenuSettingItem>
 
-              <UserMenuSettingItem href="/settings/customization">
+              <UserMenuSettingItem href="/settings/customization" returnThreadId={returnThreadId}>
                 <Columns3CogIcon />
                 Customize
               </UserMenuSettingItem>
 
-              <UserMenuSettingItem href="/settings/profiles">
+              <UserMenuSettingItem href="/settings/profiles" returnThreadId={returnThreadId}>
                 <UserRoundPenIcon />
                 Profiles
               </UserMenuSettingItem>
@@ -106,22 +113,22 @@ export function ThreadUserProfile() {
                 Workspace
               </Menu.GroupLabel>
 
-              <UserMenuSettingItem href="/settings/threads">
+              <UserMenuSettingItem href="/settings/threads" returnThreadId={returnThreadId}>
                 <MessagesSquareIcon />
                 Threads
               </UserMenuSettingItem>
 
-              <UserMenuSettingItem href="/settings/statistics">
+              <UserMenuSettingItem href="/settings/statistics" returnThreadId={returnThreadId}>
                 <ChartNoAxesColumnIcon />
                 Statistics
               </UserMenuSettingItem>
 
-              <UserMenuSettingItem href="/settings/attachments">
+              <UserMenuSettingItem href="/settings/attachments" returnThreadId={returnThreadId}>
                 <PaperclipIcon />
                 Attachments
               </UserMenuSettingItem>
 
-              <UserMenuSettingItem href="/settings/models">
+              <UserMenuSettingItem href="/settings/models" returnThreadId={returnThreadId}>
                 <BrainIcon />
                 Models
               </UserMenuSettingItem>
@@ -145,11 +152,17 @@ export function ThreadUserProfile() {
 
 type UserMenuSettingItemProps = ComponentProps<typeof Menu.Item> & {
   href: string;
+  returnThreadId?: string;
 };
 
-function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSettingItemProps) {
-  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
-  const rt = params?.threadId ? `/threads/${params.threadId}` : "/";
+function UserMenuSettingItem({
+  className,
+  children,
+  href,
+  returnThreadId,
+  ...props
+}: UserMenuSettingItemProps) {
+  const returnPath = returnThreadId ? `/threads/${returnThreadId}` : "/";
 
   return (
     <Menu.Item
@@ -162,8 +175,8 @@ function UserMenuSettingItem({ className, children, href, ...props }: UserMenuSe
         <Link
           preload={false}
           to={href}
-          search={{ rt: params?.threadId }}
-          viewTransition={getNavigationViewTransition(rt, href)}
+          search={{ rt: returnThreadId }}
+          viewTransition={getNavigationViewTransition(returnPath, href)}
         />
       }
     >

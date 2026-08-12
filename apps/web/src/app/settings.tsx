@@ -1,13 +1,33 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { convexQuery } from "@convex-dev/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createIsomorphicFn } from "@tanstack/react-start";
+import { getCookie } from "@tanstack/react-start/server";
 import { getAuth } from "@workos/authkit-tanstack-react-start";
+import type { CSSProperties } from "react";
 import { z } from "zod/v4";
 
 import { SettingsRouteHeader } from "@/components/settings/settings-route-header";
 import { SettingsSidebar } from "@/components/settings/settings-sidebar";
-import { UserNavbar } from "@/components/user/navbar";
+import { SettingsTopBar } from "@/components/settings/settings-top-bar";
+import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+
+import { convexSessionQuery } from "@/lib/convex/helpers";
+
+const DEFAULT_UI_FONT = "Space Grotesk";
+const DEFAULT_CODE_FONT = "JetBrains Mono";
+
+const getDefaultOpenSidebar = createIsomorphicFn()
+  .server(async function () {
+    return { defaultOpenSidebar: getCookie(SIDEBAR_COOKIE_NAME) === "true" };
+  })
+  .client(async function () {
+    const defaultOpenSidebar = await cookieStore.get(SIDEBAR_COOKIE_NAME);
+
+    return { defaultOpenSidebar: defaultOpenSidebar?.value === "true" };
+  });
 
 export const Route = createFileRoute("/settings")({
   validateSearch: z.object({ rt: z.string().optional() }),
@@ -17,33 +37,50 @@ export const Route = createFileRoute("/settings")({
       throw redirect({ to: "/settings/account" });
     }
 
-    const auth = await getAuth();
+    const [auth, { defaultOpenSidebar }] = await Promise.all([getAuth(), getDefaultOpenSidebar()]);
     if (!auth.user) {
       const path = location.pathname;
       throw redirect({ to: "/auth/login", search: { rt: path }, reloadDocument: true });
     }
 
-    await context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser));
-    return { user: auth.user };
+    await Promise.all([
+      context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser)),
+      context.queryClient.ensureQueryData(convexQuery(api.functions.users.getCurrentUserPreferences)),
+    ]);
+    return { user: auth.user, defaultOpenSidebar };
   },
   component: AuthLayout,
 });
 
 function AuthLayout() {
+  const { defaultOpenSidebar } = Route.useLoaderData();
+  const { data: userPreferences } = useSuspenseQuery(
+    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
+  );
+  const customFontStyle: CSSProperties & {
+    "--custom-ui-font": string;
+    "--custom-code-font": string;
+  } = {
+    "--custom-ui-font": userPreferences.fonts.ui || DEFAULT_UI_FONT,
+    "--custom-code-font": userPreferences.fonts.code || DEFAULT_CODE_FONT,
+  };
+
   return (
-    <main className="mx-auto h-svh w-full flex-1 overflow-y-auto px-4 py-2 md:px-6 md:py-4 lg:overflow-hidden">
-      <div className="grid h-full min-h-0 w-full gap-2 md:gap-4 lg:grid-cols-[300px_1fr]">
-        <SettingsSidebar />
+    <SidebarProvider
+      id="settings-sidebar-provider"
+      defaultOpen={defaultOpenSidebar}
+      className="bg-sidebar font-sans"
+      style={customFontStyle}
+    >
+      <SidebarTrigger size="icon-lg" className="fixed top-1.5 left-3.5 z-60 [&_svg]:size-5!" />
+      <SettingsSidebar />
 
-        <div className="flex min-h-0 max-w-full min-w-0 flex-col">
-          <UserNavbar />
+      <main className="relative h-svh min-w-0 flex-1 overflow-hidden border-x bg-background">
+        <SettingsTopBar />
 
-          <div
-            data-models-scroll-container
-            className="isolate z-10 flex min-h-0 w-full max-w-full min-w-0 flex-1 flex-col gap-1 overflow-visible pr-3 lg:overflow-y-auto [&>div:not(:first-child)]:pl-1"
-          >
+        <div data-models-scroll-container className="h-full overflow-y-auto pt-12">
+          <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col px-4 pb-8 sm:px-6 lg:px-8">
             <SettingsRouteHeader />
-
             <div
               data-route-transition-scope="settings-content"
               className="flex min-h-0 min-w-0 flex-1 flex-col"
@@ -53,7 +90,7 @@ function AuthLayout() {
             </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </SidebarProvider>
   );
 }

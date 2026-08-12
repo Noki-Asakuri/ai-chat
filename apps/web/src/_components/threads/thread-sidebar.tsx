@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useLoaderData, useParams } from "@tanstack/react-router";
 
 import { ThreadContents } from "./thread-content";
 import { ThreadUserProfile } from "./thread-user-profile";
@@ -8,6 +8,9 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/compone
 import { VersionUpdateNotifier } from "@/components/version-update-notifier";
 
 export function ThreadSidebar() {
+  const { user } = useLoaderData({ from: "/_chat" });
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
+
   return (
     <Sidebar
       variant="inset"
@@ -31,7 +34,7 @@ export function ThreadSidebar() {
       <SidebarFooter>
         <VersionUpdateNotifier />
         <Separator className="bg-sidebar-accent" />
-        <ThreadUserProfile />
+        <ThreadUserProfile user={user} returnThreadId={params?.threadId} />
       </SidebarFooter>
     </Sidebar>
   );
