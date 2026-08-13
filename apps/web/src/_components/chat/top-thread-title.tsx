@@ -36,7 +36,6 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
     ),
   });
 
-  if (isFetching || isSkeleton) return <Skeleton className="h-4 w-80 max-w-full" />;
   const threadData = params?.threadId && data ? data : null;
   const groupId = threadData?.groupId ?? activeGroupId;
   const groupTitle = threadData?.groupTitle ?? activeGroup?.title ?? "Ungrouped";
@@ -70,7 +69,11 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
           <span aria-hidden="true" className="shrink-0 text-muted-foreground">
             /
           </span>
-          <span className="truncate font-semibold">{threadData?.title ?? "New Chat"}</span>
+          {isFetching || isSkeleton ? (
+            <Skeleton className="h-4 w-48 max-w-full" />
+          ) : (
+            <span className="truncate font-semibold">{threadData?.title ?? "New Chat"}</span>
+          )}
         </div>
 
         {threadData && (

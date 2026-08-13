@@ -43,42 +43,70 @@ const UNGROUPED_SELECT_VALUE = "ungrouped";
 export function ThreadContents() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ClientOnly fallback={<ThreadListSkeleton key="thread-list-skeleton" />}>
+      <ClientOnly fallback={<ThreadListFallback />}>
         <ThreadListWrapper />
       </ClientOnly>
     </div>
   );
 }
 
-function ThreadListSkeleton() {
+function ThreadListFallback() {
   return (
     <div className="flex min-h-0 flex-1 flex-col" role="status" aria-label="Loading conversations">
       <span className="sr-only">Loading conversations</span>
 
       <div aria-hidden="true" className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center gap-1.5 px-2 pb-1.5">
-          <Skeleton className="h-10 min-w-0 flex-1 bg-input/60" />
-          <Skeleton className="size-10 shrink-0 bg-input/60" />
+          <InputGroup className="h-10 rounded-md border-transparent bg-input/30 shadow-none">
+            <InputGroupAddon>
+              <SearchIcon />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              placeholder="Search"
+              aria-label="Search threads in active group"
+              className="font-mono text-sm placeholder:text-muted-foreground"
+              disabled
+            />
+          </InputGroup>
+
+          <Button size="icon" variant="outline" className="size-10" disabled>
+            <SquarePenIcon />
+          </Button>
         </div>
 
         <div className="flex items-center gap-1.5 px-2 pb-2">
-          <Skeleton className="h-10 min-w-0 flex-1 bg-input/60" />
-          <Skeleton className="size-10 shrink-0 bg-input/60" />
+          <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md bg-input/30 px-2.5 font-mono text-sm">
+            <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
+            <span className="truncate">Ungrouped</span>
+          </div>
+
+          <Button size="icon" variant="outline" className="size-10" disabled>
+            <FolderPlusIcon />
+          </Button>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden pr-2.5 pl-2">
-          <ThreadSkeleton titleWidth="w-[82%]" />
-          <ThreadSkeleton titleWidth="w-[46%]" />
-          <ThreadSkeleton titleWidth="w-[74%]" />
-          <ThreadSkeleton titleWidth="w-[42%]" />
-          <ThreadSkeleton titleWidth="w-[84%]" />
-          <ThreadSkeleton titleWidth="w-[76%]" />
-          <ThreadSkeleton titleWidth="w-[68%]" />
-          <ThreadSkeleton titleWidth="w-[88%]" />
-          <ThreadSkeleton titleWidth="w-[54%]" />
+          <ThreadRowsSkeleton />
         </div>
       </div>
     </div>
+  );
+}
+
+function ThreadRowsSkeleton() {
+  return (
+    <>
+      <ThreadSkeleton titleWidth="w-[82%]" />
+      <ThreadSkeleton titleWidth="w-[46%]" />
+      <ThreadSkeleton titleWidth="w-[74%]" />
+      <ThreadSkeleton titleWidth="w-[42%]" />
+      <ThreadSkeleton titleWidth="w-[84%]" />
+      <ThreadSkeleton titleWidth="w-[76%]" />
+      <ThreadSkeleton titleWidth="w-[68%]" />
+      <ThreadSkeleton titleWidth="w-[88%]" />
+      <ThreadSkeleton titleWidth="w-[54%]" />
+    </>
   );
 }
 
@@ -187,7 +215,7 @@ function CreateGroupButton() {
 function ThreadListWrapper() {
   const activeGroupId = useThreadStore((state) => state.activeGroupId);
 
-  return <ActiveGroupThreadList key={activeGroupId ?? "ungrouped"} activeGroupId={activeGroupId} />;
+  return <ActiveGroupThreadList activeGroupId={activeGroupId} />;
 }
 
 function ActiveGroupThreadList({ activeGroupId }: { activeGroupId: Id<"groups"> | null }) {
@@ -247,13 +275,10 @@ function ActiveGroupThreadList({ activeGroupId }: { activeGroupId: Id<"groups"> 
     });
   }, [data, markThreadViewed, routeThreadId, routeThreadTitle]);
 
-  if (!data) {
-    return <ThreadListSkeleton key="thread-list-skeleton" />;
-  }
-
   return (
     <ThreadList
       data={data}
+      groups={data?.groups ?? localCache.groups}
       onLoadMore={() => setThreadLimit((current) => current + 40)}
     />
   );
@@ -262,11 +287,12 @@ function ActiveGroupThreadList({ activeGroupId }: { activeGroupId: Id<"groups"> 
 type ListGroupData = (typeof api.functions.groups.listGroups)["_returnType"];
 
 type ThreadListProps = {
-  data: ListGroupData;
+  data: ListGroupData | undefined;
+  groups: ListGroupData["groups"];
   onLoadMore: () => void;
 };
 
-function ThreadList({ data, onLoadMore }: ThreadListProps) {
+function ThreadList({ data, groups, onLoadMore }: ThreadListProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [newChatOpen, setNewChatOpen] = useState(false);
@@ -276,8 +302,8 @@ function ThreadList({ data, onLoadMore }: ThreadListProps) {
   const dialogThread = useThreadDialogStore((state) => state.thread);
   const activeGroupId = useThreadStore((state) => state.activeGroupId);
 
-  const activeGroup = data.groups.find((group) => group._id === activeGroupId);
-  const activeThreads = data.threads.filter((thread) => thread.settled !== true);
+  const activeGroup = groups.find((group) => group._id === activeGroupId);
+  const activeThreads = data?.threads.filter((thread) => thread.settled !== true) ?? [];
   const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
   const filteredThreads = normalizedSearchQuery
     ? activeThreads.filter((thread) => thread.title.toLocaleLowerCase().includes(normalizedSearchQuery))
@@ -317,7 +343,7 @@ function ThreadList({ data, onLoadMore }: ThreadListProps) {
       return;
     }
 
-    const group = data.groups.find((item) => item._id === value);
+    const group = groups.find((item) => item._id === value);
     if (group) threadStoreActions.setActiveGroupId(group._id);
   }
 
@@ -339,7 +365,7 @@ function ThreadList({ data, onLoadMore }: ThreadListProps) {
       return;
     }
 
-    const group = data.groups[shortcutNumber - 2];
+    const group = groups[shortcutNumber - 2];
     if (!group) return;
 
     event.preventDefault();
@@ -391,7 +417,7 @@ function ThreadList({ data, onLoadMore }: ThreadListProps) {
                 Ungrouped
               </SelectItem>
 
-              {data.groups.map((group) => (
+              {groups.map((group) => (
                 <SelectItem key={group._id} value={group._id}>
                   <FolderIcon className="size-4" />
                   {group.title}
@@ -409,13 +435,17 @@ function ThreadList({ data, onLoadMore }: ThreadListProps) {
         className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-2.5 pl-2"
         style={{ scrollbarGutter: "stable both-edges" }}
       >
-        <UngroupedThreadGroup
-          threads={filteredThreads}
-          groupId={activeGroupId}
-          searchQuery={normalizedSearchQuery}
-          hasMore={data.hasMore && normalizedSearchQuery.length === 0}
-          onLoadMore={onLoadMore}
-        />
+        {data ? (
+          <UngroupedThreadGroup
+            threads={filteredThreads}
+            groupId={activeGroupId}
+            searchQuery={normalizedSearchQuery}
+            hasMore={data.hasMore && normalizedSearchQuery.length === 0}
+            onLoadMore={onLoadMore}
+          />
+        ) : (
+          <ThreadRowsSkeleton />
+        )}
       </div>
 
       <CommandDialog
@@ -448,7 +478,7 @@ function ThreadList({ data, onLoadMore }: ThreadListProps) {
                 <CommandShortcut>Ctrl+1</CommandShortcut>
               </CommandItem>
 
-              {data.groups.map((group, index) => (
+              {groups.map((group, index) => (
                 <CommandItem
                   key={group._id}
                   value={group.title}
