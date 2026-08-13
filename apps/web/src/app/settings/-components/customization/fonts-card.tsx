@@ -29,7 +29,7 @@ import { CodeBlock } from "@/components/ui/code-block";
 import { cn } from "@/lib/utils";
 
 const SUPPORTED_FONTS = ["JetBrains Mono", "Space Grotesk"];
-const FONT_SIZES = [12, 13, 14, 15, 16, 17, 18, 20];
+const FONT_SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
 const MAX_VISIBLE_FONTS = 75;
 const FONT_ACCESS_STORAGE_KEY = "ai-chat:local-font-access";
 const DEVICE_FONTS_STORAGE_KEY = "ai-chat:device-font-families";

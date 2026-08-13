@@ -1098,7 +1098,7 @@ const ModelRow = memo(function ModelRow(props: ModelRowProps) {
                 <div className="truncate text-sm font-medium">{props.entry.displayName}</div>
 
                 {isDeprecated && (
-                  <Badge variant="secondary" className="rounded-sm px-1.5 py-0 text-[10px]">
+                  <Badge variant="secondary" className="text-3xs rounded-sm px-1.5 py-0">
                     Deprecated
                   </Badge>
                 )}
@@ -1146,7 +1146,7 @@ const ModelRow = memo(function ModelRow(props: ModelRowProps) {
               <Badge
                 key={capability}
                 variant="outline"
-                className={cn("rounded-sm px-1.5 text-[10px]", metadata.className)}
+                className={cn("text-3xs rounded-sm px-1.5", metadata.className)}
               >
                 <Icon className="size-3" />
                 {metadata.label}
@@ -1157,7 +1157,7 @@ const ModelRow = memo(function ModelRow(props: ModelRowProps) {
           {props.favorite && (
             <Badge
               variant="outline"
-              className={cn("rounded-sm px-1.5 text-[10px]", STATUS_BADGE_STYLES.favorite)}
+              className={cn("text-3xs rounded-sm px-1.5", STATUS_BADGE_STYLES.favorite)}
             >
               <StarIcon className="size-3 fill-amber-400" />
               Favorite

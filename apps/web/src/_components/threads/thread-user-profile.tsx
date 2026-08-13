@@ -89,7 +89,7 @@ export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfilePro
             </div>
 
             <Menu.Group className="mt-1">
-              <Menu.GroupLabel className="px-2.5 py-1.5 text-[0.65rem] font-medium tracking-widest text-muted-foreground uppercase">
+              <Menu.GroupLabel className="text-3xs px-2.5 py-1.5 font-medium tracking-widest text-muted-foreground uppercase">
                 Account
               </Menu.GroupLabel>
 
@@ -115,7 +115,7 @@ export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfilePro
             </Menu.Group>
 
             <Menu.Group className="mt-1">
-              <Menu.GroupLabel className="px-2.5 py-1.5 text-[0.65rem] font-medium tracking-widest text-muted-foreground uppercase">
+              <Menu.GroupLabel className="text-3xs px-2.5 py-1.5 font-medium tracking-widest text-muted-foreground uppercase">
                 Workspace
               </Menu.GroupLabel>
 
@@ -224,7 +224,7 @@ function UserQuota({ variant }: { variant: "panel" | "trigger" }) {
           value={percentage}
           aria-label={`${percentage.toFixed(2)}% of message quota used`}
         />
-        <span className="font-mono text-[0.65rem] leading-none text-muted-foreground tabular-nums">
+        <span className="text-3xs font-mono leading-none text-muted-foreground tabular-nums">
           {used}/{base}
         </span>
       </div>
@@ -235,7 +235,7 @@ function UserQuota({ variant }: { variant: "panel" | "trigger" }) {
     <div className="mt-3 flex flex-col gap-2">
       <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground">Message usage</span>
-        <span className="font-mono text-[0.7rem] tabular-nums">
+        <span className="text-2xs font-mono tabular-nums">
           {used} / {base}
         </span>
       </div>

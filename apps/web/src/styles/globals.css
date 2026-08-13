@@ -141,27 +141,60 @@
 }
 
 .font-sans {
-  --text-xs: calc(var(--custom-ui-font-size, 16px) * 0.75);
-  --text-xs--line-height: calc(var(--custom-ui-font-size, 16px) * 1);
-  --text-sm: calc(var(--custom-ui-font-size, 16px) * 0.875);
-  --text-sm--line-height: calc(var(--custom-ui-font-size, 16px) * 1.25);
-  --text-base: var(--custom-ui-font-size, 16px);
-  --text-base--line-height: calc(var(--custom-ui-font-size, 16px) * 1.5);
-  --text-lg: calc(var(--custom-ui-font-size, 16px) * 1.125);
-  --text-lg--line-height: calc(var(--custom-ui-font-size, 16px) * 1.75);
-  --text-xl: calc(var(--custom-ui-font-size, 16px) * 1.25);
-  --text-xl--line-height: calc(var(--custom-ui-font-size, 16px) * 1.75);
-  --text-2xl: calc(var(--custom-ui-font-size, 16px) * 1.5);
-  --text-2xl--line-height: calc(var(--custom-ui-font-size, 16px) * 2);
-  --text-3xl: calc(var(--custom-ui-font-size, 16px) * 1.875);
-  --text-3xl--line-height: calc(var(--custom-ui-font-size, 16px) * 2.25);
-  --text-4xl: calc(var(--custom-ui-font-size, 16px) * 2.25);
-  --text-4xl--line-height: calc(var(--custom-ui-font-size, 16px) * 2.5);
-
   font-family:
     var(--custom-ui-font, "Space Grotesk"), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
   font-size: var(--custom-ui-font-size, 16px);
+}
+
+:where(.font-sans) .text-3xs {
+  font-size: calc(var(--custom-ui-font-size, 16px) * 0.625);
+  line-height: calc(var(--custom-ui-font-size, 16px) * 0.875);
+}
+
+:where(.font-sans) .text-2xs {
+  font-size: calc(var(--custom-ui-font-size, 16px) * 0.6875);
+  line-height: var(--custom-ui-font-size, 16px);
+}
+
+:where(.font-sans) .text-xs {
+  font-size: calc(var(--custom-ui-font-size, 16px) * 0.75);
+  line-height: calc(var(--custom-ui-font-size, 16px) * 1);
+}
+
+:where(.font-sans) .text-sm {
+  font-size: calc(var(--custom-ui-font-size, 16px) * 0.875);
+  line-height: calc(var(--custom-ui-font-size, 16px) * 1.25);
+}
+
+:where(.font-sans) .text-base {
+  font-size: var(--custom-ui-font-size, 16px);
+  line-height: calc(var(--custom-ui-font-size, 16px) * 1.5);
+}
+
+:where(.font-sans) .text-lg {
+  font-size: calc(var(--custom-ui-font-size, 16px) * 1.125);
+  line-height: calc(var(--custom-ui-font-size, 16px) * 1.75);
+}
+
+:where(.font-sans) .text-xl {
+  font-size: calc(var(--custom-ui-font-size, 16px) * 1.25);
+  line-height: calc(var(--custom-ui-font-size, 16px) * 1.75);
+}
+
+:where(.font-sans) .text-2xl {
+  font-size: calc(var(--custom-ui-font-size, 16px) * 1.5);
+  line-height: calc(var(--custom-ui-font-size, 16px) * 2);
+}
+
+:where(.font-sans) .text-3xl {
+  font-size: calc(var(--custom-ui-font-size, 16px) * 1.875);
+  line-height: calc(var(--custom-ui-font-size, 16px) * 2.25);
+}
+
+:where(.font-sans) .text-4xl {
+  font-size: calc(var(--custom-ui-font-size, 16px) * 2.25);
+  line-height: calc(var(--custom-ui-font-size, 16px) * 2.5);
 }
 
 [data-slot="textarea-chat-input"],

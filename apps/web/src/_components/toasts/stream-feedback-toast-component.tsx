@@ -29,7 +29,7 @@ export function StreamFeedbackToastComponent(props: StreamFeedbackToastComponent
           <div className="flex min-w-0 items-center gap-2">
             <span
               className={cn(
-                "min-w-min rounded-full px-2 py-0.5 text-[11px] font-medium tracking-wide",
+                "text-2xs min-w-min rounded-full px-2 py-0.5 font-medium tracking-wide",
                 props.status === "success"
                   ? "bg-emerald-500/12 text-emerald-300"
                   : "bg-amber-500/12 text-amber-300",

@@ -143,7 +143,7 @@ function WebSearchResultCard({ result }: { result: ParsedWebSearchResult }) {
         <div className="min-w-0 grow">
           <div className="line-clamp-2 text-xs font-medium text-foreground">{result.title}</div>
 
-          <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+          <div className="text-2xs mt-0.5 flex items-center gap-1 text-muted-foreground">
             <span className="truncate">{hostname}</span>
             {publishedDate && <span>{`- ${publishedDate}`}</span>}
           </div>
@@ -162,7 +162,7 @@ export function WebSearchOutputView({ output }: { output: ParsedWebSearchOutput 
 
   return (
     <div className="mt-1 rounded-md bg-background/80 px-2 py-1.5">
-      <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground uppercase">
+      <div className="text-3xs mb-1 flex flex-wrap items-center gap-1.5 text-muted-foreground uppercase">
         <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5">
           {resultCount} {resultCount === 1 ? "result" : "results"}
         </span>

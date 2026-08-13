@@ -139,7 +139,7 @@ function InputChatTextArea() {
       setInput={chatStoreActions.setInput}
       handleAddAttachments={handleAddAttachments}
       onConfirm={sendChatRequest}
-      className="text-[15px] leading-6 placeholder:text-muted-foreground/90 md:text-[15px]"
+      className="leading-normal placeholder:text-muted-foreground/90"
     />
   );
 }

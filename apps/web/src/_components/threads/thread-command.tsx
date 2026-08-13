@@ -47,7 +47,7 @@ export function ThreadCommand({ isSkeleton }: { isSkeleton?: boolean }) {
         <span className="inline md:hidden">Search...</span>
         <span className="hidden md:inline">Search Threads...</span>
 
-        <kbd className="pointer-events-none ml-8 hidden h-4 items-center gap-1 rounded-md border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 select-none md:inline-flex">
+        <kbd className="text-3xs pointer-events-none ml-8 hidden h-4 items-center gap-1 rounded-md border bg-muted px-1.5 font-mono font-medium text-muted-foreground opacity-100 select-none md:inline-flex">
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>

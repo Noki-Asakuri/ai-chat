@@ -488,7 +488,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
                 >
                   <div
                     id={`${listId}-group-${group.key}`}
-                    className="px-2 py-1.5 text-[11px] font-medium text-muted-foreground"
+                    className="text-2xs px-2 py-1.5 font-medium text-muted-foreground"
                   >
                     {group.title}
                   </div>

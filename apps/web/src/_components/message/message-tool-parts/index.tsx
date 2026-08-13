@@ -122,7 +122,7 @@ function MessageToolPart({ part }: { part: ToolPart }) {
 
         <span className="min-w-0 shrink text-xs font-medium text-foreground">{getToolLabel(toolName)}</span>
 
-        <span className="min-w-0 grow truncate text-[11px] text-muted-foreground">{summaryText}</span>
+        <span className="text-2xs min-w-0 grow truncate text-muted-foreground">{summaryText}</span>
 
         {webSearchOutput && <WebSearchHeaderIcons output={webSearchOutput} />}
 
@@ -133,7 +133,7 @@ function MessageToolPart({ part }: { part: ToolPart }) {
 
       {detail && detailValue.length > 0 && (
         <div className="mt-1 rounded-md bg-background/80 px-2 py-1.5">
-          <div className="mb-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+          <div className="text-3xs mb-1 font-medium tracking-wide text-muted-foreground uppercase">
             {detail.label}
           </div>
           <pre className="overflow-x-auto text-xs break-words whitespace-pre-wrap text-foreground">
