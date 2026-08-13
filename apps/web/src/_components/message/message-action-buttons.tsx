@@ -3,6 +3,7 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { toast } from "@/components/ui/toast";
 import { useCopyToClipboard } from "@uidotdev/usehooks";
+import { hasMessageContent } from "@ai-chat/shared/chat/message-content";
 import { useMutation } from "convex/react";
 import {
   BugPlayIcon,
@@ -46,6 +47,7 @@ import { Label } from "../ui/label";
 import { MenuArrow } from "../ui/menu";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { MessageRetryMenu } from "./message-retry-menu";
+import { CancelledRetryDialog } from "./cancelled-retry-dialog";
 
 import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
 import { useRetryChatMessage } from "@/lib/chat/server-function/retry-chat-message";
@@ -214,6 +216,7 @@ function MobileMessageActionsMenu({
   const { retryChatMessage } = useRetryChatMessage();
   const [copyPending, startCopyTransition] = React.useTransition();
   const [retryPending, startRetryTransition] = React.useTransition();
+  const [retryConfirmationOpen, setRetryConfirmationOpen] = React.useState(false);
   const [, copyToClipboard] = useCopyToClipboard();
 
   function handleCopyMessage(): void {
@@ -223,15 +226,42 @@ function MobileMessageActionsMenu({
     });
   }
 
-  function handleRetryMessage(): void {
+  function executeRetryMessage(replaceCancelledMessage = false): void {
     if (!retryUserMessageId) return;
+
+    setRetryConfirmationOpen(false);
 
     startRetryTransition(async () => {
       await retryChatMessage({
         userMessageId: retryUserMessageId,
         assistantMessageId: message.role === "assistant" ? message._id : undefined,
+        replaceCancelledMessage,
       });
     });
+  }
+
+  function handleRetryMessage(): void {
+    if (!retryUserMessageId) return;
+
+    const messageState = useMessageStore.getState();
+    const assistantMessageId =
+      message.role === "assistant"
+        ? message._id
+        : (messageState.activeAssistantMessageIdByUserMessageId[retryUserMessageId] ??
+          messageState.variantMessageIdsByUserMessageId[retryUserMessageId]?.at(-1));
+    const assistantMessage = assistantMessageId ? messageState.messagesById[assistantMessageId] : undefined;
+
+    const shouldConfirm =
+      assistantMessage?.role === "assistant" &&
+      assistantMessage.metadata?.finishReason === "aborted" &&
+      hasMessageContent(assistantMessage.parts, assistantMessage.attachments.length);
+
+    if (shouldConfirm) {
+      setRetryConfirmationOpen(true);
+      return;
+    }
+
+    executeRetryMessage();
   }
 
   if (!isFinished && message.role !== "user" && import.meta.env.PROD) return null;
@@ -294,6 +324,13 @@ function MobileMessageActionsMenu({
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <CancelledRetryDialog
+        open={retryConfirmationOpen}
+        onOpenChange={setRetryConfirmationOpen}
+        onCreateVariant={() => executeRetryMessage()}
+        onReplace={() => executeRetryMessage(true)}
+      />
     </div>
   );
 }

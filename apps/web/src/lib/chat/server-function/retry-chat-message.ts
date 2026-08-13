@@ -25,6 +25,7 @@ import {
 type RetryChatMessage = {
   userMessageId: Id<"messages">;
   assistantMessageId?: Id<"messages">;
+  replaceCancelledMessage?: boolean;
 
   modelId?: string;
   modelParams?: Partial<NonNullable<ChatMessage["metadata"]>["modelParams"]>;
@@ -122,6 +123,7 @@ export function useRetryChatMessage() {
       const retryResult = await convexClient.mutation(api.functions.messages.retryChatMessage, {
         threadId,
         assistantMessageId,
+        replaceCancelledMessage: options.replaceCancelledMessage,
 
         model,
         modelParams: mutationModelParams,

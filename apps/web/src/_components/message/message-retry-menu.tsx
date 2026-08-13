@@ -14,7 +14,9 @@ import {
   compareModelLabelsNewestFirst,
   createEmptyProviderModels,
 } from "../chat-textarea/model-selector";
+import { CancelledRetryDialog } from "./cancelled-retry-dialog";
 
+import { hasMessageContent } from "@ai-chat/shared/chat/message-content";
 import {
   SelectableModelIds,
   getReasoningOptions,
@@ -53,6 +55,11 @@ type ModelGroup = {
 type EffortOption = {
   effort: ReasoningEffort;
   label: string;
+};
+
+type RetryOptions = {
+  modelId?: string;
+  modelParams?: Partial<NonNullable<ChatMessage["metadata"]>["modelParams"]>;
 };
 
 function groupProviderModels(models: Array<RetryModelEntry>): ProviderModels {
@@ -111,30 +118,29 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
   const [open, setOpen] = React.useState(false);
   const [selectedSection, setSelectedSection] = React.useState<PickerSectionKey>("all");
   const [query, setQuery] = React.useState("");
+  const [retryConfirmation, setRetryConfirmation] = React.useState<RetryOptions | null>(null);
   const [isPending, startTransition] = React.useTransition();
 
   const hiddenModels = useConfigStore((state) => state.hiddenModels);
   const favoriteModels = useConfigStore((state) => state.favoriteModels);
 
-  const currentModelIdFromStore = useMessageStore((state) => {
-    const activeAssistantMessageId =
-      state.activeAssistantMessageIdByUserMessageId[userMessageId] ??
-      state.variantMessageIdsByUserMessageId[userMessageId]?.at(-1);
+  const retryAssistantMessage = useMessageStore((state) => {
+    const assistantMessageId =
+      message.role === "assistant"
+        ? message._id
+        : (state.activeAssistantMessageIdByUserMessageId[userMessageId] ??
+          state.variantMessageIdsByUserMessageId[userMessageId]?.at(-1));
 
-    if (!activeAssistantMessageId) return "";
+    if (!assistantMessageId) return null;
 
-    const activeAssistantMessage = state.messagesById[activeAssistantMessageId];
-    if (!activeAssistantMessage || activeAssistantMessage.role !== "assistant") return "";
+    const assistantMessage = state.messagesById[assistantMessageId];
+    if (!assistantMessage || assistantMessage.role !== "assistant") return null;
 
-    return activeAssistantMessage.metadata?.model.request ?? "";
+    return assistantMessage;
   });
 
-  const currentModelId =
-    currentModelIdFromStore.length > 0
-      ? currentModelIdFromStore
-      : message.role === "assistant"
-        ? (message.metadata?.model.request ?? "")
-        : "";
+  const currentAssistantMessage = retryAssistantMessage ?? (message.role === "assistant" ? message : null);
+  const currentModelId = currentAssistantMessage?.metadata?.model.request ?? "";
 
   const { retryChatMessage } = useRetryChatMessage();
 
@@ -280,21 +286,36 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
     setQuery("");
   }, [open]);
 
-  function runRetry(options?: {
-    modelId?: string;
-    modelParams?: Partial<NonNullable<ChatMessage["metadata"]>["modelParams"]>;
-  }) {
+  function executeRetry(options: RetryOptions, replaceCancelledMessage = false) {
     if (pendingRetry) return;
 
     setOpen(false);
+    setRetryConfirmation(null);
 
     startTransition(async () => {
       await retryChatMessage({
         userMessageId,
         assistantMessageId: message.role === "assistant" ? message._id : undefined,
+        replaceCancelledMessage,
         ...options,
       });
     });
+  }
+
+  function runRetry(options: RetryOptions = {}) {
+    if (pendingRetry) return;
+
+    const shouldConfirm =
+      currentAssistantMessage?.metadata?.finishReason === "aborted" &&
+      hasMessageContent(currentAssistantMessage.parts, currentAssistantMessage.attachments.length);
+
+    if (shouldConfirm) {
+      setOpen(false);
+      setRetryConfirmation(options);
+      return;
+    }
+
+    executeRetry(options);
   }
 
   function handleSelectModel(model: RetryModelEntry) {
@@ -459,6 +480,20 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>
+      <CancelledRetryDialog
+        open={retryConfirmation !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setRetryConfirmation(null);
+        }}
+        onCreateVariant={() => {
+          if (!retryConfirmation) return;
+          executeRetry(retryConfirmation);
+        }}
+        onReplace={() => {
+          if (!retryConfirmation) return;
+          executeRetry(retryConfirmation, true);
+        }}
+      />
     </Menu.Root>
   );
 }

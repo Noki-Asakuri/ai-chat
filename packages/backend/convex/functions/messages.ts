@@ -1,5 +1,6 @@
 import { getAll } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
+import { hasMessageContent } from "@ai-chat/shared/chat/message-content";
 
 import { api, internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
@@ -877,6 +878,7 @@ export const retryChatMessage = authenticatedMutation({
   args: {
     threadId: v.id("threads"),
     assistantMessageId: v.id("messages"),
+    replaceCancelledMessage: v.optional(v.boolean()),
 
     model: v.string(),
     modelParams: AISDKModelParams,
@@ -889,6 +891,10 @@ export const retryChatMessage = authenticatedMutation({
       }),
     ),
   },
+  returns: v.object({
+    assistantMessageId: v.id("messages"),
+    userMessageId: v.id("messages"),
+  }),
   handler: async (ctx, args) => {
     const user = ctx.user;
 
@@ -950,10 +956,16 @@ export const retryChatMessage = authenticatedMutation({
       model: { request: args.model, response: null },
     };
 
-    const shouldReuseErrorMessage = targetAssistantMessage.status === "error";
+    const isCancelledMessage = targetAssistantMessage.metadata?.finishReason === "aborted";
+    const shouldReuseCancelledMessage =
+      isCancelledMessage &&
+      (args.replaceCancelledMessage === true ||
+        !hasMessageContent(targetAssistantMessage.parts, targetAssistantMessage.attachments.length));
+    const shouldReuseAssistantMessage =
+      targetAssistantMessage.status === "error" || shouldReuseCancelledMessage;
     let assistantMessageId = targetAssistantMessage._id;
 
-    if (shouldReuseErrorMessage) {
+    if (shouldReuseAssistantMessage) {
       await ctx.db.patch(targetAssistantMessage._id, {
         status: "pending",
         parts: [],
