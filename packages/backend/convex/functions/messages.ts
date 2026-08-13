@@ -923,6 +923,7 @@ export const retryChatMessage = authenticatedMutation({
         attachments: [],
         resumableStreamId: null,
         error: undefined,
+        statsTrackedAt: undefined,
         updatedAt: now,
         metadata: nextMetadata,
       });

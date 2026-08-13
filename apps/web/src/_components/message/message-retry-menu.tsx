@@ -289,7 +289,11 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
     setOpen(false);
 
     startTransition(async () => {
-      await retryChatMessage({ userMessageId, ...options });
+      await retryChatMessage({
+        userMessageId,
+        assistantMessageId: message.role === "assistant" ? message._id : undefined,
+        ...options,
+      });
     });
   }
 

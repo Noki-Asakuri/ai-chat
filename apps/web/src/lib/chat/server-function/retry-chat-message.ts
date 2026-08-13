@@ -24,6 +24,7 @@ import {
 
 type RetryChatMessage = {
   userMessageId: Id<"messages">;
+  assistantMessageId?: Id<"messages">;
 
   modelId?: string;
   modelParams?: Partial<NonNullable<ChatMessage["metadata"]>["modelParams"]>;
@@ -47,7 +48,11 @@ export function useRetryChatMessage() {
     })),
   );
 
-  async function retryChatMessage({ userMessageId, ...options }: RetryChatMessage) {
+  async function retryChatMessage({
+    userMessageId,
+    assistantMessageId: retryAssistantMessageId,
+    ...options
+  }: RetryChatMessage) {
     const messageState = useMessageStore.getState();
 
     const threadId = messageState.currentThreadId;
@@ -64,6 +69,7 @@ export function useRetryChatMessage() {
     if (!userMessage || userMessage.role !== "user") return;
 
     const activeAssistantMessageId =
+      retryAssistantMessageId ??
       messageState.activeAssistantMessageIdByUserMessageId[userMessageId] ??
       messageState.variantMessageIdsByUserMessageId[userMessageId]?.at(-1);
 

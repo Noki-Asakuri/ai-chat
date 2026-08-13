@@ -227,7 +227,10 @@ function MobileMessageActionsMenu({
     if (!retryUserMessageId) return;
 
     startRetryTransition(async () => {
-      await retryChatMessage({ userMessageId: retryUserMessageId });
+      await retryChatMessage({
+        userMessageId: retryUserMessageId,
+        assistantMessageId: message.role === "assistant" ? message._id : undefined,
+      });
     });
   }
 
