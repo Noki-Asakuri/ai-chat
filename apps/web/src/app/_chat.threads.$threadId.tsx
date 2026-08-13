@@ -11,7 +11,7 @@ import { MessageHistory } from "@/components/message/message-history";
 import { useAutoResumeStream } from "@/lib/chat/server-function/auto-resume-stream";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { convexSessionQuery } from "@/lib/convex/helpers";
-import { messageStoreActions } from "@/lib/store/messages-store";
+import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
 import { fromUUID } from "@/lib/utils";
 
@@ -80,7 +80,10 @@ function ChatHistory() {
 
     // Clear any active controller if the stream has completed or errored
     if (lastMessage.status === "complete" || lastMessage.status === "error") {
-      messageStoreActions.removeController(lastMessage.threadId);
+      const controllerEntry = useMessageStore.getState().controllers[lastMessage.threadId];
+      if (controllerEntry?.assistantMessageId === lastMessage._id) {
+        messageStoreActions.removeController(lastMessage.threadId, controllerEntry.controller);
+      }
     }
 
     // Auto scroll to bottom when new messages are added (only if user is already at bottom)

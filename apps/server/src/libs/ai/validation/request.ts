@@ -84,6 +84,7 @@ async function validateRequestBody(
 
     threadId: data.threadId as Id<"threads">,
     assistantMessageId: data.assistantMessageId as Id<"messages">,
+    retryAttemptId: data.retryAttemptId as Id<"retryAttempts"> | undefined,
 
     tools,
     providerOptions,

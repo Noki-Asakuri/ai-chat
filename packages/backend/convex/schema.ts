@@ -367,6 +367,8 @@ export default defineSchema(
       groupId: v.nullable(v.id("groups")),
 
       status: status,
+
+      retryAttemptId: v.optional(v.id("retryAttempts")),
     })
       .index("by_userId_updatedAt", ["userId", "updatedAt"])
       .index("by_userId_settled_groupId_updatedAt", ["userId", "settled", "groupId", "updatedAt"])
@@ -383,6 +385,38 @@ export default defineSchema(
         searchField: "title",
         filterFields: ["userId", "settled", "groupId"],
       }),
+
+    retryAttempts: defineTable({
+      threadId: v.id("threads"),
+      userId: v.string(),
+      userMessageId: v.id("messages"),
+      assistantMessageId: v.optional(v.id("messages")),
+      preparedAssistantMessageId: v.optional(v.id("messages")),
+
+      mode: v.union(v.literal("createVariant"), v.literal("replace")),
+      model: v.string(),
+      modelParams: AISDKModelParams,
+      userMessage: v.optional(
+        v.object({
+          parts: AISDKParts,
+          messageId: v.id("messages"),
+          attachments: v.array(v.id("attachments")),
+        }),
+      ),
+      status: v.union(
+        v.literal("deleting"),
+        v.literal("prepared"),
+        v.literal("streaming"),
+        v.literal("failed"),
+        v.literal("cancelled"),
+        v.literal("complete"),
+      ),
+      error: v.optional(v.string()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+      .index("by_threadId", ["threadId"])
+      .index("by_userId", ["userId"]),
 
     threadShares: defineTable({
       threadId: v.id("threads"),
@@ -448,6 +482,7 @@ export default defineSchema(
     })
       .index("by_userId_threadId", ["userId", "threadId"])
       .index("by_userId_threadId_role", ["userId", "threadId", "role"])
+      .index("by_userId_threadId_role_createdAt", ["userId", "threadId", "role", "createdAt"])
       .index("by_userId_createdAt", ["userId", "createdAt"])
       .index("by_threadId", ["threadId"])
       .index("by_threadId_activeAssistantMessageId", ["threadId", "activeAssistantMessageId"])

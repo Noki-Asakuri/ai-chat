@@ -38,7 +38,7 @@ export function useAutoResumeStream() {
       });
 
       function cleanupController() {
-        messageStoreActions.removeController(threadId);
+        messageStoreActions.removeController(threadId, abortController);
       }
 
       try {
@@ -48,7 +48,7 @@ export function useAutoResumeStream() {
         );
 
         await throwIfChatResponseError(response);
-        await processStreamResponse(response, messageId, threadId);
+        await processStreamResponse(response, messageId, threadId, abortController);
 
         emitStreamFeedback({
           status: "success",

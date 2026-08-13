@@ -2,7 +2,7 @@
 
 import migrationsTest from "@convex-dev/migrations/test";
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -78,6 +78,26 @@ async function insertMessage(
       variantIndex,
       createdAt,
       updatedAt: createdAt,
+    });
+  });
+}
+
+async function insertAttachment(
+  t: ReturnType<typeof setup>,
+  threadId: Id<"threads">,
+  userId = USER_ID,
+): Promise<Id<"attachments">> {
+  return await t.run(async (ctx) => {
+    return await ctx.db.insert("attachments", {
+      id: crypto.randomUUID(),
+      name: "retry.txt",
+      size: 10,
+      type: "pdf",
+      source: "user",
+      mimeType: "application/pdf",
+      path: `${userId}/${threadId}/retry.pdf`,
+      userId,
+      threadId,
     });
   });
 }
@@ -317,6 +337,532 @@ describe("message graph migration", () => {
     expect(page.variantMessageIdsByUserMessageId[userMessageId]).toHaveLength(
       MAX_ASSISTANT_VARIANTS_PER_TURN + 1,
     );
+  });
+
+  test("rejects retries that would exceed the assistant variant limit", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const userMessageId = await insertMessage(t, threadId, "user", 1);
+    let firstAssistantId: Id<"messages"> | undefined;
+
+    for (let index = 0; index < MAX_ASSISTANT_VARIANTS_PER_TURN; index += 1) {
+      const assistantId = await insertMessage(
+        t,
+        threadId,
+        "assistant",
+        index + 2,
+        userMessageId,
+        index,
+      );
+      firstAssistantId ??= assistantId;
+    }
+
+    if (!firstAssistantId) throw new Error("Expected an assistant variant");
+
+    await expect(
+      t.mutation(api.functions.messages.prepareRetryTurn, {
+        threadId,
+        userMessageId,
+        assistantMessageId: firstAssistantId,
+        mode: "createVariant",
+        model: "test/model",
+        modelParams: {
+          effort: "medium",
+          webSearch: false,
+          profile: null,
+        },
+      }),
+    ).rejects.toThrow("Assistant variant limit reached");
+  });
+
+  test("rejects a variant-limit retry before deleting later turns", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const firstUserMessageId = await insertMessage(t, threadId, "user", 1);
+    let firstAssistantId: Id<"messages"> | undefined;
+
+    for (let index = 0; index < MAX_ASSISTANT_VARIANTS_PER_TURN; index += 1) {
+      const assistantId = await insertMessage(
+        t,
+        threadId,
+        "assistant",
+        index + 2,
+        firstUserMessageId,
+        index,
+      );
+      firstAssistantId ??= assistantId;
+    }
+
+    if (!firstAssistantId) throw new Error("Expected an assistant variant");
+    const laterUserMessageId = await insertMessage(t, threadId, "user", 20);
+    const laterAssistantMessageId = await insertMessage(
+      t,
+      threadId,
+      "assistant",
+      21,
+      laterUserMessageId,
+      0,
+    );
+
+    await expect(
+      t.mutation(api.functions.messages.prepareRetryTurn, {
+        threadId,
+        userMessageId: firstUserMessageId,
+        assistantMessageId: firstAssistantId,
+        mode: "createVariant",
+        model: "test/model",
+        modelParams: { effort: "medium", webSearch: false, profile: null },
+      }),
+    ).rejects.toThrow("Assistant variant limit reached");
+
+    const laterMessages = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db.get("messages", laterUserMessageId),
+        ctx.db.get("messages", laterAssistantMessageId),
+      ]),
+    );
+    expect(laterMessages.every((message) => message !== null)).toBe(true);
+  });
+
+  test("prepares a response for a user turn without an assistant", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const userMessageId = await insertMessage(t, threadId, "user", 1);
+
+    const result = await t.mutation(api.functions.messages.prepareRetryTurn, {
+      threadId,
+      userMessageId,
+      mode: "createVariant",
+      model: "test/retry-model",
+      modelParams: {
+        effort: "high",
+        webSearch: true,
+        profile: null,
+      },
+    });
+    if (result.status !== "prepared") throw new Error("Expected retry to prepare immediately");
+
+    const state = await t.run(async (ctx) => ({
+      assistant: await ctx.db.get("messages", result.assistantMessageId),
+      thread: await ctx.db.get("threads", threadId),
+      userMessage: await ctx.db.get("messages", userMessageId),
+    }));
+
+    expect(state.assistant).toMatchObject({
+      parentUserMessageId: userMessageId,
+      variantIndex: 0,
+      role: "assistant",
+      status: "pending",
+      metadata: {
+        model: { request: "test/retry-model", response: null },
+        modelParams: { effort: "high", webSearch: true, profile: null },
+      },
+    });
+    expect(state.userMessage?.activeAssistantMessageId).toBe(result.assistantMessageId);
+    expect(state.thread?.status).toBe("pending");
+  });
+
+  test("reuses errored and empty cancelled responses", async () => {
+    const scenarios = [
+      { status: "error" as const, finishReason: "error", parts: [] },
+      { status: "complete" as const, finishReason: "aborted", parts: [] },
+    ];
+
+    for (const scenario of scenarios) {
+      const t = setup();
+      await insertUser(t);
+      const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+      const userMessageId = await insertMessage(t, threadId, "user", 1);
+      const assistantMessageId = await insertMessage(
+        t,
+        threadId,
+        "assistant",
+        2,
+        userMessageId,
+        0,
+      );
+
+      await t.run(async (ctx) => {
+        await ctx.db.patch(userMessageId, { activeAssistantMessageId: assistantMessageId });
+        await ctx.db.patch(assistantMessageId, {
+          status: scenario.status,
+          parts: scenario.parts,
+          error: scenario.status === "error" ? "Failed" : undefined,
+          metadata: {
+            model: { request: "test/model", response: null },
+            finishReason: scenario.finishReason,
+            usages: { inputTokens: 1, outputTokens: 1, reasoningTokens: 0 },
+            timeToFirstTokenMs: 1,
+            durations: { request: 1, reasoning: 0, text: 1 },
+            modelParams: { effort: "medium", webSearch: false, profile: null },
+          },
+        });
+      });
+
+      const result = await t.mutation(api.functions.messages.prepareRetryTurn, {
+        threadId,
+        userMessageId,
+        assistantMessageId,
+        mode: "createVariant",
+        model: "test/model",
+        modelParams: { effort: "medium", webSearch: false, profile: null },
+      });
+      if (result.status !== "prepared") throw new Error("Expected retry to prepare immediately");
+
+      expect(result.assistantMessageId).toBe(assistantMessageId);
+    }
+  });
+
+  test("preserves a cancelled response with content unless replacement is requested", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const userMessageId = await insertMessage(t, threadId, "user", 1);
+    const assistantMessageId = await insertMessage(
+      t,
+      threadId,
+      "assistant",
+      2,
+      userMessageId,
+      0,
+    );
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(userMessageId, { activeAssistantMessageId: assistantMessageId });
+      await ctx.db.patch(assistantMessageId, {
+        metadata: {
+          model: { request: "test/model", response: null },
+          finishReason: "aborted",
+          usages: { inputTokens: 1, outputTokens: 1, reasoningTokens: 0 },
+          timeToFirstTokenMs: 1,
+          durations: { request: 1, reasoning: 0, text: 1 },
+          modelParams: { effort: "medium", webSearch: false, profile: null },
+        },
+      });
+    });
+
+    const result = await t.mutation(api.functions.messages.prepareRetryTurn, {
+      threadId,
+      userMessageId,
+      assistantMessageId,
+      mode: "createVariant",
+      model: "test/model",
+      modelParams: { effort: "medium", webSearch: false, profile: null },
+    });
+    if (result.status !== "prepared") throw new Error("Expected retry to prepare immediately");
+
+    expect(result.assistantMessageId).not.toBe(assistantMessageId);
+    const preserved = await t.run(async (ctx) => await ctx.db.get("messages", assistantMessageId));
+    expect(preserved?.parts).toEqual([{ type: "text", text: "assistant-2" }]);
+  });
+
+  test("replaces a cancelled response with content when requested", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const userMessageId = await insertMessage(t, threadId, "user", 1);
+    const assistantMessageId = await insertMessage(
+      t,
+      threadId,
+      "assistant",
+      2,
+      userMessageId,
+      0,
+    );
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(userMessageId, { activeAssistantMessageId: assistantMessageId });
+      await ctx.db.patch(assistantMessageId, {
+        metadata: {
+          model: { request: "test/model", response: null },
+          finishReason: "aborted",
+          usages: { inputTokens: 1, outputTokens: 1, reasoningTokens: 0 },
+          timeToFirstTokenMs: 1,
+          durations: { request: 1, reasoning: 0, text: 1 },
+          modelParams: { effort: "medium", webSearch: false, profile: null },
+        },
+      });
+    });
+
+    const result = await t.mutation(api.functions.messages.prepareRetryTurn, {
+      threadId,
+      userMessageId,
+      assistantMessageId,
+      mode: "replace",
+      model: "test/model",
+      modelParams: { effort: "medium", webSearch: false, profile: null },
+    });
+    if (result.status !== "prepared") throw new Error("Expected retry to prepare immediately");
+
+    expect(result.assistantMessageId).toBe(assistantMessageId);
+    const replaced = await t.run(async (ctx) => await ctx.db.get("messages", assistantMessageId));
+    expect(replaced).toMatchObject({ parts: [], status: "pending" });
+  });
+
+  test("rejects an assistant from a different user turn", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const firstUserMessageId = await insertMessage(t, threadId, "user", 1);
+    const secondUserMessageId = await insertMessage(t, threadId, "user", 2);
+    const secondAssistantMessageId = await insertMessage(
+      t,
+      threadId,
+      "assistant",
+      3,
+      secondUserMessageId,
+      0,
+    );
+
+    await expect(
+      t.mutation(api.functions.messages.prepareRetryTurn, {
+        threadId,
+        userMessageId: firstUserMessageId,
+        assistantMessageId: secondAssistantMessageId,
+        mode: "createVariant",
+        model: "test/model",
+        modelParams: { effort: "medium", webSearch: false, profile: null },
+      }),
+    ).rejects.toThrow("does not belong to the retried user turn");
+  });
+
+  test("rejects foreign and cross-thread attachments during edit retry", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const otherThreadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const userMessageId = await insertMessage(t, threadId, "user", 1);
+    const foreignAttachmentId = await insertAttachment(t, threadId, "another-user");
+    const crossThreadAttachmentId = await insertAttachment(t, otherThreadId);
+
+    for (const attachmentId of [foreignAttachmentId, crossThreadAttachmentId]) {
+      await expect(
+        t.mutation(api.functions.messages.prepareRetryTurn, {
+          threadId,
+          userMessageId,
+          mode: "createVariant",
+          model: "test/model",
+          modelParams: { effort: "medium", webSearch: false, profile: null },
+          userMessage: {
+            messageId: userMessageId,
+            parts: [{ type: "text", text: "edited" }],
+            attachments: [attachmentId],
+          },
+        }),
+      ).rejects.toThrow();
+    }
+  });
+
+  test("reactivates a settled thread when retry preparation completes", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const userMessageId = await insertMessage(t, threadId, "user", 1);
+    await t.run(async (ctx) => await ctx.db.patch(threadId, { settled: true }));
+
+    const result = await t.mutation(api.functions.messages.prepareRetryTurn, {
+      threadId,
+      userMessageId,
+      mode: "createVariant",
+      model: "test/model",
+      modelParams: { effort: "medium", webSearch: false, profile: null },
+    });
+
+    expect(result.status).toBe("prepared");
+    const thread = await t.run(async (ctx) => await ctx.db.get("threads", threadId));
+    expect(thread).toMatchObject({ settled: false, status: "pending" });
+  });
+
+  test("serializes retry preparation per thread and releases the lock on cancellation", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const userMessageId = await insertMessage(t, threadId, "user", 1);
+
+    const first = await t.mutation(api.functions.messages.prepareRetryTurn, {
+      threadId,
+      userMessageId,
+      mode: "createVariant",
+      model: "test/model",
+      modelParams: { effort: "medium", webSearch: false, profile: null },
+    });
+
+    await expect(
+      t.mutation(api.functions.messages.prepareRetryTurn, {
+        threadId,
+        userMessageId,
+        mode: "createVariant",
+        model: "test/model",
+        modelParams: { effort: "medium", webSearch: false, profile: null },
+      }),
+    ).rejects.toThrow("retry is already in progress");
+
+    await t.mutation(api.functions.messages.cancelRetryAttempt, {
+      retryAttemptId: first.retryAttemptId,
+      reason: "test cancellation",
+    });
+
+    const thread = await t.run(async (ctx) => await ctx.db.get("threads", threadId));
+    expect(thread?.retryAttemptId).toBeUndefined();
+    expect(thread?.status).toBe("complete");
+  });
+
+  test("binds retry stream startup to the active attempt", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const userMessageId = await insertMessage(t, threadId, "user", 1);
+
+    const retry = await t.mutation(api.functions.messages.prepareRetryTurn, {
+      threadId,
+      userMessageId,
+      mode: "createVariant",
+      model: "test/model",
+      modelParams: { effort: "medium", webSearch: false, profile: null },
+    });
+    if (retry.status !== "prepared") throw new Error("Expected retry to prepare immediately");
+
+    await expect(
+      t.mutation(api.functions.messages.markRetryAttemptStreaming, {
+        retryAttemptId: retry.retryAttemptId,
+        assistantMessageId: userMessageId,
+        resumableStreamId: "wrong-stream",
+      }),
+    ).resolves.toBe(false);
+
+    await expect(
+      t.mutation(api.functions.messages.markRetryAttemptStreaming, {
+        retryAttemptId: retry.retryAttemptId,
+        assistantMessageId: retry.assistantMessageId,
+        resumableStreamId: "retry-stream",
+      }),
+    ).resolves.toBe(true);
+
+    const state = await t.run(async (ctx) => ({
+      attempt: await ctx.db.get("retryAttempts", retry.retryAttemptId),
+      message: await ctx.db.get("messages", retry.assistantMessageId),
+      thread: await ctx.db.get("threads", threadId),
+    }));
+    expect(state.attempt?.status).toBe("streaming");
+    expect(state.message).toMatchObject({
+      status: "streaming",
+      resumableStreamId: "retry-stream",
+    });
+    expect(state.thread?.status).toBe("streaming");
+  });
+
+  test("does not let a cancelled retry overwrite a later response", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const userMessageId = await insertMessage(t, threadId, "user", 1);
+
+    const first = await t.mutation(api.functions.messages.prepareRetryTurn, {
+      threadId,
+      userMessageId,
+      mode: "createVariant",
+      model: "test/model",
+      modelParams: { effort: "medium", webSearch: false, profile: null },
+    });
+    if (first.status !== "prepared") throw new Error("Expected retry to prepare immediately");
+    await t.mutation(api.functions.messages.cancelRetryAttempt, {
+      retryAttemptId: first.retryAttemptId,
+    });
+
+    const second = await t.mutation(api.functions.messages.prepareRetryTurn, {
+      threadId,
+      userMessageId,
+      mode: "createVariant",
+      model: "test/model",
+      modelParams: { effort: "medium", webSearch: false, profile: null },
+    });
+    if (second.status !== "prepared") throw new Error("Expected retry to prepare immediately");
+
+    await t.mutation(api.functions.messages.updateErrorMessage, {
+      messageId: second.assistantMessageId,
+      retryAttemptId: first.retryAttemptId,
+      error: "stale retry failure",
+    });
+
+    const secondMessage = await t.run(async (ctx) =>
+      ctx.db.get("messages", second.assistantMessageId),
+    );
+    expect(secondMessage?.status).toBe("pending");
+  });
+
+  test("deletes large descendant histories in bounded retry batches", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const targetUserMessageId = await insertMessage(t, threadId, "user", 1);
+
+    for (let index = 0; index < 10; index += 1) {
+      const userMessageId = await insertMessage(t, threadId, "user", index + 2);
+      await insertMessage(t, threadId, "assistant", index + 2.5, userMessageId, 0);
+    }
+
+    const initial = await t.mutation(api.functions.messages.prepareRetryTurn, {
+      threadId,
+      userMessageId: targetUserMessageId,
+      mode: "createVariant",
+      model: "test/model",
+      modelParams: { effort: "medium", webSearch: false, profile: null },
+    });
+
+    expect(initial.status).toBe("preparing");
+    vi.useFakeTimers();
+    try {
+      await t.finishAllScheduledFunctions(() => vi.runOnlyPendingTimers());
+    } finally {
+      vi.useRealTimers();
+    }
+    const final = await t.query(api.functions.messages.getRetryAttempt, {
+      retryAttemptId: initial.retryAttemptId,
+    });
+    expect(final.status).toBe("prepared");
+
+    const remainingUsers = await t.run(async (ctx) =>
+      ctx.db
+        .query("messages")
+        .withIndex("by_userId_threadId_role", (q) =>
+          q.eq("userId", USER_ID).eq("threadId", threadId).eq("role", "user"),
+        )
+        .collect(),
+    );
+    expect(remainingUsers.map((message) => message._id)).toEqual([targetUserMessageId]);
+  });
+
+  test("uses a bounded fallback to retry legacy message graphs", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t);
+    const targetUserMessageId = await insertMessage(t, threadId, "user", 1);
+    const targetAssistantMessageId = await insertMessage(t, threadId, "assistant", 2);
+    await insertMessage(t, threadId, "user", 3);
+    await insertMessage(t, threadId, "assistant", 4);
+
+    const result = await t.mutation(api.functions.messages.prepareRetryTurn, {
+      threadId,
+      userMessageId: targetUserMessageId,
+      assistantMessageId: targetAssistantMessageId,
+      mode: "createVariant",
+      model: "test/model",
+      modelParams: { effort: "medium", webSearch: false, profile: null },
+    });
+
+    expect(result.status).toBe("prepared");
+    const remainingUsers = await t.run(async (ctx) =>
+      ctx.db
+        .query("messages")
+        .withIndex("by_userId_threadId_role", (q) =>
+          q.eq("userId", USER_ID).eq("threadId", threadId).eq("role", "user"),
+        )
+        .collect(),
+    );
+    expect(remainingUsers.map((message) => message._id)).toEqual([targetUserMessageId]);
   });
 
   test("keeps branches with conflicting active pointers on the legacy fallback", async () => {

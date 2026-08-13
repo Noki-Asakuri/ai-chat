@@ -267,7 +267,12 @@ function ActiveGroupThreadList({ activeGroupId }: { activeGroupId: Id<"groups"> 
 
     const routeThread = data.threads.find((thread) => thread._id === routeThreadId) ?? routeThreadTitle;
     if (!routeThread || routeThread.status !== "complete") return;
-    if (routeThread.lastViewedAt !== undefined && routeThread.lastViewedAt !== null && routeThread.lastViewedAt >= routeThread.updatedAt) return;
+    if (
+      routeThread.lastViewedAt !== undefined &&
+      routeThread.lastViewedAt !== null &&
+      routeThread.lastViewedAt >= routeThread.updatedAt
+    )
+      return;
 
     void markThreadViewed({ threadId: routeThreadId }).catch((error: unknown) => {
       console.error("[Thread] Mark thread viewed error:", error);
@@ -480,9 +485,7 @@ function ThreadList({ data, groups }: ThreadListProps) {
                   <FolderIcon />
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate font-medium">{group.title}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      Open group
-                    </span>
+                    <span className="truncate text-xs text-muted-foreground">Open group</span>
                   </span>
                   {index < 8 && <CommandShortcut>Ctrl+{index + 2}</CommandShortcut>}
                 </CommandItem>

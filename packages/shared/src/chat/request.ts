@@ -10,6 +10,7 @@ export const chatModelParamsSchema = z.object({
 
 export const chatRequestBodySchema = z.object({
   assistantMessageId: z.string().min(1),
+  retryAttemptId: z.string().min(1).optional(),
   threadId: z.string().min(1),
   messages: z.unknown().array(),
 

@@ -192,7 +192,7 @@ export function useSendChatMessage() {
         });
       }
 
-      await processStreamResponse(response, assistantMessageId, threadId);
+      await processStreamResponse(response, assistantMessageId, threadId, abortController);
       emitStreamFeedback({
         status: "success",
         threadId,
@@ -249,7 +249,7 @@ export function useSendChatMessage() {
 
       toast.error("Failed to send message", { description: errorMessage });
     } finally {
-      messageStoreActions.removeController(threadId);
+      messageStoreActions.removeController(threadId, abortController);
     }
   }
 

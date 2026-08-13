@@ -15,8 +15,8 @@ import {
   createEmptyProviderModels,
 } from "../chat-textarea/model-selector";
 import { CancelledRetryDialog } from "./cancelled-retry-dialog";
+import { useMessageRetry } from "./use-message-retry";
 
-import { hasMessageContent } from "@ai-chat/shared/chat/message-content";
 import {
   SelectableModelIds,
   getReasoningOptions,
@@ -25,8 +25,6 @@ import {
   type ModelData,
   type Provider,
 } from "@/lib/chat/models";
-import { useRetryChatMessage } from "@/lib/chat/server-function/retry-chat-message";
-import { useMessageStore } from "@/lib/store/messages-store";
 import { reasoningEffortValues, type ChatMessage, type ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -118,33 +116,13 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
   const [open, setOpen] = React.useState(false);
   const [selectedSection, setSelectedSection] = React.useState<PickerSectionKey>("all");
   const [query, setQuery] = React.useState("");
-  const [retryConfirmation, setRetryConfirmation] = React.useState<RetryOptions | null>(null);
-  const [isPending, startTransition] = React.useTransition();
-
   const hiddenModels = useConfigStore((state) => state.hiddenModels);
   const favoriteModels = useConfigStore((state) => state.favoriteModels);
-
-  const retryAssistantMessage = useMessageStore((state) => {
-    const assistantMessageId =
-      message.role === "assistant"
-        ? message._id
-        : (state.activeAssistantMessageIdByUserMessageId[userMessageId] ??
-          state.variantMessageIdsByUserMessageId[userMessageId]?.at(-1));
-
-    if (!assistantMessageId) return null;
-
-    const assistantMessage = state.messagesById[assistantMessageId];
-    if (!assistantMessage || assistantMessage.role !== "assistant") return null;
-
-    return assistantMessage;
+  const retry = useMessageRetry({
+    userMessageId,
+    assistantMessageId: message.role === "assistant" ? message._id : undefined,
   });
-
-  const currentAssistantMessage = retryAssistantMessage ?? (message.role === "assistant" ? message : null);
-  const currentModelId = currentAssistantMessage?.metadata?.model.request ?? "";
-
-  const { retryChatMessage } = useRetryChatMessage();
-
-  const pendingRetry = isPending || message.status === "pending";
+  const currentModelId = retry.assistantMessage?.metadata?.model.request ?? "";
 
   const selectableModels = React.useMemo(() => {
     const next: Array<RetryModelEntry> = [];
@@ -286,58 +264,29 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
     setQuery("");
   }, [open]);
 
-  function executeRetry(options: RetryOptions, replaceCancelledMessage = false) {
-    if (pendingRetry) return;
-
-    setOpen(false);
-    setRetryConfirmation(null);
-
-    startTransition(async () => {
-      await retryChatMessage({
-        userMessageId,
-        assistantMessageId: message.role === "assistant" ? message._id : undefined,
-        replaceCancelledMessage,
-        ...options,
-      });
-    });
-  }
-
   function runRetry(options: RetryOptions = {}) {
-    if (pendingRetry) return;
-
-    const shouldConfirm =
-      currentAssistantMessage?.metadata?.finishReason === "aborted" &&
-      hasMessageContent(currentAssistantMessage.parts, currentAssistantMessage.attachments.length);
-
-    if (shouldConfirm) {
-      setOpen(false);
-      setRetryConfirmation(options);
-      return;
-    }
-
-    executeRetry(options);
+    if (retry.isPending) return;
+    setOpen(false);
+    retry.requestRetry(options);
   }
 
   function handleSelectModel(model: RetryModelEntry) {
-    if (pendingRetry) return;
+    if (retry.isPending) return;
     runRetry({ modelId: model.id });
   }
 
   // Left click: immediately retry with the same model.
-  function handleMouseDown(event: React.MouseEvent<HTMLButtonElement>) {
-    if (pendingRetry) return;
+  function handleClick(event: React.MouseEvent<HTMLButtonElement>) {
+    if (retry.isPending) return;
 
-    // 0 = primary/left button
-    if (event.button === 0) {
-      event.preventDefault();
-      event.stopPropagation();
-      runRetry();
-    }
+    event.preventDefault();
+    event.stopPropagation();
+    runRetry();
   }
 
   // Right click: show the retry menu (model picker).
   function handleContextMenu(event: React.MouseEvent<HTMLButtonElement>) {
-    if (pendingRetry) return;
+    if (retry.isPending) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -361,8 +310,8 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
         title="Retry Message"
         data-slot="message-retry-trigger"
         render={<ButtonWithTip side="bottom" variant="ghost" />}
-        disabled={pendingRetry}
-        onMouseDown={handleMouseDown}
+        disabled={retry.isPending}
+        onClick={handleClick}
         onContextMenu={handleContextMenu}
         {...props}
       >
@@ -385,7 +334,7 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
               <button
                 type="button"
                 onClick={() => runRetry()}
-                disabled={pendingRetry}
+                disabled={retry.isPending}
                 className={cn(
                   buttonVariants({ variant: "ghost" }),
                   "h-7 cursor-pointer gap-1.5 px-2 text-xs",
@@ -449,9 +398,7 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
                 style={{ scrollbarGutter: "stable both-edges" }}
               >
                 {groups.length === 0 ? (
-                  <div className="px-2 py-6 text-center text-xs text-muted-foreground">
-                    {emptyMessage}
-                  </div>
+                  <div className="px-2 py-6 text-center text-xs text-muted-foreground">{emptyMessage}</div>
                 ) : (
                   groups.map((group) => (
                     <div key={group.key} className="flex flex-col gap-1">
@@ -462,7 +409,7 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
                           key={model.id}
                           model={model}
                           selected={model.id === currentModelId}
-                          disabled={pendingRetry}
+                          disabled={retry.isPending}
                           onSelectModel={handleSelectModel}
                           onSelectEffort={(effort) => {
                             runRetry({
@@ -481,18 +428,10 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
         </Menu.Positioner>
       </Menu.Portal>
       <CancelledRetryDialog
-        open={retryConfirmation !== null}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) setRetryConfirmation(null);
-        }}
-        onCreateVariant={() => {
-          if (!retryConfirmation) return;
-          executeRetry(retryConfirmation);
-        }}
-        onReplace={() => {
-          if (!retryConfirmation) return;
-          executeRetry(retryConfirmation, true);
-        }}
+        open={retry.confirmationOpen}
+        onOpenChange={(open) => retry.setConfirmationOpen(open)}
+        onCreateVariant={() => retry.createVariant()}
+        onReplace={() => retry.replaceResponse()}
       />
     </Menu.Root>
   );
@@ -532,17 +471,8 @@ type RetryModelItemProps = {
   onSelectEffort: (effort: ReasoningEffort) => void;
 };
 
-function RetryModelItem({
-  model,
-  selected,
-  disabled,
-  onSelectModel,
-  onSelectEffort,
-}: RetryModelItemProps) {
-  const effortOptions = React.useMemo(
-    () => getValidReasoningEffortOptions(model.data),
-    [model.data],
-  );
+function RetryModelItem({ model, selected, disabled, onSelectModel, onSelectEffort }: RetryModelItemProps) {
+  const effortOptions = React.useMemo(() => getValidReasoningEffortOptions(model.data), [model.data]);
 
   if (effortOptions.length > 0) {
     return (

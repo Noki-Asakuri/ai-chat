@@ -101,6 +101,7 @@ export async function processStreamResponse(
   response: Response,
   messageId: Id<"messages">,
   threadId: Id<"threads">,
+  expectedController?: AbortController,
 ): Promise<void> {
   if (!response.ok) {
     const errorMessage = await readResponseErrorMessage(response);
@@ -125,7 +126,7 @@ export async function processStreamResponse(
       }
 
       if (event.type === "done") {
-        messageStoreActions.removeController(threadId);
+        messageStoreActions.removeController(threadId, expectedController);
       }
 
       if (event.type === "error" && streamError === null) {

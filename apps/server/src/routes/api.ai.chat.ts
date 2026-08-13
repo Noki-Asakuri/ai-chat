@@ -187,6 +187,29 @@ chatRouter.post("/chat", async function (ctx) {
     const streamHandle = streamHandleResult.value;
     const messageMetadataHandler = createMessageMetadataHandler({ metadata, startTime });
 
+    if (validatedBody.retryAttemptId) {
+      const retryMarkedStreaming = await convexClient.mutation(
+        api.functions.messages.markRetryAttemptStreaming,
+        {
+          retryAttemptId: validatedBody.retryAttemptId,
+          assistantMessageId: validatedBody.assistantMessageId,
+          resumableStreamId: requestId,
+        },
+      );
+
+      if (!retryMarkedStreaming) {
+        await refundReservedUsage({
+          userId,
+          requestId,
+          threadId: validatedBody.threadId,
+          assistantMessageId: validatedBody.assistantMessageId,
+          reason: "retry-attempt-start",
+        });
+        await redisStreamClient.cancelStreamForUser({ requestId, userId });
+        return Response.json({ error: { message: "This retry is no longer active." } }, { status: 409 });
+      }
+    }
+
     const stream = await agent.stream({
       abortSignal: streamHandle.abortSignal,
       messages: validatedBody.modelMessages,

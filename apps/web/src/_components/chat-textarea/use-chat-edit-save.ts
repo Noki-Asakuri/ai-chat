@@ -1,17 +1,20 @@
+import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useSessionId } from "convex-helpers/react/sessions";
+import { useMutation } from "convex/react";
 import * as React from "react";
 
 import { buildAttachmentUrl } from "@/lib/assets/urls";
-import { useRetryChatMessage } from "@/lib/chat/server-function/retry-chat-message";
+import { useRetryTurn } from "@/lib/chat/server-function/retry-turn";
 import { uploadUserAttachment } from "@/lib/chat/shared";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
 
 export function useChatEditSave() {
-  const { retryChatMessage } = useRetryChatMessage();
+  const { retryTurn } = useRetryTurn();
+  const deleteAttachments = useMutation(api.functions.attachments.deleteAttachments);
   const [sessionId] = useSessionId();
   const [isSaving, startSaving] = React.useTransition();
 
@@ -63,21 +66,17 @@ export function useChatEditSave() {
         fileParts.push({ type: "file", url, mediaType: item.mediaType });
       }
 
-      const parts: ChatMessage["parts"] = [
-        { type: "text", text: editMessage.input, state: "done" },
-      ];
+      const parts: ChatMessage["parts"] = [{ type: "text", text: editMessage.input, state: "done" }];
 
       for (const part of fileParts) {
         parts.push(part);
       }
 
-      // Close edit UI only after we have successfully prepared the updated message payload.
-      chatStoreActions.setEditMessage(null);
-
-      await retryChatMessage({
+      const result = await retryTurn({
         userMessageId: editMessage._id,
         modelId: editMessage.model,
         modelParams: editMessage.modelParams,
+        onPrepared: () => chatStoreActions.setEditMessage(null),
 
         userMessage: {
           messageId: editMessage._id,
@@ -85,6 +84,16 @@ export function useChatEditSave() {
           attachments: finalAttachmentIds,
         },
       });
+
+      if (result.status === "started" || (result.status === "failed" && result.phase === "stream")) return;
+
+      if (uploaded.length > 0) {
+        try {
+          await deleteAttachments({ attachmentIds: uploaded.map((attachment) => attachment.attachmentId) });
+        } catch (error) {
+          console.error("[Chat] Failed to clean up attachments after retry preparation", error);
+        }
+      }
     });
   }
 

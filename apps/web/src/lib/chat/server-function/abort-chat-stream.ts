@@ -20,7 +20,7 @@ export function useAbortChatStream() {
 
     // Best-effort cleanup if we don't have enough context to notify the server.
     if (!assistantMessageId || !streamId) {
-      messageStoreActions.removeController(threadId);
+      messageStoreActions.removeController(threadId, abortController);
       return;
     }
 
@@ -38,7 +38,7 @@ export function useAbortChatStream() {
         { method: "POST", credentials: "include" },
       );
     } finally {
-      messageStoreActions.removeController(threadId);
+      messageStoreActions.removeController(threadId, abortController);
     }
   }
 

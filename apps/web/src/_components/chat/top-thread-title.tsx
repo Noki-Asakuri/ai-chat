@@ -30,10 +30,7 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
 
   const { data, isFetching } = useQuery({
     enabled: typeof params?.threadId === "string" && !isSkeleton,
-    ...convexSessionQuery(
-      api.functions.threads.getThreadPageMeta,
-      threadId ? { threadId } : "skip",
-    ),
+    ...convexSessionQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
   });
 
   const threadData = params?.threadId && data ? data : null;

@@ -3,7 +3,6 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { toast } from "@/components/ui/toast";
 import { useCopyToClipboard } from "@uidotdev/usehooks";
-import { hasMessageContent } from "@ai-chat/shared/chat/message-content";
 import { useMutation } from "convex/react";
 import {
   BugPlayIcon,
@@ -48,9 +47,9 @@ import { MenuArrow } from "../ui/menu";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { MessageRetryMenu } from "./message-retry-menu";
 import { CancelledRetryDialog } from "./cancelled-retry-dialog";
+import { useMessageRetry } from "./use-message-retry";
 
 import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
-import { useRetryChatMessage } from "@/lib/chat/server-function/retry-chat-message";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
@@ -110,32 +109,14 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
       if (messageIndex < 0) return { canRetry: false, retryUserMessageId: null };
 
       if (message.role === "assistant") {
-        const previousMessageId = state.messageIds[messageIndex - 1];
-        if (!previousMessageId) {
+        const userMessageId =
+          state.userMessageIdByMessageId[message._id] ?? message.parentUserMessageId;
+        const userMessage = userMessageId ? state.messagesById[userMessageId] : undefined;
+        if (userMessage?.role !== "user") {
           return { canRetry: false, retryUserMessageId: null };
         }
 
-        const previousMessage = state.messagesById[previousMessageId];
-        if (previousMessage?.role !== "user") {
-          return { canRetry: false, retryUserMessageId: null };
-        }
-
-        return { canRetry: true, retryUserMessageId: previousMessage._id };
-      }
-
-      const nextMessageId = state.messageIds[messageIndex + 1];
-      if (!nextMessageId) {
-        const isLastUserMessage = message.role === "user" && messageIndex === state.messageIds.length - 1;
-
-        return {
-          canRetry: isLastUserMessage,
-          retryUserMessageId: isLastUserMessage ? message._id : null,
-        };
-      }
-
-      const nextMessage = state.messagesById[nextMessageId];
-      if (nextMessage?.role !== "assistant") {
-        return { canRetry: false, retryUserMessageId: null };
+        return { canRetry: true, retryUserMessageId: userMessage._id };
       }
 
       return { canRetry: true, retryUserMessageId: message._id };
@@ -213,11 +194,12 @@ function MobileMessageActionsMenu({
   retryUserMessageId,
 }: MobileMessageActionsMenuProps) {
   const { branchThread } = useBranchThread();
-  const { retryChatMessage } = useRetryChatMessage();
   const [copyPending, startCopyTransition] = React.useTransition();
-  const [retryPending, startRetryTransition] = React.useTransition();
-  const [retryConfirmationOpen, setRetryConfirmationOpen] = React.useState(false);
   const [, copyToClipboard] = useCopyToClipboard();
+  const retry = useMessageRetry({
+    userMessageId: retryUserMessageId,
+    assistantMessageId: message.role === "assistant" ? message._id : undefined,
+  });
 
   function handleCopyMessage(): void {
     startCopyTransition(async () => {
@@ -226,42 +208,9 @@ function MobileMessageActionsMenu({
     });
   }
 
-  function executeRetryMessage(replaceCancelledMessage = false): void {
-    if (!retryUserMessageId) return;
-
-    setRetryConfirmationOpen(false);
-
-    startRetryTransition(async () => {
-      await retryChatMessage({
-        userMessageId: retryUserMessageId,
-        assistantMessageId: message.role === "assistant" ? message._id : undefined,
-        replaceCancelledMessage,
-      });
-    });
-  }
-
   function handleRetryMessage(): void {
     if (!retryUserMessageId) return;
-
-    const messageState = useMessageStore.getState();
-    const assistantMessageId =
-      message.role === "assistant"
-        ? message._id
-        : (messageState.activeAssistantMessageIdByUserMessageId[retryUserMessageId] ??
-          messageState.variantMessageIdsByUserMessageId[retryUserMessageId]?.at(-1));
-    const assistantMessage = assistantMessageId ? messageState.messagesById[assistantMessageId] : undefined;
-
-    const shouldConfirm =
-      assistantMessage?.role === "assistant" &&
-      assistantMessage.metadata?.finishReason === "aborted" &&
-      hasMessageContent(assistantMessage.parts, assistantMessage.attachments.length);
-
-    if (shouldConfirm) {
-      setRetryConfirmationOpen(true);
-      return;
-    }
-
-    executeRetryMessage();
+    retry.requestRetry();
   }
 
   if (!isFinished && message.role !== "user" && import.meta.env.PROD) return null;
@@ -312,7 +261,7 @@ function MobileMessageActionsMenu({
             )}
 
             {isFinished && canRetry && retryUserMessageId && (
-              <DropdownMenuItem disabled={retryPending} onClick={handleRetryMessage}>
+              <DropdownMenuItem disabled={retry.isPending} onClick={handleRetryMessage}>
                 <RefreshCcwIcon />
                 Retry message
               </DropdownMenuItem>
@@ -326,10 +275,10 @@ function MobileMessageActionsMenu({
       </DropdownMenu>
 
       <CancelledRetryDialog
-        open={retryConfirmationOpen}
-        onOpenChange={setRetryConfirmationOpen}
-        onCreateVariant={() => executeRetryMessage()}
-        onReplace={() => executeRetryMessage(true)}
+        open={retry.confirmationOpen}
+        onOpenChange={(open) => retry.setConfirmationOpen(open)}
+        onCreateVariant={() => retry.createVariant()}
+        onReplace={() => retry.replaceResponse()}
       />
     </div>
   );

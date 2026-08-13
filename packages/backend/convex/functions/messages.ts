@@ -11,12 +11,7 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "../_generated/server";
-import {
-  authenticatedMutation,
-  authenticatedQuery,
-  authenticatedUserIdQuery,
-  r2,
-} from "../components";
+import { authenticatedMutation, authenticatedQuery, authenticatedUserIdQuery, r2 } from "../components";
 import {
   AISDKMetadata,
   AISDKModelParams,
@@ -33,6 +28,10 @@ type MessageWithAttachments = Omit<MessageDoc, "attachments"> & {
 type UserMessageDoc = MessageDoc & { role: "user" };
 type AssistantMessageDoc = MessageDoc & { role: "assistant" };
 type DeleteScope = "turnAndBelow" | "assistantVariantOnly";
+
+const RETRY_DELETE_BATCH_SIZE = 8;
+const RETRY_LEGACY_MESSAGE_LIMIT = 128;
+const RETRY_ATTEMPT_STALE_MS = 2 * 60 * 1000;
 
 type ThreadMessageGraph = {
   messagesById: Record<Id<"messages">, MessageDoc>;
@@ -306,10 +305,7 @@ async function buildMessagePayload(
     if (message) canonicalMessages.push(message);
   }
 
-  const variantMessageIdsByUserMessageId: Record<
-    Id<"messages">,
-    Array<Id<"messages">>
-  > = {};
+  const variantMessageIdsByUserMessageId: Record<Id<"messages">, Array<Id<"messages">>> = {};
 
   for (const userMessageId of sliceUserMessageIds) {
     const variants = graph.assistantsByUserId[userMessageId] ?? [];
@@ -435,6 +431,42 @@ function getNextVariantIndex(variants: AssistantMessageDoc[]): number {
   }
 
   return maxVariantIndex + 1;
+}
+
+async function validateRetryAttachments(
+  ctx: MutationCtx,
+  userId: string,
+  threadId: Id<"threads">,
+  attachmentIds: Array<Id<"attachments">>,
+): Promise<void> {
+  const attachments = attachmentIds.length > 0 ? await getAll(ctx.db, attachmentIds) : [];
+
+  for (const attachment of attachments) {
+    if (!attachment) throw new Error("Attachment not found");
+    if (attachment.userId !== userId) throw new Error("Not authorized to use attachment");
+    if (attachment.threadId !== threadId) {
+      throw new Error("Attachment is not in the retried thread");
+    }
+  }
+}
+
+async function finishActiveRetryAttempt(
+  ctx: MutationCtx,
+  threadId: Id<"threads">,
+  assistantMessageId: Id<"messages">,
+  status: "complete" | "failed",
+  error?: string,
+): Promise<void> {
+  const thread = await ctx.db.get("threads", threadId);
+  if (!thread?.retryAttemptId) return;
+
+  const attempt = await ctx.db.get("retryAttempts", thread.retryAttemptId);
+  if (!attempt || attempt.preparedAssistantMessageId !== assistantMessageId) return;
+
+  await Promise.all([
+    ctx.db.patch(attempt._id, { status, error, updatedAt: Date.now() }),
+    ctx.db.patch(threadId, { retryAttemptId: undefined }),
+  ]);
 }
 
 async function patchThreadModelConfig(
@@ -749,6 +781,7 @@ export const updateErrorMessage = authenticatedMutation({
     error: v.string(),
     messageId: v.id("messages"),
     metadata: v.optional(AISDKMetadata.partial()),
+    retryAttemptId: v.optional(v.id("retryAttempts")),
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
@@ -756,6 +789,17 @@ export const updateErrorMessage = authenticatedMutation({
     const message = await ctx.db.get("messages", args.messageId);
     if (!message) throw new Error("Message not found");
     if (message.userId !== user.userId) throw new Error("User not authorized");
+    if (args.retryAttemptId) {
+      const attempt = await ctx.db.get("retryAttempts", args.retryAttemptId);
+      if (
+        !attempt ||
+        attempt.userId !== user.userId ||
+        attempt.preparedAssistantMessageId !== message._id ||
+        (attempt.status !== "prepared" && attempt.status !== "streaming")
+      ) {
+        return;
+      }
+    }
 
     const metadata = { ...message.metadata, ...args.metadata } as (typeof AISDKMetadata)["type"];
 
@@ -774,6 +818,7 @@ export const updateErrorMessage = authenticatedMutation({
       updatedAt: Date.now(),
       status: "complete",
     });
+    await finishActiveRetryAttempt(ctx, message.threadId, message._id, "failed", args.error);
   },
 });
 
@@ -938,6 +983,7 @@ export const updateFinishedMessageById = authenticatedMutation({
       status: "complete",
       updatedAt: Date.now(),
     });
+    await finishActiveRetryAttempt(ctx, message.threadId, message._id, "complete");
 
     if (message.role !== "assistant") return false;
 
@@ -979,16 +1025,374 @@ export const recoverMissingStream = authenticatedMutation({
       metadata: message.metadata ? { ...message.metadata, finishReason: "aborted" } : undefined,
     });
     await ctx.db.patch(message.threadId, { status: "complete", updatedAt: now });
+    await finishActiveRetryAttempt(ctx, message.threadId, message._id, "complete");
 
     return true;
   },
 });
 
-export const retryChatMessage = authenticatedMutation({
+const retryPreparationResultValidator = v.union(
+  v.object({
+    status: v.literal("preparing"),
+    retryAttemptId: v.id("retryAttempts"),
+  }),
+  v.object({
+    status: v.literal("prepared"),
+    retryAttemptId: v.id("retryAttempts"),
+    assistantMessageId: v.id("messages"),
+    userMessageId: v.id("messages"),
+    creationTime: v.number(),
+    messageId: v.string(),
+    userId: v.string(),
+    createdAt: v.number(),
+    variantIndex: v.nullable(v.number()),
+  }),
+);
+
+type RetryPreparationResult =
+  | { status: "preparing"; retryAttemptId: Id<"retryAttempts"> }
+  | {
+      status: "prepared";
+      retryAttemptId: Id<"retryAttempts">;
+      assistantMessageId: Id<"messages">;
+      userMessageId: Id<"messages">;
+      creationTime: number;
+      messageId: string;
+      userId: string;
+      createdAt: number;
+      variantIndex: number | null;
+    };
+
+async function finishRetryPreparation(
+  ctx: MutationCtx,
+  attempt: Doc<"retryAttempts">,
+  legacyGraph?: ThreadMessageGraph,
+): Promise<RetryPreparationResult> {
+  const thread = await ctx.db.get("threads", attempt.threadId);
+  if (!thread || thread.retryAttemptId !== attempt._id) {
+    throw new Error("Retry attempt is no longer active");
+  }
+
+  const targetUserMessage = await ctx.db.get("messages", attempt.userMessageId);
+  if (!targetUserMessage || !isUserMessage(targetUserMessage)) {
+    throw new Error("User message not found");
+  }
+
+  const variantRows = legacyGraph
+    ? (legacyGraph.assistantsByUserId[targetUserMessage._id] ?? [])
+    : await ctx.db
+        .query("messages")
+        .withIndex("by_threadId_parentUserMessageId", (q) =>
+          q.eq("threadId", attempt.threadId).eq("parentUserMessageId", targetUserMessage._id),
+        )
+        .take(MAX_ASSISTANT_VARIANTS_PER_TURN + 1);
+
+  const variants: AssistantMessageDoc[] = [];
+  for (const variant of variantRows) {
+    if (isAssistantMessage(variant)) variants.push(variant);
+  }
+
+  if (variants.length > MAX_ASSISTANT_VARIANTS_PER_TURN) {
+    throw new Error("Assistant variant limit exceeded for this user turn");
+  }
+
+  let targetAssistantMessage: AssistantMessageDoc | null = null;
+  if (attempt.assistantMessageId) {
+    const requestedAssistantMessage = await ctx.db.get("messages", attempt.assistantMessageId);
+    if (!requestedAssistantMessage) throw new Error("Assistant message not found");
+    if (!isAssistantMessage(requestedAssistantMessage)) {
+      throw new Error("Retry response target is invalid");
+    }
+    const resolvedUserMessageId = legacyGraph
+      ? resolveUserMessageIdForMessage(legacyGraph, requestedAssistantMessage._id)
+      : requestedAssistantMessage.parentUserMessageId;
+    if (
+      requestedAssistantMessage.threadId !== attempt.threadId ||
+      requestedAssistantMessage.userId !== attempt.userId ||
+      resolvedUserMessageId !== targetUserMessage._id
+    ) {
+      throw new Error("Assistant message does not belong to the retried user turn");
+    }
+    if (requestedAssistantMessage.messageGraphIssue !== undefined) {
+      throw new Error("This legacy response must be repaired before it can be retried");
+    }
+
+    targetAssistantMessage = requestedAssistantMessage;
+  } else {
+    const activeAssistantMessageId = targetUserMessage.activeAssistantMessageId;
+    targetAssistantMessage = variants.find((variant) => variant._id === activeAssistantMessageId) ?? null;
+    if (!targetAssistantMessage) targetAssistantMessage = variants[variants.length - 1] ?? null;
+  }
+
+  const isCancelledMessage = targetAssistantMessage?.metadata?.finishReason === "aborted";
+  const shouldReuseEmptyCancelledMessage =
+    isCancelledMessage &&
+    targetAssistantMessage !== null &&
+    !hasMessageContent(targetAssistantMessage.parts, targetAssistantMessage.attachments.length);
+  const shouldReuseAssistantMessage =
+    targetAssistantMessage !== null &&
+    (attempt.mode === "replace" ||
+      targetAssistantMessage.status === "error" ||
+      shouldReuseEmptyCancelledMessage);
+
+  if (!shouldReuseAssistantMessage && variants.length >= MAX_ASSISTANT_VARIANTS_PER_TURN) {
+    throw new Error("Assistant variant limit reached for this user turn");
+  }
+
+  if (attempt.userMessage) {
+    await ctx.db.patch(targetUserMessage._id, {
+      updatedAt: Date.now(),
+      parts: attempt.userMessage.parts,
+      attachments: attempt.userMessage.attachments,
+    });
+  }
+
+  const now = Date.now();
+  const nextMetadata = {
+    durations: { request: 0, reasoning: 0, text: 0 },
+    usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+    timeToFirstTokenMs: 0,
+    finishReason: null,
+    modelParams: attempt.modelParams,
+    model: { request: attempt.model, response: null },
+  };
+
+  let assistantMessageId: Id<"messages">;
+  if (shouldReuseAssistantMessage && targetAssistantMessage) {
+    assistantMessageId = targetAssistantMessage._id;
+    await ctx.db.patch(targetAssistantMessage._id, {
+      status: "pending",
+      parts: [],
+      attachments: [],
+      resumableStreamId: null,
+      error: undefined,
+      statsTrackedAt: undefined,
+      updatedAt: now,
+      metadata: nextMetadata,
+    });
+  } else {
+    assistantMessageId = await ctx.db.insert("messages", {
+      threadId: attempt.threadId,
+      userId: attempt.userId,
+      messageId: crypto.randomUUID(),
+      status: "pending",
+      parts: [],
+      attachments: [],
+      role: "assistant",
+      resumableStreamId: null,
+      error: undefined,
+      parentUserMessageId: targetUserMessage._id,
+      variantIndex: getNextVariantIndex(variants),
+      activeAssistantMessageId: undefined,
+      messageGraphVersion:
+        thread.messageGraphVersion === CURRENT_MESSAGE_GRAPH_VERSION
+          ? CURRENT_MESSAGE_GRAPH_VERSION
+          : undefined,
+      messageGraphIssue: undefined,
+      createdAt: now,
+      updatedAt: now,
+      metadata: nextMetadata,
+    });
+  }
+
+  await Promise.all([
+    ctx.db.patch("threads", attempt.threadId, {
+      settled: false,
+      status: "pending",
+      updatedAt: now,
+    }),
+    ctx.db.patch("messages", targetUserMessage._id, {
+      updatedAt: now,
+      activeAssistantMessageId: assistantMessageId,
+    }),
+    ctx.db.patch("retryAttempts", attempt._id, {
+      preparedAssistantMessageId: assistantMessageId,
+      status: "prepared",
+      updatedAt: now,
+    }),
+  ]);
+
+  await patchThreadModelConfig(ctx, attempt.threadId, attempt.model, attempt.modelParams);
+
+  const preparedAssistantMessage = await ctx.db.get("messages", assistantMessageId);
+  if (!preparedAssistantMessage || !isAssistantMessage(preparedAssistantMessage)) {
+    throw new Error("Failed to prepare assistant response");
+  }
+
+  return {
+    status: "prepared",
+    retryAttemptId: attempt._id,
+    assistantMessageId,
+    userMessageId: targetUserMessage._id,
+    creationTime: preparedAssistantMessage._creationTime,
+    messageId: preparedAssistantMessage.messageId,
+    userId: preparedAssistantMessage.userId,
+    createdAt: preparedAssistantMessage.createdAt,
+    variantIndex: preparedAssistantMessage.variantIndex ?? null,
+  };
+}
+
+async function processLegacyRetryPreparation(
+  ctx: MutationCtx,
+  attempt: Doc<"retryAttempts">,
+): Promise<RetryPreparationResult> {
+  const messages = await ctx.db
+    .query("messages")
+    .withIndex("by_userId_threadId", (q) =>
+      q.eq("userId", attempt.userId).eq("threadId", attempt.threadId),
+    )
+    .order("asc")
+    .take(RETRY_LEGACY_MESSAGE_LIMIT + 1);
+
+  if (messages.length > RETRY_LEGACY_MESSAGE_LIMIT) {
+    throw new Error("This legacy thread must be migrated before retrying");
+  }
+
+  const graph = buildThreadMessageGraph(messages);
+  const userTurnIndex = graph.users.findIndex((message) => message._id === attempt.userMessageId);
+  if (userTurnIndex === -1) throw new Error("User turn not found");
+
+  for (const message of collectMessagesFromUserTurnIndex(graph, userTurnIndex + 1)) {
+    await ctx.db.delete(message._id);
+  }
+
+  return await finishRetryPreparation(ctx, attempt, graph);
+}
+
+async function validateModernRetryTarget(
+  ctx: MutationCtx,
+  threadId: Id<"threads">,
+  targetUserMessage: UserMessageDoc,
+  assistantMessageId: Id<"messages"> | undefined,
+  mode: "createVariant" | "replace",
+): Promise<void> {
+  const variantRows = await ctx.db
+    .query("messages")
+    .withIndex("by_threadId_parentUserMessageId", (q) =>
+      q.eq("threadId", threadId).eq("parentUserMessageId", targetUserMessage._id),
+    )
+    .take(MAX_ASSISTANT_VARIANTS_PER_TURN + 1);
+
+  const variants: AssistantMessageDoc[] = [];
+  for (const variant of variantRows) {
+    if (!isAssistantMessage(variant)) continue;
+    if (variant.messageGraphIssue !== undefined) {
+      throw new Error("This legacy response must be repaired before it can be retried");
+    }
+    variants.push(variant);
+  }
+
+  if (variants.length > MAX_ASSISTANT_VARIANTS_PER_TURN) {
+    throw new Error("Assistant variant limit exceeded for this user turn");
+  }
+
+  const targetAssistantMessage = assistantMessageId
+    ? (variants.find((variant) => variant._id === assistantMessageId) ?? null)
+    : (variants.find((variant) => variant._id === targetUserMessage.activeAssistantMessageId) ??
+      variants[variants.length - 1] ??
+      null);
+
+  if (assistantMessageId && !targetAssistantMessage) {
+    throw new Error("Assistant message does not belong to the retried user turn");
+  }
+
+  const isCancelledMessage = targetAssistantMessage?.metadata?.finishReason === "aborted";
+  const shouldReuseEmptyCancelledMessage =
+    isCancelledMessage &&
+    targetAssistantMessage !== null &&
+    !hasMessageContent(targetAssistantMessage.parts, targetAssistantMessage.attachments.length);
+  const shouldReuseAssistantMessage =
+    targetAssistantMessage !== null &&
+    (mode === "replace" ||
+      targetAssistantMessage.status === "error" ||
+      shouldReuseEmptyCancelledMessage);
+
+  if (!shouldReuseAssistantMessage && variants.length >= MAX_ASSISTANT_VARIANTS_PER_TURN) {
+    throw new Error("Assistant variant limit reached for this user turn");
+  }
+}
+
+async function processRetryDeletionBatch(
+  ctx: MutationCtx,
+  attempt: Doc<"retryAttempts">,
+): Promise<RetryPreparationResult> {
+  const targetUserMessage = await ctx.db.get("messages", attempt.userMessageId);
+  if (!targetUserMessage || !isUserMessage(targetUserMessage)) {
+    throw new Error("User message not found");
+  }
+
+  const thread = await ctx.db.get("threads", attempt.threadId);
+  if (!thread) throw new Error("Thread not found");
+  if (thread.messageGraphVersion !== CURRENT_MESSAGE_GRAPH_VERSION) {
+    return await processLegacyRetryPreparation(ctx, attempt);
+  }
+
+  const sameTimestampUsers = await ctx.db
+    .query("messages")
+    .withIndex("by_userId_threadId_role_createdAt", (q) =>
+      q
+        .eq("userId", attempt.userId)
+        .eq("threadId", attempt.threadId)
+        .eq("role", "user")
+        .eq("createdAt", targetUserMessage.createdAt)
+        .gt("_creationTime", targetUserMessage._creationTime),
+    )
+    .take(RETRY_DELETE_BATCH_SIZE);
+
+  const laterUsers =
+    sameTimestampUsers.length > 0
+      ? sameTimestampUsers
+      : await ctx.db
+          .query("messages")
+          .withIndex("by_userId_threadId_role_createdAt", (q) =>
+            q
+              .eq("userId", attempt.userId)
+              .eq("threadId", attempt.threadId)
+              .eq("role", "user")
+              .gt("createdAt", targetUserMessage.createdAt),
+          )
+          .take(RETRY_DELETE_BATCH_SIZE);
+
+  if (laterUsers.length === 0) {
+    return await finishRetryPreparation(ctx, attempt);
+  }
+
+  for (const userMessage of laterUsers) {
+    const variants = await ctx.db
+      .query("messages")
+      .withIndex("by_threadId_parentUserMessageId", (q) =>
+        q.eq("threadId", attempt.threadId).eq("parentUserMessageId", userMessage._id),
+      )
+      .take(MAX_ASSISTANT_VARIANTS_PER_TURN + 1);
+
+    if (variants.length > MAX_ASSISTANT_VARIANTS_PER_TURN) {
+      throw new Error("Assistant variant limit exceeded while preparing retry");
+    }
+
+    for (const variant of variants) {
+      await ctx.db.delete(variant._id);
+    }
+    await ctx.db.delete(userMessage._id);
+  }
+
+  if (laterUsers.length < RETRY_DELETE_BATCH_SIZE) {
+    return await finishRetryPreparation(ctx, attempt);
+  }
+
+  await ctx.db.patch(attempt._id, { updatedAt: Date.now() });
+  await ctx.scheduler.runAfter(0, internal.functions.messages.continueRetryPreparation, {
+    retryAttemptId: attempt._id,
+  });
+
+  return { status: "preparing", retryAttemptId: attempt._id };
+}
+
+export const prepareRetryTurn = authenticatedMutation({
   args: {
     threadId: v.id("threads"),
-    assistantMessageId: v.id("messages"),
-    replaceCancelledMessage: v.optional(v.boolean()),
+    userMessageId: v.id("messages"),
+    assistantMessageId: v.optional(v.id("messages")),
+    mode: v.union(v.literal("createVariant"), v.literal("replace")),
 
     model: v.string(),
     modelParams: AISDKModelParams,
@@ -1001,135 +1405,338 @@ export const retryChatMessage = authenticatedMutation({
       }),
     ),
   },
-  returns: v.object({
-    assistantMessageId: v.id("messages"),
-    userMessageId: v.id("messages"),
-  }),
+  returns: retryPreparationResultValidator,
   handler: async (ctx, args) => {
     const user = ctx.user;
 
     const thread = await ctx.db.get("threads", args.threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
+    if (thread.retryAttemptId) {
+      const activeAttempt = await ctx.db.get("retryAttempts", thread.retryAttemptId);
+      const isStale =
+        activeAttempt &&
+        (activeAttempt.status === "deleting" || activeAttempt.status === "prepared") &&
+        Date.now() - activeAttempt.updatedAt >= RETRY_ATTEMPT_STALE_MS;
 
-    const targetAssistantMessage = await ctx.db.get("messages", args.assistantMessageId);
-    if (!targetAssistantMessage) throw new Error("Message not found");
-    if (targetAssistantMessage.userId !== user.userId) throw new Error("Not authorized");
-    if (targetAssistantMessage.role !== "assistant") {
-      throw new Error("Retry target must be an assistant message");
+      if (!activeAttempt || activeAttempt.status === "complete" || activeAttempt.status === "failed" || activeAttempt.status === "cancelled") {
+        await ctx.db.patch(args.threadId, { retryAttemptId: undefined });
+      } else if (isStale) {
+        const preparedMessage = activeAttempt.preparedAssistantMessageId
+          ? await ctx.db.get("messages", activeAttempt.preparedAssistantMessageId)
+          : null;
+        if (preparedMessage?.resumableStreamId) {
+          throw new Error("A retry is already in progress");
+        }
+        if (preparedMessage) {
+          await ctx.db.patch(preparedMessage._id, {
+            status: "error",
+            error: "Retry expired before generation started",
+            updatedAt: Date.now(),
+          });
+        }
+        await ctx.db.patch(activeAttempt._id, {
+          status: "failed",
+          error: "Retry expired before generation started",
+          updatedAt: Date.now(),
+        });
+        await ctx.db.patch(args.threadId, {
+          retryAttemptId: undefined,
+          status: "complete",
+          updatedAt: Date.now(),
+        });
+      } else {
+        throw new Error("A retry is already in progress");
+      }
+    }
+    if (thread.status === "pending" || thread.status === "streaming") {
+      throw new Error("Cannot retry while a response is in progress");
     }
 
-    const messages = await ctx.db
-      .query("messages")
-      .withIndex("by_userId_threadId", (q) => q.eq("userId", user.userId).eq("threadId", args.threadId))
-      .order("asc")
-      .collect();
-
-    const graph = buildThreadMessageGraph(messages);
-
-    const resolvedUserMessageId = resolveUserMessageIdForMessage(graph, targetAssistantMessage._id);
-    if (!resolvedUserMessageId) {
-      throw new Error("Could not resolve user message for retry target");
+    const targetUserMessage = await ctx.db.get("messages", args.userMessageId);
+    if (!targetUserMessage) throw new Error("User message not found");
+    if (targetUserMessage.userId !== user.userId) throw new Error("Not authorized");
+    if (targetUserMessage.threadId !== args.threadId) throw new Error("User message is not in thread");
+    if (!isUserMessage(targetUserMessage)) throw new Error("Retry target must be a user message");
+    if (targetUserMessage.messageGraphIssue !== undefined) {
+      throw new Error("This legacy user turn must be repaired before it can be retried");
     }
-
-    const userTurnIndex = graph.users.findIndex((message) => message._id === resolvedUserMessageId);
-    if (userTurnIndex === -1) {
-      throw new Error("User turn not found");
-    }
-
-    const messagesToDelete = collectMessagesFromUserTurnIndex(graph, userTurnIndex + 1);
 
     if (args.userMessage) {
-      if (args.userMessage.messageId !== resolvedUserMessageId) {
+      if (args.userMessage.messageId !== targetUserMessage._id) {
         throw new Error("Edited message must match the retried user turn");
       }
-
-      await ctx.db.patch(args.userMessage.messageId, {
-        updatedAt: Date.now(),
-        parts: args.userMessage.parts,
-        attachments: args.userMessage.attachments,
-      });
+      await validateRetryAttachments(
+        ctx,
+        user.userId,
+        args.threadId,
+        args.userMessage.attachments,
+      );
     }
 
-    for (const message of messagesToDelete) {
-      await ctx.db.delete(message._id);
+    if (args.assistantMessageId) {
+      const requestedAssistantMessage = await ctx.db.get("messages", args.assistantMessageId);
+      if (!requestedAssistantMessage) throw new Error("Assistant message not found");
+      if (!isAssistantMessage(requestedAssistantMessage)) {
+        throw new Error("Retry response target is invalid");
+      }
+      if (requestedAssistantMessage.userId !== user.userId || requestedAssistantMessage.threadId !== args.threadId) {
+        throw new Error("Assistant message does not belong to the retried user turn");
+      }
+      if (
+        thread.messageGraphVersion === CURRENT_MESSAGE_GRAPH_VERSION &&
+        requestedAssistantMessage.parentUserMessageId !== targetUserMessage._id
+      ) {
+        throw new Error("Assistant message does not belong to the retried user turn");
+      }
+    }
+
+    if (thread.messageGraphVersion === CURRENT_MESSAGE_GRAPH_VERSION) {
+      await validateModernRetryTarget(
+        ctx,
+        args.threadId,
+        targetUserMessage,
+        args.assistantMessageId,
+        args.mode,
+      );
     }
 
     const now = Date.now();
-    const nextMetadata = {
-      durations: { request: 0, reasoning: 0, text: 0 },
-      usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
-      timeToFirstTokenMs: 0,
-      finishReason: null,
-
+    const retryAttemptId = await ctx.db.insert("retryAttempts", {
+      threadId: args.threadId,
+      userId: user.userId,
+      userMessageId: targetUserMessage._id,
+      assistantMessageId: args.assistantMessageId,
+      mode: args.mode,
+      model: args.model,
       modelParams: args.modelParams,
-      model: { request: args.model, response: null },
+      userMessage: args.userMessage,
+      status: "deleting",
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.patch(args.threadId, { retryAttemptId, updatedAt: now });
+    await ctx.scheduler.runAfter(RETRY_ATTEMPT_STALE_MS, internal.functions.messages.cleanupRetryAttempt, {
+      retryAttemptId,
+    });
+
+    const attempt = await ctx.db.get("retryAttempts", retryAttemptId);
+    if (!attempt) throw new Error("Failed to create retry attempt");
+
+    try {
+      return await processRetryDeletionBatch(ctx, attempt);
+    } catch (error) {
+      await ctx.db.delete(retryAttemptId);
+      await ctx.db.patch(args.threadId, { retryAttemptId: undefined });
+      throw error;
+    }
+  },
+});
+
+export const continueRetryPreparation = internalMutation({
+  args: { retryAttemptId: v.id("retryAttempts") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const attempt = await ctx.db.get("retryAttempts", args.retryAttemptId);
+    if (!attempt || attempt.status !== "deleting") return null;
+
+    const thread = await ctx.db.get("threads", attempt.threadId);
+    if (!thread || thread.retryAttemptId !== attempt._id) return null;
+
+    try {
+      await processRetryDeletionBatch(ctx, attempt);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to prepare retry";
+      await ctx.db.patch(attempt._id, { status: "failed", error: message, updatedAt: Date.now() });
+      const thread = await ctx.db.get("threads", attempt.threadId);
+      if (thread?.retryAttemptId === attempt._id) {
+        await ctx.db.patch(attempt.threadId, {
+          retryAttemptId: undefined,
+          status: "complete",
+          updatedAt: Date.now(),
+        });
+      }
+    }
+
+    return null;
+  },
+});
+
+export const getRetryAttempt = authenticatedQuery({
+  args: { retryAttemptId: v.id("retryAttempts") },
+  returns: v.union(
+    retryPreparationResultValidator,
+    v.object({ status: v.literal("failed"), error: v.string() }),
+    v.object({ status: v.literal("cancelled") }),
+  ),
+  handler: async (ctx, args) => {
+    const attempt = await ctx.db.get("retryAttempts", args.retryAttemptId);
+    if (!attempt) throw new Error("Retry attempt not found");
+    if (attempt.userId !== ctx.user.userId) throw new Error("Not authorized");
+
+    if (attempt.status === "failed") {
+      return { status: "failed" as const, error: attempt.error ?? "Failed to prepare retry" };
+    }
+    if (attempt.status === "cancelled") return { status: "cancelled" as const };
+    if (attempt.status === "deleting") {
+      return { status: "preparing" as const, retryAttemptId: attempt._id };
+    }
+    if (!attempt.preparedAssistantMessageId) {
+      throw new Error("Prepared retry is missing its assistant response");
+    }
+
+    const preparedAssistantMessage = await ctx.db.get(
+      "messages",
+      attempt.preparedAssistantMessageId,
+    );
+    if (!preparedAssistantMessage || !isAssistantMessage(preparedAssistantMessage)) {
+      throw new Error("Prepared assistant response not found");
+    }
+
+    return {
+      status: "prepared" as const,
+      retryAttemptId: attempt._id,
+      assistantMessageId: preparedAssistantMessage._id,
+      userMessageId: attempt.userMessageId,
+      creationTime: preparedAssistantMessage._creationTime,
+      messageId: preparedAssistantMessage.messageId,
+      userId: preparedAssistantMessage.userId,
+      createdAt: preparedAssistantMessage.createdAt,
+      variantIndex: preparedAssistantMessage.variantIndex ?? null,
     };
+  },
+});
 
-    const isCancelledMessage = targetAssistantMessage.metadata?.finishReason === "aborted";
-    const shouldReuseCancelledMessage =
-      isCancelledMessage &&
-      (args.replaceCancelledMessage === true ||
-        !hasMessageContent(targetAssistantMessage.parts, targetAssistantMessage.attachments.length));
-    const shouldReuseAssistantMessage =
-      targetAssistantMessage.status === "error" || shouldReuseCancelledMessage;
-    let assistantMessageId = targetAssistantMessage._id;
+export const markRetryAttemptStreaming = authenticatedMutation({
+  args: {
+    retryAttemptId: v.id("retryAttempts"),
+    assistantMessageId: v.id("messages"),
+    resumableStreamId: v.string(),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const attempt = await ctx.db.get("retryAttempts", args.retryAttemptId);
+    if (!attempt) return false;
+    if (attempt.userId !== ctx.user.userId) throw new Error("Not authorized");
+    if (attempt.status !== "prepared") return false;
+    if (attempt.preparedAssistantMessageId !== args.assistantMessageId) return false;
 
-    if (shouldReuseAssistantMessage) {
-      await ctx.db.patch(targetAssistantMessage._id, {
-        status: "pending",
-        parts: [],
-        attachments: [],
-        resumableStreamId: null,
-        error: undefined,
-        statsTrackedAt: undefined,
+    const message = await ctx.db.get("messages", args.assistantMessageId);
+    if (!message || message.userId !== ctx.user.userId || message.threadId !== attempt.threadId) {
+      return false;
+    }
+
+    const now = Date.now();
+    await Promise.all([
+      ctx.db.patch(attempt._id, { status: "streaming", updatedAt: now }),
+      ctx.db.patch(message._id, {
+        status: "streaming",
+        resumableStreamId: args.resumableStreamId,
         updatedAt: now,
-        metadata: nextMetadata,
-      });
-    } else {
-      const variants = graph.assistantsByUserId[resolvedUserMessageId] ?? [];
-      const variantIndex = getNextVariantIndex(variants);
+      }),
+      ctx.db.patch(attempt.threadId, { status: "streaming", updatedAt: now }),
+    ]);
+    return true;
+  },
+});
 
-      assistantMessageId = await ctx.db.insert("messages", {
-        threadId: args.threadId,
-        userId: user.userId,
+export const cancelRetryAttempt = authenticatedMutation({
+  args: {
+    retryAttemptId: v.id("retryAttempts"),
+    reason: v.optional(v.string()),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const attempt = await ctx.db.get("retryAttempts", args.retryAttemptId);
+    if (!attempt) return false;
+    if (attempt.userId !== ctx.user.userId) throw new Error("Not authorized");
+    if (attempt.status !== "deleting" && attempt.status !== "prepared") return false;
 
-        messageId: crypto.randomUUID(),
-        status: "pending",
-        parts: [],
-        attachments: [],
-
-        role: "assistant",
+    const now = Date.now();
+    const preparedMessage = attempt.preparedAssistantMessageId
+      ? await ctx.db.get("messages", attempt.preparedAssistantMessageId)
+      : null;
+    if (
+      preparedMessage &&
+      (preparedMessage.status === "pending" || preparedMessage.status === "streaming") &&
+      !preparedMessage.resumableStreamId
+    ) {
+      await ctx.db.patch(preparedMessage._id, {
+        status: "error",
+        error: args.reason ?? "Retry cancelled before generation started",
         resumableStreamId: null,
-        error: undefined,
-
-        parentUserMessageId: resolvedUserMessageId,
-        variantIndex,
-        activeAssistantMessageId: undefined,
-        messageGraphVersion:
-          thread.messageGraphVersion === CURRENT_MESSAGE_GRAPH_VERSION
-            ? CURRENT_MESSAGE_GRAPH_VERSION
-            : undefined,
-        messageGraphIssue: undefined,
-
-        createdAt: now,
         updatedAt: now,
-
-        metadata: nextMetadata,
       });
     }
 
-    await Promise.all([
-      ctx.db.patch("threads", args.threadId, { status: "pending", updatedAt: now }),
-      ctx.db.patch("messages", resolvedUserMessageId, {
+    const thread = await ctx.db.get("threads", attempt.threadId);
+    await ctx.db.patch(attempt._id, {
+      status: "cancelled",
+      error: args.reason,
+      updatedAt: now,
+    });
+    if (thread?.retryAttemptId === attempt._id) {
+      await ctx.db.patch(attempt.threadId, {
+        retryAttemptId: undefined,
+        status: "complete",
         updatedAt: now,
-        activeAssistantMessageId: assistantMessageId,
-      }),
-    ]);
+      });
+    }
 
-    await patchThreadModelConfig(ctx, args.threadId, args.model, args.modelParams);
+    return true;
+  },
+});
 
-    return { assistantMessageId, userMessageId: resolvedUserMessageId };
+export const cleanupRetryAttempt = internalMutation({
+  args: { retryAttemptId: v.id("retryAttempts") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const attempt = await ctx.db.get("retryAttempts", args.retryAttemptId);
+    if (!attempt) return null;
+    if (attempt.status !== "deleting" && attempt.status !== "prepared") return null;
+    const remainingStaleMs = RETRY_ATTEMPT_STALE_MS - (Date.now() - attempt.updatedAt);
+    if (remainingStaleMs > 0) {
+      await ctx.scheduler.runAfter(remainingStaleMs, internal.functions.messages.cleanupRetryAttempt, {
+        retryAttemptId: attempt._id,
+      });
+      return null;
+    }
+
+    const now = Date.now();
+    const preparedMessage = attempt.preparedAssistantMessageId
+      ? await ctx.db.get("messages", attempt.preparedAssistantMessageId)
+      : null;
+    if (preparedMessage?.resumableStreamId) {
+      await ctx.db.patch(attempt._id, { status: "streaming", updatedAt: Date.now() });
+      return null;
+    }
+    if (
+      preparedMessage &&
+      (preparedMessage.status === "pending" || preparedMessage.status === "streaming") &&
+      !preparedMessage.resumableStreamId
+    ) {
+      await ctx.db.patch(preparedMessage._id, {
+        status: "error",
+        error: "Retry expired before generation started",
+        resumableStreamId: null,
+        updatedAt: now,
+      });
+    }
+
+    const thread = await ctx.db.get("threads", attempt.threadId);
+    await ctx.db.patch(attempt._id, {
+      status: "failed",
+      error: "Retry expired before generation started",
+      updatedAt: now,
+    });
+    if (thread?.retryAttemptId === attempt._id) {
+      await ctx.db.patch(attempt.threadId, {
+        retryAttemptId: undefined,
+        status: "complete",
+        updatedAt: now,
+      });
+    }
+    return null;
   },
 });
 

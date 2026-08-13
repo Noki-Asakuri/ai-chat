@@ -27,6 +27,7 @@ export type ValidatedChatRequestBody = {
   modelMessages: Array<ModelMessage>;
 
   assistantMessageId: Id<"messages">;
+  retryAttemptId?: Id<"retryAttempts">;
   threadId: Id<"threads">;
 
   modelParams: ChatModelParams;

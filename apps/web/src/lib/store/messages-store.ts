@@ -94,10 +94,18 @@ export type MessagesStore = {
     metadata?: ChatMessage["metadata"],
   ) => void;
 
-  resetAssistantMessageForRetry: (
+  prepareAssistantMessageForRetry: (
     threadId: Id<"threads">,
-    id: Id<"messages">,
-    metadata?: ChatMessage["metadata"],
+    input: {
+      assistantMessageId: Id<"messages">;
+      userMessageId: Id<"messages">;
+      creationTime: number;
+      messageId: string;
+      userId: string;
+      createdAt: number;
+      variantIndex: number | null;
+      metadata: NonNullable<ChatMessage["metadata"]>;
+    },
   ) => void;
 
   /**
@@ -108,7 +116,11 @@ export type MessagesStore = {
 
   controllers: Record<Id<"threads">, StreamControllerEntry>;
   setController: (threadId: Id<"threads">, entry: StreamControllerEntry) => void;
-  removeController: (threadId: Id<"threads">) => void;
+  removeController: (threadId: Id<"threads">, expectedController?: AbortController) => void;
+
+  retryOperationIds: Record<Id<"threads">, string>;
+  startRetryOperation: (threadId: Id<"threads">, operationId: string) => boolean;
+  finishRetryOperation: (threadId: Id<"threads">, operationId: string) => void;
 };
 
 export const useMessageStore = create<MessagesStore>()(
@@ -723,28 +735,106 @@ export const useMessageStore = create<MessagesStore>()(
         });
       },
 
-      resetAssistantMessageForRetry: function resetAssistantMessageForRetry(threadId, id, metadata) {
+      prepareAssistantMessageForRetry: function prepareAssistantMessageForRetry(threadId, input) {
         set(function update(state) {
           const thread = ensureThreadStateInDraft(state, threadId);
-          const msg = thread.messagesById[id];
-          if (!msg || msg.role !== "assistant") return;
+          const existingMessage = thread.messagesById[input.assistantMessageId];
+          const now = Date.now();
+          const message: ChatMessage =
+            existingMessage?.role === "assistant"
+              ? existingMessage
+              : {
+                  _id: input.assistantMessageId,
+                  _creationTime: input.creationTime,
+                  threadId,
+                  userId: input.userId,
+                  messageId: input.messageId,
+                  parts: [],
+                  status: "pending",
+                  role: "assistant",
+                  resumableStreamId: null,
+                  metadata: input.metadata,
+                  attachments: [],
+                  parentUserMessageId: input.userMessageId,
+                  variantIndex: input.variantIndex ?? undefined,
+                  createdAt: input.createdAt,
+                  updatedAt: now,
+                };
 
-          msg.parts = [];
-          msg.status = "pending";
-          msg.error = undefined;
-          msg.resumableStreamId = null;
-          msg.updatedAt = Date.now();
+          thread.messagesById[input.assistantMessageId] = message;
 
-          if (metadata) {
-            msg.metadata = metadata;
+          message.parts = [];
+          message.status = "pending";
+          message.error = undefined;
+          message.resumableStreamId = null;
+          message.updatedAt = now;
+          message.metadata = input.metadata;
+
+          const userMessage = thread.messagesById[input.userMessageId];
+          if (userMessage?.role === "user") {
+            userMessage.activeAssistantMessageId = input.assistantMessageId;
           }
 
-          const prev = thread.localMetaById[id];
+          const variants = thread.variantMessageIdsByUserMessageId[input.userMessageId] ?? [];
+          if (!variants.includes(input.assistantMessageId)) {
+            variants.push(input.assistantMessageId);
+            thread.variantMessageIdsByUserMessageId[input.userMessageId] = variants;
+          }
+
+          thread.userMessageIdByMessageId[input.assistantMessageId] = input.userMessageId;
+          thread.activeAssistantMessageIdByUserMessageId[input.userMessageId] =
+            input.assistantMessageId;
+
+          const userMessageIndex = thread.messageIds.indexOf(input.userMessageId);
+          if (userMessageIndex >= 0) {
+            const laterUserMessageIds: Array<Id<"messages">> = [];
+            for (const laterMessageId of thread.messageIds.slice(userMessageIndex + 1)) {
+              const laterMessage = thread.messagesById[laterMessageId];
+              if (laterMessage?.role === "user") laterUserMessageIds.push(laterMessage._id);
+            }
+
+            const removedMessageIds = new Set<Id<"messages">>();
+            for (const laterUserMessageId of laterUserMessageIds) {
+              removedMessageIds.add(laterUserMessageId);
+              for (const variantId of
+                thread.variantMessageIdsByUserMessageId[laterUserMessageId] ?? []) {
+                removedMessageIds.add(variantId);
+              }
+
+              delete thread.variantMessageIdsByUserMessageId[laterUserMessageId];
+              delete thread.activeAssistantMessageIdByUserMessageId[laterUserMessageId];
+            }
+
+            for (const removedMessageId of removedMessageIds) {
+              delete thread.messagesById[removedMessageId];
+              delete thread.localMetaById[removedMessageId];
+              delete thread.userMessageIdByMessageId[removedMessageId];
+            }
+
+            thread.allMessageIds = thread.allMessageIds.filter(
+              (messageId) => !removedMessageIds.has(messageId),
+            );
+            thread.messageIds.splice(
+              userMessageIndex + 1,
+              thread.messageIds.length - userMessageIndex - 1,
+              input.assistantMessageId,
+            );
+          }
+
+          if (!thread.allMessageIds.includes(input.assistantMessageId)) {
+            thread.allMessageIds = mergeMessageIdLists(
+              thread.allMessageIds,
+              [input.assistantMessageId],
+              thread.messagesById,
+            );
+          }
+
+          const prev = thread.localMetaById[input.assistantMessageId];
           const nextRevision = (prev?.localRevision ?? 0) + 1;
 
-          thread.localMetaById[id] = {
+          thread.localMetaById[input.assistantMessageId] = {
             localRevision: nextRevision,
-            localUpdatedAt: Date.now(),
+            localUpdatedAt: now,
           };
 
           if (state.currentThreadId === threadId) {
@@ -793,9 +883,32 @@ export const useMessageStore = create<MessagesStore>()(
           state.controllers[threadId] = entry;
         });
       },
-      removeController: function removeController(threadId) {
+      removeController: function removeController(threadId, expectedController) {
         set(function remove(state) {
+          if (
+            expectedController &&
+            state.controllers[threadId]?.controller !== expectedController
+          ) {
+            return;
+          }
           delete state.controllers[threadId];
+        });
+      },
+
+      retryOperationIds: {},
+      startRetryOperation: function startRetryOperation(threadId, operationId) {
+        let started = false;
+        set(function start(state) {
+          if (state.retryOperationIds[threadId]) return;
+          state.retryOperationIds[threadId] = operationId;
+          started = true;
+        });
+        return started;
+      },
+      finishRetryOperation: function finishRetryOperation(threadId, operationId) {
+        set(function finish(state) {
+          if (state.retryOperationIds[threadId] !== operationId) return;
+          delete state.retryOperationIds[threadId];
         });
       },
     };
