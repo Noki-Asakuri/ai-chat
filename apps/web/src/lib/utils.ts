@@ -1,11 +1,6 @@
 import { tryCatch, tryCatchSync } from "@ai-chat/shared/utils/async";
 
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+export { cn } from "cnfast";
 
 const BYTE_UNITS = ["byte", "kilobyte", "megabyte", "gigabyte"] as const;
 type ByteUnit = (typeof BYTE_UNITS)[number];
