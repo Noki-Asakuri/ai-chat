@@ -44,7 +44,7 @@ export function formatUser(user: User) {
   return \`${"${displayName}"} <${"${user.email}"}>\`;
 }`;
 const CODE_PREVIEW_HIGHLIGHT: HighlightResult = {
-  bg: "#282c34",
+  bg: "transparent",
   fg: "#abb2bf",
   tokens: [
     [
