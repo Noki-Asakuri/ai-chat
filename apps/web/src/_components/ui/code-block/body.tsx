@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { LINE_CLAMP } from ".";
 import { useCodeBlockContext } from "./context";
 
-const CODE_LINE_HEIGHT_PX = 20;
+const CODE_LINE_HEIGHT_EM = 1.5;
 const COLLAPSED_VERTICAL_PADDING_PX = 8;
 
 type CodeBlockBodyProps = ComponentProps<"div"> & {
@@ -178,7 +178,7 @@ export const CodeBlockContent = memo(
 
     return (
       <div
-        className={cn(className, "text-sm", wrapline ? "w-full" : "w-max min-w-full")}
+        className={cn(className, wrapline ? "w-full" : "w-max min-w-full")}
         data-language={language}
         data-streamdown="code-block-body"
         {...rest}
@@ -221,7 +221,7 @@ export function CodeBlockBody({ result }: { result: HighlightResult }) {
 
   const containerMaxHeight = (() => {
     if (!isCollapsed) return undefined;
-    return `${LINE_CLAMP * CODE_LINE_HEIGHT_PX + COLLAPSED_VERTICAL_PADDING_PX}px`;
+    return `calc(${LINE_CLAMP * CODE_LINE_HEIGHT_EM}em + ${COLLAPSED_VERTICAL_PADDING_PX}px)`;
   })();
 
   return (
@@ -229,7 +229,11 @@ export function CodeBlockBody({ result }: { result: HighlightResult }) {
       <div
         className={cn("px-3 py-2", isCollapsed ? "overflow-auto pb-10" : "overflow-x-auto")}
         data-should-wrap={wrapline ? "true" : "false"}
-        style={{ maxHeight: containerMaxHeight }}
+        style={{
+          maxHeight: containerMaxHeight,
+          fontSize: "var(--custom-code-font-size, 14px)",
+          lineHeight: CODE_LINE_HEIGHT_EM,
+        }}
       >
         <CodeBlockContent
           result={result}

@@ -13,6 +13,7 @@ import {
   LogOutIcon,
   MessagesSquareIcon,
   PaperclipIcon,
+  PaletteIcon,
   UserRoundPenIcon,
 } from "lucide-react";
 import type { ComponentProps } from "react";
@@ -97,9 +98,14 @@ export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfilePro
                 Account
               </UserMenuSettingItem>
 
-              <UserMenuSettingItem href="/settings/appearance" returnThreadId={returnThreadId}>
+              <UserMenuSettingItem href="/settings/customization" returnThreadId={returnThreadId}>
                 <Columns3CogIcon />
                 Customize
+              </UserMenuSettingItem>
+
+              <UserMenuSettingItem href="/settings/appearance" returnThreadId={returnThreadId}>
+                <PaletteIcon />
+                Appearance
               </UserMenuSettingItem>
 
               <UserMenuSettingItem href="/settings/profiles" returnThreadId={returnThreadId}>

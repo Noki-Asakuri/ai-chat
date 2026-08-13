@@ -119,10 +119,6 @@
 
   --font-serif: "Space Grotesk", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 
-  --font-mono:
-    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
-    monospace;
-
   --animate-caret-blink: caret-blink 1.25s ease-out infinite;
 
   @keyframes caret-blink {
@@ -136,6 +132,12 @@
       opacity: "0";
     }
   }
+}
+
+@theme inline {
+  --font-mono:
+    var(--custom-code-font, "JetBrains Mono"), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 }
 
 .font-sans {
@@ -162,12 +164,6 @@
   font-size: var(--custom-ui-font-size, 16px);
 }
 
-.font-mono {
-  font-family:
-    var(--custom-code-font, "JetBrains Mono"), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
-}
-
 [data-slot="textarea-chat-input"],
 [data-slot="textarea-user-message-edit"] {
   font-family:
@@ -177,14 +173,12 @@
 
 [data-streamdown="code-block-body"] {
   font-size: var(--custom-code-font-size, 14px);
+  line-height: 1.5;
 }
 
 [data-streamdown="code-block-body"] pre,
 [data-slot="inline-codeblock"],
 .message-tool-part pre {
-  font-family:
-    var(--custom-code-font, "JetBrains Mono"), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
   font-size: var(--custom-code-font-size, 14px);
 }
 

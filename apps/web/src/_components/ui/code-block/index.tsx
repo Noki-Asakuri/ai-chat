@@ -46,7 +46,11 @@ export const LANGUAGE_DISPLAY_NAME: Record<string, LanguageData> = {
   sh: { name: "Shell" },
 };
 
-export function CodeBlock({ code: rawCode, language, meta }: CustomRendererProps) {
+type CodeBlockProps = CustomRendererProps & {
+  showCopyAndWrap?: boolean;
+};
+
+export function CodeBlock({ code: rawCode, language, meta, showCopyAndWrap = true }: CodeBlockProps) {
   const code = String(rawCode).replace(TRAILING_NEWLINES_REGEX, "");
   const displayLanguage = extractOriginalFenceLanguage(meta) ?? language;
   return (
@@ -54,6 +58,7 @@ export function CodeBlock({ code: rawCode, language, meta }: CustomRendererProps
       language={displayLanguage}
       displayLanguage={displayLanguage}
       code={code}
+      showCopyAndWrap={showCopyAndWrap}
     />
   );
 }
@@ -62,6 +67,7 @@ type HighlightedCodeBlockProps = {
   language: string;
   displayLanguage: string;
   code: string;
+  showCopyAndWrap: boolean;
 };
 
 function splitCodeToHighlightTokens(code: string) {
@@ -111,7 +117,12 @@ function transformHighlightResult(result: HighlightResult) {
   };
 }
 
-function HighlightedCodeBlock({ language, displayLanguage, code }: HighlightedCodeBlockProps) {
+function HighlightedCodeBlock({
+  language,
+  displayLanguage,
+  code,
+  showCopyAndWrap,
+}: HighlightedCodeBlockProps) {
   const totalLines = code.split("\n").length;
   const prevCodeRef = useRef(code);
 
@@ -156,7 +167,7 @@ function HighlightedCodeBlock({ language, displayLanguage, code }: HighlightedCo
   return (
     <CodeBlockProvider code={code} language={displayLanguage} totalLines={totalLines}>
       <CodeBlockContainer>
-        <CodeBlockHeader />
+        <CodeBlockHeader showCopyAndWrap={showCopyAndWrap} />
         <CodeBlockBody result={result} />
       </CodeBlockContainer>
     </CodeBlockProvider>

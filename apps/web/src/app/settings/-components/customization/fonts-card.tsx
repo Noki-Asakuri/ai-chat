@@ -241,6 +241,7 @@ export function FontsCard(props: FontsCardProps) {
               code={CODE_PREVIEW}
               language="typescript"
               isIncomplete={false}
+              showCopyAndWrap={false}
             />
           </ConfigStoreProvider>
         </FontSelector>
@@ -362,33 +363,28 @@ function FontCombobox(props: FontComboboxProps) {
         className="w-[var(--anchor-width)] min-w-64 gap-0 overflow-hidden p-0"
       >
         <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Search fonts…"
-            value={query}
-            onValueChange={setQuery}
-            autoFocus
-          />
+          <CommandInput placeholder="Search fonts…" value={query} onValueChange={setQuery} autoFocus />
           <CommandList className="max-h-72 p-1">
             {visibleFonts.length === 0 ? (
               <CommandEmpty>No fonts found.</CommandEmpty>
             ) : (
               <CommandGroup>
                 {visibleFonts.map((font) => (
-                <CommandItem
-                  key={font}
-                  value={font}
-                  data-checked={font === props.value}
-                  style={{ fontFamily: font }}
-                  onSelect={() => {
-                    setOpen(false);
-                    setQuery("");
-                    window.requestAnimationFrame(() => {
-                      startTransition(() => props.onValueChange(font));
-                    });
-                  }}
-                >
-                  <span className="truncate">{font}</span>
-                </CommandItem>
+                  <CommandItem
+                    key={font}
+                    value={font}
+                    data-checked={font === props.value}
+                    style={{ fontFamily: font }}
+                    onSelect={() => {
+                      setOpen(false);
+                      setQuery("");
+                      window.requestAnimationFrame(() => {
+                        startTransition(() => props.onValueChange(font));
+                      });
+                    }}
+                  >
+                    <span className="truncate">{font}</span>
+                  </CommandItem>
                 ))}
               </CommandGroup>
             )}
