@@ -7,7 +7,6 @@ import { useShallow } from "zustand/shallow";
 
 import { MessageContent } from "./message-content";
 import { MessageFooter } from "./message-footer";
-import { MessagePending } from "./message-pending";
 
 import { ChatEditTextarea } from "../chat-textarea/chat-edit-textarea";
 
@@ -99,7 +98,7 @@ export function Message({
       data-effort={message.metadata?.modelParams.effort}
       data-web-search={message.metadata?.modelParams.webSearch ?? false}
     >
-      <ConditionallyRenderedMessage
+      <MessageInner
         message={message}
         isLast={isLast}
         readOnly={readOnly}
@@ -113,14 +112,6 @@ function isLastMessage(role: ChatMessage["role"], index: number, total: number):
   if (index === total - 1) return true;
   if (role === "user" && index === total - 2) return true;
   return false;
-}
-
-export function ConditionallyRenderedMessage({ message, ...props }: MessageInnerProps) {
-  if (message.status === "pending" && !message.parts.length) {
-    return <MessagePending metadata={message.metadata} />;
-  }
-
-  return <MessageInner message={message} {...props} />;
 }
 
 type MessageInnerProps = {

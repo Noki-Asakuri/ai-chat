@@ -7,6 +7,7 @@ import { Message, MessageAvatar, MessageContent as MessageLayoutContent, Message
 
 import { MessageAttachmentsDisplay } from "./message-attachments-display";
 import { StreamDownWrapper } from "./message-markdown";
+import { MessagePending } from "./message-pending";
 import { MessageReasoning } from "./message-reasoning";
 import { MessageStepDivider, MessageToolParts, isToolPart, type ToolPart } from "./message-tool-parts";
 
@@ -152,8 +153,13 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
   const assistantBlocks = message.role === "assistant" ? buildAssistantFlowBlocks(parts) : [];
 
   const shouldRenderUserAvatar = showUserAvatar && message.role === "user";
+  const shouldRenderPending =
+    message.role === "assistant" &&
+    (message.status === "pending" || message.status === "streaming") &&
+    assistantBlocks.length === 0;
   const hasRenderableContent =
     message.status === "error" ||
+    shouldRenderPending ||
     fileParts.length > 0 ||
     (message.role === "assistant" ? assistantBlocks.length > 0 : userTextParts.length > 0);
 
@@ -161,7 +167,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
   const modelId = message.metadata?.model.request;
   const modelData = modelId ? tryGetModelData(modelId) : null;
 
-  if (!hasRenderableContent && !shouldRenderUserAvatar) return null;
+  if (message.role === "user" && !hasRenderableContent && !shouldRenderUserAvatar) return null;
 
   return (
     <Message
@@ -189,9 +195,9 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
       )}
 
       <MessageLayoutContent className="items-end group-data-[align=start]/message:items-start">
-        {message.role === "assistant" && modelData && (
+        {message.role === "assistant" && (
           <MessageHeader className="px-0 text-base leading-5 text-foreground">
-            {modelData.display.name}
+            {modelData?.display.name ?? modelId ?? "Model"}
           </MessageHeader>
         )}
 
@@ -259,6 +265,8 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
             })}
           </div>
         )}
+
+        {shouldRenderPending && <MessagePending />}
 
         {message.status !== "error" && shouldRenderUserMessageBody && (
           <div className="relative flex max-w-full items-start justify-end gap-2 self-end">
