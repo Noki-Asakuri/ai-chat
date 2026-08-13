@@ -13,7 +13,7 @@ type LocalMessageMeta = {
 type VariantMessageIdsByUserMessageId = Record<Id<"messages">, Array<Id<"messages">>>;
 type UserMessageIdByMessageId = Record<Id<"messages">, Id<"messages">>;
 type ActiveAssistantMessageIdByUserMessageId = Record<Id<"messages">, Id<"messages">>;
-type SyncMessagesMode = "replace" | "prepend";
+type SyncMessagesMode = "replace" | "refresh" | "prepend";
 
 type ThreadMessagesState = {
   allMessageIds: Array<Id<"messages">>;
@@ -320,6 +320,46 @@ export const useMessageStore = create<MessagesStore>()(
       return nextIds;
     }
 
+    function mergeLatestCanonicalMessageIds(
+      existingIds: Array<Id<"messages">>,
+      incomingIds: Array<Id<"messages">>,
+      messagesById: Record<Id<"messages">, ChatMessage>,
+    ): Array<Id<"messages">> {
+      const incomingUserMessageIds = new Set<Id<"messages">>();
+
+      for (const id of incomingIds) {
+        const message = messagesById[id];
+        if (!message) continue;
+
+        if (message.role === "user") {
+          incomingUserMessageIds.add(message._id);
+        } else if (message.parentUserMessageId) {
+          incomingUserMessageIds.add(message.parentUserMessageId);
+        }
+      }
+
+      const retainedExistingIds: Array<Id<"messages">> = [];
+      let previousUserMessageId: Id<"messages"> | null = null;
+
+      for (const id of existingIds) {
+        const message = messagesById[id];
+        if (!message) continue;
+
+        if (message.role === "user") {
+          previousUserMessageId = message._id;
+          retainedExistingIds.push(id);
+          continue;
+        }
+
+        const userMessageId = message.parentUserMessageId ?? previousUserMessageId;
+        if (userMessageId && incomingUserMessageIds.has(userMessageId)) continue;
+
+        retainedExistingIds.push(id);
+      }
+
+      return mergeMessageIdLists(retainedExistingIds, incomingIds, messagesById);
+    }
+
     function mergeVariantMaps(
       existingMap: VariantMessageIdsByUserMessageId,
       incomingMap: VariantMessageIdsByUserMessageId,
@@ -524,7 +564,7 @@ export const useMessageStore = create<MessagesStore>()(
             }
           }
 
-          if (mode === "prepend" && earliestIncomingCreatedAt !== null) {
+          if (mode === "refresh" && earliestIncomingCreatedAt !== null) {
             for (const cachedMessage of Object.values(thread.messagesById)) {
               if (incomingIds.has(cachedMessage._id)) continue;
               if (cachedMessage.createdAt < earliestIncomingCreatedAt) continue;
@@ -551,22 +591,28 @@ export const useMessageStore = create<MessagesStore>()(
           }
 
           const nextAllMessageIds =
-            mode === "prepend"
-              ? mergeMessageIdLists(
+            mode === "replace"
+              ? incomingAllMessageIds
+              : mergeMessageIdLists(
                   thread.allMessageIds,
                   incomingAllMessageIds,
                   thread.messagesById,
-                )
-              : incomingAllMessageIds;
+                );
 
-          const nextCanonicalMessageIds =
-            mode === "prepend"
-              ? mergeMessageIdLists(
-                  thread.messageIds,
-                  incomingCanonicalMessageIds,
-                  thread.messagesById,
-                )
-              : incomingCanonicalMessageIds;
+          let nextCanonicalMessageIds = incomingCanonicalMessageIds;
+          if (mode === "prepend") {
+            nextCanonicalMessageIds = mergeMessageIdLists(
+              thread.messageIds,
+              incomingCanonicalMessageIds,
+              thread.messagesById,
+            );
+          } else if (mode === "refresh") {
+            nextCanonicalMessageIds = mergeLatestCanonicalMessageIds(
+              thread.messageIds,
+              incomingCanonicalMessageIds,
+              thread.messagesById,
+            );
+          }
 
           const nextCanonicalMessages: ChatMessage[] = [];
           for (const messageId of nextCanonicalMessageIds) {
@@ -580,13 +626,13 @@ export const useMessageStore = create<MessagesStore>()(
             : buildVariantMapFromCanonical(canonicalMessages);
 
           const nextVariantMap =
-            mode === "prepend"
-              ? mergeVariantMaps(
+            mode === "replace"
+              ? baseVariantMap
+              : mergeVariantMaps(
                   thread.variantMessageIdsByUserMessageId,
                   baseVariantMap,
                   thread.messagesById,
-                )
-              : baseVariantMap;
+                );
 
           const nextUserMessageMap = buildUserMessageMap(
             nextCanonicalMessages,

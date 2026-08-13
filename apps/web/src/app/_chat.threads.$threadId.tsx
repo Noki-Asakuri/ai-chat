@@ -67,7 +67,7 @@ function ChatHistory() {
   });
 
   const syncMessage = useEffectEvent((payload: ChatHistoryPayload, syncToken: number) => {
-    const mode = hasSyncedInitialPageRef.current ? "prepend" : "replace";
+    const mode = hasSyncedInitialPageRef.current ? "refresh" : "replace";
     messageStoreActions.syncMessages(threadId, payload, syncToken, mode);
     hasSyncedInitialPageRef.current = true;
 
