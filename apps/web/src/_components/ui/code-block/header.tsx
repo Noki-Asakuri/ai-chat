@@ -28,7 +28,7 @@ export function CodeBlockHeader() {
   const Icon = languageData?.icon;
 
   const calculateShouldStickyHeader = useCallback(() => {
-    if (!expanded) return false;
+    if (!expanded || typeof window === "undefined") return false;
 
     const availableViewportPx = window.innerHeight - textareaHeight - 48;
     if (availableViewportPx <= 0) return false;
