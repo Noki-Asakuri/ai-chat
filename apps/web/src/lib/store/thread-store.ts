@@ -9,7 +9,6 @@ export type GroupedThreads = {
   activeGroupId: Id<"groups"> | null;
   groups: Doc<"groups">[];
   threads: Doc<"threads">[];
-  hasMore: boolean;
 };
 
 export type ThreadStore = {
@@ -30,7 +29,6 @@ export const useThreadStore = create<ThreadStore>()(
         activeGroupId: null,
         groups: [],
         threads: [],
-        hasMore: false,
       },
       setGroupedThreads: (groupedThreads) => set({ groupedThreads }),
 

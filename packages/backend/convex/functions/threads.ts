@@ -6,7 +6,12 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
 
 import { authenticatedMutation, authenticatedQuery, authenticatedUserIdQuery } from "../components";
-import { AISDKModelParams, status } from "../schema";
+import {
+  AISDKModelParams,
+  CURRENT_MESSAGE_GRAPH_VERSION,
+  MAX_ASSISTANT_VARIANTS_PER_TURN,
+  status,
+} from "../schema";
 
 type ThreadStatus = "pending" | "streaming" | "complete" | "error";
 
@@ -156,6 +161,7 @@ export const createThread = authenticatedMutation({
       title: args.title ?? "New Chat",
       pinned: false,
       settled: false,
+      messageGraphVersion: CURRENT_MESSAGE_GRAPH_VERSION,
       status: "pending",
       userId: user.userId,
       updatedAt: now + 1,
@@ -209,6 +215,9 @@ export const branchThread = authenticatedMutation({
 
     const lastMessage = await ctx.db.get("messages", args.assistantMessageId);
     if (!lastMessage) throw new Error("Message not found");
+    if (lastMessage.userId !== user.userId) throw new Error("Not authorized");
+    if (lastMessage.threadId !== args.threadId) throw new Error("Message is not in thread");
+    if (lastMessage.role !== "assistant") throw new Error("Message is not an assistant response");
 
     const messages = await ctx.db
       .query("messages")
@@ -232,16 +241,143 @@ export const branchThread = authenticatedMutation({
       latestModelParams: thread.latestModelParams,
     });
 
-    for (const { _id, _creationTime, ...message } of messages) {
-      await ctx.db.insert("messages", {
+    const copiedMessageIds = new Map<Id<"messages">, Id<"messages">>();
+    const sourceMessagesById = new Map(messages.map((message) => [message._id, message]));
+    const copiedAssistantsByUserId = new Map<Id<"messages">, Doc<"messages">[]>();
+    const variantIndexesByUserId = new Map<Id<"messages">, number[]>();
+    let hasCompleteMessageGraph = true;
+
+    for (const message of messages) {
+      if (message.threadId !== args.threadId || message.userId !== user.userId) {
+        throw new Error("Thread contains an invalid message owner");
+      }
+      if (message.messageGraphIssue !== undefined) {
+        hasCompleteMessageGraph = false;
+      }
+
+      if (message.role === "user") {
+        if (message.parentUserMessageId !== undefined || message.variantIndex !== undefined) {
+          hasCompleteMessageGraph = false;
+        }
+
+        if (message.activeAssistantMessageId) {
+          const activeAssistant = sourceMessagesById.get(message.activeAssistantMessageId);
+          if (activeAssistant && activeAssistant.parentUserMessageId !== message._id) {
+            hasCompleteMessageGraph = false;
+          }
+        }
+        continue;
+      }
+
+      const parentMessage = message.parentUserMessageId
+        ? sourceMessagesById.get(message.parentUserMessageId)
+        : undefined;
+      if (parentMessage?.role !== "user" || message.variantIndex === undefined) {
+        hasCompleteMessageGraph = false;
+        continue;
+      }
+
+      const variantIndexes = variantIndexesByUserId.get(parentMessage._id) ?? [];
+      variantIndexes.push(message.variantIndex);
+      variantIndexesByUserId.set(parentMessage._id, variantIndexes);
+
+      const copiedAssistants = copiedAssistantsByUserId.get(parentMessage._id) ?? [];
+      copiedAssistants.push(message);
+      copiedAssistantsByUserId.set(parentMessage._id, copiedAssistants);
+    }
+
+    for (const variantIndexes of variantIndexesByUserId.values()) {
+      if (variantIndexes.length > MAX_ASSISTANT_VARIANTS_PER_TURN) {
+        hasCompleteMessageGraph = false;
+        continue;
+      }
+
+      variantIndexes.sort((left, right) => left - right);
+      for (let index = 0; index < variantIndexes.length; index += 1) {
+        if (variantIndexes[index] !== index) hasCompleteMessageGraph = false;
+      }
+    }
+
+    for (const {
+      _id,
+      _creationTime,
+      parentUserMessageId: _parentUserMessageId,
+      activeAssistantMessageId: _activeAssistantMessageId,
+      messageGraphVersion: _messageGraphVersion,
+      ...message
+    } of messages) {
+      const copiedMessageId = await ctx.db.insert("messages", {
         ...message,
 
         userId: user.userId,
         threadId: newThreadId,
         messageId: crypto.randomUUID(),
 
+        parentUserMessageId: undefined,
+        activeAssistantMessageId: undefined,
+        messageGraphVersion: hasCompleteMessageGraph
+          ? CURRENT_MESSAGE_GRAPH_VERSION
+          : undefined,
+        messageGraphIssue: message.messageGraphIssue,
+
         createdAt: Date.now() + 1,
         updatedAt: Date.now() + 2,
+      });
+
+      copiedMessageIds.set(_id, copiedMessageId);
+    }
+
+    for (const message of messages) {
+      const copiedMessageId = copiedMessageIds.get(message._id);
+      if (!copiedMessageId) continue;
+
+      if (message.role === "assistant") {
+        const parentMessage = message.parentUserMessageId
+          ? sourceMessagesById.get(message.parentUserMessageId)
+          : undefined;
+        const copiedParentId =
+          parentMessage?.role === "user" &&
+          parentMessage.threadId === args.threadId &&
+          parentMessage.userId === user.userId
+            ? copiedMessageIds.get(parentMessage._id)
+            : undefined;
+
+        if (!copiedParentId) {
+          hasCompleteMessageGraph = false;
+          continue;
+        }
+
+        await ctx.db.patch(copiedMessageId, { parentUserMessageId: copiedParentId });
+        continue;
+      }
+
+      const activeAssistant = message.activeAssistantMessageId
+        ? sourceMessagesById.get(message.activeAssistantMessageId)
+        : undefined;
+      const copiedActiveAssistantId =
+        activeAssistant?.role === "assistant" &&
+        activeAssistant.threadId === args.threadId &&
+        activeAssistant.userId === user.userId &&
+        activeAssistant.parentUserMessageId === message._id
+          ? copiedMessageIds.get(activeAssistant._id)
+          : undefined;
+
+      const copiedAssistants = copiedAssistantsByUserId.get(message._id) ?? [];
+      const copiedFallbackAssistantId = copiedAssistants[copiedAssistants.length - 1]?._id;
+      const nextActiveAssistantId =
+        copiedActiveAssistantId ??
+        (copiedFallbackAssistantId ? copiedMessageIds.get(copiedFallbackAssistantId) : undefined);
+
+      if (nextActiveAssistantId) {
+        await ctx.db.patch(copiedMessageId, {
+          activeAssistantMessageId: nextActiveAssistantId,
+        });
+      }
+    }
+
+    if (hasCompleteMessageGraph) {
+      await ctx.db.patch(newThreadId, {
+        messageGraphVersion: CURRENT_MESSAGE_GRAPH_VERSION,
       });
     }
 

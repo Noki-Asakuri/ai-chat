@@ -222,12 +222,11 @@ function ActiveGroupThreadList({ activeGroupId }: { activeGroupId: Id<"groups"> 
   const localCache = useThreadStore((state) => state.groupedThreads);
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const lastSyncedThreadIdRef = useRef<Id<"threads"> | null>(null);
-  const [threadLimit, setThreadLimit] = useState(40);
   const routeThreadId = fromUUID<Id<"threads">>(params?.threadId);
   const markThreadViewed = useMutation(api.functions.threads.markThreadViewed);
 
   const { data } = useQuery({
-    ...convexSessionQuery(api.functions.groups.listGroups, { activeGroupId, limit: threadLimit }),
+    ...convexSessionQuery(api.functions.groups.listGroups, { activeGroupId }),
     initialData: localCache.activeGroupId === activeGroupId ? localCache : undefined,
   });
   const { data: routeThreadTitle } = useQuery(
@@ -275,13 +274,7 @@ function ActiveGroupThreadList({ activeGroupId }: { activeGroupId: Id<"groups"> 
     });
   }, [data, markThreadViewed, routeThreadId, routeThreadTitle]);
 
-  return (
-    <ThreadList
-      data={data}
-      groups={data?.groups ?? localCache.groups}
-      onLoadMore={() => setThreadLimit((current) => current + 40)}
-    />
-  );
+  return <ThreadList data={data} groups={data?.groups ?? localCache.groups} />;
 }
 
 type ListGroupData = (typeof api.functions.groups.listGroups)["_returnType"];
@@ -289,10 +282,9 @@ type ListGroupData = (typeof api.functions.groups.listGroups)["_returnType"];
 type ThreadListProps = {
   data: ListGroupData | undefined;
   groups: ListGroupData["groups"];
-  onLoadMore: () => void;
 };
 
-function ThreadList({ data, groups, onLoadMore }: ThreadListProps) {
+function ThreadList({ data, groups }: ThreadListProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [newChatOpen, setNewChatOpen] = useState(false);
@@ -440,8 +432,6 @@ function ThreadList({ data, groups, onLoadMore }: ThreadListProps) {
             threads={filteredThreads}
             groupId={activeGroupId}
             searchQuery={normalizedSearchQuery}
-            hasMore={data.hasMore && normalizedSearchQuery.length === 0}
-            onLoadMore={onLoadMore}
           />
         ) : (
           <ThreadRowsSkeleton />

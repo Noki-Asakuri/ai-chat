@@ -17,7 +17,14 @@ import {
   authenticatedUserIdQuery,
   r2,
 } from "../components";
-import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
+import {
+  AISDKMetadata,
+  AISDKModelParams,
+  AISDKParts,
+  CURRENT_MESSAGE_GRAPH_VERSION,
+  MAX_ASSISTANT_VARIANTS_PER_TURN,
+  status,
+} from "../schema";
 
 type MessageDoc = Doc<"messages">;
 type MessageWithAttachments = Omit<MessageDoc, "attachments"> & {
@@ -125,6 +132,22 @@ function buildThreadMessageGraph(messages: MessageDoc[]): ThreadMessageGraph {
 
   const assistantsByUserId: Record<Id<"messages">, AssistantMessageDoc[]> = {};
   const parentUserIdByAssistantId: Record<Id<"messages">, Id<"messages">> = {};
+  const reverseParentUserIdByAssistantId: Record<
+    Id<"messages">,
+    Id<"messages"> | null
+  > = {};
+
+  for (const userMessage of users) {
+    const activeAssistantMessageId = userMessage.activeAssistantMessageId;
+    if (!activeAssistantMessageId) continue;
+
+    if (reverseParentUserIdByAssistantId[activeAssistantMessageId] === undefined) {
+      reverseParentUserIdByAssistantId[activeAssistantMessageId] = userMessage._id;
+      continue;
+    }
+
+    reverseParentUserIdByAssistantId[activeAssistantMessageId] = null;
+  }
 
   for (const assistantMessage of assistants) {
     let parentUserMessageId: Id<"messages"> | null = null;
@@ -134,6 +157,10 @@ function buildThreadMessageGraph(messages: MessageDoc[]): ThreadMessageGraph {
       if (parentUser) {
         parentUserMessageId = parentUser._id;
       }
+    }
+
+    if (parentUserMessageId === null) {
+      parentUserMessageId = reverseParentUserIdByAssistantId[assistantMessage._id] ?? null;
     }
 
     if (parentUserMessageId === null) {
@@ -305,7 +332,7 @@ async function expandMessagePage(db: QueryCtx["db"], pageRows: MessageDoc[]): Pr
   for (const message of pageRows) {
     messagesById[message._id] = message;
 
-    if (message.role === "user") {
+    if (isUserMessage(message)) {
       userMessageIds.add(message._id);
     } else if (message.parentUserMessageId) {
       userMessageIds.add(message.parentUserMessageId);
@@ -336,7 +363,11 @@ async function expandMessagePage(db: QueryCtx["db"], pageRows: MessageDoc[]): Pr
         .withIndex("by_threadId_parentUserMessageId", (q) =>
           q.eq("threadId", userMessage.threadId).eq("parentUserMessageId", userMessageId),
         )
-        .take(100);
+        .take(MAX_ASSISTANT_VARIANTS_PER_TURN + 1);
+
+      if (variants.length > MAX_ASSISTANT_VARIANTS_PER_TURN) {
+        throw new Error("Assistant variant limit exceeded for migrated thread");
+      }
 
       return [userMessage, ...variants];
     }),
@@ -455,7 +486,47 @@ export const getAllMessagesFromThread = authenticatedUserIdQuery({
   },
 });
 
-const MESSAGE_PAGE_SIZE_LIMIT = 100;
+const DEFAULT_MESSAGE_TURN_PAGE_SIZE = 5;
+const MESSAGE_TURN_PAGE_SIZE_LIMIT = 5;
+
+const attachmentValidator = v.object({
+  _id: v.id("attachments"),
+  _creationTime: v.number(),
+  id: v.string(),
+  name: v.string(),
+  size: v.number(),
+  type: v.union(v.literal("image"), v.literal("pdf")),
+  source: v.union(v.literal("assistant"), v.literal("user")),
+  mimeType: v.string(),
+  path: v.string(),
+  userId: v.string(),
+  threadId: v.id("threads"),
+});
+
+const messageWithAttachmentsValidator = v.object({
+  _id: v.id("messages"),
+  _creationTime: v.number(),
+  threadId: v.id("threads"),
+  userId: v.string(),
+  messageId: v.string(),
+  error: v.optional(v.string()),
+  parts: AISDKParts,
+  status,
+  role: v.union(v.literal("assistant"), v.literal("user")),
+  resumableStreamId: v.optional(v.nullable(v.string())),
+  metadata: v.optional(AISDKMetadata),
+  attachments: v.array(attachmentValidator),
+  statsTrackedAt: v.optional(v.number()),
+  parentUserMessageId: v.optional(v.id("messages")),
+  activeAssistantMessageId: v.optional(v.id("messages")),
+  variantIndex: v.optional(v.number()),
+  messageGraphVersion: v.optional(v.number()),
+  messageGraphIssue: v.optional(
+    v.union(v.literal("invalidParent"), v.literal("ambiguousParent"), v.literal("variantLimit")),
+  ),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
 
 export const getMessagePage = authenticatedUserIdQuery({
   args: {
@@ -463,23 +534,52 @@ export const getMessagePage = authenticatedUserIdQuery({
     before: v.optional(v.number()),
     limit: v.optional(v.number()),
   },
+  returns: v.object({
+    messages: v.array(messageWithAttachmentsValidator),
+    allMessages: v.array(messageWithAttachmentsValidator),
+    variantMessageIdsByUserMessageId: v.record(v.id("messages"), v.array(v.id("messages"))),
+    hasMore: v.boolean(),
+    nextBefore: v.nullable(v.number()),
+  }),
   handler: async (ctx, args) => {
-    const limit = Math.min(Math.max(args.limit ?? 40, 1), MESSAGE_PAGE_SIZE_LIMIT);
-    const query = ctx.db
+    const thread = await ctx.db.get("threads", args.threadId);
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== ctx.userId) throw new Error("Not authorized");
+
+    if (thread.messageGraphVersion !== CURRENT_MESSAGE_GRAPH_VERSION) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_userId_threadId", (q) =>
+          q.eq("userId", ctx.userId).eq("threadId", args.threadId),
+        )
+        .order("asc")
+        .collect();
+      const payload = await buildMessagePayload(ctx.db, messages);
+
+      return { ...payload, hasMore: false, nextBefore: null };
+    }
+
+    const requestedLimit = args.limit ?? DEFAULT_MESSAGE_TURN_PAGE_SIZE;
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(Math.max(Math.trunc(requestedLimit), 1), MESSAGE_TURN_PAGE_SIZE_LIMIT)
+      : DEFAULT_MESSAGE_TURN_PAGE_SIZE;
+    const before = args.before !== undefined && Number.isFinite(args.before) ? args.before : undefined;
+    const userTurnQuery = ctx.db
       .query("messages")
-      .withIndex("by_userId_threadId", (q) =>
-        args.before === undefined
-          ? q.eq("userId", ctx.userId).eq("threadId", args.threadId)
+      .withIndex("by_userId_threadId_role", (q) =>
+        before === undefined
+          ? q.eq("userId", ctx.userId).eq("threadId", args.threadId).eq("role", "user")
           : q
               .eq("userId", ctx.userId)
               .eq("threadId", args.threadId)
-              .lt("_creationTime", args.before),
+              .eq("role", "user")
+              .lt("_creationTime", before),
       )
       .order("desc");
 
-    const rows = await query.take(limit + 1);
-    const hasMore = rows.length > limit;
-    const pageRows = rows.slice(0, limit).reverse();
+    const userTurns = await userTurnQuery.take(limit + 1);
+    const hasMore = userTurns.length > limit;
+    const pageRows = userTurns.slice(0, limit).reverse();
     const expandedPageRows = await expandMessagePage(ctx.db, pageRows);
     const payload = await buildMessagePayload(ctx.db, expandedPageRows);
 
@@ -598,6 +698,11 @@ export const addMessagesToThread = authenticatedMutation({
       activeAssistantMessageId: undefined,
       parentUserMessageId: undefined,
       variantIndex: undefined,
+      messageGraphVersion:
+        thread.messageGraphVersion === CURRENT_MESSAGE_GRAPH_VERSION
+          ? CURRENT_MESSAGE_GRAPH_VERSION
+          : undefined,
+      messageGraphIssue: undefined,
     });
 
     const assistantMessageId = await ctx.db.insert("messages", {
@@ -609,6 +714,11 @@ export const addMessagesToThread = authenticatedMutation({
       parentUserMessageId: userMessageId,
       variantIndex: 0,
       activeAssistantMessageId: undefined,
+      messageGraphVersion:
+        thread.messageGraphVersion === CURRENT_MESSAGE_GRAPH_VERSION
+          ? CURRENT_MESSAGE_GRAPH_VERSION
+          : undefined,
+      messageGraphIssue: undefined,
     });
 
     await ctx.db.patch(userMessageId, {
@@ -996,6 +1106,11 @@ export const retryChatMessage = authenticatedMutation({
         parentUserMessageId: resolvedUserMessageId,
         variantIndex,
         activeAssistantMessageId: undefined,
+        messageGraphVersion:
+          thread.messageGraphVersion === CURRENT_MESSAGE_GRAPH_VERSION
+            ? CURRENT_MESSAGE_GRAPH_VERSION
+            : undefined,
+        messageGraphIssue: undefined,
 
         createdAt: now,
         updatedAt: now,
@@ -1266,6 +1381,19 @@ export const deleteMessageAndBelow = authenticatedMutation({
         updatedAt: Date.now(),
         activeAssistantMessageId: payload.activeAssistantMessageId,
       });
+    }
+
+    if (deleteScope === "assistantVariantOnly") {
+      const remainingTargetVariants = (graph.assistantsByUserId[targetUserMessageId] ?? []).filter(
+        (variant) => !deletedMessageIds.has(variant._id),
+      );
+
+      for (let variantIndex = 0; variantIndex < remainingTargetVariants.length; variantIndex += 1) {
+        const variant = remainingTargetVariants[variantIndex];
+        if (!variant || variant.variantIndex === variantIndex) continue;
+
+        await ctx.db.patch(variant._id, { variantIndex });
+      }
     }
 
     const adjustedRemainingMessages: MessageDoc[] = [];

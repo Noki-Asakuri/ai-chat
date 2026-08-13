@@ -341,6 +341,9 @@ export const userPreferences = v.object({
   }),
 });
 
+export const CURRENT_MESSAGE_GRAPH_VERSION = 2;
+export const MAX_ASSISTANT_VARIANTS_PER_TURN = 10;
+
 export default defineSchema(
   {
     groups: defineTable({
@@ -356,6 +359,7 @@ export default defineSchema(
       pinned: v.boolean(),
       settled: v.optional(v.boolean()),
       branchedFrom: v.optional(v.id("threads")),
+      messageGraphVersion: v.optional(v.number()),
 
       latestModel: v.string(),
       latestModelParams: AISDKModelParams,
@@ -434,13 +438,20 @@ export default defineSchema(
       parentUserMessageId: v.optional(v.id("messages")),
       activeAssistantMessageId: v.optional(v.id("messages")),
       variantIndex: v.optional(v.number()),
+      messageGraphVersion: v.optional(v.number()),
+      messageGraphIssue: v.optional(
+        v.union(v.literal("invalidParent"), v.literal("ambiguousParent"), v.literal("variantLimit")),
+      ),
 
       createdAt: v.number(),
       updatedAt: v.number(),
     })
       .index("by_userId_threadId", ["userId", "threadId"])
+      .index("by_userId_threadId_role", ["userId", "threadId", "role"])
       .index("by_userId_createdAt", ["userId", "createdAt"])
       .index("by_threadId", ["threadId"])
+      .index("by_threadId_activeAssistantMessageId", ["threadId", "activeAssistantMessageId"])
+      .index("by_threadId_messageGraphVersion", ["threadId", "messageGraphVersion"])
       .index("by_threadId_parentUserMessageId", ["threadId", "parentUserMessageId"])
       .index("by_messageId", ["messageId"]),
 

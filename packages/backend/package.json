@@ -13,17 +13,21 @@
     "convex-helpers": "catalog:backend"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@types/node": "catalog:tooling",
     "@typescript/native-preview": "catalog:tooling",
+    "convex-test": "^0.0.55",
     "oxlint": "catalog:tooling",
     "oxlint-tsgolint": "catalog:tooling",
-    "typescript": "catalog:tooling"
+    "typescript": "catalog:tooling",
+    "vitest": "^4.1.10"
   },
   "scripts": {
     "dev": "convex dev --typecheck disable",
     "deploy": "convex deploy",
     "lint": "oxlint --config ../../.oxlintrc.json --type-aware .",
     "lint:fix": "oxlint --config ../../.oxlintrc.json --type-aware --fix .",
+    "test": "vitest run",
     "typecheck": "tsgo --noEmit"
   }
 }

@@ -1,108 +1,52 @@
 import { v } from "convex/values";
 
-import type { Doc, Id } from "../_generated/dataModel";
 import { authenticatedMutation, authenticatedUserIdQuery } from "../components";
 
 /** List all groups for the current user in creation order. */
 export const listGroups = authenticatedUserIdQuery({
-  args: {
-    activeGroupId: v.optional(v.nullable(v.id("groups"))),
-    limit: v.optional(v.number()),
-  },
+  args: { activeGroupId: v.optional(v.nullable(v.id("groups"))) },
   handler: async (ctx, args) => {
-    const limit = Math.min(Math.max(args.limit ?? 40, 1), 200);
     const activeGroupId = args.activeGroupId ?? null;
     const groupsPromise = ctx.db
       .query("groups")
       .withIndex("by_userId", (q) => q.eq("userId", ctx.userId))
       .order("asc")
-      .take(100);
-
-    const pinnedThreadsPromise = ctx.db
+      .collect();
+    const activeGroupPromise = activeGroupId === null ? null : ctx.db.get("groups", activeGroupId);
+    const currentThreadsPromise = ctx.db
       .query("threads")
-      .withIndex("by_userId_groupId_pinned_settled_updatedAt", (q) =>
-        q
-          .eq("userId", ctx.userId)
-          .eq("groupId", activeGroupId)
-          .eq("pinned", true)
-          .eq("settled", false),
+      .withIndex("by_userId_settled_groupId_updatedAt", (q) =>
+        q.eq("userId", ctx.userId).eq("settled", false).eq("groupId", activeGroupId),
       )
       .order("desc")
-      .take(100);
-
-    const legacyPinnedThreadsPromise = ctx.db
+      .collect();
+    const legacyThreadsPromise = ctx.db
       .query("threads")
-      .withIndex("by_userId_groupId_pinned_settled_updatedAt", (q) =>
-        q
-          .eq("userId", ctx.userId)
-          .eq("groupId", activeGroupId)
-          .eq("pinned", true)
-          .eq("settled", undefined),
+      .withIndex("by_userId_settled_groupId_updatedAt", (q) =>
+        q.eq("userId", ctx.userId).eq("settled", undefined).eq("groupId", activeGroupId),
       )
       .order("desc")
-      .take(100);
+      .collect();
 
-    const activeThreadsPromise = ctx.db
-      .query("threads")
-      .withIndex("by_userId_groupId_pinned_settled_updatedAt", (q) =>
-        q
-          .eq("userId", ctx.userId)
-          .eq("groupId", activeGroupId)
-          .eq("pinned", false)
-          .eq("settled", false),
-      )
-      .order("desc")
-      .take(limit + 1);
-
-    const legacyActiveThreadsPromise = ctx.db
-      .query("threads")
-      .withIndex("by_userId_groupId_pinned_settled_updatedAt", (q) =>
-        q
-          .eq("userId", ctx.userId)
-          .eq("groupId", activeGroupId)
-          .eq("pinned", false)
-          .eq("settled", undefined),
-      )
-      .order("desc")
-      .take(limit + 1);
-
-    const [groups, pinnedThreads, legacyPinnedThreads, activeThreads, legacyActiveThreads] =
-      await Promise.all([
+    const [groups, activeGroup, currentThreads, legacyThreads] = await Promise.all([
       groupsPromise,
-      pinnedThreadsPromise,
-      legacyPinnedThreadsPromise,
-      activeThreadsPromise,
-      legacyActiveThreadsPromise,
+      activeGroupPromise,
+      currentThreadsPromise,
+      legacyThreadsPromise,
     ]);
 
-    const activeThreadRows = [...activeThreads, ...legacyActiveThreads].sort(
-      (left, right) => right.updatedAt - left.updatedAt,
-    );
-
-    const groupExists =
-      activeGroupId === null ||
-      groups.some((group) => group._id === activeGroupId && group.userId === ctx.userId);
+    const groupExists = activeGroupId === null || activeGroup?.userId === ctx.userId;
 
     if (!groupExists) {
-      return { activeGroupId, groups, threads: [], hasMore: false };
-    }
-
-    const threadsById: Record<Id<"threads">, Doc<"threads">> = {};
-    for (const thread of [...pinnedThreads, ...legacyPinnedThreads]) {
-      if (thread.groupId === activeGroupId && thread.settled !== true) {
-        threadsById[thread._id] = thread;
-      }
-    }
-
-    for (const thread of activeThreadRows.slice(0, limit)) {
-      threadsById[thread._id] = thread;
+      return { activeGroupId, groups, threads: [] };
     }
 
     return {
       activeGroupId,
       groups,
-      threads: Object.values(threadsById),
-      hasMore: activeThreadRows.length > limit,
+      threads: [...currentThreads, ...legacyThreads].sort(
+        (left, right) => right.updatedAt - left.updatedAt,
+      ),
     };
   },
 });
