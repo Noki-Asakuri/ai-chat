@@ -239,7 +239,7 @@ export function AccountThreadsTableSkeleton() {
   }
 
   return (
-    <div className="mt-4 flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-4">
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Skeleton className="h-8 w-full" />

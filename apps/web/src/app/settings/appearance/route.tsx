@@ -337,7 +337,7 @@ function RouteComponent() {
             onBehaviorChange={requestAutoSave}
           />
 
-          <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+          <div className="max-w-3xl">
             <BackgroundCard
               disabled={isPending || isSaving}
               existingBackgroundId={backgroundImageId}

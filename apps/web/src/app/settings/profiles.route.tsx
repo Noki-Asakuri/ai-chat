@@ -3,12 +3,14 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useMutation } from "convex/react";
 import { PlusIcon, SearchIcon } from "lucide-react";
-import { memo, useCallback, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useDebounce } from "@uidotdev/usehooks";
 
+import { SettingsSection } from "@/components/settings/settings-section";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -19,6 +21,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/toast";
 
 import { convexSessionQuery } from "@/lib/convex/helpers";
 
@@ -40,7 +43,7 @@ export const Route = createFileRoute("/settings/profiles")({
   head: () => ({ meta: [{ title: "AI Profiles - AI Chat" }] }),
 });
 
-const ProfilesHeader = memo(function ProfilesHeader({
+function ProfilesHeader({
   search,
   onSearchChange,
   sort,
@@ -74,7 +77,7 @@ const ProfilesHeader = memo(function ProfilesHeader({
       </div>
     </div>
   );
-});
+}
 
 function ProfilesList({
   profiles,
@@ -153,11 +156,15 @@ function AiProfilesPage() {
   const searchParams = Route.useSearch();
   const navigate = Route.useNavigate();
 
-  const search = searchParams.q ?? "";
+  const [search, setSearch] = useState(searchParams.q ?? "");
+  const debouncedSearch = useDebounce(search, 300);
   const sort = searchParams.sort ?? ("recently-updated" satisfies SortOption);
 
   const { data, isPending, refetch } = useQuery({
-    ...convexSessionQuery(api.functions.profiles.listProfilesWithQuery, { search, sort }),
+    ...convexSessionQuery(api.functions.profiles.listProfilesWithQuery, {
+      search: debouncedSearch,
+      sort,
+    }),
     placeholderData: keepPreviousData,
   });
   const profiles = (data ?? []) as Array<ProfileListItem>;
@@ -168,72 +175,79 @@ function AiProfilesPage() {
 
   const dialogRef = useRef<ProfilesDialogControllerHandle | null>(null);
 
-  const onSearchChange = useCallback(
-    function onSearchChange(value: string) {
-      void navigate({
-        replace: true,
-        search: (prev) => ({ ...prev, q: value.trim().length === 0 ? undefined : value }),
-      });
-    },
-    [navigate],
-  );
+  useEffect(() => {
+    setSearch(searchParams.q ?? "");
+  }, [searchParams.q]);
 
-  const onSortChange = useCallback(
-    function onSortChange(value: SortOption) {
-      void navigate({
-        replace: true,
-        search: (prev) => ({ ...prev, sort: value }),
-      });
-    },
-    [navigate],
-  );
+  useEffect(() => {
+    if (debouncedSearch === (searchParams.q ?? "")) return;
 
-  const onClearSearch = useCallback(
-    function onClearSearch() {
-      void navigate({ replace: true, search: (prev) => ({ ...prev, q: undefined }) });
-    },
-    [navigate],
-  );
+    void navigate({
+      replace: true,
+      search: (previous) => ({
+        ...previous,
+        q: debouncedSearch.trim().length === 0 ? undefined : debouncedSearch,
+      }),
+    });
+  }, [debouncedSearch, navigate, searchParams.q]);
 
-  const onCreate = useCallback(function onCreate() {
+  function onSortChange(value: SortOption) {
+    void navigate({
+      replace: true,
+      search: (previous) => ({ ...previous, sort: value }),
+    });
+  }
+
+  function onClearSearch() {
+    setSearch("");
+  }
+
+  function onCreate() {
     dialogRef.current?.openCreate();
-  }, []);
+  }
 
-  const onEdit = useCallback(function onEdit(seed: ProfileEditSeed) {
+  function onEdit(seed: ProfileEditSeed) {
     dialogRef.current?.openEdit(seed);
-  }, []);
+  }
 
-  const onDelete = useCallback(
-    async function onDelete(id: Id<"profiles">) {
-      try {
-        await deleteProfile({ profileId: id });
-        void refetch();
-      } catch (e) {
-        console.error("[AI Profiles] delete error:", e);
-      }
-    },
-    [deleteProfile, refetch],
-  );
+  async function onDelete(id: Id<"profiles">) {
+    try {
+      await deleteProfile({ profileId: id });
+      void refetch();
+    } catch (error) {
+      toast.error("Failed to delete profile", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  }
 
   return (
-    <main className="space-y-4">
-      <ProfilesHeader
-        search={search}
-        onSearchChange={onSearchChange}
-        sort={sort}
-        onSortChange={onSortChange}
-        onCreate={onCreate}
-      />
+    <main>
+      <SettingsSection
+        id="profile-library"
+        title="Profile library"
+        description="Search, sort, and manage the personas available in your chats."
+      >
+        <div className="flex flex-col gap-4">
+          <ProfilesHeader
+            search={search}
+            onSearchChange={setSearch}
+            sort={sort}
+            onSortChange={onSortChange}
+            onCreate={onCreate}
+          />
 
-      <ProfilesList
-        profiles={profiles}
-        isLoading={isPending}
-        search={search}
-        onClearSearch={onClearSearch}
-        onCreate={onCreate}
-        onEdit={onEdit}
-        onDelete={onDelete}
-      />
+          <ProfilesList
+            profiles={profiles}
+            isLoading={isPending}
+            search={debouncedSearch}
+            onClearSearch={onClearSearch}
+            onCreate={onCreate}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        </div>
+      </SettingsSection>
 
       <ProfilesDialogController
         ref={dialogRef}

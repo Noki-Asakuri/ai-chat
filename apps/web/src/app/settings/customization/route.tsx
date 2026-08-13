@@ -9,7 +9,7 @@ import type { ComponentPropsWithoutRef } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -103,58 +103,50 @@ function RouteComponent() {
 
   return (
     <form ref={formRef} onSubmit={(event) => event.preventDefault()} onChangeCapture={requestAutoSave}>
-      <Card className="gap-0 py-0">
-        <CardHeader className="border-b px-5 py-4">
-          <CardTitle>Personal context</CardTitle>
-          <CardDescription>
-            Give the assistant a small amount of context it can use in every conversation.
-          </CardDescription>
-        </CardHeader>
+      <SettingsSection
+        id="personal-context"
+        title="Personal context"
+        description="Give the assistant a small amount of context it can use in every conversation."
+        actions={<AutosaveStatus isSaving={isSaving} />}
+      >
+        <FieldGroup className="gap-0">
+          <Field className="grid gap-4 py-5 md:grid-cols-[minmax(12rem,0.7fr)_minmax(18rem,1fr)] md:gap-x-8">
+            <FieldContent>
+              <FieldLabel htmlFor="name">What should AI call you?</FieldLabel>
+              <FieldDescription>Your preferred name or nickname.</FieldDescription>
+            </FieldContent>
+            <ControlledInput
+              id="name"
+              name="name"
+              autoComplete="off"
+              placeholder="Enter your name"
+              className="h-10 bg-input/30 text-sm"
+              disabled={isPending}
+              defaultValue={data?.name ?? ""}
+            />
+          </Field>
 
-        <CardContent className="p-0">
-          <FieldGroup className="gap-0">
-            <Field className="grid gap-4 px-5 py-5 md:grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)] md:gap-8">
-              <FieldContent>
-                <FieldLabel htmlFor="name">What should AI call you?</FieldLabel>
-                <FieldDescription>Your preferred name or nickname.</FieldDescription>
-              </FieldContent>
-              <ControlledInput
-                id="name"
-                name="name"
-                autoComplete="off"
-                placeholder="Enter your name"
-                className="h-10 bg-input/30 text-sm"
-                disabled={isPending}
-                defaultValue={data?.name ?? ""}
-              />
-            </Field>
+          <Separator />
 
-            <Separator />
-
-            <Field className="grid gap-4 px-5 py-5 md:grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)] md:gap-8">
-              <FieldContent>
-                <FieldLabel htmlFor="system-instruction">Global instruction</FieldLabel>
-                <FieldDescription>
-                  Applied to every new conversation unless a profile provides more specific guidance.
-                </FieldDescription>
-              </FieldContent>
-              <ControlledTextarea
-                autoComplete="off"
-                id="system-instruction"
-                name="system-instruction"
-                className="min-h-48 resize-y bg-input/30"
-                disabled={isPending}
-                defaultValue={data?.globalSystemInstruction ?? "You are a helpful assistant."}
-              />
-            </Field>
-          </FieldGroup>
-        </CardContent>
-
-        <CardFooter className="justify-between gap-3 bg-muted/30">
-          <p className="text-xs text-muted-foreground">Changes save automatically.</p>
-          <AutosaveStatus isSaving={isSaving} />
-        </CardFooter>
-      </Card>
+          <Field className="grid gap-4 py-5 md:grid-cols-[minmax(12rem,0.7fr)_minmax(18rem,1fr)] md:gap-x-8">
+            <FieldContent>
+              <FieldLabel htmlFor="system-instruction">Global instruction</FieldLabel>
+              <FieldDescription>
+                Applied to every new conversation unless a profile provides more specific guidance.
+              </FieldDescription>
+            </FieldContent>
+            <ControlledTextarea
+              autoComplete="off"
+              id="system-instruction"
+              name="system-instruction"
+              className="min-h-48 resize-y bg-input/30"
+              disabled={isPending}
+              defaultValue={data?.globalSystemInstruction ?? "You are a helpful assistant."}
+            />
+          </Field>
+        </FieldGroup>
+        <p className="border-t pt-4 text-xs text-muted-foreground">Changes save automatically.</p>
+      </SettingsSection>
     </form>
   );
 }

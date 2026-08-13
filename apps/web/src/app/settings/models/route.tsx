@@ -24,19 +24,17 @@ function RouteComponent() {
   const updateUserPreferences = useMutation(api.functions.users.updateUserPreferences);
 
   return (
-    <div className="space-y-6">
-      <ModelsEditor
-        disabled={isDisabled}
-        initialHiddenModels={preferences?.models?.hidden ?? []}
-        initialFavoriteModels={preferences?.models?.favorite ?? []}
-        onSaveCustomization={async function onSaveCustomization(customization) {
-          if (!preferences) return;
+    <ModelsEditor
+      disabled={isDisabled}
+      initialHiddenModels={preferences?.models?.hidden ?? []}
+      initialFavoriteModels={preferences?.models?.favorite ?? []}
+      onSaveCustomization={async function onSaveCustomization(customization) {
+        if (!preferences) return;
 
-          await updateUserPreferences({
-            data: { models: { ...preferences.models, ...customization } },
-          });
-        }}
-      />
-    </div>
+        await updateUserPreferences({
+          data: { models: { ...preferences.models, ...customization } },
+        });
+      }}
+    />
   );
 }

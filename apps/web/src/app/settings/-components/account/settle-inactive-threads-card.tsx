@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingsSection } from "@/components/settings/settings-section";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -55,20 +55,17 @@ export function SettleInactiveThreadsCard() {
 
   return (
     <>
-      <Card className="rounded-md">
-        <CardHeader>
-          <CardTitle>Thread cleanup</CardTitle>
-          <CardDescription>
-            Settle completed or failed threads that have not been updated in the last 3 days.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
+      <SettingsSection
+        id="thread-cleanup"
+        title="Thread cleanup"
+        description="Settle completed or failed threads that have not been updated in the last 3 days."
+      >
+        <div className="flex justify-end py-1">
           <Button type="button" variant="outline" onClick={() => setDialogOpen(true)}>
             Settle inactive threads
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsSection>
 
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogContent>

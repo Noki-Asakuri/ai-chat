@@ -9,7 +9,7 @@ import { toast } from "@/components/ui/toast";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -151,14 +151,9 @@ export function AccountProfileCard() {
   }
 
   return (
-    <form className="space-y-4" onSubmit={onSubmit}>
-      <Card className="rounded-md">
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Update your name, email, and profile image.</CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
+    <form onSubmit={onSubmit}>
+      <SettingsSection id="profile" title="Profile" description="Update your name, email, and profile image.">
+        <div>
           <div className="grid gap-4 md:grid-cols-[auto_1fr] md:items-start">
             <div className="flex w-full flex-col items-center gap-3 md:w-48 md:items-start">
               <div className="group relative w-full">
@@ -300,8 +295,8 @@ export function AccountProfileCard() {
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsSection>
     </form>
   );
 }

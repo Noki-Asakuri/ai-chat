@@ -1,7 +1,6 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { EditIcon, Trash2Icon } from "lucide-react";
-import { memo } from "react";
 
 import {
   AlertDialog,
@@ -32,7 +31,7 @@ type ProfileEditSeed = {
   systemPrompt: string;
 };
 
-export const ProfileCard = memo(function ProfileCard({
+export function ProfileCard({
   profile,
   onEdit,
   onDelete,
@@ -45,9 +44,7 @@ export const ProfileCard = memo(function ProfileCard({
     profile.imageKey && profile.imageKey.length > 0 ? buildImageAssetUrl(profile.imageKey) : null;
 
   const shortDesc =
-    profile.systemPrompt.length > 140
-      ? profile.systemPrompt.slice(0, 140) + "…"
-      : profile.systemPrompt;
+    profile.systemPrompt.length > 140 ? profile.systemPrompt.slice(0, 140) + "…" : profile.systemPrompt;
 
   return (
     <Card className="rounded-md">
@@ -97,11 +94,7 @@ export const ProfileCard = memo(function ProfileCard({
 
       <CardContent className="flex items-start gap-3">
         {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={profile.name}
-            className="size-16 shrink-0 rounded-md object-cover"
-          />
+          <img src={imageUrl} alt={profile.name} className="size-16 shrink-0 rounded-md object-cover" />
         ) : (
           <div className="size-16 shrink-0 rounded-md bg-muted" />
         )}
@@ -110,4 +103,4 @@ export const ProfileCard = memo(function ProfileCard({
       </CardContent>
     </Card>
   );
-});
+}

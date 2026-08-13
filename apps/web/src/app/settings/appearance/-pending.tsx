@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -53,45 +53,43 @@ export function LoadingAppearanceSkeleton() {
         ))}
       </section>
 
-      <Card className="gap-0 py-0">
-        <CardHeader className="border-b px-5 py-4">
-          <CardTitle>Interaction</CardTitle>
-          <CardDescription>Control how chat input, notifications, and code behave.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {BEHAVIOR_OPTIONS.map((title, index) => (
-            <div key={title}>
-              {index > 0 && <Separator />}
-              <div className="flex items-center gap-3 px-5 py-4">
-                <Skeleton className="size-8 shrink-0 rounded-md" />
-                <div className="flex flex-1 flex-col gap-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-3 w-full max-w-sm" />
-                </div>
-                <Skeleton
-                  className={
-                    index === 0 ? "h-8 w-48 shrink-0 rounded-md" : "h-[1.15rem] w-8 shrink-0 rounded-full"
-                  }
-                />
+      <SettingsSection
+        id="interaction"
+        title="Interaction"
+        description="Control how chat input, notifications, and code behave."
+      >
+        {BEHAVIOR_OPTIONS.map((title, index) => (
+          <div key={title}>
+            {index > 0 && <Separator />}
+            <div className="flex items-center gap-3 py-4">
+              <Skeleton className="size-8 shrink-0 rounded-md" />
+              <div className="flex flex-1 flex-col gap-2">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-3 w-full max-w-sm" />
               </div>
+              <Skeleton
+                className={
+                  index === 0 ? "h-8 w-48 shrink-0 rounded-md" : "h-[1.15rem] w-8 shrink-0 rounded-full"
+                }
+              />
             </div>
-          ))}
-        </CardContent>
-      </Card>
+          </div>
+        ))}
+      </SettingsSection>
 
-      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
-        <Card className="gap-0 py-0">
-          <CardHeader className="border-b px-5 py-4">
-            <CardTitle>Chat background</CardTitle>
-            <CardDescription>Add a personal image behind your conversations.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-3">
+      <div className="max-w-3xl">
+        <SettingsSection
+          id="chat-background"
+          title="Chat background"
+          description="Add a personal image behind your conversations."
+        >
+          <div>
             <Skeleton className="aspect-[16/10] w-full rounded-md" />
-          </CardContent>
-          <CardFooter className="justify-end gap-2 bg-muted/30">
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
             <Skeleton className="h-8 w-28 rounded-md" />
-          </CardFooter>
-        </Card>
+          </div>
+        </SettingsSection>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "@/components/ui/toast";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { buildImageAssetUrl } from "@/lib/assets/urls";
 
@@ -61,13 +61,12 @@ export function BackgroundCard(props: BackgroundCardProps) {
   }
 
   return (
-    <Card className="gap-0 py-0">
-      <CardHeader className="border-b px-5 py-4">
-        <CardTitle>Chat background</CardTitle>
-        <CardDescription>Add a personal image behind your conversations.</CardDescription>
-      </CardHeader>
-
-      <CardContent className="p-3">
+    <SettingsSection
+      id="chat-background"
+      title="Chat background"
+      description="Add a personal image behind your conversations."
+    >
+      <div>
         {backgroundPreviewSrc ? (
           <div className="relative overflow-hidden rounded-md bg-muted ring-1 ring-foreground/10">
             <img
@@ -109,9 +108,9 @@ export function BackgroundCard(props: BackgroundCardProps) {
             setBackgroundImage(selected);
           }}
         />
-      </CardContent>
+      </div>
 
-      <CardFooter className="justify-end gap-2 bg-muted/30">
+      <div className="flex justify-end gap-2 pt-4">
         {props.existingBackgroundId && (
           <Button disabled={disabled} type="button" variant="ghost" onClick={onRemove}>
             <TrashIcon data-icon="inline-start" />
@@ -127,7 +126,7 @@ export function BackgroundCard(props: BackgroundCardProps) {
           <ImagePlusIcon data-icon="inline-start" />
           {backgroundPreviewSrc ? "Replace" : "Choose image"}
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </SettingsSection>
   );
 }

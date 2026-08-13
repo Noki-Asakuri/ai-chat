@@ -14,9 +14,11 @@ import {
   type TooltipProps,
 } from "recharts";
 
+import { SettingsSection } from "@/components/settings/settings-section";
 import { Icons } from "@/components/ui/icons";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
+import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { LoadingStatisticsSkeleton } from "./-pending";
@@ -129,52 +131,45 @@ function StatisticsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="rounded-md">
-          <CardHeader className="flex flex-row items-center justify-between gap-y-0">
-            <CardTitle className="text-sm font-normal text-muted-foreground">Threads</CardTitle>
-          </CardHeader>
-
-          <CardContent>
+    <div className="flex flex-col gap-8">
+      <SettingsSection
+        id="overview"
+        title="Overview"
+        description="A quick summary of your conversation and token activity."
+      >
+        <div className="grid border-y md:grid-cols-3 md:divide-x">
+          <div className="py-5 md:pr-6">
+            <p className="text-sm text-muted-foreground">Threads</p>
             <div className="text-3xl font-bold">{format.number(threadsCount)}</div>
             <div className="mt-1 text-xs text-muted-foreground">
               Total messages: {format.number(totalMessages)}
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card className="rounded-md">
-          <CardHeader className="flex flex-row items-center justify-between gap-y-0">
-            <CardTitle className="text-sm font-normal text-muted-foreground">Assistant</CardTitle>
-          </CardHeader>
-
-          <CardContent>
+          <div className="border-t py-5 md:border-t-0 md:px-6">
+            <p className="text-sm text-muted-foreground">Assistant</p>
             <div className="text-3xl font-bold">{format.number(assistantMessagesCount)}</div>
             <div className="mt-1 text-xs text-muted-foreground">
               Output + reasoning: {format.number(assistantTokens)} tokens
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card className="rounded-md">
-          <CardHeader className="flex flex-row items-center justify-between gap-y-0">
-            <CardTitle className="text-sm font-normal text-muted-foreground">User</CardTitle>
-          </CardHeader>
-
-          <CardContent>
+          <div className="border-t py-5 md:border-t-0 md:pl-6">
+            <p className="text-sm text-muted-foreground">User</p>
             <div className="text-3xl font-bold">{format.number(userMessagesCount)}</div>
             <div className="mt-1 text-xs text-muted-foreground">
               Input: {format.number(userTokens)} tokens
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+      </SettingsSection>
 
-      <Card className="rounded-md">
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Activity in {selectedYear}</CardTitle>
-
+      <Separator />
+      <SettingsSection
+        id="activity"
+        title={`Activity in ${selectedYear}`}
+        description="Daily user message activity and total token usage for the selected year."
+        actions={
           <Select value={String(selectedYear)} onValueChange={(value) => handleYearChange(value)}>
             <SelectTrigger className="w-full sm:w-[160px]">
               <SelectValue>{selectedYear}</SelectValue>
@@ -188,9 +183,9 @@ function StatisticsPage() {
               ))}
             </SelectContent>
           </Select>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
+        }
+      >
+        <div className="flex flex-col gap-3">
           <div className="h-60 px-4 sm:px-10">
             <ResponsiveCalendar
               data={selectedYearActivity}
@@ -233,9 +228,10 @@ function StatisticsPage() {
           </div>
 
           <div className="text-xs text-muted-foreground">Total tokens: {format.number(tokensTotal)}</div>
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsSection>
 
+      <Separator />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <RankPieChart
           title="Assistant token breakdown"
@@ -307,12 +303,12 @@ function RankPieChart(props: {
   const chartConfig = createPieChartConfig(chartData, props.valueLabel);
 
   return (
-    <Card className="rounded-md">
-      <CardHeader>
-        <CardTitle>{props.title}</CardTitle>
-      </CardHeader>
-
-      <CardContent className="space-y-3">
+    <SettingsSection
+      id={props.title.toLowerCase().replaceAll(" ", "-")}
+      title={props.title}
+      className="border-b pb-6 xl:[&:nth-last-child(-n+2)]:border-b-0"
+    >
+      <div className="flex flex-col gap-3">
         {chartData.length === 0 ? (
           <div className="text-sm text-muted-foreground">{props.emptyText}</div>
         ) : (
@@ -345,8 +341,8 @@ function RankPieChart(props: {
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </SettingsSection>
   );
 }
 

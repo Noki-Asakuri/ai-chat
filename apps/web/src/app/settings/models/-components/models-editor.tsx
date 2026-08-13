@@ -15,6 +15,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { Card, CardContent } from "@/components/ui/card";
 import { Icons } from "@/components/ui/icons";
 import { Input } from "@/components/ui/input";
@@ -610,9 +611,13 @@ export function ModelsEditor(props: ModelsEditorProps) {
   const hasSaveError = hiddenSaveError || favoriteSaveError;
 
   return (
-    <Card className="rounded-md">
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2 border-b pb-3 text-xs text-muted-foreground">
+    <SettingsSection
+      id="model-library"
+      title="Model library"
+      description="Filter the catalog, choose what appears in the picker, and keep frequently used models close."
+    >
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-2 border-y py-3 text-xs text-muted-foreground">
           <Badge
             variant="outline"
             className={cn("gap-1 rounded-sm px-2 py-0.5 text-xs font-medium", STATUS_BADGE_STYLES.visible)}
@@ -693,8 +698,8 @@ export function ModelsEditor(props: ModelsEditorProps) {
           disabled={disabled}
           emptyMessage={emptyMessage}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </SettingsSection>
   );
 }
 

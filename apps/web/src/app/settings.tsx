@@ -36,9 +36,19 @@ export const Route = createFileRoute("/settings")({
       throw redirect({ to: "/auth/login", search: { rt: path }, reloadDocument: true });
     }
 
+    const needsCurrentUser = location.pathname === "/settings/account";
+    const needsPreferences =
+      location.pathname === "/settings/appearance" ||
+      location.pathname === "/settings/customization" ||
+      location.pathname === "/settings/models";
+
     await Promise.all([
-      context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser)),
-      context.queryClient.ensureQueryData(convexQuery(api.functions.users.getCurrentUserPreferences)),
+      needsCurrentUser
+        ? context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser))
+        : Promise.resolve(),
+      needsPreferences
+        ? context.queryClient.ensureQueryData(convexQuery(api.functions.users.getCurrentUserPreferences))
+        : Promise.resolve(),
     ]);
     return { user: auth.user, defaultOpenSidebar };
   },

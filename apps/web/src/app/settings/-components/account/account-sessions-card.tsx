@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLoaderData, useRouter } from "@tanstack/react-router";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { ChevronLeftIcon } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "@/components/ui/toast";
 
 import {
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { listAccountSessions, revokeAccountSession } from "@/lib/authkit/account-server-functions";
@@ -113,9 +113,11 @@ export function AccountSessionsCard() {
 
   const currentSessionId = auth.user ? auth.sessionId : undefined;
 
+  const [sessionsOpen, setSessionsOpen] = useState(false);
   const { data, error, isError, isPending, refetch } = useQuery({
     queryKey: ["account-sessions"],
     queryFn: async () => await listAccountSessions(),
+    enabled: sessionsOpen,
   });
 
   const [revokeState, setRevokeState] = useState<RevokeDialogState>({
@@ -124,21 +126,18 @@ export function AccountSessionsCard() {
   });
   const [pending, startTransition] = useTransition();
 
-  const rows = useMemo<Array<AccountSessionRow>>(() => {
-    const result: Array<AccountSessionRow> = [];
-    for (const s of data?.sessions ?? []) {
-      result.push({
-        id: s.id,
-        authMethod: s.authMethod,
-        ipAddress: s.ipAddress,
-        userAgent: s.userAgent,
-        createdAt: s.createdAt,
-        expiresAt: s.expiresAt,
-        status: s.status,
-      });
-    }
-    return result;
-  }, [data?.sessions]);
+  const rows: Array<AccountSessionRow> = [];
+  for (const session of data?.sessions ?? []) {
+    rows.push({
+      id: session.id,
+      authMethod: session.authMethod,
+      ipAddress: session.ipAddress,
+      userAgent: session.userAgent,
+      createdAt: session.createdAt,
+      expiresAt: session.expiresAt,
+      status: session.status,
+    });
+  }
 
   function openRevokeDialog(sessionId: string) {
     setRevokeState({ open: true, sessionId });
@@ -171,24 +170,23 @@ export function AccountSessionsCard() {
   }
 
   return (
-    <Collapsible.Root defaultOpen={false}>
-      <Card className="rounded-md">
-        <CardHeader className="grid-rows-1">
+    <Collapsible.Root open={sessionsOpen} onOpenChange={setSessionsOpen}>
+      <SettingsSection
+        id="active-sessions"
+        title="Active sessions"
+        description="See where you’re signed in and revoke old sessions."
+        actions={
           <Collapsible.Trigger
             type="button"
-            className="group/trigger flex w-full items-start justify-between gap-4 text-left"
+            className="group/trigger flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+            aria-label="Toggle active sessions"
           >
-            <div className="space-y-1">
-              <CardTitle>Active sessions</CardTitle>
-              <CardDescription>See where you’re signed in and revoke old sessions.</CardDescription>
-            </div>
-
-            <ChevronLeftIcon className="mt-1 size-4 shrink-0 transition-[rotate] group-data-panel-open/trigger:-rotate-90" />
+            <ChevronLeftIcon className="size-4 transition-[rotate] group-data-panel-open/trigger:-rotate-90" />
           </Collapsible.Trigger>
-        </CardHeader>
-
+        }
+      >
         <Collapsible.Panel>
-          <CardContent className="space-y-3">
+          <div className="flex flex-col gap-3 border-t pt-5">
             {isPending ? (
               <div className="space-y-2">
                 <Skeleton className="h-4 w-48" />
@@ -287,9 +285,9 @@ export function AccountSessionsCard() {
               onConfirm={revokeSelected}
               pending={pending}
             />
-          </CardContent>
+          </div>
         </Collapsible.Panel>
-      </Card>
+      </SettingsSection>
     </Collapsible.Root>
   );
 }
