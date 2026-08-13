@@ -1,5 +1,7 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
+import { play } from "cuelume";
+
 import { showStreamFeedbackToast } from "@/components/toasts/stream-feedback-toast";
 import { dispatchNavigateToThreadEvent } from "@/lib/chat/notification-navigation";
 import { useMessageStore } from "@/lib/store/messages-store";
@@ -15,26 +17,6 @@ type StreamFeedbackOptions = {
   desktopEnabled: boolean;
   errorMessage?: string;
 };
-
-const SUCCESS_SOUND_PATH = "/sounds/notification-success.mp3";
-const ERROR_SOUND_PATH = "/sounds/notification-error.mp3";
-
-function getSoundPath(status: StreamFeedbackStatus): string {
-  if (status === "success") {
-    return SUCCESS_SOUND_PATH;
-  }
-
-  return ERROR_SOUND_PATH;
-}
-
-function playSound(path: string): void {
-  if (typeof Audio === "undefined") return;
-
-  const audio = new Audio(path);
-  void audio.play().catch(() => {
-    // Ignore playback errors (autoplay policy, unsupported codecs, etc).
-  });
-}
 
 function isPageInactive(): boolean {
   if (typeof document === "undefined") return false;
@@ -158,8 +140,7 @@ export function emitStreamFeedback(options: StreamFeedbackOptions): void {
   const pageInactive = isPageInactive();
 
   if (options.soundEnabled && pageInactive) {
-    const soundPath = getSoundPath(options.status);
-    playSound(soundPath);
+    play(options.status);
   }
 
   if (!pageInactive && isViewingDifferentThread(options.threadId)) {

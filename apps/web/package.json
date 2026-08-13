@@ -38,6 +38,7 @@
     "cmdk": "^1.1.1",
     "convex": "catalog:backend",
     "convex-helpers": "catalog:backend",
+    "cuelume": "^0.2.2",
     "dedent": "catalog:shared",
     "embla-carousel-react": "^8.6.0",
     "immer": "^11.1.16",
