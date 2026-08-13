@@ -166,6 +166,8 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
   const shouldRenderUserMessageBody = message.role === "user" && userTextParts.length > 0;
   const modelId = message.metadata?.model.request;
   const modelData = modelId ? tryGetModelData(modelId) : null;
+  const isReasoningActive =
+    modelData?.capabilities.reasoning != null && message.metadata?.modelParams.effort !== "none";
 
   if (message.role === "user" && !hasRenderableContent && !shouldRenderUserAvatar) return null;
 
@@ -266,7 +268,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
           </div>
         )}
 
-        {shouldRenderPending && <MessagePending />}
+        {shouldRenderPending && <MessagePending isReasoning={isReasoningActive} />}
 
         {message.status !== "error" && shouldRenderUserMessageBody && (
           <div className="relative flex max-w-full items-start justify-end gap-2 self-end">

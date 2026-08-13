@@ -1,14 +1,23 @@
-import { MessageContent as MessageBubble } from "../ui/ai-elements/message";
-import { Icons } from "../ui/icons";
+import { LoaderCircleIcon } from "lucide-react";
 
-export function MessagePending() {
+type MessagePendingProps = {
+  isReasoning: boolean;
+};
+
+export function MessagePending({ isReasoning }: MessagePendingProps) {
+  const label = isReasoning ? "Thinking…" : "Generating response…";
+
   return (
-    <MessageBubble
+    <div
       data-slot="message-pending"
-      className="surface-edge flex w-full items-center gap-2 bg-background/75 text-foreground/80 backdrop-blur-md backdrop-saturate-150 md:p-4"
+      role="status"
+      className="surface-edge inline-flex min-h-8 items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground"
     >
-      <Icons.loading className="size-5 fill-primary stroke-primary text-primary" />
-      <span className="shimmer font-medium shimmer-duration-1200">Thinking…</span>
-    </MessageBubble>
+      <LoaderCircleIcon
+        aria-hidden="true"
+        className="size-3.5 shrink-0 animate-spin text-primary motion-reduce:animate-none"
+      />
+      <span className="shimmer shimmer-duration-1200">{label}</span>
+    </div>
   );
 }
