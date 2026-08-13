@@ -77,7 +77,10 @@ function SettledThreadNotice() {
 
   const { data } = useQuery({
     enabled: threadId !== undefined,
-    ...convexSessionQuery(api.functions.threads.getThreadTitle, { threadId }),
+    ...convexSessionQuery(
+      api.functions.threads.getThreadPageMeta,
+      threadId ? { threadId } : "skip",
+    ),
   });
 
   if (!threadId || data?.settled !== true) return null;

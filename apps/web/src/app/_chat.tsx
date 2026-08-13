@@ -49,15 +49,7 @@ export const Route = createFileRoute("/_chat")({
       throw redirect({ to: "/auth/login", search: { rt: path }, reloadDocument: true });
     }
 
-    const promises: Promise<unknown>[] = [];
-
-    promises.push(
-      context.queryClient.ensureQueryData(convexQuery(api.functions.users.getCurrentUserPreferences)),
-    );
-
-    promises.push(context.queryClient.ensureQueryData(convexQuery(api.functions.users.currentUser)));
-
-    await Promise.all(promises);
+    await context.queryClient.ensureQueryData(convexQuery(api.functions.users.getChatShell));
     return { user: auth.user, defaultOpenSidebar };
   },
 
@@ -68,12 +60,11 @@ export const Route = createFileRoute("/_chat")({
 
 function RouteComponent() {
   const { defaultOpenSidebar } = Route.useLoaderData();
-  const { data: userPreferencesData } = useSuspenseQuery(
-    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
-  );
+  const { data: chatShell } = useSuspenseQuery(convexSessionQuery(api.functions.users.getChatShell));
+
   const backgroundStyle = {
-    backgroundImage: userPreferencesData.backgroundImage
-      ? `url(${buildImageAssetUrl(userPreferencesData.backgroundImage)})`
+    backgroundImage: chatShell.preferences.backgroundImage
+      ? `url(${buildImageAssetUrl(chatShell.preferences.backgroundImage)})`
       : undefined,
   };
 
@@ -81,7 +72,7 @@ function RouteComponent() {
     <SidebarProvider
       id="sidebar-provider"
       defaultOpen={defaultOpenSidebar}
-      data-performance-mode={userPreferencesData.performanceEnabled ? "true" : "false"}
+      data-performance-mode={chatShell.preferences.performanceEnabled ? "true" : "false"}
       className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat font-sans"
       style={backgroundStyle}
     >
@@ -97,32 +88,36 @@ function ChatLayoutConfig() {
   const { isMobile, state: sidebarState } = useSidebar();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const threadId = fromUUID<Id<"threads">>(params?.threadId);
-  const { data: defaultUserPreferences } = useSuspenseQuery(
-    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
+
+  const { data: chatShell } = useSuspenseQuery(convexSessionQuery(api.functions.users.getChatShell));
+  const { data: threadMeta } = useQuery(
+    convexSessionQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
   );
 
-  const { data: userPreferences } = useQuery({
-    ...convexSessionQuery(api.functions.users.getCurrentUserPreferences, { threadId }),
-    initialData: defaultUserPreferences,
-  });
+  const selectedModel = threadMeta?.latestModel ?? chatShell.preferences.models.defaultModel;
+  const selectedModelParams = {
+    ...(threadMeta?.latestModelParams ?? chatShell.preferences.models.modelParams),
+    profile:
+      threadMeta?.latestModelParams.profile ?? chatShell.preferences.models.modelParams.profile ?? null,
+  };
 
   return (
     <ConfigStoreProvider
       key={threadId ?? "welcome"}
       initialState={{
-        hiddenModels: userPreferences.models.hidden,
-        favoriteModels: userPreferences.models.favorite,
+        hiddenModels: chatShell.preferences.models.hidden,
+        favoriteModels: chatShell.preferences.models.favorite,
 
-        pref: userPreferences.sendPreference,
-        notificationSound: userPreferences.notifications.sound,
-        desktopNotification: userPreferences.notifications.desktop,
+        pref: chatShell.preferences.sendPreference,
+        notificationSound: chatShell.preferences.notifications.sound,
+        desktopNotification: chatShell.preferences.notifications.desktop,
 
-        wrapline: userPreferences.code.autoWrap,
-        showFullCode: userPreferences.code.showFullCode,
+        wrapline: chatShell.preferences.code.autoWrap,
+        showFullCode: chatShell.preferences.code.showFullCode,
 
-        model: userPreferences.models.selectedModel,
-        defaultModel: userPreferences.models.selectedModel,
-        modelParams: userPreferences.models.selectedModelParams,
+        model: selectedModel,
+        defaultModel: selectedModel,
+        modelParams: selectedModelParams,
       }}
     >
       <GlobalDropzone data-slot="chat" className="relative inset-0 h-dvh w-screen overflow-hidden border-x">

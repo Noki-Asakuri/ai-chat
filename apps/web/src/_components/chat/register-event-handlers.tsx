@@ -213,7 +213,7 @@ export function RegisterEventHandlers() {
 
     if (eventKey === NEW_THREAD_KEYBOARD_SHORTCUT && event.shiftKey && metaKey) {
       event.preventDefault();
-      await queryClient.ensureQueryData(convexQuery(api.functions.users.getCurrentUserPreferences));
+      await queryClient.ensureQueryData(convexQuery(api.functions.users.getChatShell));
 
       await navigate({ to: "/" });
       return;

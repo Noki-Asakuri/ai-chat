@@ -15,11 +15,19 @@ type UngroupedThreadGroupProps = {
   threads: Doc<"threads">[];
   groupId: Id<"groups"> | null;
   searchQuery: string;
+  hasMore: boolean;
+  onLoadMore: () => void;
 };
 
 const SETTLED_THREADS_PAGE_SIZE = 10;
 
-export function UngroupedThreadGroup({ threads, groupId, searchQuery }: UngroupedThreadGroupProps) {
+export function UngroupedThreadGroup({
+  threads,
+  groupId,
+  searchQuery,
+  hasMore,
+  onLoadMore,
+}: UngroupedThreadGroupProps) {
   const [now, setNow] = useState(() => Date.now());
   const {
     results: settledThreads,
@@ -49,6 +57,18 @@ export function UngroupedThreadGroup({ threads, groupId, searchQuery }: Ungroupe
       {recentThreads.map((thread) => (
         <ThreadItem key={thread._id} thread={thread} now={now} />
       ))}
+
+      {hasMore && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start px-2 text-muted-foreground"
+          onClick={onLoadMore}
+        >
+          <PlusIcon data-icon="inline-start" />
+          Show more
+        </Button>
+      )}
 
       {settledThreads.length > 0 && (
         <Collapsible defaultOpen className="mt-1 flex flex-col gap-1">

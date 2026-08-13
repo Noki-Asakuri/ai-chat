@@ -1,7 +1,5 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
-import { ChevronDownIcon } from "lucide-react";
-
-import { Message } from "./message";
+import { ChevronDownIcon, Loader2Icon } from "lucide-react";
 
 import {
   MessageScroller,
@@ -12,6 +10,8 @@ import {
   MessageScrollerViewport,
   useMessageScroller,
 } from "../ui/message-scroller";
+import { Button } from "../ui/button";
+import { Message } from "./message";
 
 import {
   getStickyToBottom,
@@ -27,6 +27,9 @@ type MessageHistoryProps = {
   showUserAvatar?: boolean;
   bottomPaddingPx?: number;
   topPaddingPx?: number;
+  canLoadOlder?: boolean;
+  isLoadingOlder?: boolean;
+  onLoadOlder?: () => void;
 };
 
 export function MessageHistory({
@@ -34,6 +37,9 @@ export function MessageHistory({
   showUserAvatar = true,
   bottomPaddingPx,
   topPaddingPx = 48,
+  canLoadOlder = false,
+  isLoadingOlder = false,
+  onLoadOlder,
 }: MessageHistoryProps) {
   const textareaHeight = useChatStore((state) => state.textareaHeight);
   const resolvedBottomPadding = bottomPaddingPx ?? textareaHeight;
@@ -53,6 +59,18 @@ export function MessageHistory({
             className="mx-auto min-h-full w-full max-w-[calc(56rem+32px)] gap-4 px-4"
             style={{ paddingTop: `${topPaddingPx}px`, paddingBottom: `${resolvedBottomPadding}px` }}
           >
+            {canLoadOlder && onLoadOlder && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mx-auto text-muted-foreground"
+                disabled={isLoadingOlder}
+                onClick={onLoadOlder}
+              >
+                {isLoadingOlder && <Loader2Icon className="animate-spin" />}
+                {isLoadingOlder ? "Loading earlier messages..." : "Load earlier messages"}
+              </Button>
+            )}
             <Messages
               readOnly={readOnly}
               showUserAvatar={showUserAvatar}

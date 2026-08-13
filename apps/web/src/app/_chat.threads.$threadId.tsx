@@ -4,12 +4,12 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { convexQuery } from "@convex-dev/react-query";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { MessageHistory } from "@/components/message/message-history";
 
-import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { useAutoResumeStream } from "@/lib/chat/server-function/auto-resume-stream";
+import { getConvexReactClient } from "@/lib/convex/client";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { messageStoreActions } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
@@ -27,12 +27,12 @@ export const Route = createFileRoute("/_chat/threads/$threadId")({
   loader: async ({ context, params }) => {
     const threadId = fromUUID<Id<"threads">>(params.threadId);
 
-    await context.queryClient.prefetchQuery(
-      convexQuery(api.functions.users.getCurrentUserPreferences, { threadId }),
+    void context.queryClient.prefetchQuery(
+      convexQuery(api.functions.messages.getMessagePage, { threadId }),
     );
 
-    void context.queryClient.prefetchQuery(
-      convexQuery(api.functions.messages.getAllMessagesFromThread, { threadId }),
+    await context.queryClient.prefetchQuery(
+      convexQuery(api.functions.threads.getThreadPageMeta, { threadId }),
     );
   },
 });
@@ -44,18 +44,22 @@ function ChatComponentPage() {
     messageStoreActions.setCurrentThreadId(fromUUID<Id<"threads">>(params.threadId));
   }, [params.threadId]);
 
-  return <ChatHistory />;
+  return <ChatHistory key={params.threadId} />;
 }
 
 function ChatHistory() {
   const params = useParams({ from: "/_chat/threads/$threadId" });
   const threadId = fromUUID<Id<"threads">>(params.threadId);
   const shouldForceScrollToBottomRef = useRef(true);
+  const hasSyncedInitialPageRef = useRef(false);
+  const olderCursorRef = useRef<number | null | undefined>(undefined);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState<boolean>();
 
   const { autoResumeStream } = useAutoResumeStream();
 
   const { data, dataUpdatedAt } = useSuspenseQuery({
-    ...convexSessionQuery(api.functions.messages.getAllMessagesFromThread, { threadId }),
+    ...convexSessionQuery(api.functions.messages.getMessagePage, { threadId }),
     retry(failureCount, error) {
       const ignoreErrors = ["Thread not found", "Not authorized", "Not authenticated"];
       return ignoreErrors.some((e) => error.message.includes(e)) ? false : failureCount < 3;
@@ -63,7 +67,9 @@ function ChatHistory() {
   });
 
   const syncMessage = useEffectEvent((payload: ChatHistoryPayload, syncToken: number) => {
-    messageStoreActions.syncMessages(threadId, payload, syncToken, "replace");
+    const mode = hasSyncedInitialPageRef.current ? "prepend" : "replace";
+    messageStoreActions.syncMessages(threadId, payload, syncToken, mode);
+    hasSyncedInitialPageRef.current = true;
 
     const lastMessage = payload.messages[payload.messages.length - 1];
     if (!lastMessage) return;
@@ -83,10 +89,31 @@ function ChatHistory() {
     });
   });
 
-  useEffect(() => {
-    shouldForceScrollToBottomRef.current = true;
-    setStickyToBottom(true);
-  }, [threadId]);
+  async function loadOlderMessages(): Promise<void> {
+    const cursor = olderCursorRef.current === undefined ? data.nextBefore : olderCursorRef.current;
+    if (!cursor || isLoadingOlder) return;
+
+    setIsLoadingOlder(true);
+    const olderPage = await getConvexReactClient()
+      .query(api.functions.messages.getMessagePage, {
+        threadId,
+        before: cursor,
+      })
+      .finally(() => setIsLoadingOlder(false));
+
+    messageStoreActions.syncMessages(
+      threadId,
+      {
+        messages: olderPage.messages,
+        allMessages: olderPage.allMessages,
+        variantMessageIdsByUserMessageId: olderPage.variantMessageIdsByUserMessageId,
+      },
+      undefined,
+      "prepend",
+    );
+    olderCursorRef.current = olderPage.nextBefore;
+    setHasOlderMessages(olderPage.hasMore);
+  }
 
   useEffect(() => {
     if (data) {
@@ -109,5 +136,12 @@ function ChatHistory() {
     }
   }, [data, dataUpdatedAt]);
 
-  return <MessageHistory topPaddingPx={56} />;
+  return (
+    <MessageHistory
+      topPaddingPx={56}
+      canLoadOlder={hasOlderMessages ?? data.hasMore}
+      isLoadingOlder={isLoadingOlder}
+      onLoadOlder={() => void loadOlderMessages()}
+    />
+  );
 }

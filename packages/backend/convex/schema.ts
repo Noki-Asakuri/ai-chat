@@ -345,9 +345,8 @@ export default defineSchema(
   {
     groups: defineTable({
       title: v.string(),
-      order: v.number(),
       userId: v.string(),
-    }).index("by_userId_order", ["userId", "order"]),
+    }).index("by_userId", ["userId"]),
 
     threads: defineTable({
       title: v.string(),
@@ -362,15 +361,18 @@ export default defineSchema(
       latestModelParams: AISDKModelParams,
 
       groupId: v.nullable(v.id("groups")),
-      order: v.number(),
 
       status: status,
     })
-      .index("by_userId", ["userId"])
       .index("by_userId_updatedAt", ["userId", "updatedAt"])
-      .index("by_userId_settled_groupId_order", ["userId", "settled", "groupId", "order"])
       .index("by_userId_settled_groupId_updatedAt", ["userId", "settled", "groupId", "updatedAt"])
-      .index("by_userId_groupId_order", ["userId", "groupId", "order"])
+      .index("by_userId_groupId_pinned_settled_updatedAt", [
+        "userId",
+        "groupId",
+        "pinned",
+        "settled",
+        "updatedAt",
+      ])
       .index("by_userId_pinned_updatedAt", ["userId", "pinned", "updatedAt"])
       .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "pinned"] })
       .searchIndex("search_title_by_userId_settled_groupId", {
@@ -393,8 +395,7 @@ export default defineSchema(
       updatedAt: v.number(),
     })
       .index("by_threadId", ["threadId"])
-      .index("by_shareId", ["shareId"])
-      .index("by_ownerUserId_updatedAt", ["ownerUserId", "updatedAt"]),
+      .index("by_shareId", ["shareId"]),
 
     attachments: defineTable({
       id: v.string(),
@@ -409,8 +410,7 @@ export default defineSchema(
       threadId: v.id("threads"),
     })
       .index("by_userId", ["userId"])
-      .index("by_userId_threadId", ["userId", "threadId"])
-      .index("by_UUID", ["id"]),
+      .index("by_userId_threadId", ["userId", "threadId"]),
 
     messages: defineTable({
       threadId: v.id("threads"),
@@ -442,8 +442,7 @@ export default defineSchema(
       .index("by_userId_createdAt", ["userId", "createdAt"])
       .index("by_threadId", ["threadId"])
       .index("by_threadId_parentUserMessageId", ["threadId", "parentUserMessageId"])
-      .index("by_messageId", ["messageId"])
-      .index("by_userId_resumableStreamId", ["userId", "resumableStreamId"]),
+      .index("by_messageId", ["messageId"]),
 
     profiles: defineTable({
       userId: v.string(),

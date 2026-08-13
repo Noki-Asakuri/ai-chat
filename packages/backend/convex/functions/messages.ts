@@ -3,11 +3,25 @@ import { v } from "convex/values";
 
 import { api, internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import { action, internalMutation, internalQuery, type MutationCtx } from "../_generated/server";
-import { authenticatedMutation, authenticatedQuery, r2 } from "../components";
+import {
+  action,
+  internalMutation,
+  internalQuery,
+  type MutationCtx,
+  type QueryCtx,
+} from "../_generated/server";
+import {
+  authenticatedMutation,
+  authenticatedQuery,
+  authenticatedUserIdQuery,
+  r2,
+} from "../components";
 import { AISDKMetadata, AISDKModelParams, AISDKParts, status } from "../schema";
 
 type MessageDoc = Doc<"messages">;
+type MessageWithAttachments = Omit<MessageDoc, "attachments"> & {
+  attachments: Doc<"attachments">[];
+};
 type UserMessageDoc = MessageDoc & { role: "user" };
 type AssistantMessageDoc = MessageDoc & { role: "assistant" };
 type DeleteScope = "turnAndBelow" | "assistantVariantOnly";
@@ -183,6 +197,159 @@ function buildThreadMessageGraph(messages: MessageDoc[]): ThreadMessageGraph {
   };
 }
 
+async function buildMessagePayload(
+  db: QueryCtx["db"],
+  messages: MessageDoc[],
+): Promise<{
+  messages: MessageWithAttachments[];
+  allMessages: MessageWithAttachments[];
+  variantMessageIdsByUserMessageId: Record<Id<"messages">, Array<Id<"messages">>>;
+}> {
+  const graph = buildThreadMessageGraph(messages);
+  const canonicalMessageIds = graph.canonicalMessageIds;
+
+  const sliceUserMessageIds = new Set<Id<"messages">>();
+  for (const messageId of canonicalMessageIds) {
+    const message = graph.messagesById[messageId];
+    if (!message) continue;
+
+    if (message.role === "user") {
+      sliceUserMessageIds.add(message._id);
+      continue;
+    }
+
+    if (message.parentUserMessageId) {
+      sliceUserMessageIds.add(message.parentUserMessageId);
+    }
+  }
+
+  const visibleMessageIds = new Set<Id<"messages">>(canonicalMessageIds);
+  for (const userMessageId of sliceUserMessageIds) {
+    visibleMessageIds.add(userMessageId);
+
+    const variants = graph.assistantsByUserId[userMessageId] ?? [];
+    for (const variant of variants) {
+      visibleMessageIds.add(variant._id);
+    }
+  }
+
+  const visibleMessages: MessageDoc[] = [];
+  for (const messageId of visibleMessageIds) {
+    const message = graph.messagesById[messageId];
+    if (message) visibleMessages.push(message);
+  }
+
+  const attachmentIdSet = new Set<Id<"attachments">>();
+  for (const message of visibleMessages) {
+    for (const attachmentId of message.attachments) {
+      attachmentIdSet.add(attachmentId);
+    }
+  }
+
+  const attachmentIds = Array.from(attachmentIdSet);
+  const attachmentDocs = attachmentIds.length > 0 ? await getAll(db, attachmentIds) : [];
+  const attachmentsById: Record<Id<"attachments">, Doc<"attachments">> = {};
+
+  for (const attachmentDoc of attachmentDocs) {
+    if (attachmentDoc) attachmentsById[attachmentDoc._id] = attachmentDoc;
+  }
+
+  const hydratedVisibleMessagesById: Record<Id<"messages">, MessageWithAttachments> = {};
+  for (const message of visibleMessages) {
+    const attachments: Doc<"attachments">[] = [];
+
+    for (const attachmentId of message.attachments) {
+      const attachment = attachmentsById[attachmentId];
+      if (attachment) attachments.push(attachment);
+    }
+
+    hydratedVisibleMessagesById[message._id] = { ...message, attachments };
+  }
+
+  const allMessages: MessageWithAttachments[] = [];
+  for (const message of sortMessagesAscending(visibleMessages)) {
+    const hydrated = hydratedVisibleMessagesById[message._id];
+    if (hydrated) allMessages.push(hydrated);
+  }
+
+  const canonicalMessages: MessageWithAttachments[] = [];
+  for (const messageId of canonicalMessageIds) {
+    const message = hydratedVisibleMessagesById[messageId];
+    if (message) canonicalMessages.push(message);
+  }
+
+  const variantMessageIdsByUserMessageId: Record<
+    Id<"messages">,
+    Array<Id<"messages">>
+  > = {};
+
+  for (const userMessageId of sliceUserMessageIds) {
+    const variants = graph.assistantsByUserId[userMessageId] ?? [];
+    if (variants.length === 0) continue;
+
+    variantMessageIdsByUserMessageId[userMessageId] = variants.map((variant) => variant._id);
+  }
+
+  return {
+    messages: canonicalMessages,
+    allMessages,
+    variantMessageIdsByUserMessageId,
+  };
+}
+
+async function expandMessagePage(db: QueryCtx["db"], pageRows: MessageDoc[]): Promise<MessageDoc[]> {
+  const messagesById: Record<Id<"messages">, MessageDoc> = {};
+  const userMessageIds = new Set<Id<"messages">>();
+
+  for (const message of pageRows) {
+    messagesById[message._id] = message;
+
+    if (message.role === "user") {
+      userMessageIds.add(message._id);
+    } else if (message.parentUserMessageId) {
+      userMessageIds.add(message.parentUserMessageId);
+    }
+  }
+
+  const pageMessage = pageRows[0];
+  const expandedTurns = await Promise.all(
+    Array.from(userMessageIds, async (userMessageId) => {
+      let userMessage = messagesById[userMessageId];
+
+      if (!userMessage) {
+        const candidate = await db.get("messages", userMessageId);
+        if (
+          candidate &&
+          pageMessage &&
+          candidate.userId === pageMessage.userId &&
+          candidate.threadId === pageMessage.threadId
+        ) {
+          userMessage = candidate;
+        }
+      }
+
+      if (!userMessage) return [];
+
+      const variants = await db
+        .query("messages")
+        .withIndex("by_threadId_parentUserMessageId", (q) =>
+          q.eq("threadId", userMessage.threadId).eq("parentUserMessageId", userMessageId),
+        )
+        .take(100);
+
+      return [userMessage, ...variants];
+    }),
+  );
+
+  for (const turnMessages of expandedTurns) {
+    for (const message of turnMessages) {
+      messagesById[message._id] = message;
+    }
+  }
+
+  return Object.values(messagesById);
+}
+
 function resolveUserMessageIdForMessage(
   graph: ThreadMessageGraph,
   messageId: Id<"messages">,
@@ -273,130 +440,52 @@ const assistantCompletionTrackingPayloadValidator = v.object({
   reasoningTokens: v.number(),
 });
 
-export const getAllMessagesFromThread = authenticatedQuery({
+export const getAllMessagesFromThread = authenticatedUserIdQuery({
   args: {
     threadId: v.id("threads"),
   },
   handler: async (ctx, args) => {
-    const user = ctx.user;
-    if (!args.threadId) throw new Error("Thread not found");
-
-    const thread = await ctx.db.get("threads", args.threadId);
-    if (!thread) throw new Error("Thread not found");
-    if (thread?.userId !== user.userId) throw new Error("Not authorized");
-
     const messages = await ctx.db
       .query("messages")
-      .withIndex("by_userId_threadId", (q) => q.eq("userId", user.userId).eq("threadId", args.threadId))
+      .withIndex("by_userId_threadId", (q) => q.eq("userId", ctx.userId).eq("threadId", args.threadId))
       .order("asc")
       .collect();
+    return await buildMessagePayload(ctx.db, messages);
+  },
+});
 
-    type MessageWithAttachments = Omit<Doc<"messages">, "attachments"> & {
-      attachments: Doc<"attachments">[];
-    };
+const MESSAGE_PAGE_SIZE_LIMIT = 100;
 
-    const graph = buildThreadMessageGraph(messages);
+export const getMessagePage = authenticatedUserIdQuery({
+  args: {
+    threadId: v.id("threads"),
+    before: v.optional(v.number()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.min(Math.max(args.limit ?? 40, 1), MESSAGE_PAGE_SIZE_LIMIT);
+    const query = ctx.db
+      .query("messages")
+      .withIndex("by_userId_threadId", (q) =>
+        args.before === undefined
+          ? q.eq("userId", ctx.userId).eq("threadId", args.threadId)
+          : q
+              .eq("userId", ctx.userId)
+              .eq("threadId", args.threadId)
+              .lt("_creationTime", args.before),
+      )
+      .order("desc");
 
-    const canonicalMessageIds = graph.canonicalMessageIds;
-
-    const sliceUserMessageIds = new Set<Id<"messages">>();
-    for (const messageId of canonicalMessageIds) {
-      const message = graph.messagesById[messageId];
-      if (!message) continue;
-
-      if (message.role === "user") {
-        sliceUserMessageIds.add(message._id);
-        continue;
-      }
-
-      const parentUserMessageId = message.parentUserMessageId;
-      if (parentUserMessageId) {
-        sliceUserMessageIds.add(parentUserMessageId);
-      }
-    }
-
-    const visibleMessageIds = new Set<Id<"messages">>(canonicalMessageIds);
-    for (const userMessageId of sliceUserMessageIds) {
-      visibleMessageIds.add(userMessageId);
-
-      const variants = graph.assistantsByUserId[userMessageId] ?? [];
-      for (const variant of variants) {
-        visibleMessageIds.add(variant._id);
-      }
-    }
-
-    const visibleMessages: MessageDoc[] = [];
-    for (const messageId of visibleMessageIds) {
-      const message = graph.messagesById[messageId];
-      if (!message) continue;
-      visibleMessages.push(message);
-    }
-
-    const attachmentIdSet = new Set<Id<"attachments">>();
-    for (const message of visibleMessages) {
-      for (const attachmentId of message.attachments) {
-        attachmentIdSet.add(attachmentId);
-      }
-    }
-
-    const attachmentIds = Array.from(attachmentIdSet);
-    const attachmentDocs = attachmentIds.length > 0 ? await getAll(ctx.db, attachmentIds) : [];
-
-    const attachmentsById: Record<Id<"attachments">, Doc<"attachments">> = {};
-    for (const attachmentDoc of attachmentDocs) {
-      if (!attachmentDoc) continue;
-      attachmentsById[attachmentDoc._id] = attachmentDoc;
-    }
-
-    const hydratedVisibleMessagesById: Record<Id<"messages">, MessageWithAttachments> = {};
-    for (const message of visibleMessages) {
-      const attachments: Doc<"attachments">[] = [];
-
-      for (const attachmentId of message.attachments) {
-        const attachment = attachmentsById[attachmentId];
-        if (!attachment) continue;
-        attachments.push(attachment);
-      }
-
-      hydratedVisibleMessagesById[message._id] = {
-        ...message,
-        attachments,
-      };
-    }
-
-    const allMessages: MessageWithAttachments[] = [];
-    const sortedVisibleMessages = sortMessagesAscending(visibleMessages);
-    for (const message of sortedVisibleMessages) {
-      const hydrated = hydratedVisibleMessagesById[message._id];
-      if (!hydrated) continue;
-      allMessages.push(hydrated);
-    }
-
-    const canonicalMessages: MessageWithAttachments[] = [];
-    for (const messageId of canonicalMessageIds) {
-      const message = hydratedVisibleMessagesById[messageId];
-      if (!message) continue;
-      canonicalMessages.push(message);
-    }
-
-    const variantMessageIdsByUserMessageId: Record<Id<"messages">, Array<Id<"messages">>> = {};
-
-    for (const userMessageId of sliceUserMessageIds) {
-      const variants = graph.assistantsByUserId[userMessageId] ?? [];
-      if (variants.length === 0) continue;
-
-      variantMessageIdsByUserMessageId[userMessageId] = [];
-
-      for (const variant of variants) {
-        variantMessageIdsByUserMessageId[userMessageId]!.push(variant._id);
-      }
-    }
+    const rows = await query.take(limit + 1);
+    const hasMore = rows.length > limit;
+    const pageRows = rows.slice(0, limit).reverse();
+    const expandedPageRows = await expandMessagePage(ctx.db, pageRows);
+    const payload = await buildMessagePayload(ctx.db, expandedPageRows);
 
     return {
-      messages: canonicalMessages,
-      allMessages,
-      thread,
-      variantMessageIdsByUserMessageId,
+      ...payload,
+      hasMore,
+      nextBefore: hasMore ? (pageRows[0]?._creationTime ?? null) : null,
     };
   },
 });

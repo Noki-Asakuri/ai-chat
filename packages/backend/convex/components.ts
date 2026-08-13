@@ -33,6 +33,20 @@ export const authenticatedQuery = customQuery(query, {
   },
 });
 
+/**
+ * Authenticate a query without loading the application's user document.
+ * Use this for reads that only need the stable WorkOS user ID for ownership.
+ */
+export const authenticatedUserIdQuery = customQuery(query, {
+  args: {},
+  input: async (ctx) => {
+    const userFromAuthKit = await ctx.auth.getUserIdentity();
+    if (!userFromAuthKit) throw new Error("Not authenticated");
+
+    return { ctx: { ...ctx, userId: userFromAuthKit.subject }, args: {} };
+  },
+});
+
 export const authenticatedMutation = customMutation(mutation, {
   args: {},
   input: async (ctx) => {

@@ -57,9 +57,9 @@ export const MessageContent = ({ children, className, variant, ...props }: Messa
 
 export const MessageAvatar = ({ className, ...props }: ComponentProps<typeof Avatar>) => {
   const { user } = useLoaderData({ from: "/_chat" });
-  const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
+  const { data: chatShell } = useQuery(convexSessionQuery(api.functions.users.getChatShell));
 
-  const avatarUrl = currentUser?.imageUrl ?? getUserAvatarUrl(user);
+  const avatarUrl = chatShell?.viewer.imageUrl ?? getUserAvatarUrl(user);
 
   return (
     <Avatar className={cn("size-11 rounded-md ring-1 ring-border", className)} {...props}>

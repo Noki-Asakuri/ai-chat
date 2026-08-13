@@ -1,71 +1,119 @@
 import { v } from "convex/values";
 
 import type { Doc, Id } from "../_generated/dataModel";
-import { authenticatedMutation, authenticatedQuery } from "../components";
+import { authenticatedMutation, authenticatedUserIdQuery } from "../components";
 
-/**
- * List all groups for the current user ordered by `order` asc.
- */
-export const listGroups = authenticatedQuery({
-  args: {},
-  handler: async (ctx) => {
-    const user = ctx.user;
-
+/** List all groups for the current user in creation order. */
+export const listGroups = authenticatedUserIdQuery({
+  args: {
+    activeGroupId: v.optional(v.nullable(v.id("groups"))),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.min(Math.max(args.limit ?? 40, 1), 200);
+    const activeGroupId = args.activeGroupId ?? null;
     const groupsPromise = ctx.db
       .query("groups")
-      .withIndex("by_userId_order", (q) => q.eq("userId", user.userId))
+      .withIndex("by_userId", (q) => q.eq("userId", ctx.userId))
       .order("asc")
-      .collect();
+      .take(100);
 
-    const threadsPromise = ctx.db
+    const pinnedThreadsPromise = ctx.db
       .query("threads")
-      .withIndex("by_userId_settled_groupId_order", (q) => q.eq("userId", user.userId).lt("settled", true))
-      .order("asc")
-      .collect();
+      .withIndex("by_userId_groupId_pinned_settled_updatedAt", (q) =>
+        q
+          .eq("userId", ctx.userId)
+          .eq("groupId", activeGroupId)
+          .eq("pinned", true)
+          .eq("settled", false),
+      )
+      .order("desc")
+      .take(100);
 
-    const [groups, threads] = await Promise.all([groupsPromise, threadsPromise]);
-    threads.sort((left, right) => left.order - right.order);
+    const legacyPinnedThreadsPromise = ctx.db
+      .query("threads")
+      .withIndex("by_userId_groupId_pinned_settled_updatedAt", (q) =>
+        q
+          .eq("userId", ctx.userId)
+          .eq("groupId", activeGroupId)
+          .eq("pinned", true)
+          .eq("settled", undefined),
+      )
+      .order("desc")
+      .take(100);
 
-    const groupedThreads = threads.reduce(
-      (acc, thread) => {
-        const groupId = thread.groupId ?? "none";
+    const activeThreadsPromise = ctx.db
+      .query("threads")
+      .withIndex("by_userId_groupId_pinned_settled_updatedAt", (q) =>
+        q
+          .eq("userId", ctx.userId)
+          .eq("groupId", activeGroupId)
+          .eq("pinned", false)
+          .eq("settled", false),
+      )
+      .order("desc")
+      .take(limit + 1);
 
-        acc[groupId] ??= { group: null, threads: [] };
-        acc[groupId].threads.push(thread);
+    const legacyActiveThreadsPromise = ctx.db
+      .query("threads")
+      .withIndex("by_userId_groupId_pinned_settled_updatedAt", (q) =>
+        q
+          .eq("userId", ctx.userId)
+          .eq("groupId", activeGroupId)
+          .eq("pinned", false)
+          .eq("settled", undefined),
+      )
+      .order("desc")
+      .take(limit + 1);
 
-        return acc;
-      },
-      {} as Record<Id<"groups"> | "none", { group: Doc<"groups"> | null; threads: Doc<"threads">[] }>,
+    const [groups, pinnedThreads, legacyPinnedThreads, activeThreads, legacyActiveThreads] =
+      await Promise.all([
+      groupsPromise,
+      pinnedThreadsPromise,
+      legacyPinnedThreadsPromise,
+      activeThreadsPromise,
+      legacyActiveThreadsPromise,
+    ]);
+
+    const activeThreadRows = [...activeThreads, ...legacyActiveThreads].sort(
+      (left, right) => right.updatedAt - left.updatedAt,
     );
 
-    for (const group of groups) {
-      const existing = groupedThreads[group._id] ?? { group: null, threads: [] };
-      groupedThreads[group._id] = { ...existing, group };
+    const groupExists =
+      activeGroupId === null ||
+      groups.some((group) => group._id === activeGroupId && group.userId === ctx.userId);
+
+    if (!groupExists) {
+      return { activeGroupId, groups, threads: [], hasMore: false };
     }
 
-    return { groupedThreads, groups, threads, length: threads.length };
+    const threadsById: Record<Id<"threads">, Doc<"threads">> = {};
+    for (const thread of [...pinnedThreads, ...legacyPinnedThreads]) {
+      if (thread.groupId === activeGroupId && thread.settled !== true) {
+        threadsById[thread._id] = thread;
+      }
+    }
+
+    for (const thread of activeThreadRows.slice(0, limit)) {
+      threadsById[thread._id] = thread;
+    }
+
+    return {
+      activeGroupId,
+      groups,
+      threads: Object.values(threadsById),
+      hasMore: activeThreadRows.length > limit,
+    };
   },
 });
 
-/**
- * Create a group with the next available order for the current user.
- */
 export const createGroup = authenticatedMutation({
   args: { title: v.string() },
   handler: async (ctx, args) => {
     const user = ctx.user;
 
-    const last = await ctx.db
-      .query("groups")
-      .withIndex("by_userId_order", (q) => q.eq("userId", user.userId))
-      .order("desc")
-      .take(1);
-
-    const nextOrder = (last[0]?.order ?? 0) + 1;
-
     const id = await ctx.db.insert("groups", {
       title: args.title,
-      order: nextOrder,
       userId: user.userId,
     });
 
@@ -86,15 +134,16 @@ export const deleteGroup = authenticatedMutation({
     if (!group) throw new Error("Group not found");
     if (group.userId !== user.userId) throw new Error("Not authorized");
 
-    // Move threads from this group to ungrouped with increasing order
+    // Move threads from this group to ungrouped.
     const threadsInGroup = await ctx.db
       .query("threads")
-      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.userId).eq("groupId", args.groupId))
-      .order("asc")
+      .withIndex("by_userId_groupId_pinned_settled_updatedAt", (q) =>
+        q.eq("userId", user.userId).eq("groupId", args.groupId),
+      )
       .collect();
 
     for (const t of threadsInGroup) {
-      await ctx.db.patch(t._id, { groupId: null, order: 0 });
+      await ctx.db.patch(t._id, { groupId: null });
     }
 
     // Delete the group
@@ -121,75 +170,10 @@ export const updateGroupTitle = authenticatedMutation({
   },
 });
 
-/**
- * Re-order thread within same group
- */
-export const reorderThreadWithinGroup = authenticatedMutation({
-  args: { threadId: v.id("threads"), toIndex: v.number() },
-  handler: async (ctx, args) => {
-    const user = ctx.user;
-
-    const thread = await ctx.db.get("threads", args.threadId);
-    if (!thread) throw new Error("Thread not found");
-    if (thread.userId !== user.userId) throw new Error("Not authorized");
-
-    const threadsInGroup = await ctx.db
-      .query("threads")
-      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.userId).eq("groupId", thread.groupId))
-      .order("asc")
-      .collect();
-
-    // Remove the thread from the list
-    const threads = threadsInGroup.filter((t) => t._id !== args.threadId);
-    // Clamp target index to [0, threads.length] so dropping at the end appends
-    const insertIndex = Math.max(0, Math.min(args.toIndex, threads.length));
-    // Insert at the new index
-    threads.splice(insertIndex, 0, thread);
-
-    // Reorder all threads in the group to fill the gap
-    for (let i = 0; i < threads.length; i++) {
-      const thread = threads[i];
-      if (!thread) continue;
-      await ctx.db.patch(thread._id, { order: i });
-    }
-  },
-});
-
-export const removeGroupId = authenticatedMutation({
-  args: { threadId: v.id("threads") },
-  handler: async (ctx, args) => {
-    const user = ctx.user;
-
-    const thread = await ctx.db.get("threads", args.threadId);
-    if (!thread) throw new Error("Thread not found");
-    if (thread.userId !== user.userId) throw new Error("Not authorized");
-
-    if (thread.groupId === null) return;
-
-    await ctx.db.patch(args.threadId, { groupId: null, order: 0 });
-
-    const threadsInOldGroup = await ctx.db
-      .query("threads")
-      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.userId).eq("groupId", thread.groupId))
-      .order("asc")
-      .collect();
-
-    // Remove thread in old group
-    threadsInOldGroup.splice(thread.order!, 1);
-    // Reorder all threads in the old group to fill the gap
-    for (let i = 0; i < threadsInOldGroup.length; i++) {
-      const thread = threadsInOldGroup[i];
-      if (!thread) continue;
-      await ctx.db.patch(thread._id, { order: i });
-    }
-  },
-});
-
 export const moveThreadToGroup = authenticatedMutation({
   args: {
     threadId: v.id("threads"),
     toGroupId: v.nullable(v.id("groups")),
-    toIndex: v.number(),
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
@@ -198,82 +182,12 @@ export const moveThreadToGroup = authenticatedMutation({
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
-    const oldIndex = thread.order!;
-    const oldGroupId = thread.groupId;
-
-    const threadsInOldGroupPromise = ctx.db
-      .query("threads")
-      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.userId).eq("groupId", oldGroupId))
-      .order("asc")
-      .collect();
-
-    const threadsInNewGroupPromise = ctx.db
-      .query("threads")
-      .withIndex("by_userId_groupId_order", (q) => q.eq("userId", user.userId).eq("groupId", args.toGroupId))
-      .order("asc")
-      .collect();
-
-    const [threadsInOldGroup, threadsInNewGroup] = await Promise.all([
-      threadsInOldGroupPromise,
-      threadsInNewGroupPromise,
-    ]);
-
-    // Insert the new thread in new group
-    const insertIndex =
-      args.toGroupId === null ? 0 : Math.max(0, Math.min(args.toIndex, threadsInNewGroup.length));
-
-    threadsInNewGroup.splice(insertIndex, 0, thread);
-    await ctx.db.patch(thread._id, { groupId: args.toGroupId, order: insertIndex });
-
     if (args.toGroupId !== null) {
-      // Reorder all threads in the new group to fill the gap
-      for (let i = 0; i < threadsInNewGroup.length; i++) {
-        const thread = threadsInNewGroup[i];
-        if (!thread) continue;
-        await ctx.db.patch(thread._id, { order: i });
-      }
+      const group = await ctx.db.get("groups", args.toGroupId);
+      if (!group) throw new Error("Group not found");
+      if (group.userId !== user.userId) throw new Error("Not authorized");
     }
 
-    if (oldGroupId !== null) {
-      // Remove thread in old group
-      threadsInOldGroup.splice(oldIndex, 1);
-      // Reorder all threads in the old group to fill the gap
-      for (let i = 0; i < threadsInOldGroup.length; i++) {
-        const thread = threadsInOldGroup[i];
-        if (!thread) continue;
-        await ctx.db.patch(thread._id, { order: i });
-      }
-    }
-  },
-});
-
-export const moveGroupToIndex = authenticatedMutation({
-  args: { groupId: v.id("groups"), toIndex: v.number() },
-  handler: async (ctx, args) => {
-    const user = ctx.user;
-
-    const group = await ctx.db.get("groups", args.groupId);
-    if (!group) throw new Error("Group not found");
-    if (group.userId !== user.userId) throw new Error("Not authorized");
-
-    const groups = await ctx.db
-      .query("groups")
-      .withIndex("by_userId_order", (q) => q.eq("userId", user.userId))
-      .order("asc")
-      .collect();
-
-    // Remove the group from the list
-    const filtered = groups.filter((g) => g._id !== args.groupId);
-    // Clamp target index to [0, groups.length] so dropping at the end appends
-    const insertIndex = Math.max(0, Math.min(args.toIndex, filtered.length));
-    // Insert at the new index
-    filtered.splice(insertIndex, 0, group);
-
-    // Reorder all groups to fill the gap
-    for (let i = 0; i < filtered.length; i++) {
-      const group = filtered[i];
-      if (!group) continue;
-      await ctx.db.patch(group._id, { order: i });
-    }
+    await ctx.db.patch(thread._id, { groupId: args.toGroupId });
   },
 });

@@ -40,12 +40,12 @@ type ThreadUserProfileProps = {
 };
 
 export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfileProps) {
-  const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
+  const { data: chatShell } = useQuery(convexSessionQuery(api.functions.users.getChatShell));
   const logoutUser = useServerFn(logout);
 
   const initials = getUserInitials(user);
   const username = getUserDisplayName(user);
-  const avatarUrl = currentUser?.imageUrl ?? getUserAvatarUrl(user);
+  const avatarUrl = chatShell?.viewer.imageUrl ?? getUserAvatarUrl(user);
 
   return (
     <Menu.Root>

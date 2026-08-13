@@ -134,12 +134,12 @@ export function RootLayout() {
 
 function TypographySync() {
   const { auth } = Route.useLoaderData();
-  const { data: preferences } = useQuery({
-    ...convexQuery(api.functions.users.getCurrentUserPreferences),
+  const { data: chatShell } = useQuery({
+    ...convexQuery(api.functions.users.getChatShell),
     enabled: !!auth.user,
   });
 
-  const fonts = preferences?.fonts;
+  const fonts = chatShell?.preferences.fonts;
 
   useEffect(() => {
     if (!fonts || !auth.user) return;

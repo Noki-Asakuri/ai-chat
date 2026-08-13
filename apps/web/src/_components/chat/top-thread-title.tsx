@@ -30,13 +30,14 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
 
   const { data, isFetching } = useQuery({
     enabled: typeof params?.threadId === "string" && !isSkeleton,
-    ...convexSessionQuery(api.functions.threads.getThreadTitle, {
-      threadId,
-    }),
+    ...convexSessionQuery(
+      api.functions.threads.getThreadPageMeta,
+      threadId ? { threadId } : "skip",
+    ),
   });
 
   if (isFetching || isSkeleton) return <Skeleton className="h-4 w-80 max-w-full" />;
-  const threadData = params?.threadId && data?.title ? data : null;
+  const threadData = params?.threadId && data ? data : null;
   const groupId = threadData?.groupId ?? activeGroupId;
   const groupTitle = threadData?.groupTitle ?? activeGroup?.title ?? "Ungrouped";
 

@@ -179,7 +179,6 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
     <div
       data-thread-id={thread._id}
       data-thread-active={isActive}
-      data-thread-index={thread.order}
       data-thread-status={thread.status}
       data-slot="thread-item"
       className={cn(
@@ -270,15 +269,10 @@ function ThreadActions({
       toGroupId === null ? "Ungrouped" : destinationGroups.find((group) => group._id === toGroupId)?.title;
     if (!destinationTitle) return;
 
-    const toIndex =
-      toGroupId === null
-        ? 0
-        : (useThreadStore.getState().groupedThreads.groupedThreads[toGroupId]?.threads.length ?? 0);
     const [, error] = await tryCatch(
       convexClient.mutation(api.functions.groups.moveThreadToGroup, {
         threadId: thread._id,
         toGroupId,
-        toIndex,
       }),
     );
 

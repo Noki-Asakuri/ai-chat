@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_chat/")({
   loader: async ({ context }) => {
     const [auth] = await Promise.all([
       getAuth(),
-      context.queryClient.prefetchQuery(convexQuery(api.functions.users.getCurrentUserPreferences)),
+      context.queryClient.prefetchQuery(convexQuery(api.functions.users.getChatShell)),
     ]);
 
     return { user: auth.user };

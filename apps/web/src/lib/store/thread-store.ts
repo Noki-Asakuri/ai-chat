@@ -6,13 +6,10 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import type { RemoveAllExceptFunctions } from "../types";
 
 export type GroupedThreads = {
-  groupedThreads: Record<
-    Id<"groups"> | "none",
-    { group: Doc<"groups"> | null; threads: Doc<"threads">[] }
-  >;
+  activeGroupId: Id<"groups"> | null;
   groups: Doc<"groups">[];
   threads: Doc<"threads">[];
-  length: number;
+  hasMore: boolean;
 };
 
 export type ThreadStore = {
@@ -30,10 +27,10 @@ export const useThreadStore = create<ThreadStore>()(
   persist(
     (set) => ({
       groupedThreads: {
-        groupedThreads: { none: { group: null, threads: [] } },
+        activeGroupId: null,
         groups: [],
         threads: [],
-        length: 0,
+        hasMore: false,
       },
       setGroupedThreads: (groupedThreads) => set({ groupedThreads }),
 
@@ -48,7 +45,7 @@ export const useThreadStore = create<ThreadStore>()(
     }),
     {
       name: "local-threads-cache",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
 
       partialize: (state) => ({

@@ -185,18 +185,28 @@ function CreateGroupButton() {
 }
 
 function ThreadListWrapper() {
+  const activeGroupId = useThreadStore((state) => state.activeGroupId);
+
+  return <ActiveGroupThreadList key={activeGroupId ?? "ungrouped"} activeGroupId={activeGroupId} />;
+}
+
+function ActiveGroupThreadList({ activeGroupId }: { activeGroupId: Id<"groups"> | null }) {
   const localCache = useThreadStore((state) => state.groupedThreads);
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const lastSyncedThreadIdRef = useRef<Id<"threads"> | null>(null);
+  const [threadLimit, setThreadLimit] = useState(40);
   const routeThreadId = fromUUID<Id<"threads">>(params?.threadId);
   const markThreadViewed = useMutation(api.functions.threads.markThreadViewed);
 
   const { data } = useQuery({
-    ...convexSessionQuery(api.functions.groups.listGroups),
-    initialData: localCache,
+    ...convexSessionQuery(api.functions.groups.listGroups, { activeGroupId, limit: threadLimit }),
+    initialData: localCache.activeGroupId === activeGroupId ? localCache : undefined,
   });
   const { data: routeThreadTitle } = useQuery(
-    convexSessionQuery(api.functions.threads.getThreadTitle, { threadId: routeThreadId }),
+    convexSessionQuery(
+      api.functions.threads.getThreadPageMeta,
+      routeThreadId ? { threadId: routeThreadId } : "skip",
+    ),
   );
 
   useEffect(() => {
@@ -212,15 +222,15 @@ function ThreadListWrapper() {
         return;
       }
 
-      if (routeThreadTitle && routeThreadTitle.title !== null) {
+      if (routeThreadTitle) {
         threadStoreActions.setActiveGroupId(routeThreadTitle.groupId);
         lastSyncedThreadIdRef.current = routeThreadId;
         return;
       }
     }
 
-    const activeGroupId = useThreadStore.getState().activeGroupId;
-    if (activeGroupId && !data.groups.some((group) => group._id === activeGroupId)) {
+    const storedActiveGroupId = useThreadStore.getState().activeGroupId;
+    if (storedActiveGroupId && !data.groups.some((group) => group._id === storedActiveGroupId)) {
       threadStoreActions.setActiveGroupId(null);
     }
   }, [data, routeThreadId, routeThreadTitle]);
@@ -228,29 +238,35 @@ function ThreadListWrapper() {
   useEffect(() => {
     if (!data || !routeThreadId) return;
 
-    const routeThread = data.threads.find((thread) => thread._id === routeThreadId);
+    const routeThread = data.threads.find((thread) => thread._id === routeThreadId) ?? routeThreadTitle;
     if (!routeThread || routeThread.status !== "complete") return;
-    if (routeThread.lastViewedAt !== undefined && routeThread.lastViewedAt >= routeThread.updatedAt) return;
+    if (routeThread.lastViewedAt !== undefined && routeThread.lastViewedAt !== null && routeThread.lastViewedAt >= routeThread.updatedAt) return;
 
     void markThreadViewed({ threadId: routeThreadId }).catch((error: unknown) => {
       console.error("[Thread] Mark thread viewed error:", error);
     });
-  }, [data, markThreadViewed, routeThreadId]);
+  }, [data, markThreadViewed, routeThreadId, routeThreadTitle]);
 
   if (!data) {
     return <ThreadListSkeleton key="thread-list-skeleton" />;
   }
 
-  return <ThreadList data={data} />;
+  return (
+    <ThreadList
+      data={data}
+      onLoadMore={() => setThreadLimit((current) => current + 40)}
+    />
+  );
 }
 
 type ListGroupData = (typeof api.functions.groups.listGroups)["_returnType"];
 
 type ThreadListProps = {
   data: ListGroupData;
+  onLoadMore: () => void;
 };
 
-function ThreadList({ data }: ThreadListProps) {
+function ThreadList({ data, onLoadMore }: ThreadListProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [newChatOpen, setNewChatOpen] = useState(false);
@@ -261,9 +277,7 @@ function ThreadList({ data }: ThreadListProps) {
   const activeGroupId = useThreadStore((state) => state.activeGroupId);
 
   const activeGroup = data.groups.find((group) => group._id === activeGroupId);
-  const activeThreads = (data.groupedThreads[activeGroupId ?? "none"]?.threads ?? []).filter(
-    (thread) => thread.settled !== true,
-  );
+  const activeThreads = data.threads.filter((thread) => thread.settled !== true);
   const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
   const filteredThreads = normalizedSearchQuery
     ? activeThreads.filter((thread) => thread.title.toLocaleLowerCase().includes(normalizedSearchQuery))
@@ -399,6 +413,8 @@ function ThreadList({ data }: ThreadListProps) {
           threads={filteredThreads}
           groupId={activeGroupId}
           searchQuery={normalizedSearchQuery}
+          hasMore={data.hasMore && normalizedSearchQuery.length === 0}
+          onLoadMore={onLoadMore}
         />
       </div>
 
@@ -445,7 +461,7 @@ function ThreadList({ data }: ThreadListProps) {
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate font-medium">{group.title}</span>
                     <span className="truncate text-xs text-muted-foreground">
-                      {data.groupedThreads[group._id]?.threads.length ?? 0} threads
+                      Open group
                     </span>
                   </span>
                   {index < 8 && <CommandShortcut>Ctrl+{index + 2}</CommandShortcut>}

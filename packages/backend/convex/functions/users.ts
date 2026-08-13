@@ -246,6 +246,16 @@ export const currentUser = authenticatedQuery({
   },
 });
 
+export const getChatShell = authenticatedQuery({
+  args: {},
+  handler: async (ctx) => {
+    return {
+      preferences: mergeUserPreferences(ctx.user.preferences),
+      viewer: { imageUrl: ctx.user.imageUrl },
+    };
+  },
+});
+
 export const getCurrentUserPreferences = authenticatedQuery({
   args: { threadId: v.optional(v.id("threads")) },
   handler: async (ctx, args) => {

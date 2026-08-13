@@ -2,10 +2,10 @@ import { paginationOptsValidator, paginationResultValidator } from "convex/serve
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import { query } from "../_generated/server";
 
-import { authenticatedMutation, authenticatedQuery } from "../components";
+import { authenticatedMutation, authenticatedQuery, authenticatedUserIdQuery } from "../components";
 import { AISDKModelParams, status } from "../schema";
 
 type ThreadStatus = "pending" | "streaming" | "complete" | "error";
@@ -39,6 +39,24 @@ type AccountThreadSortDirection = "asc" | "desc";
 const MAX_ACCOUNT_THREADS_PAGE_SIZE = 15;
 const SETTLE_INACTIVE_THREADS_PAGE_SIZE = 100;
 
+function serializeThread(thread: Doc<"threads">) {
+  return {
+    _id: thread._id,
+    _creationTime: thread._creationTime,
+    title: thread.title,
+    userId: thread.userId,
+    updatedAt: thread.updatedAt,
+    lastViewedAt: thread.lastViewedAt,
+    pinned: thread.pinned,
+    settled: thread.settled,
+    branchedFrom: thread.branchedFrom,
+    latestModel: thread.latestModel,
+    latestModelParams: thread.latestModelParams,
+    groupId: thread.groupId,
+    status: thread.status,
+  };
+}
+
 const threadValidator = v.object({
   _id: v.id("threads"),
   _creationTime: v.number(),
@@ -52,7 +70,6 @@ const threadValidator = v.object({
   latestModel: v.string(),
   latestModelParams: AISDKModelParams,
   groupId: v.nullable(v.id("groups")),
-  order: v.number(),
   status,
 });
 
@@ -144,7 +161,6 @@ export const createThread = authenticatedMutation({
       updatedAt: now + 1,
       lastViewedAt: now,
       groupId: args.groupId,
-      order: 0,
 
       latestModel: args.latestModel,
       latestModelParams: args.latestModelParams,
@@ -212,7 +228,6 @@ export const branchThread = authenticatedMutation({
       title: thread.title,
       branchedFrom: args.threadId,
       groupId: null,
-      order: 0,
       latestModel: thread.latestModel,
       latestModelParams: thread.latestModelParams,
     });
@@ -297,21 +312,25 @@ export const listSettledThreads = authenticatedQuery({
     const search = args.query.trim();
 
     if (search.length > 0) {
-      return await ctx.db
+      const result = await ctx.db
         .query("threads")
         .withSearchIndex("search_title_by_userId_settled_groupId", (q) =>
           q.search("title", search).eq("userId", user.userId).eq("settled", true).eq("groupId", args.groupId),
         )
         .paginate(args.paginationOpts);
+
+      return { ...result, page: result.page.map(serializeThread) };
     }
 
-    return await ctx.db
+    const result = await ctx.db
       .query("threads")
       .withIndex("by_userId_settled_groupId_updatedAt", (q) =>
         q.eq("userId", user.userId).eq("settled", true).eq("groupId", args.groupId),
       )
       .order("desc")
       .paginate(args.paginationOpts);
+
+    return { ...result, page: result.page.map(serializeThread) };
   },
 });
 
@@ -497,6 +516,37 @@ export const getThreadTitle = authenticatedQuery({
       pinned: thread.pinned,
       settled: thread.settled === true,
       isShared: threadShare !== null,
+    };
+  },
+});
+
+export const getThreadPageMeta = authenticatedUserIdQuery({
+  args: { threadId: v.id("threads") },
+  handler: async (ctx, args) => {
+    const thread = await ctx.db.get("threads", args.threadId);
+    if (!thread) throw new Error("Thread not found");
+    if (thread.userId !== ctx.userId) throw new Error("Not authorized");
+
+    const [group, threadShare] = await Promise.all([
+      thread.groupId ? ctx.db.get("groups", thread.groupId) : null,
+      ctx.db
+        .query("threadShares")
+        .withIndex("by_threadId", (q) => q.eq("threadId", thread._id))
+        .unique(),
+    ]);
+
+    return {
+      title: thread.title,
+      groupId: group?.userId === ctx.userId ? group._id : null,
+      groupTitle: group?.userId === ctx.userId ? group.title : null,
+      pinned: thread.pinned,
+      settled: thread.settled === true,
+      isShared: threadShare !== null,
+      status: thread.status,
+      updatedAt: thread.updatedAt,
+      lastViewedAt: thread.lastViewedAt ?? null,
+      latestModel: thread.latestModel,
+      latestModelParams: thread.latestModelParams,
     };
   },
 });
