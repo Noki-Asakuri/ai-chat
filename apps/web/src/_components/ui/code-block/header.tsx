@@ -10,7 +10,7 @@ import { ButtonWithTip } from "@/components/ui/button";
 import { useChatStore } from "@/lib/store/chat-store";
 import { cn } from "@/lib/utils";
 
-export function CodeBlockHeader({ showCopyAndWrap = true }: { showCopyAndWrap?: boolean }) {
+export function CodeBlockHeader({ showButtonActions = true }: { showButtonActions?: boolean }) {
   const textareaHeight = useChatStore((state) => state.textareaHeight);
 
   const { expanded, setExpanded, wrapline, toggleWrapline, code, language, totalLines, containerHeightPx } =
@@ -44,7 +44,7 @@ export function CodeBlockHeader({ showCopyAndWrap = true }: { showCopyAndWrap?: 
         <span className="text-xs text-primary">{totalLines} lines</span>
       </div>
 
-      {(totalLines > LINE_CLAMP || showCopyAndWrap) && (
+      {(totalLines > LINE_CLAMP || showButtonActions) && (
         <div className="pointer-events-auto flex items-center gap-1">
           {totalLines > LINE_CLAMP && (
             <ButtonWithTip
@@ -58,7 +58,7 @@ export function CodeBlockHeader({ showCopyAndWrap = true }: { showCopyAndWrap?: 
             </ButtonWithTip>
           )}
 
-          {showCopyAndWrap && (
+          {showButtonActions && (
             <>
               <ButtonWithTip
                 title="Wrap"

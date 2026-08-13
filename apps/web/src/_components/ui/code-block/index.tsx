@@ -47,18 +47,37 @@ export const LANGUAGE_DISPLAY_NAME: Record<string, LanguageData> = {
 };
 
 type CodeBlockProps = CustomRendererProps & {
-  showCopyAndWrap?: boolean;
+  showButtonActions?: boolean;
+  highlightedResult?: HighlightResult;
 };
 
-export function CodeBlock({ code: rawCode, language, meta, showCopyAndWrap = true }: CodeBlockProps) {
+export function CodeBlock({
+  code: rawCode,
+  language,
+  meta,
+  showButtonActions = true,
+  highlightedResult,
+}: CodeBlockProps) {
   const code = String(rawCode).replace(TRAILING_NEWLINES_REGEX, "");
   const displayLanguage = extractOriginalFenceLanguage(meta) ?? language;
+
+  if (highlightedResult) {
+    return (
+      <RenderedCodeBlock
+        code={code}
+        displayLanguage={displayLanguage}
+        result={highlightedResult}
+        showButtonActions={showButtonActions}
+      />
+    );
+  }
+
   return (
     <HighlightedCodeBlock
       language={displayLanguage}
       displayLanguage={displayLanguage}
       code={code}
-      showCopyAndWrap={showCopyAndWrap}
+      showButtonActions={showButtonActions}
     />
   );
 }
@@ -67,7 +86,7 @@ type HighlightedCodeBlockProps = {
   language: string;
   displayLanguage: string;
   code: string;
-  showCopyAndWrap: boolean;
+  showButtonActions: boolean;
 };
 
 function splitCodeToHighlightTokens(code: string) {
@@ -121,9 +140,8 @@ function HighlightedCodeBlock({
   language,
   displayLanguage,
   code,
-  showCopyAndWrap,
+  showButtonActions,
 }: HighlightedCodeBlockProps) {
-  const totalLines = code.split("\n").length;
   const prevCodeRef = useRef(code);
 
   const isIncomplete = useIsCodeFenceIncomplete();
@@ -165,9 +183,27 @@ function HighlightedCodeBlock({
   }, [code, language, raw, isIncomplete]);
 
   return (
-    <CodeBlockProvider code={code} language={displayLanguage} totalLines={totalLines}>
+    <RenderedCodeBlock
+      code={code}
+      displayLanguage={displayLanguage}
+      result={result}
+      showButtonActions={showButtonActions}
+    />
+  );
+}
+
+type RenderedCodeBlockProps = {
+  code: string;
+  displayLanguage: string;
+  result: HighlightResult;
+  showButtonActions: boolean;
+};
+
+function RenderedCodeBlock({ code, displayLanguage, result, showButtonActions }: RenderedCodeBlockProps) {
+  return (
+    <CodeBlockProvider code={code} language={displayLanguage} totalLines={code.split("\n").length}>
       <CodeBlockContainer>
-        <CodeBlockHeader showCopyAndWrap={showCopyAndWrap} />
+        <CodeBlockHeader showButtonActions={showButtonActions} />
         <CodeBlockBody result={result} />
       </CodeBlockContainer>
     </CodeBlockProvider>

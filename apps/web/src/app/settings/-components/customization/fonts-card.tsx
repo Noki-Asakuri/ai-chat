@@ -1,4 +1,5 @@
 import { ChevronDownIcon, LockKeyholeIcon, RefreshCwIcon } from "lucide-react";
+import type { HighlightResult } from "@streamdown/code";
 import type { ReactNode } from "react";
 import { startTransition, useEffect, useState } from "react";
 import { toast } from "@/components/ui/toast";
@@ -42,6 +43,79 @@ export function formatUser(user: User) {
   const displayName = user.name.trim();
   return \`${"${displayName}"} <${"${user.email}"}>\`;
 }`;
+const CODE_PREVIEW_HIGHLIGHT: HighlightResult = {
+  bg: "#282c34",
+  fg: "#abb2bf",
+  tokens: [
+    [
+      { content: "type", color: "#C678DD", offset: 0 },
+      { content: " ", color: "#ABB2BF", offset: 4 },
+      { content: "User", color: "#E5C07B", offset: 5 },
+      { content: " = {", color: "#ABB2BF", offset: 9 },
+    ],
+    [
+      { content: "  ", color: "#ABB2BF", offset: 14 },
+      { content: "name", color: "#E06C75", offset: 16 },
+      { content: ": ", color: "#ABB2BF", offset: 20 },
+      { content: "string", color: "#E5C07B", offset: 22 },
+      { content: ";", color: "#ABB2BF", offset: 28 },
+    ],
+    [
+      { content: "  ", color: "#ABB2BF", offset: 30 },
+      { content: "email", color: "#E06C75", offset: 32 },
+      { content: ": ", color: "#ABB2BF", offset: 37 },
+      { content: "string", color: "#E5C07B", offset: 39 },
+      { content: ";", color: "#ABB2BF", offset: 45 },
+    ],
+    [{ content: "};", color: "#ABB2BF", offset: 47 }],
+    [],
+    [
+      { content: "export", color: "#C678DD", offset: 51 },
+      { content: " ", color: "#ABB2BF", offset: 57 },
+      { content: "function", color: "#C678DD", offset: 58 },
+      { content: " ", color: "#ABB2BF", offset: 66 },
+      { content: "formatUser", color: "#61AFEF", offset: 67 },
+      { content: "(", color: "#ABB2BF", offset: 77 },
+      { content: "user", color: "#E06C75", fontStyle: 1, offset: 78 },
+      { content: ": ", color: "#ABB2BF", offset: 82 },
+      { content: "User", color: "#E5C07B", offset: 84 },
+      { content: ") {", color: "#ABB2BF", offset: 88 },
+    ],
+    [
+      { content: "  ", color: "#ABB2BF", offset: 92 },
+      { content: "const", color: "#C678DD", offset: 94 },
+      { content: " ", color: "#ABB2BF", offset: 99 },
+      { content: "displayName", color: "#E5C07B", offset: 100 },
+      { content: " ", color: "#ABB2BF", offset: 111 },
+      { content: "=", color: "#56B6C2", offset: 112 },
+      { content: " ", color: "#ABB2BF", offset: 113 },
+      { content: "user", color: "#E5C07B", offset: 114 },
+      { content: ".", color: "#ABB2BF", offset: 118 },
+      { content: "name", color: "#E5C07B", offset: 119 },
+      { content: ".", color: "#ABB2BF", offset: 123 },
+      { content: "trim", color: "#61AFEF", offset: 124 },
+      { content: "();", color: "#ABB2BF", offset: 128 },
+    ],
+    [
+      { content: "  ", color: "#ABB2BF", offset: 132 },
+      { content: "return", color: "#C678DD", offset: 134 },
+      { content: " ", color: "#ABB2BF", offset: 140 },
+      { content: "`", color: "#98C379", offset: 141 },
+      { content: "${", color: "#C678DD", offset: 142 },
+      { content: "displayName", color: "#E06C75", offset: 144 },
+      { content: "}", color: "#C678DD", offset: 155 },
+      { content: " <", color: "#98C379", offset: 156 },
+      { content: "${", color: "#C678DD", offset: 158 },
+      { content: "user", color: "#E5C07B", offset: 160 },
+      { content: ".", color: "#ABB2BF", offset: 164 },
+      { content: "email", color: "#E06C75", offset: 165 },
+      { content: "}", color: "#C678DD", offset: 170 },
+      { content: ">`", color: "#98C379", offset: 171 },
+      { content: ";", color: "#ABB2BF", offset: 173 },
+    ],
+    [{ content: "}", color: "#ABB2BF", offset: 175 }],
+  ],
+};
 
 type FontAccessStatus = "idle" | "requesting" | "granted" | "denied" | "unavailable";
 
@@ -241,7 +315,8 @@ export function FontsCard(props: FontsCardProps) {
               code={CODE_PREVIEW}
               language="typescript"
               isIncomplete={false}
-              showCopyAndWrap={false}
+              showButtonActions={false}
+              highlightedResult={CODE_PREVIEW_HIGHLIGHT}
             />
           </ConfigStoreProvider>
         </FontSelector>
