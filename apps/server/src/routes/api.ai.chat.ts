@@ -226,25 +226,27 @@ chatRouter.post("/chat", async function (ctx) {
       },
 
       onEnd: async function ({ responseMessage, isAborted }) {
-        await redisStreamClient.cancelStreamForUser({ requestId, userId: auth.userId });
-
         if (isAborted) {
           logger.info("[Chat] Request aborted by user", { userId, threadId: validatedBody.threadId });
           metadata.finishReason = "aborted";
         }
 
-        const attachments = await handleUploadFileAttachment(ctx, validatedBody.threadId, responseMessage);
-        const parts = finalizeStreamParts(responseMessage);
+        try {
+          const attachments = await handleUploadFileAttachment(ctx, validatedBody.threadId, responseMessage);
+          const parts = finalizeStreamParts(responseMessage);
 
-        const shouldTrack = await convexClient.mutation(api.functions.messages.updateFinishedMessageById, {
-          messageId: validatedBody.assistantMessageId,
-          updates: { metadata, parts, attachments },
-        });
-
-        if (shouldTrack) {
-          void convexClient.action(api.functions.messages.trackFinishedMessageById, {
+          const shouldTrack = await convexClient.mutation(api.functions.messages.updateFinishedMessageById, {
             messageId: validatedBody.assistantMessageId,
+            updates: { metadata, parts, attachments },
           });
+
+          if (shouldTrack) {
+            void convexClient.action(api.functions.messages.trackFinishedMessageById, {
+              messageId: validatedBody.assistantMessageId,
+            });
+          }
+        } finally {
+          await redisStreamClient.cancelStreamForUser({ requestId, userId: auth.userId });
         }
       },
     });

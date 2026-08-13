@@ -836,6 +836,43 @@ export const updateFinishedMessageById = authenticatedMutation({
   },
 });
 
+export const recoverMissingStream = authenticatedMutation({
+  args: {
+    messageId: v.id("messages"),
+    resumableStreamId: v.string(),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get("messages", args.messageId);
+    if (!message) throw new Error("Message not found");
+    if (message.userId !== ctx.user.userId) throw new Error("User not authorized");
+    if (message.role !== "assistant") throw new Error("Message is not an assistant response");
+
+    const isInFlight = message.status === "pending" || message.status === "streaming";
+    if (!isInFlight || message.resumableStreamId !== args.resumableStreamId) return false;
+
+    const parts = message.parts.map((part) => {
+      if ((part.type === "text" || part.type === "reasoning") && part.state === "streaming") {
+        return { ...part, state: "done" as const };
+      }
+
+      return part;
+    });
+    const now = Date.now();
+
+    await ctx.db.patch(args.messageId, {
+      parts,
+      status: "complete",
+      resumableStreamId: null,
+      updatedAt: now,
+      metadata: message.metadata ? { ...message.metadata, finishReason: "aborted" } : undefined,
+    });
+    await ctx.db.patch(message.threadId, { status: "complete", updatedAt: now });
+
+    return true;
+  },
+});
+
 export const retryChatMessage = authenticatedMutation({
   args: {
     threadId: v.id("threads"),
