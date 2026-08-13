@@ -29,6 +29,10 @@ const userPreferencesPatch = v.object({
     v.object({
       ui: v.optional(v.string()),
       code: v.optional(v.string()),
+      prompt: v.optional(v.string()),
+      uiSize: v.optional(v.number()),
+      promptSize: v.optional(v.number()),
+      codeSize: v.optional(v.number()),
     }),
   ),
   notifications: v.optional(
@@ -63,6 +67,10 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
   fonts: {
     ui: "Space Grotesk",
     code: "JetBrains Mono",
+    prompt: "Space Grotesk",
+    uiSize: 16,
+    promptSize: 15,
+    codeSize: 14,
   },
   notifications: {
     sound: true,

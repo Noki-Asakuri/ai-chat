@@ -1,9 +1,9 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { BellRingIcon, BoltIcon, CodeXmlIcon, KeyboardIcon, MonitorUpIcon, WrapTextIcon } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 
@@ -11,15 +11,18 @@ import type { SendPreference } from "@/lib/chat/send-preference";
 
 export type BehaviorOptionsCardProps = {
   disabled: boolean;
-  defaultAutoWrap: boolean;
-  defaultPerformanceEnabled: boolean;
-  defaultShowFullCode: boolean;
+  autoWrap: boolean;
+  performanceEnabled: boolean;
+  showFullCode: boolean;
   sendPreference: SendPreference;
   notificationSound: boolean;
   desktopNotification: boolean;
   onSendPreferenceChange: (nextPreference: SendPreference) => void;
   onNotificationSoundChange: (enabled: boolean) => void;
   onDesktopNotificationChange: (enabled: boolean) => Promise<boolean> | boolean;
+  onAutoWrapChange: (enabled: boolean) => void;
+  onPerformanceEnabledChange: (enabled: boolean) => void;
+  onShowFullCodeChange: (enabled: boolean) => void;
   onBehaviorChange: () => void;
 };
 
@@ -27,21 +30,26 @@ type ToggleRowProps = {
   id: string;
   title: string;
   description: string;
+  icon: typeof BellRingIcon;
   children: ReactNode;
 };
 
 function ToggleRow(props: ToggleRowProps) {
-  return (
-    <div className="flex items-start justify-between gap-6 py-4">
-      <div className="min-w-0 space-y-1">
-        <Label htmlFor={props.id} className="text-sm leading-none font-medium">
-          {props.title}
-        </Label>
-        <p className="text-sm text-muted-foreground">{props.description}</p>
-      </div>
+  const Icon = props.icon;
 
-      {props.children}
-    </div>
+  return (
+    <Item className="items-start rounded-none border-0 px-5 py-4 sm:flex-nowrap sm:items-center">
+      <ItemMedia variant="icon" className="mt-0.5 rounded-md bg-muted p-2 text-muted-foreground">
+        <Icon />
+      </ItemMedia>
+      <ItemContent className="min-w-0">
+        <ItemTitle className="text-sm">
+          <label htmlFor={props.id}>{props.title}</label>
+        </ItemTitle>
+        <p className="max-w-2xl text-xs/relaxed text-pretty text-muted-foreground">{props.description}</p>
+      </ItemContent>
+      <ItemActions className="basis-full justify-end sm:basis-auto">{props.children}</ItemActions>
+    </Item>
   );
 }
 
@@ -49,51 +57,20 @@ function isSendPreference(value: string): value is SendPreference {
   return value === "enter" || value === "ctrlEnter";
 }
 
-function ControlledSwitch({
-  defaultChecked,
-  onCheckedChange,
-  ...props
-}: ComponentPropsWithoutRef<typeof Switch> & {
-  defaultChecked?: boolean;
-  onCheckedChange?: (checked: boolean) => void;
-}) {
-  const [value, setValue] = useState(defaultChecked ?? false);
-
-  useEffect(() => {
-    setValue(defaultChecked ?? false);
-  }, [defaultChecked]);
-
-  return (
-    <Switch
-      checked={value}
-      onCheckedChange={(checked) => {
-        setValue(checked);
-        onCheckedChange?.(checked);
-      }}
-      {...props}
-    />
-  );
-}
-
 export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
-  const [autoWrap, setAutoWrap] = useState<boolean>(props.defaultAutoWrap);
-
-  useEffect(() => {
-    setAutoWrap(props.defaultAutoWrap);
-  }, [props.defaultAutoWrap]);
-
   return (
-    <Card className="rounded-md">
-      <CardHeader>
-        <CardTitle>Behavior options</CardTitle>
-        <CardDescription>Toggle how the interface behaves for you.</CardDescription>
+    <Card className="gap-0 py-0">
+      <CardHeader className="border-b px-5 py-4">
+        <CardTitle>Interaction</CardTitle>
+        <CardDescription>Control how chat input, notifications, and code behave.</CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-0">
+      <CardContent className="p-0">
         <ToggleRow
           id="send-preference"
           title="How to send messages"
           description="Choose the keyboard shortcut used to send a message."
+          icon={KeyboardIcon}
         >
           <Select
             value={props.sendPreference}
@@ -105,9 +82,13 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
               props.onBehaviorChange();
             }}
           >
-            <SelectTrigger id="send-preference" className="w-[240px]" aria-label="Send preference">
-              <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                <span className="truncate">
+            <SelectTrigger
+              id="send-preference"
+              className="w-max max-w-full min-w-max"
+              aria-label="Send preference"
+            >
+              <div className="flex items-center gap-2 text-left">
+                <span>
                   {props.sendPreference === "ctrlEnter"
                     ? "Press Ctrl + Enter to send"
                     : "Press Enter to send"}
@@ -116,12 +97,14 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
             </SelectTrigger>
 
             <SelectContent className="bg-card">
-              <SelectItem value="enter">
-                <span>Press Enter to send</span>
-              </SelectItem>
-              <SelectItem value="ctrlEnter">
-                <span>Press Ctrl + Enter to send</span>
-              </SelectItem>
+              <SelectGroup>
+                <SelectItem value="enter">
+                  <span>Press Enter to send</span>
+                </SelectItem>
+                <SelectItem value="ctrlEnter">
+                  <span>Press Ctrl + Enter to send</span>
+                </SelectItem>
+              </SelectGroup>
             </SelectContent>
           </Select>
         </ToggleRow>
@@ -132,6 +115,7 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
           id="notification-sound"
           title="Play chat completion sound"
           description="Play a sound when a response finishes or fails."
+          icon={BellRingIcon}
         >
           <Switch
             id="notification-sound"
@@ -151,19 +135,18 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
           id="desktop-notification"
           title="Desktop notifications"
           description="Show browser notifications when responses finish or fail in background tabs."
+          icon={MonitorUpIcon}
         >
           <Switch
             id="desktop-notification"
             disabled={props.disabled}
             checked={props.desktopNotification}
             onCheckedChange={(checked) => {
-              void Promise.resolve(props.onDesktopNotificationChange(checked)).then(
-                (shouldSave) => {
-                  if (shouldSave) {
-                    props.onBehaviorChange();
-                  }
-                },
-              );
+              void Promise.resolve(props.onDesktopNotificationChange(checked)).then((shouldSave) => {
+                if (shouldSave) {
+                  props.onBehaviorChange();
+                }
+              });
             }}
             aria-label="Desktop notifications"
           />
@@ -175,14 +158,14 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
           id="auto-wrap"
           title="Wrap long code lines"
           description="Wrap code blocks instead of scrolling horizontally."
+          icon={WrapTextIcon}
         >
           <Switch
             id="auto-wrap"
-            name="auto-wrap"
             disabled={props.disabled}
-            checked={autoWrap}
+            checked={props.autoWrap}
             onCheckedChange={(checked) => {
-              setAutoWrap(checked);
+              props.onAutoWrapChange(checked);
               props.onBehaviorChange();
             }}
             aria-label="Wrap long code lines"
@@ -195,13 +178,16 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
           id="performance-mode"
           title="Performance mode"
           description="Turn on the performance mode (can improve readability)."
+          icon={BoltIcon}
         >
-          <ControlledSwitch
+          <Switch
             id="performance-mode"
-            name="performance-mode"
             disabled={props.disabled}
-            defaultChecked={props.defaultPerformanceEnabled}
-            onCheckedChange={() => props.onBehaviorChange()}
+            checked={props.performanceEnabled}
+            onCheckedChange={(checked) => {
+              props.onPerformanceEnabledChange(checked);
+              props.onBehaviorChange();
+            }}
             aria-label="Performance mode"
           />
         </ToggleRow>
@@ -212,13 +198,16 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
           id="show-full-code"
           title="Show full code by default"
           description="Expand code blocks by default instead of clamping them."
+          icon={CodeXmlIcon}
         >
-          <ControlledSwitch
+          <Switch
             id="show-full-code"
-            name="show-full-code"
             disabled={props.disabled}
-            defaultChecked={props.defaultShowFullCode}
-            onCheckedChange={() => props.onBehaviorChange()}
+            checked={props.showFullCode}
+            onCheckedChange={(checked) => {
+              props.onShowFullCodeChange(checked);
+              props.onBehaviorChange();
+            }}
             aria-label="Show full code by default"
           />
         </ToggleRow>

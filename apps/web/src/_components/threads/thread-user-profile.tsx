@@ -97,7 +97,7 @@ export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfilePro
                 Account
               </UserMenuSettingItem>
 
-              <UserMenuSettingItem href="/settings/customization" returnThreadId={returnThreadId}>
+              <UserMenuSettingItem href="/settings/appearance" returnThreadId={returnThreadId}>
                 <Columns3CogIcon />
                 Customize
               </UserMenuSettingItem>

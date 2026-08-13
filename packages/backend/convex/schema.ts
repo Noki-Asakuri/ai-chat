@@ -310,6 +310,10 @@ export const userPreferences = v.object({
   fonts: v.object({
     ui: v.string(),
     code: v.string(),
+    prompt: v.optional(v.string()),
+    uiSize: v.optional(v.number()),
+    promptSize: v.optional(v.number()),
+    codeSize: v.optional(v.number()),
   }),
 
   sendPreference: v.union(v.literal("enter"), v.literal("ctrlEnter")),

@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 
+import { api } from "@ai-chat/backend/convex/_generated/api";
 import { tryCatch } from "@ai-chat/shared/utils/async";
 
 import appCss from "@/styles/globals.css?url";
@@ -10,6 +11,7 @@ import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import {
   HeadContent,
   Outlet,
+  ScriptOnce,
   Scripts,
   createRootRouteWithContext,
   useNavigate,
@@ -17,12 +19,13 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
-import { type ConvexQueryClient } from "@convex-dev/react-query";
+import { convexQuery, type ConvexQueryClient } from "@convex-dev/react-query";
 import { getAuthAction } from "@workos/authkit-tanstack-react-start";
 import { AuthKitProvider, useAccessToken, useAuth } from "@workos/authkit-tanstack-react-start/client";
 import { SessionProvider } from "convex-helpers/react/sessions";
 import { ConvexProviderWithAuth, type ConvexReactClient } from "convex/react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -31,6 +34,11 @@ import { DefaultCatchBoundary } from "@/components/default-catch-boundary";
 import { DefaultNotFoundBoundary } from "@/components/default-not-found-boundary";
 import { Toaster } from "@/components/ui/toast";
 
+import {
+  applyTypography,
+  cacheTypography,
+  getTypographyPrePaintScript,
+} from "@/lib/appearance/typography";
 import {
   CHAT_NAVIGATE_TO_THREAD_EVENT,
   type NavigateToThreadEventDetail,
@@ -124,10 +132,30 @@ export function RootLayout() {
   );
 }
 
+function TypographySync() {
+  const { auth } = Route.useLoaderData();
+  const { data: preferences } = useQuery({
+    ...convexQuery(api.functions.users.getCurrentUserPreferences),
+    enabled: !!auth.user,
+  });
+
+  const fonts = preferences?.fonts;
+
+  useEffect(() => {
+    if (!fonts || !auth.user) return;
+
+    cacheTypography(auth.user.id, fonts);
+    applyTypography(document.documentElement, fonts);
+  }, [auth.user, fonts]);
+
+  return null;
+}
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const loaderData = Route.useLoaderData();
   const { convexReactClient } = Route.useRouteContext();
+  const typographyPrePaintScript = getTypographyPrePaintScript(loaderData.auth.user?.id);
 
   useWindowEvent<CustomEvent<NavigateToThreadEventDetail>>(
     CHAT_NAVIGATE_TO_THREAD_EVENT,
@@ -150,16 +178,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <html lang="en" className="antialiased">
+    <html lang="en" className="antialiased" suppressHydrationWarning>
       <head>
+        {typographyPrePaintScript && <ScriptOnce>{typographyPrePaintScript}</ScriptOnce>}
         <HeadContent />
       </head>
 
       <body className="dark isolate max-h-svh overflow-hidden font-sans">
         <AuthKitProvider initialAuth={loaderData.auth}>
-          <ConvexProviderWithAuth client={convexReactClient} useAuth={useAuthFromWorkOS}>
-            <SessionProvider useStorage={sessionUseCookie}>{children}</SessionProvider>
-          </ConvexProviderWithAuth>
+          <RootElement convexClient={convexReactClient}>{children}</RootElement>
         </AuthKitProvider>
 
         <Scripts />
@@ -192,7 +219,26 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   );
 }
 
-function useAuthFromWorkOS() {
+function RootElement({
+  convexClient,
+  children,
+}: {
+  convexClient: ConvexReactClient;
+  children: React.ReactNode;
+}) {
+  const convexAuth = useWorkOSConvexAuth();
+
+  return (
+    <ConvexProviderWithAuth client={convexClient} useAuth={() => convexAuth}>
+      <SessionProvider useStorage={sessionUseCookie}>
+        <TypographySync />
+        {children}
+      </SessionProvider>
+    </ConvexProviderWithAuth>
+  );
+}
+
+function useWorkOSConvexAuth() {
   const { user, loading } = useAuth();
   const { getAccessToken, refresh } = useAccessToken();
 

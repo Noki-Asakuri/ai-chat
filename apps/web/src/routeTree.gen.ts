@@ -17,6 +17,7 @@ import { Route as AuthErrorRouteImport } from './app/auth.error'
 import { Route as AuthLoginRouteImport } from './app/auth.login'
 import { Route as AuthLogoutRouteImport } from './app/auth.logout'
 import { Route as SettingsAccountRouteImport } from './app/settings/account'
+import { Route as SettingsAppearanceRouteRouteImport } from './app/settings/appearance/route'
 import { Route as SettingsAttachmentsRouteRouteImport } from './app/settings/attachments/route'
 import { Route as SettingsCustomizationRouteRouteImport } from './app/settings/customization/route'
 import { Route as SettingsModelsRouteRouteImport } from './app/settings/models/route'
@@ -64,6 +65,11 @@ const AuthLogoutRoute = AuthLogoutRouteImport.update({
 const SettingsAccountRoute = SettingsAccountRouteImport.update({
   id: '/account',
   path: '/account',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAppearanceRouteRoute = SettingsAppearanceRouteRouteImport.update({
+  id: '/appearance',
+  path: '/appearance',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsAttachmentsRouteRoute =
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/': typeof ChatIndexRoute
   '/settings': typeof SettingsRouteWithChildren
   '/threads': typeof ChatThreadsRouteRouteWithChildren
+  '/settings/appearance': typeof SettingsAppearanceRouteRoute
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
   '/settings/customization': typeof SettingsCustomizationRouteRoute
   '/settings/models': typeof SettingsModelsRouteRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/settings': typeof SettingsRouteWithChildren
   '/threads': typeof ChatThreadsRouteRouteWithChildren
+  '/settings/appearance': typeof SettingsAppearanceRouteRoute
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
   '/settings/customization': typeof SettingsCustomizationRouteRoute
   '/settings/models': typeof SettingsModelsRouteRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   '/_chat': typeof ChatRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
   '/_chat/threads': typeof ChatThreadsRouteRouteWithChildren
+  '/settings/appearance': typeof SettingsAppearanceRouteRoute
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
   '/settings/customization': typeof SettingsCustomizationRouteRoute
   '/settings/models': typeof SettingsModelsRouteRoute
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/threads'
+    | '/settings/appearance'
     | '/settings/attachments'
     | '/settings/customization'
     | '/settings/models'
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
   to:
     | '/settings'
     | '/threads'
+    | '/settings/appearance'
     | '/settings/attachments'
     | '/settings/customization'
     | '/settings/models'
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/_chat'
     | '/settings'
     | '/_chat/threads'
+    | '/settings/appearance'
     | '/settings/attachments'
     | '/settings/customization'
     | '/settings/models'
@@ -294,6 +306,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/settings/account'
       preLoaderRoute: typeof SettingsAccountRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/appearance': {
+      id: '/settings/appearance'
+      path: '/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof SettingsAppearanceRouteRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/attachments': {
@@ -386,6 +405,7 @@ const ChatRouteChildren: ChatRouteChildren = {
 const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren)
 
 interface SettingsRouteChildren {
+  SettingsAppearanceRouteRoute: typeof SettingsAppearanceRouteRoute
   SettingsAttachmentsRouteRoute: typeof SettingsAttachmentsRouteRoute
   SettingsCustomizationRouteRoute: typeof SettingsCustomizationRouteRoute
   SettingsModelsRouteRoute: typeof SettingsModelsRouteRoute
@@ -396,6 +416,7 @@ interface SettingsRouteChildren {
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsAppearanceRouteRoute: SettingsAppearanceRouteRoute,
   SettingsAttachmentsRouteRoute: SettingsAttachmentsRouteRoute,
   SettingsCustomizationRouteRoute: SettingsCustomizationRouteRoute,
   SettingsModelsRouteRoute: SettingsModelsRouteRoute,

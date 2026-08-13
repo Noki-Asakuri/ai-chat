@@ -1,23 +1,16 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { convexQuery } from "@convex-dev/react-query";
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 import { getAuth } from "@workos/authkit-tanstack-react-start";
-import type { CSSProperties } from "react";
 import { z } from "zod/v4";
 
 import { SettingsRouteHeader } from "@/components/settings/settings-route-header";
 import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import { SettingsTopBar } from "@/components/settings/settings-top-bar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-
-import { convexSessionQuery } from "@/lib/convex/helpers";
-
-const DEFAULT_UI_FONT = "Space Grotesk";
-const DEFAULT_CODE_FONT = "JetBrains Mono";
 
 const getDefaultOpenSidebar = createIsomorphicFn()
   .server(async function () {
@@ -54,23 +47,12 @@ export const Route = createFileRoute("/settings")({
 
 function AuthLayout() {
   const { defaultOpenSidebar } = Route.useLoaderData();
-  const { data: userPreferences } = useSuspenseQuery(
-    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
-  );
-  const customFontStyle: CSSProperties & {
-    "--custom-ui-font": string;
-    "--custom-code-font": string;
-  } = {
-    "--custom-ui-font": userPreferences.fonts.ui || DEFAULT_UI_FONT,
-    "--custom-code-font": userPreferences.fonts.code || DEFAULT_CODE_FONT,
-  };
 
   return (
     <SidebarProvider
       id="settings-sidebar-provider"
       defaultOpen={defaultOpenSidebar}
       className="bg-sidebar font-sans"
-      style={customFontStyle}
     >
       <SidebarTrigger size="icon-lg" className="fixed top-1.5 left-3.5 z-60 [&_svg]:size-5!" />
       <SettingsSidebar />

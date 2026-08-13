@@ -6,6 +6,7 @@ import {
   Columns3CogIcon,
   MessagesSquareIcon,
   PaperclipIcon,
+  PaletteIcon,
   UserRoundPenIcon,
 } from "lucide-react";
 
@@ -36,8 +37,14 @@ export const SETTINGS_NAVIGATION = [
   {
     path: "/settings/customization",
     label: "Customization",
-    description: "Personalize how the assistant talks to you and how the UI behaves.",
+    description: "Personalize how the assistant talks to you.",
     icon: Columns3CogIcon,
+  },
+  {
+    path: "/settings/appearance",
+    label: "Appearance",
+    description: "Choose how the interface looks and behaves.",
+    icon: PaletteIcon,
   },
   {
     path: "/settings/statistics",

@@ -1,194 +1,50 @@
-import type { CSSProperties } from "react";
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 
-type CustomFontProperties = CSSProperties & {
-  "--custom-ui-font": string;
-  "--custom-code-font": string;
-};
-
 export function LoadingCustomizationSkeleton() {
-  const customStyle: CustomFontProperties = {
-    "--custom-ui-font": "Space Grotesk",
-    "--custom-code-font": "JetBrains Mono",
-  };
-
   return (
-    <div className="space-y-6 font-sans" style={customStyle}>
-      <form className="space-y-6">
-        <Card className="rounded-md">
-          <CardHeader>
-            <CardTitle>About you</CardTitle>
-            <CardDescription>Basic information used to personalize responses.</CardDescription>
-          </CardHeader>
+    <form>
+      <Card className="gap-0 py-0">
+        <CardHeader className="border-b px-5 py-4">
+          <CardTitle>Personal context</CardTitle>
+          <CardDescription>
+            Give the assistant a small amount of context it can use in every conversation.
+          </CardDescription>
+        </CardHeader>
 
-          <CardContent className="space-y-4">
-            <div className="w-full space-y-2">
-              <Label>What should AI call you?</Label>
-              <Input disabled className="bg-input/30" placeholder="Enter your name" />
-            </div>
-          </CardContent>
-        </Card>
+        <CardContent className="p-0">
+          <FieldGroup className="gap-0">
+            <Field className="grid gap-4 px-5 py-5 md:grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)] md:gap-8">
+              <FieldContent>
+                <FieldLabel>What should AI call you?</FieldLabel>
+                <FieldDescription>Your preferred name or nickname.</FieldDescription>
+              </FieldContent>
+              <Input disabled className="h-10 bg-input/30 text-sm" placeholder="Enter your name" />
+            </Field>
 
-        <Card className="rounded-md">
-          <CardHeader>
-            <CardTitle>System instruction</CardTitle>
-            <CardDescription>
-              A global instruction applied to the assistant across the app.
-            </CardDescription>
-          </CardHeader>
+            <Separator />
 
-          <CardContent className="space-y-2">
-            <Label>Instruction</Label>
-            <Textarea disabled className="min-h-[150px] bg-input/30" />
-          </CardContent>
-        </Card>
+            <Field className="grid gap-4 px-5 py-5 md:grid-cols-[minmax(0,0.42fr)_minmax(0,1fr)] md:gap-8">
+              <FieldContent>
+                <FieldLabel>Global instruction</FieldLabel>
+                <FieldDescription>
+                  Applied to every new conversation unless a profile provides more specific guidance.
+                </FieldDescription>
+              </FieldContent>
+              <Textarea disabled className="min-h-48 bg-input/30" />
+            </Field>
+          </FieldGroup>
+        </CardContent>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] xl:items-start">
-          <Card className="rounded-md">
-            <CardHeader>
-              <CardTitle>Behavior options</CardTitle>
-              <CardDescription>Toggle how the interface behaves for you.</CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-0">
-              <div className="flex items-start justify-between gap-6 py-4">
-                <div className="min-w-0 space-y-1">
-                  <Label className="text-sm leading-none font-medium">How to send messages</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Choose the keyboard shortcut used to send a message.
-                  </p>
-                </div>
-                <Skeleton className="h-8 w-56 rounded-md" />
-              </div>
-
-              <Separator className="-mx-4" />
-
-              <div className="flex items-start justify-between gap-6 py-4">
-                <div className="min-w-0 space-y-1">
-                  <Label className="text-sm leading-none font-medium">
-                    Play chat completion sound
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Play a sound when a response finishes or fails.
-                  </p>
-                </div>
-                <Skeleton className="h-[1.15rem] w-8 rounded-full" />
-              </div>
-
-              <Separator className="-mx-4" />
-
-              <div className="flex items-start justify-between gap-6 py-4">
-                <div className="min-w-0 space-y-1">
-                  <Label className="text-sm leading-none font-medium">Desktop notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Show browser notifications when responses finish or fail in background tabs.
-                  </p>
-                </div>
-                <Skeleton className="h-[1.15rem] w-8 rounded-full" />
-              </div>
-
-              <Separator className="-mx-4" />
-
-              <div className="flex items-start justify-between gap-6 py-4">
-                <div className="min-w-0 space-y-1">
-                  <Label className="text-sm leading-none font-medium">Wrap long code lines</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Wrap code blocks instead of scrolling horizontally.
-                  </p>
-                </div>
-                <Skeleton className="h-[1.15rem] w-8 rounded-full" />
-              </div>
-
-              <Separator className="-mx-4" />
-
-              <div className="flex items-start justify-between gap-6 py-4">
-                <div className="min-w-0 space-y-1">
-                  <Label className="text-sm leading-none font-medium">Performance mode</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Turn on the performance mode (can improve readability).
-                  </p>
-                </div>
-                <Skeleton className="h-[1.15rem] w-8 rounded-full" />
-              </div>
-
-              <Separator className="-mx-4" />
-
-              <div className="flex items-start justify-between gap-6 py-4">
-                <div className="min-w-0 space-y-1">
-                  <Label className="text-sm leading-none font-medium">
-                    Show full code by default
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Expand code blocks by default instead of clamping them.
-                  </p>
-                </div>
-                <Skeleton className="h-[1.15rem] w-8 rounded-full" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-md">
-            <CardHeader>
-              <CardTitle>Fonts</CardTitle>
-              <CardDescription>Set custom font families for UI text and code.</CardDescription>
-            </CardHeader>
-
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>UI font</Label>
-                <Input disabled className="bg-input/30" placeholder="Space Grotesk" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Code block font</Label>
-                <Input
-                  disabled
-                  className="bg-input/30 font-mono"
-                  placeholder="JetBrains Mono"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-md">
-            <CardHeader>
-              <CardTitle>Background</CardTitle>
-              <CardDescription>Optional background image used in the chat layout.</CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 space-y-1">
-                  <Label className="text-sm leading-none font-medium">Background image</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Upload an image to use as your chat background.
-                  </p>
-                  <p className="text-xs text-muted-foreground">Loading current background…</p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-9 w-24 rounded-md" />
-                  <Skeleton className="h-9 w-24 rounded-md" />
-                </div>
-              </div>
-
-              <div className="overflow-hidden rounded-md border bg-muted">
-                <Skeleton className="aspect-video w-full" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="flex items-center justify-end">
-          <Skeleton className="h-5 w-56 rounded-md" />
-        </div>
-      </form>
-    </div>
+        <CardFooter className="justify-between gap-3 bg-muted/30">
+          <p className="text-xs text-muted-foreground">Changes save automatically.</p>
+          <Skeleton className="h-5 w-16 rounded-md" />
+        </CardFooter>
+      </Card>
+    </form>
   );
 }

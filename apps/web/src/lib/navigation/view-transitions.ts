@@ -6,6 +6,7 @@ export const SETTINGS_ROUTE_ORDER = [
   "/settings/account",
   "/settings/threads",
   "/settings/customization",
+  "/settings/appearance",
   "/settings/statistics",
   "/settings/attachments",
   "/settings/models",

@@ -1,10 +1,10 @@
-import { ImagePlusIcon, TrashIcon } from "lucide-react";
+import { ImageIcon, ImagePlusIcon, TrashIcon } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "@/components/ui/toast";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { buildImageAssetUrl } from "@/lib/assets/urls";
 
 export type BackgroundCardProps = {
@@ -61,62 +61,38 @@ export function BackgroundCard(props: BackgroundCardProps) {
   }
 
   return (
-    <Card className="rounded-md">
-      <CardHeader>
-        <CardTitle>Background</CardTitle>
-        <CardDescription>Optional background image used in the chat layout.</CardDescription>
+    <Card className="gap-0 py-0">
+      <CardHeader className="border-b px-5 py-4">
+        <CardTitle>Chat background</CardTitle>
+        <CardDescription>Add a personal image behind your conversations.</CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 space-y-1">
-            <Label htmlFor="background-image" className="text-sm leading-none font-medium">
-              Background image
-            </Label>
-
-            <p className="text-sm text-muted-foreground">Upload an image to use as your chat background.</p>
-
-            <p className="text-xs text-muted-foreground">
-              {backgroundImage
-                ? `Selected: ${backgroundImage.name}`
-                : props.existingBackgroundId
-                  ? "Current background is set."
-                  : "No background set."}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              disabled={disabled}
-              type="button"
-              variant="outline"
-              onClick={() => imageInputRef.current?.click()}
-            >
-              <ImagePlusIcon />
-              Upload
-            </Button>
-
-            {props.existingBackgroundId && (
-              <Button disabled={disabled} type="button" variant="destructive" onClick={onRemove}>
-                <TrashIcon />
-                Remove
-              </Button>
-            )}
-          </div>
-        </div>
-
+      <CardContent className="p-3">
         {backgroundPreviewSrc ? (
-          <div className="overflow-hidden rounded-md border bg-muted">
+          <div className="relative overflow-hidden rounded-md bg-muted ring-1 ring-foreground/10">
             <img
               src={backgroundPreviewSrc}
               alt="Background preview"
-              className="aspect-video w-full object-cover"
+              className="aspect-[16/10] w-full object-cover"
             />
+            <div className="absolute inset-x-0 bottom-0 bg-background/80 px-3 py-2 backdrop-blur-sm">
+              <p className="truncate text-xs text-foreground">
+                {backgroundImage ? backgroundImage.name : "Current background"}
+              </p>
+            </div>
           </div>
         ) : (
-          <div className="flex aspect-video items-center justify-center rounded-md border bg-muted text-sm text-muted-foreground">
-            No background selected.
-          </div>
+          <Item variant="muted" className="aspect-[16/10] flex-col justify-center border border-dashed">
+            <ItemMedia variant="icon" className="rounded-md bg-background p-3 text-muted-foreground">
+              <ImageIcon />
+            </ItemMedia>
+            <ItemContent className="flex-none items-center text-center">
+              <ItemTitle>No background image</ItemTitle>
+              <ItemDescription className="max-w-64">
+                Upload an image to add depth and personality to your chat workspace.
+              </ItemDescription>
+            </ItemContent>
+          </Item>
         )}
 
         <input
@@ -134,6 +110,24 @@ export function BackgroundCard(props: BackgroundCardProps) {
           }}
         />
       </CardContent>
+
+      <CardFooter className="justify-end gap-2 bg-muted/30">
+        {props.existingBackgroundId && (
+          <Button disabled={disabled} type="button" variant="ghost" onClick={onRemove}>
+            <TrashIcon data-icon="inline-start" />
+            Remove
+          </Button>
+        )}
+        <Button
+          disabled={disabled}
+          type="button"
+          variant="outline"
+          onClick={() => imageInputRef.current?.click()}
+        >
+          <ImagePlusIcon data-icon="inline-start" />
+          {backgroundPreviewSrc ? "Replace" : "Choose image"}
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

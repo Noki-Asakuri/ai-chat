@@ -10,7 +10,7 @@ import { getCookie } from "@tanstack/react-start/server";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { getAuth } from "@workos/authkit-tanstack-react-start";
-import { Suspense, type CSSProperties } from "react";
+import { Suspense } from "react";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { GlobalDropzone } from "@/components/chat/global-dropzone";
@@ -24,9 +24,6 @@ import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger, useSidebar } from
 import { buildImageAssetUrl } from "@/lib/assets/urls";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { cn, fromUUID } from "@/lib/utils";
-
-const DEFAULT_UI_FONT = "Space Grotesk";
-const DEFAULT_CODE_FONT = "JetBrains Mono";
 
 const getDefaultOpenSidebar = createIsomorphicFn()
   .server(async function () {
@@ -74,7 +71,11 @@ function RouteComponent() {
   const { data: userPreferencesData } = useSuspenseQuery(
     convexSessionQuery(api.functions.users.getCurrentUserPreferences),
   );
-  const customStyle = getCustomizationStyle(userPreferencesData.fonts, userPreferencesData.backgroundImage);
+  const backgroundStyle = {
+    backgroundImage: userPreferencesData.backgroundImage
+      ? `url(${buildImageAssetUrl(userPreferencesData.backgroundImage)})`
+      : undefined,
+  };
 
   return (
     <SidebarProvider
@@ -82,31 +83,14 @@ function RouteComponent() {
       defaultOpen={defaultOpenSidebar}
       data-performance-mode={userPreferencesData.performanceEnabled ? "true" : "false"}
       className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat font-sans"
-      style={customStyle}
+      style={backgroundStyle}
     >
-      <SidebarTrigger
-        size="icon-lg"
-        className="fixed top-1.5 left-3.5 z-60 [&_svg]:size-5!"
-      />
+      <SidebarTrigger size="icon-lg" className="fixed top-1.5 left-3.5 z-60 [&_svg]:size-5!" />
       <ThreadSidebar />
 
       <ChatLayoutConfig />
     </SidebarProvider>
   );
-}
-
-function getCustomizationStyle(
-  fonts: { ui: string; code: string },
-  backgroundImage: string | null,
-): CSSProperties & {
-  "--custom-ui-font": string;
-  "--custom-code-font": string;
-} {
-  return {
-    "--custom-ui-font": fonts.ui || DEFAULT_UI_FONT,
-    "--custom-code-font": fonts.code || DEFAULT_CODE_FONT,
-    backgroundImage: backgroundImage ? `url(${buildImageAssetUrl(backgroundImage)})` : undefined,
-  };
 }
 
 function ChatLayoutConfig() {

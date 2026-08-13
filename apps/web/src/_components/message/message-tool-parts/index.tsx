@@ -61,11 +61,7 @@ function getToolSummary(part: ToolPart, hasWebSearchOutput: boolean): string {
   return "";
 }
 
-function getToolDetail(
-  part: ToolPart,
-  isOpen: boolean,
-  hasSpecializedOutput: boolean,
-): ToolDetail | null {
+function getToolDetail(part: ToolPart, isOpen: boolean, hasSpecializedOutput: boolean): ToolDetail | null {
   if (!isOpen) return null;
 
   if (part.state === "input-streaming" || part.state === "input-available") {
@@ -114,26 +110,19 @@ function MessageToolPart({ part }: { part: ToolPart }) {
   const detailValue = detail?.value ?? "";
 
   return (
-    <div className="rounded-md border bg-background/80 px-2 py-1.5 backdrop-blur-md backdrop-saturate-150">
+    <div className="message-tool-part rounded-md border bg-background/80 px-2 py-1.5 backdrop-blur-md backdrop-saturate-150">
       <button
         type="button"
         className="flex w-full items-center gap-2 text-left"
         onClick={() => setIsOpen((prev) => !prev)}
       >
         <ChevronDownIcon
-          className={cn(
-            "size-3 shrink-0 text-muted-foreground transition-transform",
-            isOpen && "rotate-180",
-          )}
+          className={cn("size-3 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-180")}
         />
 
-        <span className="min-w-0 shrink text-xs font-medium text-foreground">
-          {getToolLabel(toolName)}
-        </span>
+        <span className="min-w-0 shrink text-xs font-medium text-foreground">{getToolLabel(toolName)}</span>
 
-        <span className="min-w-0 grow truncate text-[11px] text-muted-foreground">
-          {summaryText}
-        </span>
+        <span className="min-w-0 grow truncate text-[11px] text-muted-foreground">{summaryText}</span>
 
         {webSearchOutput && <WebSearchHeaderIcons output={webSearchOutput} />}
 

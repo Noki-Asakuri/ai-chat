@@ -101,7 +101,7 @@
   --typeset-font-mono:
     var(--custom-code-font, "JetBrains Mono"), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
-  --typeset-size: 16px;
+  --typeset-size: var(--custom-ui-font-size, 16px);
   --typeset-leading: 1.75;
   --typeset-flow: 1em;
 }
@@ -139,15 +139,57 @@
 }
 
 .font-sans {
+  --text-xs: calc(var(--custom-ui-font-size, 16px) * 0.75);
+  --text-xs--line-height: calc(var(--custom-ui-font-size, 16px) * 1);
+  --text-sm: calc(var(--custom-ui-font-size, 16px) * 0.875);
+  --text-sm--line-height: calc(var(--custom-ui-font-size, 16px) * 1.25);
+  --text-base: var(--custom-ui-font-size, 16px);
+  --text-base--line-height: calc(var(--custom-ui-font-size, 16px) * 1.5);
+  --text-lg: calc(var(--custom-ui-font-size, 16px) * 1.125);
+  --text-lg--line-height: calc(var(--custom-ui-font-size, 16px) * 1.75);
+  --text-xl: calc(var(--custom-ui-font-size, 16px) * 1.25);
+  --text-xl--line-height: calc(var(--custom-ui-font-size, 16px) * 1.75);
+  --text-2xl: calc(var(--custom-ui-font-size, 16px) * 1.5);
+  --text-2xl--line-height: calc(var(--custom-ui-font-size, 16px) * 2);
+  --text-3xl: calc(var(--custom-ui-font-size, 16px) * 1.875);
+  --text-3xl--line-height: calc(var(--custom-ui-font-size, 16px) * 2.25);
+  --text-4xl: calc(var(--custom-ui-font-size, 16px) * 2.25);
+  --text-4xl--line-height: calc(var(--custom-ui-font-size, 16px) * 2.5);
+
   font-family:
     var(--custom-ui-font, "Space Grotesk"), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  font-size: var(--custom-ui-font-size, 16px);
 }
 
 .font-mono {
   font-family:
     var(--custom-code-font, "JetBrains Mono"), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
+}
+
+[data-slot="textarea-chat-input"],
+[data-slot="textarea-user-message-edit"] {
+  font-family:
+    var(--custom-prompt-font, var(--custom-ui-font, "Space Grotesk")), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--custom-prompt-font-size, 15px);
+}
+
+[data-streamdown="code-block-body"] {
+  font-size: var(--custom-code-font-size, 14px);
+}
+
+[data-streamdown="code-block-body"] pre,
+[data-slot="inline-codeblock"],
+.message-tool-part pre {
+  font-family:
+    var(--custom-code-font, "JetBrains Mono"), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: var(--custom-code-font-size, 14px);
+}
+
+[data-slot="inline-codeblock"] {
+  line-height: 1.4;
 }
 
 [data-streamdown="mermaid-block"] {
@@ -236,11 +278,7 @@
   --secondary-foreground: var(--foreground);
 
   --muted: rgb(255 255 255 / 4%);
-  --muted-foreground: color-mix(
-    in srgb,
-    var(--color-neutral-500) 90%,
-    var(--color-white)
-  );
+  --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-white));
 
   --accent: rgb(255 255 255 / 4%);
   --accent-foreground: var(--foreground);
