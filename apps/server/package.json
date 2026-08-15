@@ -22,7 +22,7 @@
     "better-result": "catalog:shared",
     "convex": "catalog:backend",
     "dedent": "catalog:shared",
-    "hono": "^4.13.1",
+    "hono": "^4.13.2",
     "ioredis": "^6.0.0",
     "jose": "catalog:shared",
     "resumable-stream": "2.2.12",
