@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import { query } from "../_generated/server";
+import { internalMutation, query } from "../_generated/server";
 
 import { authenticatedMutation, authenticatedQuery, authenticatedUserIdQuery } from "../components";
 import {
@@ -43,6 +43,8 @@ type AccountThreadSortDirection = "asc" | "desc";
 
 const MAX_ACCOUNT_THREADS_PAGE_SIZE = 15;
 const SETTLE_INACTIVE_THREADS_PAGE_SIZE = 100;
+const AUTO_SETTLE_USERS_PAGE_SIZE = 25;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function serializeThread(thread: Doc<"threads">) {
   return {
@@ -801,6 +803,75 @@ export const settleInactiveThreads = authenticatedMutation({
       isDone: pageResult.isDone,
       continueCursor: pageResult.isDone ? null : pageResult.continueCursor,
     };
+  },
+});
+
+export const autoSettleInactiveThreads = internalMutation({
+  args: { cursor: v.union(v.string(), v.null()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const users = await ctx.db.query("users").paginate({
+      numItems: AUTO_SETTLE_USERS_PAGE_SIZE,
+      cursor: args.cursor,
+    });
+
+    for (const user of users.page) {
+      const autoSettleDays = user.preferences.threads?.autoSettleDays ?? 0;
+      if (!Number.isInteger(autoSettleDays) || autoSettleDays < 1 || autoSettleDays > 90) continue;
+
+      await ctx.scheduler.runAfter(0, internal.functions.threads.autoSettleInactiveThreadsForUser, {
+        userId: user.userId,
+        cursor: null,
+      });
+    }
+
+    if (!users.isDone) {
+      await ctx.scheduler.runAfter(0, internal.functions.threads.autoSettleInactiveThreads, {
+        cursor: users.continueCursor,
+      });
+    }
+
+    return null;
+  },
+});
+
+export const autoSettleInactiveThreadsForUser = internalMutation({
+  args: {
+    userId: v.string(),
+    cursor: v.union(v.string(), v.null()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+    const autoSettleDays = user?.preferences.threads?.autoSettleDays ?? 0;
+    if (!Number.isInteger(autoSettleDays) || autoSettleDays < 1 || autoSettleDays > 90) return null;
+
+    const before = Date.now() - autoSettleDays * DAY_MS;
+    const threads = await ctx.db
+      .query("threads")
+      .withIndex("by_userId_updatedAt", (q) => q.eq("userId", args.userId).lte("updatedAt", before))
+      .paginate({
+        numItems: SETTLE_INACTIVE_THREADS_PAGE_SIZE,
+        cursor: args.cursor,
+      });
+
+    for (const thread of threads.page) {
+      if (thread.settled !== true && (thread.status === "complete" || thread.status === "error")) {
+        await ctx.db.patch(thread._id, { settled: true });
+      }
+    }
+
+    if (!threads.isDone) {
+      await ctx.scheduler.runAfter(0, internal.functions.threads.autoSettleInactiveThreadsForUser, {
+        userId: args.userId,
+        cursor: threads.continueCursor,
+      });
+    }
+
+    return null;
   },
 });
 

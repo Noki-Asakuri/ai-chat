@@ -9,11 +9,12 @@ const MODEL_PROVIDER_PREFIXES = ["google/", "openai/", "deepseek/"] as const;
 
 export type UserPreferences = Doc<"users">["preferences"];
 export type UserPreferencesPatch = Partial<
-  Omit<UserPreferences, "models" | "notifications" | "code" | "fonts">
+  Omit<UserPreferences, "models" | "notifications" | "code" | "fonts" | "threads">
 > & {
   notifications?: Partial<UserPreferences["notifications"]>;
   code?: Partial<UserPreferences["code"]>;
   fonts?: Partial<UserPreferences["fonts"]>;
+  threads?: Partial<NonNullable<UserPreferences["threads"]>>;
   models?: Omit<Partial<UserPreferences["models"]>, "modelParams"> & {
     modelParams?: Partial<UserPreferences["models"]["modelParams"]>;
   };
@@ -45,6 +46,11 @@ const userPreferencesPatch = v.object({
     v.object({
       autoWrap: v.optional(v.boolean()),
       showFullCode: v.optional(v.boolean()),
+    }),
+  ),
+  threads: v.optional(
+    v.object({
+      autoSettleDays: v.optional(v.number()),
     }),
   ),
   models: v.optional(
@@ -80,6 +86,9 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
     autoWrap: false,
     showFullCode: false,
   },
+  threads: {
+    autoSettleDays: 0,
+  },
   models: {
     hidden: [],
     favorite: [],
@@ -110,6 +119,13 @@ export function mergeUserPreferences(
       ...DEFAULT_USER_PREFERENCES.code,
       ...current?.code,
       ...updates?.code,
+    },
+    threads: {
+      autoSettleDays:
+        updates?.threads?.autoSettleDays ??
+        current?.threads?.autoSettleDays ??
+        DEFAULT_USER_PREFERENCES.threads?.autoSettleDays ??
+        0,
     },
     fonts: {
       ...DEFAULT_USER_PREFERENCES.fonts,
@@ -167,6 +183,14 @@ export const updateUserPreferences = authenticatedMutation({
 
     if (updates.models?.favorite !== undefined) {
       updates.models.favorite = sanitizeModelIds(updates.models.favorite);
+    }
+
+    const autoSettleDays = updates.threads?.autoSettleDays;
+    if (
+      autoSettleDays !== undefined &&
+      (!Number.isInteger(autoSettleDays) || autoSettleDays < 0 || autoSettleDays > 90)
+    ) {
+      throw new Error("Auto-settle days must be an integer between 0 and 90");
     }
 
     await ctx.db.patch(user._id, {

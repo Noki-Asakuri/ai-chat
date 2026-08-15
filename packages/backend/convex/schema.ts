@@ -328,6 +328,12 @@ export const userPreferences = v.object({
     showFullCode: v.boolean(),
   }),
 
+  threads: v.optional(
+    v.object({
+      autoSettleDays: v.number(),
+    }),
+  ),
+
   models: v.object({
     hidden: v.array(v.string()),
     favorite: v.array(v.string()),

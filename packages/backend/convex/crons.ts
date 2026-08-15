@@ -22,4 +22,11 @@ crons.daily(
   {},
 );
 
+crons.interval(
+  "settle inactive threads",
+  { hours: 24 },
+  internal.functions.threads.autoSettleInactiveThreads,
+  { cursor: null },
+);
+
 export default crons;
