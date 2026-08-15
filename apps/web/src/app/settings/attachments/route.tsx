@@ -10,28 +10,29 @@ import {
   ArrowDownNarrowWideIcon,
   ArrowUpAZIcon,
   ArrowUpNarrowWideIcon,
+  ArchiveIcon,
   BotIcon,
   CalendarArrowDownIcon,
   CalendarArrowUpIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  ChevronsLeftIcon,
-  ChevronsRightIcon,
   FileTextIcon,
+  FilesIcon,
+  HardDriveIcon,
   ImageIcon,
   LayersIcon,
   PaperclipIcon,
   SearchIcon,
   TrashIcon,
+  TriangleAlertIcon,
   UserIcon,
   XIcon,
 } from "lucide-react";
-import { useDeferredValue, useMemo, useState, useTransition } from "react";
+import { useDeferredValue, useState, useTransition } from "react";
 import { toast } from "@/components/ui/toast";
 
 import { ImageLightboxProvider, ImageLightboxTrigger } from "@/components/image-lightbox";
-import { SettingsSection } from "@/components/settings/settings-section";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,10 +41,20 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Empty,
   EmptyContent,
@@ -52,9 +63,9 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Input } from "@/components/ui/input";
-import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 
 import { LoadingAttachmentsSkeleton } from "./-pending";
 
@@ -76,7 +87,6 @@ type AttachmentSortValue =
   "createdAt_desc" | "createdAt_asc" | "name_asc" | "name_desc" | "size_desc" | "size_asc";
 
 const PAGE_SIZE = 20;
-const PAGE_WINDOW_SIZE = 3;
 
 const GRID_IMAGE_TRANSFORM = "tr=w-448,h-448,c-at_max,f-auto,q-70";
 
@@ -195,18 +205,6 @@ function getAttachmentSortValue(
   return "size_asc";
 }
 
-function getVisiblePageNumbers(currentPage: number, totalPages: number): Array<number> {
-  const start = Math.max(1, currentPage - PAGE_WINDOW_SIZE);
-  const end = Math.min(totalPages, currentPage + PAGE_WINDOW_SIZE);
-
-  const pageNumbers: Array<number> = [];
-  for (let pageNumber = start; pageNumber <= end; pageNumber += 1) {
-    pageNumbers.push(pageNumber);
-  }
-
-  return pageNumbers;
-}
-
 function AttachmentsPage() {
   const deleteAttachments = useMutation(api.functions.attachments.deleteAttachments);
 
@@ -227,6 +225,7 @@ function AttachmentsPage() {
     name: "",
   });
   const [page, setPage] = useState<number>(1);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkPending, startBulkTransition] = useTransition();
   const deferredSearchText = useDeferredValue(searchText);
 
@@ -244,29 +243,22 @@ function AttachmentsPage() {
   });
 
   const data = attachmentsQuery.data;
-  const attachments = useMemo(() => data?.items ?? [], [data?.items]);
+  const attachments = data?.items ?? [];
   const totalItems = data?.totalCount ?? 0;
   const totalPages = data?.totalPages ?? 0;
   const currentPage = data?.page ?? page;
 
-  const imageItems = useMemo(
-    () => attachments.filter((attachment) => attachment.type === "image"),
-    [attachments],
-  );
+  const imageItems = attachments.filter((attachment) => attachment.type === "image");
 
-  const lightboxImages = useMemo(
-    () =>
-      imageItems.map((attachment) => ({
-        src: getAttachmentImageUrl(attachment.path),
-        thumbnailSrc: getAttachmentThumbnailUrl(attachment.path),
-        alt: attachment.name,
-        name: attachment.name,
-        bytes: attachment.size,
-      })),
-    [imageItems],
-  );
+  const lightboxImages = imageItems.map((attachment) => ({
+    src: getAttachmentImageUrl(attachment.path),
+    thumbnailSrc: getAttachmentThumbnailUrl(attachment.path),
+    alt: attachment.name,
+    name: attachment.name,
+    bytes: attachment.size,
+  }));
 
-  const imageIndexMap = useMemo(() => {
+  const imageIndexMap = (() => {
     const map = new Map<Id<"attachments">, number>();
     for (let index = 0; index < imageItems.length; index += 1) {
       const attachment = imageItems[index];
@@ -274,35 +266,35 @@ function AttachmentsPage() {
       map.set(attachment._id, index);
     }
     return map;
-  }, [imageItems]);
+  })();
 
-  const selectedBytes = useMemo(() => {
+  const selectedBytes = (() => {
     if (selected.size === 0) return 0;
     let sum = 0;
     for (const attachment of attachments) {
       if (selected.has(attachment._id)) sum += attachment.size;
     }
     return sum;
-  }, [selected, attachments]);
+  })();
 
-  const currentPageBytes = useMemo(() => {
+  const currentPageBytes = (() => {
     let sum = 0;
     for (const attachment of attachments) {
       sum += attachment.size;
     }
 
     return sum;
-  }, [attachments]);
-
-  const visiblePageNumbers = useMemo(
-    () => getVisiblePageNumbers(currentPage, totalPages),
-    [currentPage, totalPages],
-  );
+  })();
 
   const selectedSourceOption = SOURCE_FILTER_OPTIONS[sourceFilter];
   const selectedTypeOption = TYPE_FILTER_OPTIONS[typeFilter];
   const selectedSortValue = getAttachmentSortValue(sortField, sortDirection);
   const selectedSortOption = ATTACHMENT_SORT_OPTIONS[selectedSortValue];
+  const hasActiveFilters = searchText.trim().length > 0 || sourceFilter !== "all" || typeFilter !== "all";
+  const allVisibleSelected =
+    attachments.length > 0 && attachments.every((attachment) => selected.has(attachment._id));
+  const firstVisibleItem = totalItems === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const lastVisibleItem = Math.min(currentPage * PAGE_SIZE, totalItems);
 
   if (!data) return <LoadingAttachmentsSkeleton />;
 
@@ -321,10 +313,8 @@ function AttachmentsPage() {
   }
 
   function toggleSelectionMode() {
-    setSelectionMode((previous) => {
-      if (previous) setSelected(new Set());
-      return !previous;
-    });
+    if (selectionMode) setSelected(new Set());
+    setSelectionMode(!selectionMode);
   }
 
   function toggleSelect(id: Id<"attachments">) {
@@ -336,7 +326,12 @@ function AttachmentsPage() {
     });
   }
 
-  function selectAllVisible() {
+  function toggleAllVisible() {
+    if (allVisibleSelected) {
+      setSelected(new Set());
+      return;
+    }
+
     const next = new Set<Id<"attachments">>();
     for (const attachment of attachments) {
       next.add(attachment._id);
@@ -348,6 +343,15 @@ function AttachmentsPage() {
     setPage(1);
     setSelected(new Set());
     setSelectionMode(false);
+  }
+
+  function resetFilters() {
+    setSearchText("");
+    setSourceFilter("all");
+    setTypeFilter("all");
+    setSortField("createdAt");
+    setSortDirection("desc");
+    resetPageAndSelection();
   }
 
   function handleSortChange(value: string | null) {
@@ -373,6 +377,7 @@ function AttachmentsPage() {
 
       setSelected(new Set());
       setSelectionMode(false);
+      setBulkDeleteDialogOpen(false);
 
       if (attachments.length === ids.length && page > 1) {
         setPage((previous) => Math.max(1, previous - 1));
@@ -383,440 +388,444 @@ function AttachmentsPage() {
   }
 
   return (
-    <SettingsSection
-      id="attachment-library"
-      title="Attachment library"
-      description="Filter files by name, source, or type, then select items for bulk cleanup."
-    >
-      <div className="flex flex-col gap-5">
-        <div className="sticky top-14 isolate z-30 border-y bg-background/95 py-3 backdrop-blur-sm">
-          <div className="flex flex-col gap-2">
-            <div className="relative w-full">
-              <SearchIcon
-                size={16}
-                className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
-              />
+    <div className="flex flex-col gap-6">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle>Library</CardTitle>
+            <CardAction>
+              <ArchiveIcon className="size-4 text-muted-foreground" aria-hidden="true" />
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold tracking-tight tabular-nums">
+              {format.number(data.overallCount)}
+            </p>
+          </CardContent>
+        </Card>
 
-              <Input
-                placeholder="Search attachment names..."
-                value={searchText}
-                onChange={(event) => {
-                  setSearchText(event.target.value);
-                  resetPageAndSelection();
-                }}
-                className="h-9 w-full pl-9"
-              />
-            </div>
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle>Storage used</CardTitle>
+            <CardAction>
+              <HardDriveIcon className="size-4 text-muted-foreground" aria-hidden="true" />
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold tracking-tight tabular-nums">
+              {format.size(data.overallBytes)}
+            </p>
+          </CardContent>
+        </Card>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={sourceFilter}
-                onValueChange={(value) => {
-                  if (!isSourceFilter(value)) return;
-                  setSourceFilter(value);
-                  resetPageAndSelection();
-                }}
-              >
-                <SelectTrigger className="w-full sm:w-[220px]">
-                  <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                    <selectedSourceOption.Icon className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="shrink-0 text-muted-foreground">Source</span>
-                    <span className="min-w-0 truncate" title={selectedSourceOption.label}>
-                      {selectedSourceOption.label}
-                    </span>
-                  </div>
-                </SelectTrigger>
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle>Current view</CardTitle>
+            <CardAction>
+              <FilesIcon className="size-4 text-muted-foreground" aria-hidden="true" />
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold tracking-tight tabular-nums">{format.number(totalItems)}</p>
+          </CardContent>
+        </Card>
+      </div>
 
-                <SelectContent className="bg-card">
-                  {SOURCE_FILTER_ORDER.map((value) => {
-                    const option = SOURCE_FILTER_OPTIONS[value];
-                    const Icon = option.Icon;
-
-                    return (
-                      <SelectItem key={value} value={value}>
-                        <div className="flex items-center gap-2">
-                          <Icon className="size-4" />
-                          <span>{option.label}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={typeFilter}
-                onValueChange={(value) => {
-                  if (!isAttachmentTypeFilter(value)) return;
-                  setTypeFilter(value);
-                  resetPageAndSelection();
-                }}
-              >
-                <SelectTrigger className="w-full sm:w-[170px]">
-                  <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                    <selectedTypeOption.Icon className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="shrink-0 text-muted-foreground">Type</span>
-                    <span className="min-w-0 truncate" title={selectedTypeOption.label}>
-                      {selectedTypeOption.label}
-                    </span>
-                  </div>
-                </SelectTrigger>
-
-                <SelectContent className="bg-card">
-                  {TYPE_FILTER_ORDER.map((value) => {
-                    const option = TYPE_FILTER_OPTIONS[value];
-                    const Icon = option.Icon;
-
-                    return (
-                      <SelectItem key={value} value={value}>
-                        <div className="flex items-center gap-2">
-                          <Icon className="size-4" />
-                          <span>{option.label}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-
-              <Select value={selectedSortValue} onValueChange={handleSortChange}>
-                <SelectTrigger className="w-full sm:w-[250px]">
-                  <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                    <selectedSortOption.Icon className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="shrink-0 text-muted-foreground">Sort</span>
-                    <span className="min-w-0 truncate" title={selectedSortOption.label}>
-                      {selectedSortOption.label}
-                    </span>
-                  </div>
-                </SelectTrigger>
-
-                <SelectContent className="bg-card">
-                  {ATTACHMENT_SORT_ORDER.map((value) => {
-                    const option = ATTACHMENT_SORT_OPTIONS[value];
-                    const Icon = option.Icon;
-
-                    return (
-                      <SelectItem key={value} value={value}>
-                        <div className="flex items-center gap-2">
-                          <Icon className="size-4" />
-                          <span>{option.label}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-
-              {!selectionMode && (
-                <Button
-                  variant="outline"
-                  className="ml-auto"
-                  onClick={toggleSelectionMode}
-                  title="Select"
-                  aria-label="Select"
+      <div className="flex flex-col gap-3 border-y py-3">
+        <div className="flex gap-2">
+          <InputGroup className="h-9">
+            <InputGroupInput
+              aria-label="Search attachments"
+              placeholder="Search by file name"
+              value={searchText}
+              onChange={(event) => {
+                setSearchText(event.target.value);
+                resetPageAndSelection();
+              }}
+            />
+            <InputGroupAddon align="inline-start">
+              <SearchIcon />
+            </InputGroupAddon>
+            {searchText.length > 0 && (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  size="icon-xs"
+                  aria-label="Clear search"
+                  onClick={() => {
+                    setSearchText("");
+                    resetPageAndSelection();
+                  }}
                 >
-                  <CheckIcon data-icon="inline-start" />
-                  Select
-                </Button>
-              )}
+                  <XIcon />
+                </InputGroupButton>
+              </InputGroupAddon>
+            )}
+          </InputGroup>
 
-              {selectionMode && (
-                <div className="ml-auto flex items-center gap-2">
-                  <div className="flex w-max flex-col leading-tight">
-                    <span className="text-sm text-muted-foreground">{selected.size} selected</span>
-                    <span className="text-center text-xs text-muted-foreground">
-                      {format.size(selectedBytes)} total
-                    </span>
-                  </div>
-
-                  <Button
-                    variant="secondary"
-                    onClick={selectAllVisible}
-                    disabled={attachments.length === 0}
-                    title="Select All"
-                    aria-label="Select All"
-                  >
-                    <CheckIcon data-icon="inline-start" />
-                    Select All
-                  </Button>
-
-                  <Button
-                    variant="destructive"
-                    onClick={onBulkDelete}
-                    disabled={selected.size === 0 || bulkPending}
-                    title="Delete Selected"
-                    aria-label="Delete Selected"
-                  >
-                    <TrashIcon data-icon="inline-start" />
-                    {bulkPending ? "Deleting..." : "Delete Selected"}
-                  </Button>
-
-                  <Button variant="outline" onClick={toggleSelectionMode} title="Cancel" aria-label="Cancel">
-                    <XIcon data-icon="inline-start" />
-                    Cancel
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
+          <Button
+            variant={selectionMode ? "secondary" : "outline"}
+            onClick={toggleSelectionMode}
+            disabled={attachments.length === 0}
+          >
+            {selectionMode ? <XIcon data-icon="inline-start" /> : <CheckIcon data-icon="inline-start" />}
+            {selectionMode ? "Done" : "Select"}
+          </Button>
         </div>
 
-        {totalItems === 0 ? (
-          <Empty className="rounded-md border">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <FileTextIcon className="size-4" />
-              </EmptyMedia>
-              <EmptyTitle>No attachments found</EmptyTitle>
-              <EmptyDescription>Try adjusting your search, source, or type filters.</EmptyDescription>
-            </EmptyHeader>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.35fr)_auto]">
+          <Select
+            value={sourceFilter}
+            onValueChange={(value) => {
+              if (!isSourceFilter(value)) return;
+              setSourceFilter(value);
+              resetPageAndSelection();
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                <selectedSourceOption.Icon className="shrink-0 text-muted-foreground" />
+                <span className="min-w-0 truncate" title={selectedSourceOption.label}>
+                  {selectedSourceOption.label}
+                </span>
+              </div>
+            </SelectTrigger>
 
-            <EmptyContent>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setSearchText("");
-                  setSourceFilter("all");
-                  setTypeFilter("all");
-                  setSortField("createdAt");
-                  setSortDirection("desc");
-                  resetPageAndSelection();
-                }}
-              >
-                Reset filters
-              </Button>
-            </EmptyContent>
-          </Empty>
-        ) : (
-          <ImageLightboxProvider images={lightboxImages}>
-            <div className="relative z-0 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {attachments.map((attachment) => {
-                const isSelected = selected.has(attachment._id);
-                const thumbnailUrl = getAttachmentThumbnailUrl(attachment.path);
-                const fileUrl = getAttachmentFileUrl(attachment.path);
-                const imageIndex = imageIndexMap.get(attachment._id) ?? -1;
+            <SelectContent className="bg-card">
+              <SelectGroup>
+                {SOURCE_FILTER_ORDER.map((value) => {
+                  const option = SOURCE_FILTER_OPTIONS[value];
+                  const Icon = option.Icon;
 
-                return (
-                  <div
-                    key={attachment._id}
-                    className="group flex flex-col overflow-hidden rounded-md border bg-card [content-visibility:auto]"
-                    data-selected={isSelected}
-                  >
-                    <div className="relative">
-                      {selectionMode ? (
-                        <button
-                          type="button"
-                          className="block size-full cursor-pointer"
-                          onClick={() => toggleSelect(attachment._id)}
-                          aria-pressed={isSelected}
-                          aria-label={`Select ${attachment.name}`}
-                        >
-                          {attachment.type === "image" ? (
-                            <img
-                              alt={attachment.name}
-                              className="aspect-square size-full object-cover"
-                              src={thumbnailUrl}
-                              loading="lazy"
-                              decoding="async"
-                              width={448}
-                              height={448}
-                            />
-                          ) : (
-                            <div className="flex aspect-square size-full items-center justify-center p-2">
-                              <FileTextIcon size={64} />
-                            </div>
-                          )}
-                        </button>
-                      ) : attachment.type === "image" && imageIndex >= 0 ? (
-                        <ImageLightboxTrigger index={imageIndex} className="block size-full">
+                  return (
+                    <SelectItem key={value} value={value}>
+                      <Icon />
+                      <span>{option.label}</span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={typeFilter}
+            onValueChange={(value) => {
+              if (!isAttachmentTypeFilter(value)) return;
+              setTypeFilter(value);
+              resetPageAndSelection();
+            }}
+          >
+            <SelectTrigger className="w-full">
+              <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                <selectedTypeOption.Icon className="shrink-0 text-muted-foreground" />
+                <span className="min-w-0 truncate" title={selectedTypeOption.label}>
+                  {selectedTypeOption.label}
+                </span>
+              </div>
+            </SelectTrigger>
+
+            <SelectContent className="bg-card">
+              <SelectGroup>
+                {TYPE_FILTER_ORDER.map((value) => {
+                  const option = TYPE_FILTER_OPTIONS[value];
+                  const Icon = option.Icon;
+
+                  return (
+                    <SelectItem key={value} value={value}>
+                      <Icon />
+                      <span>{option.label}</span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedSortValue} onValueChange={handleSortChange}>
+            <SelectTrigger className="w-full">
+              <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                <selectedSortOption.Icon className="shrink-0 text-muted-foreground" />
+                <span className="min-w-0 truncate" title={selectedSortOption.label}>
+                  {selectedSortOption.label}
+                </span>
+              </div>
+            </SelectTrigger>
+
+            <SelectContent className="bg-card">
+              <SelectGroup>
+                {ATTACHMENT_SORT_ORDER.map((value) => {
+                  const option = ATTACHMENT_SORT_OPTIONS[value];
+                  const Icon = option.Icon;
+
+                  return (
+                    <SelectItem key={value} value={value}>
+                      <Icon />
+                      <span>{option.label}</span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          <Button
+            variant="ghost"
+            onClick={resetFilters}
+            disabled={!hasActiveFilters && selectedSortValue === "createdAt_desc"}
+          >
+            Reset
+          </Button>
+        </div>
+      </div>
+
+      {totalItems === 0 ? (
+        <Empty className="rounded-md border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FileTextIcon className="size-4" />
+            </EmptyMedia>
+            <EmptyTitle>{hasActiveFilters ? "No matching attachments" : "No attachments yet"}</EmptyTitle>
+            <EmptyDescription>
+              {hasActiveFilters
+                ? "Try another search or reset the filters."
+                : "Files you share in conversations will appear here."}
+            </EmptyDescription>
+          </EmptyHeader>
+
+          <EmptyContent>
+            {hasActiveFilters && <Button onClick={resetFilters}>Reset filters</Button>}
+          </EmptyContent>
+        </Empty>
+      ) : (
+        <ImageLightboxProvider images={lightboxImages}>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-4">
+            {attachments.map((attachment) => {
+              const isSelected = selected.has(attachment._id);
+              const thumbnailUrl = getAttachmentThumbnailUrl(attachment.path);
+              const fileUrl = getAttachmentFileUrl(attachment.path);
+              const imageIndex = imageIndexMap.get(attachment._id) ?? -1;
+
+              return (
+                <Card
+                  key={attachment._id}
+                  className="group gap-0 py-0 [content-visibility:auto] data-[selected=true]:ring-2 data-[selected=true]:ring-ring"
+                  data-selected={isSelected}
+                >
+                  <div className="relative overflow-hidden bg-muted/40">
+                    {selectionMode ? (
+                      <button
+                        type="button"
+                        className="block w-full cursor-pointer"
+                        onClick={() => toggleSelect(attachment._id)}
+                        aria-pressed={isSelected}
+                        aria-label={`Select ${attachment.name}`}
+                      >
+                        {attachment.type === "image" ? (
                           <img
-                            src={thumbnailUrl}
                             alt={attachment.name}
-                            className="aspect-square size-full object-cover object-center"
+                            className="aspect-[4/3] w-full object-cover transition-transform duration-200 group-hover:scale-[1.02] motion-reduce:transition-none"
+                            src={thumbnailUrl}
                             loading="lazy"
                             decoding="async"
                             width={448}
                             height={448}
                           />
-                        </ImageLightboxTrigger>
-                      ) : (
-                        <Link
-                          to={fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block size-full"
-                        >
-                          <div className="flex aspect-square size-full items-center justify-center p-2">
-                            <FileTextIcon size={64} />
+                        ) : (
+                          <div className="flex aspect-[4/3] w-full items-center justify-center">
+                            <FileTextIcon className="size-12 text-muted-foreground" />
                           </div>
-                        </Link>
-                      )}
-
-                      <div className="pointer-events-none absolute top-0 left-0 flex size-full items-start justify-between gap-2 p-2">
-                        <div className="flex items-center gap-2">
-                          {selectionMode && (
-                            <input
-                              type="checkbox"
-                              aria-label={`Select ${attachment.name}`}
-                              className="pointer-events-auto size-5 cursor-pointer rounded-md border bg-background"
-                              checked={isSelected}
-                              onChange={() => toggleSelect(attachment._id)}
-                            />
-                          )}
-
-                          <Badge>{format.size(attachment.size)}</Badge>
-                        </div>
-
-                        {!selectionMode && (
-                          <Button
-                            variant="secondary"
-                            className="pointer-events-auto size-7 transition-colors hover:bg-destructive"
-                            onClick={() => openDeleteDialog(attachment._id, attachment.name)}
-                          >
-                            <TrashIcon />
-                            <span className="sr-only">Delete {attachment.name}</span>
-                          </Button>
                         )}
+                      </button>
+                    ) : attachment.type === "image" && imageIndex >= 0 ? (
+                      <ImageLightboxTrigger index={imageIndex} className="block w-full">
+                        <img
+                          src={thumbnailUrl}
+                          alt={attachment.name}
+                          className="aspect-[4/3] w-full object-cover object-center transition-transform duration-200 group-hover:scale-[1.02] motion-reduce:transition-none"
+                          loading="lazy"
+                          decoding="async"
+                          width={448}
+                          height={448}
+                        />
+                      </ImageLightboxTrigger>
+                    ) : (
+                      <Link to={fileUrl} target="_blank" rel="noopener noreferrer" className="block w-full">
+                        <div className="flex aspect-[4/3] w-full items-center justify-center">
+                          <FileTextIcon className="size-12 text-muted-foreground" />
+                        </div>
+                      </Link>
+                    )}
+
+                    {selectionMode && (
+                      <div className="absolute top-3 right-3 rounded-md bg-background/90 p-2 shadow-sm backdrop-blur-sm">
+                        <Checkbox
+                          aria-label={`Select ${attachment.name}`}
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSelect(attachment._id)}
+                        />
                       </div>
-
-                      <div className="pointer-events-none absolute top-0 left-0 flex size-full items-end justify-between gap-2 p-2">
-                        <Badge variant={attachment.source === "assistant" ? "destructive" : "secondary"}>
-                          {attachment.source === "assistant" ? "AI" : "User"}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-1 border-t p-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate" title={attachment.name}>
-                          {attachment.name}
-                        </p>
-
-                        <span className="shrink-0 text-sm text-muted-foreground">
-                          {format.date(attachment._creationTime)}
-                        </span>
-                      </div>
-
-                      {attachment.thread ? (
-                        <Link
-                          to="/threads/$threadId"
-                          params={{ threadId: toUUID(attachment.threadId) }}
-                          title={attachment.thread.title}
-                          className="line-clamp-1 w-fit text-sm underline-offset-4 hover:underline"
-                        >
-                          Thread: {attachment.thread.title}
-                        </Link>
-                      ) : (
-                        <span className="w-full text-sm select-none">Thread: [Deleted]</span>
-                      )}
-                    </div>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          </ImageLightboxProvider>
-        )}
 
-        <DeleteAttachmentDialog
-          open={deleteDialogState.open}
-          onOpenChange={(open: boolean) => {
-            if (!open) {
-              closeDeleteDialog();
-              return;
-            }
-
-            setDeleteDialogState((previous) => ({ ...previous, open }));
-          }}
-          attachmentId={deleteDialogState.attachmentId}
-          name={deleteDialogState.name}
-        />
-
-        {totalItems > 0 && (
-          <div className="flex w-full flex-wrap items-center justify-between gap-2 border-t py-2 text-sm text-muted-foreground">
-            <span className="leading-none">
-              <span className="font-medium text-foreground">{format.number(attachments.length)}</span> (
-              {format.size(currentPageBytes)}) /{" "}
-              <span className="font-medium text-foreground">{format.number(data.overallCount)}</span> (
-              {format.size(data.overallBytes)})
-            </span>
-
-            <Pagination className="mx-0 ml-auto w-auto">
-              <PaginationContent className="gap-2">
-                <PaginationItem>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onPageChange(1)}
-                    disabled={!data.hasPrev}
-                    title="First Page"
-                    aria-label="First Page"
+                  <div
+                    className={
+                      attachment.source === "assistant"
+                        ? "flex h-8 items-center gap-2 bg-destructive px-3 text-xs font-medium text-background"
+                        : "flex h-8 items-center gap-2 bg-primary px-3 text-xs font-medium text-primary-foreground"
+                    }
                   >
-                    <ChevronsLeftIcon data-icon="inline-start" />
-                    First
-                  </Button>
-                </PaginationItem>
+                    {attachment.source === "assistant" ? (
+                      <BotIcon className="size-3.5" />
+                    ) : (
+                      <UserIcon className="size-3.5" />
+                    )}
+                    <span>{attachment.source === "assistant" ? "AI generated" : "User upload"}</span>
+                  </div>
 
-                <PaginationItem>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onPageChange(currentPage - 1)}
-                    disabled={!data.hasPrev}
-                    title="Previous Page"
-                    aria-label="Previous Page"
-                  >
-                    <ChevronLeftIcon data-icon="inline-start" />
-                    Prev
-                  </Button>
-                </PaginationItem>
+                  <CardHeader className="py-3">
+                    <CardTitle className="truncate pr-2" title={attachment.name}>
+                      {attachment.name}
+                    </CardTitle>
+                    <CardDescription>{format.date(attachment._creationTime)}</CardDescription>
+                    {!selectionMode && (
+                      <CardAction>
+                        <Button
+                          variant="destructive"
+                          size="icon-sm"
+                          onClick={() => openDeleteDialog(attachment._id, attachment.name)}
+                          aria-label={`Delete ${attachment.name}`}
+                        >
+                          <TrashIcon />
+                        </Button>
+                      </CardAction>
+                    )}
+                  </CardHeader>
 
-                {visiblePageNumbers.map((pageNumber) => (
-                  <PaginationItem key={`page-${pageNumber}`}>
-                    <Button
-                      variant={pageNumber === currentPage ? "secondary" : "outline"}
-                      size="sm"
-                      className="min-w-8 px-2 tabular-nums"
-                      onClick={() => onPageChange(pageNumber)}
-                      aria-current={pageNumber === currentPage ? "page" : undefined}
-                    >
-                      {pageNumber}
-                    </Button>
-                  </PaginationItem>
-                ))}
+                  <CardContent className="min-w-0 pb-3">
+                    {attachment.thread ? (
+                      <Link
+                        to="/threads/$threadId"
+                        params={{ threadId: toUUID(attachment.threadId) }}
+                        title={attachment.thread.title}
+                        className="block truncate text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                      >
+                        From: {attachment.thread.title}
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Conversation deleted</span>
+                    )}
+                  </CardContent>
 
-                <PaginationItem>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onPageChange(currentPage + 1)}
-                    disabled={!data.hasNext}
-                    title="Next Page"
-                    aria-label="Next Page"
-                  >
-                    Next
-                    <ChevronRightIcon data-icon="inline-end" />
-                  </Button>
-                </PaginationItem>
-
-                <PaginationItem>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onPageChange(totalPages)}
-                    disabled={!data.hasNext}
-                    title="Last Page"
-                    aria-label="Last Page"
-                  >
-                    Last
-                    <ChevronsRightIcon data-icon="inline-end" />
-                  </Button>
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                  <CardFooter className="mt-auto justify-between gap-2 py-2.5">
+                    <span className="text-xs text-muted-foreground uppercase">{attachment.type}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                      {format.size(attachment.size)}
+                    </span>
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
-        )}
-      </div>
-    </SettingsSection>
+        </ImageLightboxProvider>
+      )}
+
+      <DeleteAttachmentDialog
+        open={deleteDialogState.open}
+        onOpenChange={(open: boolean) => {
+          if (!open) {
+            closeDeleteDialog();
+            return;
+          }
+
+          setDeleteDialogState((previous) => ({ ...previous, open }));
+        }}
+        attachmentId={deleteDialogState.attachmentId}
+        name={deleteDialogState.name}
+      />
+
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <TriangleAlertIcon />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete {selected.size} selected files?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes {format.size(selectedBytes)} from storage and unlinks the files from
+              their conversations. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={onBulkDelete} disabled={bulkPending}>
+              {bulkPending && <Spinner data-icon="inline-start" />}
+              {bulkPending ? "Deleting" : "Delete files"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {totalItems > 0 && (
+        <div className="flex w-full flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <span className="tabular-nums">
+            {firstVisibleItem}–{lastVisibleItem} of {format.number(totalItems)} ·{" "}
+            {format.size(currentPageBytes)}
+          </span>
+
+          <div className="flex items-center justify-between gap-2 sm:justify-end">
+            <span className="mr-1 tabular-nums">
+              {currentPage} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={!data.hasPrev}
+              aria-label="Previous page"
+            >
+              <ChevronLeftIcon data-icon="inline-start" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={!data.hasNext}
+              aria-label="Next page"
+            >
+              Next
+              <ChevronRightIcon data-icon="inline-end" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {selectionMode && (
+        <div className="fixed right-4 bottom-4 left-4 z-40 flex flex-wrap items-center gap-2 rounded-md bg-popover p-2 text-popover-foreground shadow-xl ring-1 ring-foreground/10 sm:left-auto">
+          <div className="min-w-0 flex-1 px-1 sm:w-36 sm:flex-none">
+            <p aria-live="polite" className="text-sm font-medium tabular-nums">
+              {selected.size} selected
+            </p>
+            <p className="truncate text-xs text-muted-foreground tabular-nums">
+              {format.size(selectedBytes)}
+            </p>
+          </div>
+
+          <Button variant="outline" size="sm" onClick={toggleAllVisible}>
+            {allVisibleSelected ? "Deselect page" : "Select page"}
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setBulkDeleteDialogOpen(true)}
+            disabled={selected.size === 0 || bulkPending}
+          >
+            <TrashIcon data-icon="inline-start" />
+            Delete
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -851,17 +860,21 @@ function DeleteAttachmentDialog({ open, onOpenChange, attachmentId, name }: Dele
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
+          <AlertDialogMedia className="bg-destructive/10 text-destructive">
+            <TriangleAlertIcon />
+          </AlertDialogMedia>
           <AlertDialogTitle>Delete file {name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete this file and remove it from our
-            servers and your chats!
+            This permanently removes the file from storage and unlinks it from its conversation. This action
+            cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onDelete} disabled={pending || !attachmentId}>
-            {pending ? "Deleting..." : "Continue"}
+          <AlertDialogAction variant="destructive" onClick={onDelete} disabled={pending || !attachmentId}>
+            {pending && <Spinner data-icon="inline-start" />}
+            {pending ? "Deleting" : "Delete file"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
