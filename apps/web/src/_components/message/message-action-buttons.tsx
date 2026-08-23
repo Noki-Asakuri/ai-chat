@@ -560,15 +560,6 @@ function DeleteButton({ menu = false, message }: { menu?: boolean; message: Chat
   const deleteButtonSrLabel =
     effectiveDeleteScope === "assistantVariantOnly" ? "Delete response variant" : "Delete message and below";
 
-  React.useEffect(() => {
-    if (canDeleteVariantOnly) {
-      setDeleteScope("assistantVariantOnly");
-      return;
-    }
-
-    setDeleteScope("turnAndBelow");
-  }, [canDeleteVariantOnly, message._id]);
-
   if (isStreaming) return null;
 
   function handleOpenChange(nextOpen: boolean): void {

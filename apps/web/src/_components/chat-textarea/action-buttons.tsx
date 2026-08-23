@@ -10,7 +10,7 @@ import { MobileChatToolsMenu } from "./mobile-chat-tools-menu";
 import { ChatModelSelector, ModelSelector } from "./model-selector";
 import { ChatReasoningPicker, ReasoningPicker } from "./reasoning-picker";
 
-import { getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
+import { getDefaultReasoning, getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
 import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
 import { cn } from "@/lib/utils";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
@@ -65,8 +65,17 @@ export function ChatEditActionButtons() {
       <ModelSelector
         value={editMessage.model}
         onChange={(model) => {
+          const nextModelData = tryGetModelData(model);
+          const currentEffort = editMessage.modelParams.effort ?? "medium";
+          const effort =
+            nextModelData && !getReasoningOptions(nextModelData).includes(currentEffort)
+              ? getDefaultReasoning(nextModelData)
+              : currentEffort;
           chatStoreActions.retainCompatibleEditAttachments(model);
-          chatStoreActions.updateEditMessage({ model });
+          chatStoreActions.updateEditMessage({
+            model,
+            modelParams: { ...editMessage.modelParams, effort },
+          });
         }}
         triggerId="button-edit-model-selector-trigger"
       />

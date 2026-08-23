@@ -257,16 +257,15 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
     return "No models available.";
   }, [normalizedQuery.length, selectedSection]);
 
-  React.useEffect(() => {
-    if (open) return;
-
+  function closeMenu() {
+    setOpen(false);
     setSelectedSection("all");
     setQuery("");
-  }, [open]);
+  }
 
   function runRetry(options: RetryOptions = {}) {
     if (retry.isPending) return;
-    setOpen(false);
+    closeMenu();
     retry.requestRetry(options);
   }
 
@@ -303,7 +302,8 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
           return;
         }
 
-        setOpen(nextOpen);
+        if (nextOpen) setOpen(true);
+        else closeMenu();
       }}
     >
       <Menu.Trigger

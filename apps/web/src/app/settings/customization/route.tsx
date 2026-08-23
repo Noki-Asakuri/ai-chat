@@ -6,7 +6,6 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { useDebounce } from "@uidotdev/usehooks";
 import { useMutation } from "convex/react";
-import type { ComponentPropsWithoutRef } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
 
@@ -116,7 +115,8 @@ function RouteComponent() {
               <FieldLabel htmlFor="name">What should AI call you?</FieldLabel>
               <FieldDescription>Your preferred name or nickname.</FieldDescription>
             </FieldContent>
-            <ControlledInput
+
+            <Input
               id="name"
               name="name"
               autoComplete="off"
@@ -136,7 +136,8 @@ function RouteComponent() {
                 Applied to every new conversation unless a profile provides more specific guidance.
               </FieldDescription>
             </FieldContent>
-            <ControlledTextarea
+
+            <Textarea
               autoComplete="off"
               id="system-instruction"
               name="system-instruction"
@@ -150,30 +151,4 @@ function RouteComponent() {
       </SettingsSection>
     </form>
   );
-}
-
-function ControlledInput({
-  defaultValue,
-  ...props
-}: ComponentPropsWithoutRef<typeof Input> & { defaultValue?: string }) {
-  const [value, setValue] = useState(defaultValue ?? "");
-
-  useEffect(() => {
-    setValue(defaultValue ?? "");
-  }, [defaultValue]);
-
-  return <Input type="text" value={value} onValueChange={setValue} {...props} />;
-}
-
-function ControlledTextarea({
-  defaultValue,
-  ...props
-}: ComponentPropsWithoutRef<typeof Textarea> & { defaultValue?: string }) {
-  const [value, setValue] = useState(defaultValue ?? "");
-
-  useEffect(() => {
-    setValue(defaultValue ?? "");
-  }, [defaultValue]);
-
-  return <Textarea value={value} onChange={(event) => setValue(event.target.value)} {...props} />;
 }

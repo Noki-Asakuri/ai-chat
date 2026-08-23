@@ -112,6 +112,7 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
 
       {threadId && threadData && (
         <ThreadShareDialog
+          key={threadId}
           threadId={threadId}
           threadTitle={threadData.title}
           open={shareOpen}

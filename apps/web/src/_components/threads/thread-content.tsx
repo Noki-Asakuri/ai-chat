@@ -293,7 +293,7 @@ function ThreadList({ data, groups }: ThreadListProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [newChatOpen, setNewChatOpen] = useState(false);
-  const [editTitle, setEditTitle] = useState("");
+  const [editedTitle, setEditedTitle] = useState<string | null>(null);
   const [isSavingTitle, startSavingTitle] = useTransition();
   const activeDialog = useThreadDialogStore((state) => state.activeDialog);
   const dialogThread = useThreadDialogStore((state) => state.thread);
@@ -309,16 +309,14 @@ function ThreadList({ data, groups }: ThreadListProps) {
   const isEditDialogOpen = activeDialog === "edit" && dialogThread !== null;
   const isDeleteDialogOpen = activeDialog === "delete" && dialogThread !== null;
   const isShareDialogOpen = activeDialog === "share" && dialogThread !== null;
-
-  useEffect(() => {
-    if (activeDialog === "edit" && dialogThread) setEditTitle(dialogThread.title);
-  }, [activeDialog, dialogThread]);
+  const editTitle = editedTitle ?? dialogThread?.title ?? "";
 
   function saveThreadTitle(): void {
     if (!dialogThread || activeDialog !== "edit") return;
 
     const title = editTitle.trim();
     if (!title || title === dialogThread.title) {
+      setEditedTitle(null);
       threadDialogStoreActions.closeThreadDialog();
       return;
     }
@@ -330,6 +328,7 @@ function ThreadList({ data, groups }: ThreadListProps) {
         title,
       });
 
+      setEditedTitle(null);
       threadDialogStoreActions.closeThreadDialog();
     });
   }
@@ -516,7 +515,10 @@ function ThreadList({ data, groups }: ThreadListProps) {
         <Dialog.Root
           open={true}
           onOpenChange={(open) => {
-            if (!open) threadDialogStoreActions.closeThreadDialog();
+            if (!open) {
+              setEditedTitle(null);
+              threadDialogStoreActions.closeThreadDialog();
+            }
           }}
         >
           <Dialog.Portal>
@@ -536,7 +538,7 @@ function ThreadList({ data, groups }: ThreadListProps) {
               >
                 <Input
                   value={editTitle}
-                  onChange={(event) => setEditTitle(event.target.value)}
+                  onChange={(event) => setEditedTitle(event.target.value)}
                   placeholder="Thread title"
 
                 />
@@ -572,6 +574,7 @@ function ThreadList({ data, groups }: ThreadListProps) {
 
       {isShareDialogOpen && dialogThread && (
         <ThreadShareDialog
+          key={dialogThread._id}
           threadId={dialogThread._id}
           threadTitle={dialogThread.title}
           open={true}

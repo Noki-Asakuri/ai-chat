@@ -130,10 +130,6 @@ export function ZoomableImage(props: ZoomableImageProps) {
   }));
 
   React.useEffect(() => {
-    reset();
-  }, [src]);
-
-  React.useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return undefined;
 
@@ -144,7 +140,7 @@ export function ZoomableImage(props: ZoomableImageProps) {
     observer.observe(viewport);
 
     return () => observer.disconnect();
-  }, []);
+  });
 
   React.useEffect(() => {
     const viewport = viewportRef.current;

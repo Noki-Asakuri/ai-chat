@@ -62,7 +62,7 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
 
   const validOptions = getReasoningOptions(modelData);
 
-  const handleChange = useEffectEvent((effort: ReasoningEffort) => {
+  function handleChange(effort: ReasoningEffort) {
     if (props.onChange) {
       props.onChange(effort);
       return;
@@ -70,7 +70,7 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
 
     configStore.setModelParams({ effort });
     setPendingSyncEffort(effort);
-  });
+  }
 
   const syncPendingEffort = useEffectEvent((effort: ReasoningEffort) => {
     void syncThreadModelConfig({
@@ -80,18 +80,13 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
   });
 
   useEffect(() => {
-    if (validOptions.length > 0 && !validOptions.includes(props.value)) {
-      handleChange(getDefaultReasoning(modelData));
-    }
-  }, [modelData, props.value, validOptions]);
-
-  useEffect(() => {
     if (debouncedSyncEffort === null) return;
 
     syncPendingEffort(debouncedSyncEffort);
   }, [debouncedSyncEffort]);
 
   if (validOptions.length === 0) return null;
+  const value = validOptions.includes(props.value) ? props.value : getDefaultReasoning(modelData);
 
   return (
     <Popover>
@@ -102,7 +97,7 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
           props.className,
         )}
       >
-        {props.value}
+        {value}
         <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
       </PopoverTrigger>
 

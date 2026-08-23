@@ -14,7 +14,7 @@ import {
   Trash2Icon,
   ZapIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "@/components/ui/toast";
 
 import { buttonVariants } from "../ui/button";
@@ -35,6 +35,12 @@ type ThreadShareDialogProps = {
 
 type ShareVisibility = "public" | "private";
 type ShareMode = "snapshot" | "live";
+type ShareDraft = {
+  visibility: ShareVisibility;
+  mode: ShareMode;
+  allowedEmailsText: string;
+  urlPath: string | null;
+};
 
 export function ThreadShareDialog({ threadId, threadTitle, open, onOpenChange }: ThreadShareDialogProps) {
   const upsertThreadShare = useMutation(api.functions.threadShares.upsertThreadShare);
@@ -42,32 +48,18 @@ export function ThreadShareDialog({ threadId, threadTitle, open, onOpenChange }:
   const [isSaving, startSaving] = useTransition();
   const [isDisabling, startDisabling] = useTransition();
 
-  const [visibility, setVisibility] = useState<ShareVisibility>("public");
-  const [mode, setMode] = useState<ShareMode>("live");
-  const [allowedEmailsText, setAllowedEmailsText] = useState("");
-  const [localSharePath, setLocalSharePath] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ShareDraft | null>(null);
   const [copied, setCopied] = useState(false);
 
   const { data, isFetching, isPending } = useQuery({
     ...convexSessionQuery(api.functions.threadShares.getThreadShareSettings, open ? { threadId } : "skip"),
   });
 
-  useEffect(() => {
-    if (!open || !data) return;
-
-    setVisibility(data.visibility);
-    setMode(data.mode);
-    setAllowedEmailsText(data.allowedEmailsText);
-    setLocalSharePath(data.urlPath);
-    setCopied(false);
-  }, [data, open]);
-
-  const currentPath = localSharePath ?? data?.urlPath ?? null;
-  const shareUrl = useMemo(() => {
-    if (!currentPath) return "";
-    if (!("window" in globalThis)) return currentPath;
-    return new URL(currentPath, window.location.origin).toString();
-  }, [currentPath]);
+  const visibility = draft?.visibility ?? data?.visibility ?? "public";
+  const mode = draft?.mode ?? data?.mode ?? "live";
+  const allowedEmailsText = draft?.allowedEmailsText ?? data?.allowedEmailsText ?? "";
+  const currentPath = draft ? draft.urlPath : (data?.urlPath ?? null);
+  const shareUrl = currentPath ?? "";
 
   const hasChanges =
     visibility !== (data?.visibility ?? "public") ||
@@ -82,7 +74,7 @@ export function ThreadShareDialog({ threadId, threadTitle, open, onOpenChange }:
     if (!shareUrl) return;
 
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(new URL(shareUrl, window.location.origin).toString());
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch (error) {
@@ -102,8 +94,12 @@ export function ThreadShareDialog({ threadId, threadTitle, open, onOpenChange }:
           allowedEmailsText,
         });
 
-        setLocalSharePath(next.urlPath);
-        setAllowedEmailsText(next.allowedEmailsText);
+        setDraft({
+          visibility: next.visibility,
+          mode: next.mode,
+          allowedEmailsText: next.allowedEmailsText,
+          urlPath: next.urlPath,
+        });
 
         toast.success("Thread sharing updated");
       } catch (error) {
@@ -121,10 +117,12 @@ export function ThreadShareDialog({ threadId, threadTitle, open, onOpenChange }:
       try {
         const next = await disableThreadShare({ threadId });
 
-        setLocalSharePath(next.urlPath);
-        setVisibility(next.visibility);
-        setMode(next.mode);
-        setAllowedEmailsText(next.allowedEmailsText);
+        setDraft({
+          visibility: next.visibility,
+          mode: next.mode,
+          allowedEmailsText: next.allowedEmailsText,
+          urlPath: next.urlPath,
+        });
         setCopied(false);
 
         toast.success("Thread sharing disabled");
@@ -137,7 +135,16 @@ export function ThreadShareDialog({ threadId, threadTitle, open, onOpenChange }:
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          setDraft(null);
+          setCopied(false);
+        }
+        onOpenChange(nextOpen);
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-40 bg-black opacity-20 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 dark:opacity-70" />
         <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(96vw,40rem)] -translate-x-1/2 -translate-y-1/2 rounded-md border bg-background p-6 shadow-lg transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
@@ -153,7 +160,7 @@ export function ThreadShareDialog({ threadId, threadTitle, open, onOpenChange }:
                 value={visibility}
                 onValueChange={(value) => {
                   if (value === "public" || value === "private") {
-                    setVisibility(value);
+                    setDraft({ visibility: value, mode, allowedEmailsText, urlPath: currentPath });
                   }
                 }}
                 className="gap-2"
@@ -192,7 +199,7 @@ export function ThreadShareDialog({ threadId, threadTitle, open, onOpenChange }:
                 value={mode}
                 onValueChange={(value) => {
                   if (value === "snapshot" || value === "live") {
-                    setMode(value);
+                    setDraft({ visibility, mode: value, allowedEmailsText, urlPath: currentPath });
                   }
                 }}
                 className="gap-2"
@@ -231,7 +238,9 @@ export function ThreadShareDialog({ threadId, threadTitle, open, onOpenChange }:
                 <Textarea
                   id="thread-share-email-list"
                   value={allowedEmailsText}
-                  onChange={(event) => setAllowedEmailsText(event.target.value)}
+                  onChange={(event) =>
+                    setDraft({ visibility, mode, allowedEmailsText: event.target.value, urlPath: currentPath })
+                  }
                   placeholder="name@example.com\nteam@example.com"
                   className="min-h-24 rounded-md"
                 />

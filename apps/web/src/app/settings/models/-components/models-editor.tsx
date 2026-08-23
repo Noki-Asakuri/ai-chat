@@ -934,6 +934,8 @@ function VirtualizedModelsGrid(props: ModelsGridProps) {
     return next;
   }, []);
 
+  // TanStack Virtual intentionally returns non-memoizable functions; React Compiler skips this component.
+  // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement,

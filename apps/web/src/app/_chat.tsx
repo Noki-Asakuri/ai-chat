@@ -20,6 +20,7 @@ import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 
 import { buildImageAssetUrl } from "@/lib/assets/urls";
+import { resolveReasoning, tryGetModelData } from "@/lib/chat/models";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { cn, fromUUID } from "@/lib/utils";
 
@@ -93,8 +94,13 @@ function ChatLayoutConfig() {
   );
 
   const selectedModel = threadMeta?.latestModel ?? chatShell.preferences.models.defaultModel;
+  const storedModelParams = threadMeta?.latestModelParams ?? chatShell.preferences.models.modelParams;
+  const selectedModelData = tryGetModelData(selectedModel);
   const selectedModelParams = {
-    ...(threadMeta?.latestModelParams ?? chatShell.preferences.models.modelParams),
+    ...storedModelParams,
+    effort: selectedModelData
+      ? resolveReasoning(selectedModelData, storedModelParams.effort)
+      : storedModelParams.effort,
     profile:
       threadMeta?.latestModelParams.profile ?? chatShell.preferences.models.modelParams.profile ?? null,
   };

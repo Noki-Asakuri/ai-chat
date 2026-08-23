@@ -191,26 +191,26 @@ export function FontsCard(props: FontsCardProps) {
   }
 
   useEffect(() => {
-    const storedAccess = window.localStorage.getItem(FONT_ACCESS_STORAGE_KEY);
-    const storedFonts = window.localStorage.getItem(DEVICE_FONTS_STORAGE_KEY);
+    const frame = requestAnimationFrame(() => {
+      const storedAccess = window.localStorage.getItem(FONT_ACCESS_STORAGE_KEY);
+      const storedFonts = window.localStorage.getItem(DEVICE_FONTS_STORAGE_KEY);
 
-    if (storedFonts) {
-      try {
-        const parsedFonts = z.array(z.string().trim().min(1)).safeParse(JSON.parse(storedFonts));
-        if (parsedFonts.success) setDeviceFonts([...new Set(parsedFonts.data)]);
-      } catch {
-        window.localStorage.removeItem(DEVICE_FONTS_STORAGE_KEY);
+      if (storedFonts) {
+        try {
+          const parsedFonts = z.array(z.string().trim().min(1)).safeParse(JSON.parse(storedFonts));
+          if (parsedFonts.success) setDeviceFonts([...new Set(parsedFonts.data)]);
+        } catch {
+          window.localStorage.removeItem(DEVICE_FONTS_STORAGE_KEY);
+        }
       }
-    }
 
-    if (storedAccess === "granted") {
-      setFontAccessStatus("granted");
-      return;
-    }
+      if (storedAccess === "granted") setFontAccessStatus("granted");
+      else if (storedAccess === "denied" || storedAccess === "unavailable") {
+        setFontAccessStatus(storedAccess);
+      }
+    });
 
-    if (storedAccess === "denied" || storedAccess === "unavailable") {
-      setFontAccessStatus(storedAccess);
-    }
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   let accessDescription = "AI Chat asks once to include fonts installed on this device.";

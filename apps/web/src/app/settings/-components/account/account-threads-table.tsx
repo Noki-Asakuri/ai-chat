@@ -479,18 +479,6 @@ export function AccountThreadsTable() {
 
   const cursor = pageCursors[pageIndex] ?? null;
 
-  const onResolved = useCallback(
-    function (info: AccountThreadsTablePageInfo) {
-      setPageInfo(info);
-      setIsLoadingPage(false);
-
-      if (info.isDone) {
-        setKnownLastPageNumber(pageIndex + 1);
-      }
-    },
-    [pageIndex],
-  );
-
   const pinThread = useMutation(api.functions.threads.pinThread);
   const [, startTransition] = useTransition();
 
@@ -630,6 +618,37 @@ export function AccountThreadsTable() {
     [isLoadingPage, pageCursors, pageIndex, pageInfo.continueCursor, pageInfo.isDone],
   );
 
+  const onResolved = useCallback(
+    function (info: AccountThreadsTablePageInfo) {
+      setPageInfo(info);
+
+      if (info.isDone) {
+        setKnownLastPageNumber(pageIndex + 1);
+      }
+
+      if (pendingTargetPageIndex === null || pageIndex >= pendingTargetPageIndex || info.isDone) {
+        setPendingTargetPageIndex(null);
+        setIsLoadingPage(false);
+        return;
+      }
+
+      const nextCursor = info.continueCursor;
+      if (!nextCursor) {
+        setPendingTargetPageIndex(null);
+        setIsLoadingPage(false);
+        return;
+      }
+
+      setPageCursors((prev) => {
+        if (prev[pageIndex + 1] !== undefined) return prev;
+        return [...prev, nextCursor];
+      });
+      setPageIndex((prev) => prev + 1);
+      setIsLoadingPage(true);
+    },
+    [pageIndex, pendingTargetPageIndex],
+  );
+
   function goToPage(pageNumber: number) {
     if (pageNumber < 1) return;
     if (pageNumber > maxPageNumber) return;
@@ -653,32 +672,14 @@ export function AccountThreadsTable() {
     goNextPage(true);
   }
 
-  useEffect(() => {
-    if (pendingTargetPageIndex === null) return;
-
-    if (pageIndex >= pendingTargetPageIndex) {
-      setPendingTargetPageIndex(null);
-      return;
-    }
-
-    if (isLoadingPage) return;
-
-    if (pageInfo.isDone) {
-      setPendingTargetPageIndex(null);
-      return;
-    }
-
-    goNextPage(true);
-  }, [goNextPage, isLoadingPage, pageIndex, pageInfo.isDone, pendingTargetPageIndex]);
-
-  function toggleRowSelection(id: Id<"threads">) {
+  const toggleRowSelection = useCallback(function toggleRowSelection(id: Id<"threads">) {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  }
+  }, []);
 
   const setAllVisibleSelection = useCallback(
     function (nextChecked: boolean) {
@@ -879,6 +880,7 @@ export function AccountThreadsTable() {
       setAllVisibleSelection,
       someSelected,
       startTransition,
+      toggleRowSelection,
     ],
   );
 

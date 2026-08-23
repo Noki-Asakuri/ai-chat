@@ -23,7 +23,11 @@ function RouteComponent() {
 
   return (
     <div className="flex flex-col gap-8">
-      <AutoSettleThreadsCard disabled={isPending} initialDays={preferences?.threads?.autoSettleDays ?? 0} />
+      <AutoSettleThreadsCard
+        key={preferences?.threads?.autoSettleDays ?? 0}
+        disabled={isPending}
+        initialDays={preferences?.threads?.autoSettleDays ?? 0}
+      />
       <Separator />
       <SettleInactiveThreadsCard />
       <Separator />

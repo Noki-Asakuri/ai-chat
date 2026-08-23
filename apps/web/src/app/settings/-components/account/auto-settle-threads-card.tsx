@@ -1,7 +1,7 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { useMutation } from "convex/react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "@/components/ui/toast";
 
 import { SettingsSection } from "@/components/settings/settings-section";
@@ -24,12 +24,6 @@ export function AutoSettleThreadsCard(props: AutoSettleThreadsCardProps) {
   const [daysInput, setDaysInput] = useState(String(props.initialDays));
   const [pending, startTransition] = useTransition();
   const lastEnabledDaysRef = useRef(props.initialDays > 0 ? props.initialDays : DEFAULT_AUTO_SETTLE_DAYS);
-
-  useEffect(() => {
-    setDays(props.initialDays);
-    setDaysInput(String(props.initialDays));
-    if (props.initialDays > 0) lastEnabledDaysRef.current = props.initialDays;
-  }, [props.initialDays]);
 
   function saveDays(nextDays: number) {
     const previousDays = days;

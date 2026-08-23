@@ -5,22 +5,11 @@ export function useThrottledDebouncedValue<T>(value: T, delayMs: number): T {
   const lastExecutedRef = React.useRef<number>(0);
 
   React.useEffect(() => {
-    if (delayMs <= 0) {
-      lastExecutedRef.current = Date.now();
-      setRenderValue(value);
-      return undefined;
-    }
+    if (delayMs <= 0) return undefined;
 
     const now = Date.now();
     const elapsed = now - lastExecutedRef.current;
-
-    if (elapsed >= delayMs) {
-      lastExecutedRef.current = now;
-      setRenderValue(value);
-      return undefined;
-    }
-
-    const remaining = delayMs - elapsed;
+    const remaining = Math.max(0, delayMs - elapsed);
 
     // Throttle high-frequency updates to avoid excessive syntax highlighting work.
     const timeoutId = setTimeout(() => {
@@ -33,5 +22,5 @@ export function useThrottledDebouncedValue<T>(value: T, delayMs: number): T {
     };
   }, [value, delayMs]);
 
-  return renderValue;
+  return delayMs <= 0 ? value : renderValue;
 }

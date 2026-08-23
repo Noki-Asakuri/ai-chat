@@ -76,26 +76,6 @@ function RouteComponent() {
   const backgroundIdRef = useRef<string | null>(data?.backgroundImage ?? null);
   const runAutoSaveRef = useRef<(() => Promise<void>) | null>(null);
 
-  useEffect(() => setSendPreference(data?.sendPreference ?? "enter"), [data?.sendPreference]);
-  useEffect(() => setNotificationSound(data?.notifications?.sound ?? true), [data?.notifications?.sound]);
-  useEffect(
-    () => setDesktopNotification(data?.notifications?.desktop ?? false),
-    [data?.notifications?.desktop],
-  );
-  useEffect(() => setAutoWrap(data?.code?.autoWrap ?? false), [data?.code?.autoWrap]);
-  useEffect(() => setPerformanceEnabled(data?.performanceEnabled ?? false), [data?.performanceEnabled]);
-  useEffect(() => setShowFullCode(data?.code?.showFullCode ?? false), [data?.code?.showFullCode]);
-  useEffect(() => setUiFont(data?.fonts?.ui ?? DEFAULT_UI_FONT), [data?.fonts?.ui]);
-  useEffect(() => setUiFontSize(data?.fonts?.uiSize ?? DEFAULT_UI_FONT_SIZE), [data?.fonts?.uiSize]);
-  useEffect(() => setPromptFont(data?.fonts?.prompt ?? DEFAULT_UI_FONT), [data?.fonts?.prompt]);
-  useEffect(
-    () => setPromptFontSize(data?.fonts?.promptSize ?? DEFAULT_PROMPT_FONT_SIZE),
-    [data?.fonts?.promptSize],
-  );
-  useEffect(() => setCodeFont(data?.fonts?.code ?? DEFAULT_CODE_FONT), [data?.fonts?.code]);
-  useEffect(() => setCodeFontSize(data?.fonts?.codeSize ?? DEFAULT_CODE_FONT_SIZE), [data?.fonts?.codeSize]);
-  useEffect(() => setBackgroundImageId(data?.backgroundImage ?? null), [data?.backgroundImage]);
-
   useEffect(() => {
     if (!user) return;
 
@@ -340,6 +320,7 @@ function RouteComponent() {
 
           <div className="max-w-3xl">
             <BackgroundCard
+              key={backgroundImageId}
               disabled={isPending || isSaving}
               existingBackgroundId={backgroundImageId}
               onRemoveExistingBackground={removeExistingBackground}

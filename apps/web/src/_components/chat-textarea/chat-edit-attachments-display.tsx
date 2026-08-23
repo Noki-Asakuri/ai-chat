@@ -1,4 +1,4 @@
-import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { FileTextIcon, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ImageLightboxProvider, ImageLightboxTrigger } from "@/components/image-lightbox";
 import { buildAttachmentUrl } from "@/lib/assets/urls";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
+import type { UserAttachment } from "@/lib/types";
 import { cn, format } from "@/lib/utils";
 
 type LocalPreview = {
@@ -26,33 +27,53 @@ type ExistingPreview = {
 
 export function ChatEditAttachmentsDisplay() {
   const editMessage = useChatStore((state) => state.editMessage);
+  if (!editMessage) return null;
+
+  return (
+    <ChatEditAttachmentPreviews
+      key={editMessage.attachments.map((attachment) => attachment.id).join(":")}
+      attachments={editMessage.attachments}
+      currentAttachments={editMessage.currentAttachments}
+      keptAttachmentIds={editMessage.keptAttachmentIds}
+    />
+  );
+}
+
+type ChatEditAttachmentPreviewsProps = {
+  attachments: UserAttachment[];
+  currentAttachments: Array<Doc<"attachments">>;
+  keptAttachmentIds: Array<Id<"attachments">>;
+};
+
+function ChatEditAttachmentPreviews({
+  attachments,
+  currentAttachments,
+  keptAttachmentIds,
+}: ChatEditAttachmentPreviewsProps) {
   const [localPreview, setLocalPreview] = useState<Array<LocalPreview>>([]);
 
   useEffect(() => {
-    if (!editMessage?.attachments.length) {
-      setLocalPreview([]);
-      return undefined;
-    }
-
-    const nextPreview: Array<LocalPreview> = editMessage.attachments.map(
-      ({ id, type, file }): LocalPreview => {
-        return { id, type, file, url: URL.createObjectURL(file) };
-      },
-    );
-
-    setLocalPreview(nextPreview);
+    const nextPreview = attachments.map(({ id, type, file }) => ({
+      id,
+      type,
+      file,
+      url: URL.createObjectURL(file),
+    }));
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setLocalPreview(nextPreview);
+    });
 
     return () => {
-      for (const p of nextPreview) URL.revokeObjectURL(p.url);
+      active = false;
+      for (const attachment of nextPreview) URL.revokeObjectURL(attachment.url);
     };
-  }, [editMessage?.attachments]);
+  }, [attachments]);
 
-  if (!editMessage) return null;
-
-  const keptIdSet = new Set(editMessage.keptAttachmentIds);
+  const keptIdSet = new Set(keptAttachmentIds);
 
   const existingPreview: Array<ExistingPreview> = [];
-  for (const attachment of editMessage.currentAttachments) {
+  for (const attachment of currentAttachments) {
     if (!keptIdSet.has(attachment._id)) continue;
 
     existingPreview.push({
@@ -138,11 +159,7 @@ function AttachmentPill({ name, size, url, isImage, imageIndex, onRemove }: Atta
   return (
     <div className="group relative flex justify-center gap-2 rounded-md border border-border bg-background/50 p-2 transition-colors hover:bg-foreground/10">
       {isImage && imageIndex >= 0 ? (
-        <ImageLightboxTrigger
-          index={imageIndex}
-          type="button"
-          className="overflow-hidden rounded-md"
-        >
+        <ImageLightboxTrigger index={imageIndex} type="button" className="overflow-hidden rounded-md">
           <img src={url} alt={name} className="aspect-square size-15 object-cover object-center" />
         </ImageLightboxTrigger>
       ) : (

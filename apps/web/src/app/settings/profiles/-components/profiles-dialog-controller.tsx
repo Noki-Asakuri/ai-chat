@@ -1,6 +1,6 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { useCallback, useEffect, useImperativeHandle, useState } from "react";
+import { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 import { uploadAiProfileImage } from "@/lib/convex/upload-files";
 
@@ -50,37 +50,39 @@ export function ProfilesDialogController({
   const [systemPrompt, setSystemPrompt] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const filePreviewUrlRef = useRef<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!file) {
-      setFilePreviewUrl(null);
-      return undefined;
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    setFilePreviewUrl(objectUrl);
-
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      if (filePreviewUrlRef.current) URL.revokeObjectURL(filePreviewUrlRef.current);
     };
-  }, [file]);
+  }, []);
+
+  const updateFile = useCallback(function updateFile(nextFile: File | null) {
+    if (filePreviewUrlRef.current) URL.revokeObjectURL(filePreviewUrlRef.current);
+
+    const nextPreviewUrl = nextFile ? URL.createObjectURL(nextFile) : null;
+    filePreviewUrlRef.current = nextPreviewUrl;
+    setFilePreviewUrl(nextPreviewUrl);
+    setFile(nextFile);
+  }, []);
 
   const openCreate = useCallback(function openCreate() {
     setEditing(null);
     setName("");
     setSystemPrompt("");
-    setFile(null);
+    updateFile(null);
     setOpen(true);
-  }, []);
+  }, [updateFile]);
 
   const openEdit = useCallback(function openEdit(seed: ProfileEditSeed) {
     setEditing(seed);
     setName(seed.name);
     setSystemPrompt(seed.systemPrompt);
-    setFile(null);
+    updateFile(null);
     setOpen(true);
-  }, []);
+  }, [updateFile]);
 
   useImperativeHandle(
     ref,
@@ -126,7 +128,7 @@ export function ProfilesDialogController({
           setEditing(null);
           setName("");
           setSystemPrompt("");
-          setFile(null);
+          updateFile(null);
           onAfterSubmit();
         } catch (e) {
           console.error("[AI Profiles] submit error:", e);
@@ -135,20 +137,25 @@ export function ProfilesDialogController({
         setIsSubmitting(false);
       })();
     },
-    [createProfile, editing, file, name, onAfterSubmit, systemPrompt, updateProfile],
+    [createProfile, editing, file, name, onAfterSubmit, systemPrompt, updateFile, updateProfile],
   );
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) updateFile(null);
+  }
 
   return (
     <ProfileDialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={handleOpenChange}
       editing={editing}
       name={name}
       onNameChange={setName}
       systemPrompt={systemPrompt}
       onSystemPromptChange={setSystemPrompt}
       file={file}
-      onFileChange={setFile}
+      onFileChange={updateFile}
       filePreviewUrl={filePreviewUrl}
       isSubmitting={isSubmitting}
       onSubmit={handleSubmit}

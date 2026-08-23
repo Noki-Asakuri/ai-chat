@@ -205,6 +205,7 @@ export function ImageLightboxDialog(props: ImageLightboxDialogProps) {
                     className="relative flex size-full items-center justify-center"
                   >
                     <ZoomableImage
+                      key={active.src}
                       ref={zoomRef}
                       src={active.src}
                       alt={active.alt ?? active.name ?? "Image"}

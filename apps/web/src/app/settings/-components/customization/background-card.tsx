@@ -20,25 +20,13 @@ export function BackgroundCard(props: BackgroundCardProps) {
 
   const [backgroundImage, setBackgroundImage] = useState<File | null>(null);
   const [backgroundPreviewUrl, setBackgroundPreviewUrl] = useState<string | null>(null);
+  const backgroundPreviewUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!backgroundImage) {
-      setBackgroundPreviewUrl(null);
-      return undefined;
-    }
-
-    const url = URL.createObjectURL(backgroundImage);
-    setBackgroundPreviewUrl(url);
-
     return () => {
-      URL.revokeObjectURL(url);
+      if (backgroundPreviewUrlRef.current) URL.revokeObjectURL(backgroundPreviewUrlRef.current);
     };
-  }, [backgroundImage]);
-
-  useEffect(() => {
-    if (!props.existingBackgroundId) return;
-    setBackgroundImage(null);
-  }, [props.existingBackgroundId]);
+  }, []);
 
   const existingBackgroundUrl = props.existingBackgroundId
     ? buildImageAssetUrl(props.existingBackgroundId)
@@ -50,6 +38,9 @@ export function BackgroundCard(props: BackgroundCardProps) {
 
   function onRemove() {
     startRemoveTransition(async () => {
+      if (backgroundPreviewUrlRef.current) URL.revokeObjectURL(backgroundPreviewUrlRef.current);
+      backgroundPreviewUrlRef.current = null;
+      setBackgroundPreviewUrl(null);
       setBackgroundImage(null);
 
       void toast.promise(props.onRemoveExistingBackground(), {
@@ -105,6 +96,10 @@ export function BackgroundCard(props: BackgroundCardProps) {
             const selected = event.target.files?.[0];
             if (!selected) return;
 
+            if (backgroundPreviewUrlRef.current) URL.revokeObjectURL(backgroundPreviewUrlRef.current);
+            const nextPreviewUrl = URL.createObjectURL(selected);
+            backgroundPreviewUrlRef.current = nextPreviewUrl;
+            setBackgroundPreviewUrl(nextPreviewUrl);
             setBackgroundImage(selected);
           }}
         />

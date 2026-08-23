@@ -1,7 +1,7 @@
 /* oxlint-disable react/no-array-index-key -- A message may contain repeated attachment URLs. */
 import type { FileUIPart } from "@ai-chat/shared/chat/ui";
 import { BotIcon, FileTextIcon, ImageOffIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { extractNameFromUrl, ImageLightboxProvider, ImageLightboxTrigger } from "../image-lightbox";
 
@@ -90,11 +90,9 @@ export function MessageAttachmentsDisplay({
 
             if (imageIndex < 0) {
               return (
-                <div
-                  key={`${messageId}-attachment-${index}`}
-                  className="size-40 overflow-hidden rounded-md"
-                >
+                <div key={`${messageId}-attachment-${index}`} className="size-40 overflow-hidden rounded-md">
                   <AttachmentImageThumbnail
+                    key={thumbnailUrl}
                     src={thumbnailUrl}
                     alt={extractNameFromUrl(part.url) ?? "Attachment image"}
                   />
@@ -106,6 +104,7 @@ export function MessageAttachmentsDisplay({
               <ImageLightboxTrigger index={imageIndex} key={`${messageId}-attachment-${index}`}>
                 <div className="size-40 overflow-hidden rounded-md">
                   <AttachmentImageThumbnail
+                    key={thumbnailUrl}
                     src={thumbnailUrl}
                     alt={extractNameFromUrl(part.url) ?? "Attachment image"}
                   />
@@ -126,10 +125,6 @@ type AttachmentImageThumbnailProps = {
 
 function AttachmentImageThumbnail({ src, alt }: AttachmentImageThumbnailProps) {
   const [loadState, setLoadState] = useState<AttachmentImageLoadState>("loading");
-
-  useEffect(() => {
-    setLoadState("loading");
-  }, [src]);
 
   const showPlaceholder = loadState !== "loaded";
 

@@ -73,7 +73,7 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
   const isStreaming = thread.status === "streaming" || thread.status === "pending";
   const isSettled = thread.settled === true;
   const canSettle = thread.status === "complete" || thread.status === "error";
-  const isRecentlyCreated = thread._creationTime > Date.now() - 1000 * 60 * 60 * 24 * 2;
+  const isRecentlyCreated = thread._creationTime > now - 1000 * 60 * 60 * 24 * 2;
   const hasUnreadCompletion =
     !isActive &&
     thread.status === "complete" &&

@@ -157,7 +157,7 @@ function HighlightedCodeBlock({
   const [result, setResult] = useState<HighlightResult>(raw);
 
   useEffect(() => {
-    if (isIncomplete) return setResult(raw);
+    if (isIncomplete) return;
 
     const isIncrementalUpdate =
       code.startsWith(prevCodeRef.current) && code.length > prevCodeRef.current.length;
@@ -195,7 +195,7 @@ function HighlightedCodeBlock({
     <RenderedCodeBlock
       code={code}
       displayLanguage={displayLanguage}
-      result={result}
+      result={isIncomplete ? raw : result}
       showButtonActions={showButtonActions}
     />
   );

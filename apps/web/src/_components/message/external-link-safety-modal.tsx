@@ -30,10 +30,9 @@ export function ExternalLinkSafetyModal({ isOpen, onClose, onConfirm, url }: Lin
     }
 
     if (isOpen) {
-      setIsPresent(true);
-      setIsVisible(false);
-
       openAnimationFrameIdRef.current = requestAnimationFrame(() => {
+        setIsPresent(true);
+        setIsVisible(false);
         openAnimationFrameIdRef.current = requestAnimationFrame(() => {
           setIsVisible(true);
           openAnimationFrameIdRef.current = null;
@@ -48,13 +47,20 @@ export function ExternalLinkSafetyModal({ isOpen, onClose, onConfirm, url }: Lin
       };
     }
 
-    setIsVisible(false);
-    closeTimeoutIdRef.current = window.setTimeout(() => {
-      setIsPresent(false);
-      closeTimeoutIdRef.current = null;
-    }, FADE_DURATION_MS);
+    openAnimationFrameIdRef.current = requestAnimationFrame(() => {
+      setIsVisible(false);
+      openAnimationFrameIdRef.current = null;
+      closeTimeoutIdRef.current = window.setTimeout(() => {
+        setIsPresent(false);
+        closeTimeoutIdRef.current = null;
+      }, FADE_DURATION_MS);
+    });
 
     return () => {
+      if (openAnimationFrameIdRef.current !== null) {
+        cancelAnimationFrame(openAnimationFrameIdRef.current);
+        openAnimationFrameIdRef.current = null;
+      }
       if (closeTimeoutIdRef.current !== null) {
         window.clearTimeout(closeTimeoutIdRef.current);
         closeTimeoutIdRef.current = null;

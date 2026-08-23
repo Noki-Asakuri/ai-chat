@@ -89,27 +89,38 @@ type Preview = { id: string; type: "image" | "pdf"; file: File; url: string };
 
 export function ChatAttachmentsDisplay() {
   const attachments = useChatStore((state) => state.attachments);
+  if (attachments.length === 0) return null;
+
+  return (
+    <ChatAttachmentPreviews
+      key={attachments.map((attachment) => attachment.id).join(":")}
+      attachments={attachments}
+    />
+  );
+}
+
+function ChatAttachmentPreviews({ attachments }: { attachments: UserAttachment[] }) {
   const [preview, setPreview] = useState<Preview[]>([]);
 
   useEffect(() => {
-    if (!attachments.length) {
-      setPreview([]);
-      return undefined;
-    }
-
-    const nextPreview = attachments.map(({ id, type, file }): Preview => {
-      return { id, type, file, url: URL.createObjectURL(file) };
+    const nextPreview = attachments.map(({ id, type, file }) => ({
+      id,
+      type,
+      file,
+      url: URL.createObjectURL(file),
+    }));
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setPreview(nextPreview);
     });
 
-    setPreview(nextPreview);
-
     return () => {
-      for (const p of nextPreview) URL.revokeObjectURL(p.url);
+      active = false;
+      for (const attachment of nextPreview) URL.revokeObjectURL(attachment.url);
     };
   }, [attachments]);
 
   const imageList = preview.filter((p) => p.type === "image");
-  if (attachments.length === 0) return null;
 
   return (
     <div

@@ -18,8 +18,6 @@ export const getLatestAppVersion = createServerFn({ method: "GET" }).handler(asy
 // The hook's job is simple: return true if a new version is available.
 export function useVersionWatcher() {
   const [isNewVersionAvailable, setIsNewVersionAvailable] = useState(false);
-  const currentVersion = __APP_VERSION__;
-
   const running = useRef(false);
   const intervalId = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -36,7 +34,7 @@ export function useVersionWatcher() {
       const data: VersionResponse = await getLatestAppVersion();
       const latestVersion = data.version;
 
-      if (latestVersion && latestVersion !== currentVersion) {
+      if (latestVersion && latestVersion !== __APP_VERSION__) {
         setIsNewVersionAvailable(true);
         if (intervalId.current) {
           clearInterval(intervalId.current);
@@ -72,7 +70,7 @@ export function useVersionWatcher() {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [currentVersion]);
+  }, []);
 
   return isNewVersionAvailable;
 }

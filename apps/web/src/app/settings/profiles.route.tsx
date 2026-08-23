@@ -3,7 +3,7 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useMutation } from "convex/react";
 import { PlusIcon, SearchIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { z } from "zod";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -156,7 +156,7 @@ function AiProfilesPage() {
   const searchParams = Route.useSearch();
   const navigate = Route.useNavigate();
 
-  const [search, setSearch] = useState(searchParams.q ?? "");
+  const search = searchParams.q ?? "";
   const debouncedSearch = useDebounce(search, 300);
   const sort = searchParams.sort ?? ("recently-updated" satisfies SortOption);
 
@@ -175,21 +175,15 @@ function AiProfilesPage() {
 
   const dialogRef = useRef<ProfilesDialogControllerHandle | null>(null);
 
-  useEffect(() => {
-    setSearch(searchParams.q ?? "");
-  }, [searchParams.q]);
-
-  useEffect(() => {
-    if (debouncedSearch === (searchParams.q ?? "")) return;
-
+  function onSearchChange(value: string) {
     void navigate({
       replace: true,
       search: (previous) => ({
         ...previous,
-        q: debouncedSearch.trim().length === 0 ? undefined : debouncedSearch,
+        q: value.trim().length === 0 ? undefined : value,
       }),
     });
-  }, [debouncedSearch, navigate, searchParams.q]);
+  }
 
   function onSortChange(value: SortOption) {
     void navigate({
@@ -199,7 +193,7 @@ function AiProfilesPage() {
   }
 
   function onClearSearch() {
-    setSearch("");
+    onSearchChange("");
   }
 
   function onCreate() {
@@ -231,7 +225,7 @@ function AiProfilesPage() {
         <div className="flex flex-col gap-4">
           <ProfilesHeader
             search={search}
-            onSearchChange={setSearch}
+            onSearchChange={onSearchChange}
             sort={sort}
             onSortChange={onSortChange}
             onCreate={onCreate}

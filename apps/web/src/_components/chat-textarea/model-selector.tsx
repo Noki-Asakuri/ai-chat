@@ -18,7 +18,14 @@ import { Icons } from "@/components/ui/icons";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-import { SelectableModelIds, prettifyProviderName, tryGetModelData, type Provider } from "@/lib/chat/models";
+import {
+  SelectableModelIds,
+  getDefaultReasoning,
+  getReasoningOptions,
+  prettifyProviderName,
+  tryGetModelData,
+  type Provider,
+} from "@/lib/chat/models";
 import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
 import { chatStoreActions } from "@/lib/store/chat-store";
 import { cn, tryCatch } from "@/lib/utils";
@@ -560,11 +567,20 @@ export function ChatModelSelector() {
   const isWelcomeRoute = !params?.threadId;
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
 
-  const storeModel = useConfigStore((state) => state.model);
-  const setConfig = useConfigStore((state) => state.setConfig);
+  const { effort, storeModel, setConfig, setModelParams } = useConfigStore(
+    useShallow((state) => ({
+      effort: state.modelParams.effort,
+      storeModel: state.model,
+      setConfig: state.setConfig,
+      setModelParams: state.setModelParams,
+    })),
+  );
 
   function handleChange(model: string) {
     chatStoreActions.retainCompatibleAttachments(model);
+    const modelData = tryGetModelData(model);
+    const nextEffort =
+      modelData && !getReasoningOptions(modelData).includes(effort) ? getDefaultReasoning(modelData) : effort;
 
     if (isWelcomeRoute) {
       setConfig({ model, defaultModel: model });
@@ -572,7 +588,8 @@ export function ChatModelSelector() {
       setConfig({ model });
     }
 
-    void syncThreadModelConfig({ model });
+    if (nextEffort !== effort) setModelParams({ effort: nextEffort });
+    void syncThreadModelConfig({ model, modelParams: { effort: nextEffort } });
   }
 
   return (
