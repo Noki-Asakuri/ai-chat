@@ -542,7 +542,7 @@ const messageWithAttachmentsValidator = v.object({
   userId: v.string(),
   messageId: v.string(),
   error: v.optional(v.string()),
-  parts: AISDKParts,
+  parts: v.any(),
   status,
   role: v.union(v.literal("assistant"), v.literal("user")),
   resumableStreamId: v.optional(v.nullable(v.string())),
