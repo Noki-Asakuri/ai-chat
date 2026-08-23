@@ -101,10 +101,10 @@ function fixLatexOutsideInlineCode(text: string): string {
 
 function fixLatexInProse(text: string): string {
   const fixedDelimiters = text
-    .replace(/\\(\(|\[)/g, function replaceOpeningDelimiter(_, delimiter: string) {
+    .replace(/(?<!\\)\\(\(|\[)/g, function replaceOpeningDelimiter(_, delimiter: string) {
       return delimiter === "(" ? "$ " : "$$\n";
     })
-    .replace(/\\(\)|\])/g, function replaceClosingDelimiter(_, delimiter: string) {
+    .replace(/(?<!\\)\\(\)|\])/g, function replaceClosingDelimiter(_, delimiter: string) {
       return delimiter === ")" ? " $" : "\n$$";
     })
     .replace(/\$\$[\w].*(\n)[\W\w].*\$\$/g, function collapseDisplayMathLines(match) {

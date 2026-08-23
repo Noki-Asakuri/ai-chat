@@ -4,6 +4,8 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import { tryCatch } from "@ai-chat/shared/utils/async";
 
 import appCss from "@/styles/globals.css?url";
+import katexStyles from "katex/dist/katex.min.css?url";
+import streamdownStyles from "streamdown/styles.css?url";
 
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
@@ -104,6 +106,8 @@ export const Route = createRootRouteWithContext<RootContext>()({
       ],
       links: [
         // Manifests
+        { rel: "stylesheet", href: streamdownStyles },
+        { rel: "stylesheet", href: katexStyles },
         { rel: "stylesheet", href: appCss },
         { rel: "manifest", href: "/manifest.webmanifest" },
 

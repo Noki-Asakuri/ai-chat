@@ -1,5 +1,3 @@
-import katexStyles from "katex/dist/katex.min.css?url";
-
 import { cjk } from "@streamdown/cjk";
 import { createMathPlugin } from "@streamdown/math";
 import { createMermaidPlugin } from "@streamdown/mermaid";
@@ -18,8 +16,6 @@ import { normalizeCodeFenceLanguages } from "./utils/normalize-code-fence-langua
 
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-void katexStyles;
 
 type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
   role: ChatMessage["role"];

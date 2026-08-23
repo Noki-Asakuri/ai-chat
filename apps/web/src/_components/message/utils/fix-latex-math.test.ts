@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { renderToString } from "katex";
 
 import { fixLatexMath } from "./fix-latex-math";
 
@@ -81,5 +82,23 @@ describe("fixLatexMath", function () {
     const input = "Inline \\(a+b\\), raw $ c+d $, and block $$\nx^2\n$$";
 
     expect(fixLatexMath(input)).toBe("Inline $ a+b $, raw $ c+d $, and block $$\nx^2\n$$");
+  });
+
+  test("preserves aligned row spacing inside display math", function () {
+    const input = [
+      "$$",
+      "\\begin{aligned}",
+      "f(x) &= x^2 \\\\[1.25em]",
+      "g(x) &= x^3 \\\\[0.4em]",
+      "h(x) &= x^4",
+      "\\end{aligned}",
+      "$$",
+    ].join("\n");
+
+    const fixed = fixLatexMath(input);
+    const latex = fixed.slice(3, -3);
+
+    expect(fixed).toBe(input);
+    expect(() => renderToString(latex, { displayMode: true, throwOnError: true })).not.toThrow();
   });
 });

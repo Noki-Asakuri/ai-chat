@@ -1,5 +1,3 @@
-import streamdownStyles from "streamdown/styles.css?url";
-
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
@@ -11,8 +9,6 @@ import { getCookie } from "@tanstack/react-start/server";
 import { convexQuery } from "@convex-dev/react-query";
 import { getAuth } from "@workos/authkit-tanstack-react-start";
 import { Suspense } from "react";
-
-void streamdownStyles;
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { GlobalDropzone } from "@/components/chat/global-dropzone";
