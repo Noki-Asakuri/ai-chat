@@ -101,7 +101,10 @@ export async function printStartupBanner(port: string | number): Promise<void> {
 
 export function registerShutdownHandler(server: Bun.Server<undefined>) {
   function shutdown(signal: "SIGINT" | "SIGTERM") {
-    if (shuttingDown) return;
+    if (shuttingDown) {
+      logger.warn(`[Server] ${signal} received during shutdown. Forcing process exit.`);
+      process.exit(signal === "SIGINT" ? 130 : 143);
+    }
     shuttingDown = true;
 
     logger.info(`[Server] ${signal} received. Draining in-flight requests...`, { inFlight: activeRequests });
