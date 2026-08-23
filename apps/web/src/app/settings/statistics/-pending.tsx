@@ -1,3 +1,4 @@
+/* oxlint-disable react/no-array-index-key -- Static skeleton placeholders are positionally stable. */
 import { SettingsSection } from "@/components/settings/settings-section";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";

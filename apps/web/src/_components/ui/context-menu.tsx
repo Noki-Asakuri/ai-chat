@@ -4,6 +4,7 @@ import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu
 import { ChevronRightIcon, CheckIcon } from "lucide-react";
 
 import { Icons } from "./icons";
+import { z } from "zod/v4";
 
 import { cn } from "@/lib/utils";
 
@@ -66,7 +67,8 @@ function ContextMenuContent({
 }
 
 function ContextMenuArrow({ className, ...props }: React.ComponentProps<typeof ContextMenuPrimitive.Arrow>) {
-  const arrowClassName = typeof className === "string" ? className : undefined;
+  const classNameResult = z.string().safeParse(className);
+  const arrowClassName = classNameResult.success ? classNameResult.data : undefined;
 
   return (
     <ContextMenuPrimitive.Arrow

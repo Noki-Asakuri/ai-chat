@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-import type { UIDataTypes, UIMessage, UITools } from "./ui";
+import type { UIMessage } from "./ui";
 
 export const reasoningEffortValues = ["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
 
@@ -28,4 +28,4 @@ export const metadataSchema = z
   .optional();
 
 export type Metadata = z.infer<typeof metadataSchema>;
-export type UIChatMessage = UIMessage<Metadata, UIDataTypes, UITools>;
+export type UIChatMessage = UIMessage<Metadata>;

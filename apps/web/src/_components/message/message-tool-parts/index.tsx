@@ -152,8 +152,8 @@ export function MessageToolParts({ parts, className }: MessageToolPartsProps) {
 
   return (
     <div className={cn("flex w-full flex-col gap-1", className)}>
-      {toolParts.map((part, index) => (
-        <MessageToolPart key={`${part.toolCallId}-${index}`} part={part} />
+      {toolParts.map((part) => (
+        <MessageToolPart key={part.toolCallId} part={part} />
       ))}
     </div>
   );

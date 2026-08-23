@@ -26,5 +26,5 @@ export const useThreadDialogStore = create<ThreadDialogStore>()((set) => ({
   closeThreadDialog: () => set({ activeDialog: null, thread: null }),
 }));
 
-export const threadDialogStoreActions =
-  useThreadDialogStore.getInitialState() as RemoveAllExceptFunctions<ThreadDialogStore>;
+export const threadDialogStoreActions: RemoveAllExceptFunctions<ThreadDialogStore> =
+  useThreadDialogStore.getInitialState();

@@ -84,7 +84,7 @@ export function ImageLightboxDialog(props: ImageLightboxDialogProps) {
   const resolvedWidth = active.width ?? activeImageState.naturalSize?.width;
   const resolvedHeight = active.height ?? activeImageState.naturalSize?.height;
   const metadata = [
-    typeof active.bytes === "number" ? format.size(active.bytes) : "",
+    active.bytes === undefined ? "" : format.size(active.bytes),
     resolvedWidth && resolvedHeight ? `${resolvedWidth}×${resolvedHeight}` : "",
   ]
     .filter(Boolean)

@@ -1,3 +1,4 @@
+/* oxlint-disable react/no-array-index-key -- Syntax tokens have no stable identity beyond position. */
 import type { HighlightResult } from "@streamdown/code";
 import { EllipsisIcon } from "lucide-react";
 import { type ComponentProps, type CSSProperties, memo, useMemo } from "react";
@@ -35,7 +36,7 @@ const LINE_NUMBER_CLASSES = cn(
  * Parse a CSS declarations string (e.g. Shiki's rootStyle) into a style object.
  * This extracts CSS custom properties like --shiki-dark-bg from Shiki's dual theme output.
  */
-function parseRootStyle(rootStyle: string): Record<string, string> {
+function parseRootStyle(rootStyle: string) {
   const style: Record<string, string> = {};
   for (const decl of rootStyle.split(";")) {
     const idx = decl.indexOf(":");
@@ -96,7 +97,7 @@ export const CodeBlockContent = memo(
         style.paddingBottom = `${virtualPaddingBottomPx}px`;
       }
 
-      return style as CSSProperties;
+      return style;
     }, [result.bg, result.fg, result.rootStyle, virtualPaddingBottomPx, virtualPaddingTopPx]);
 
     const boundedStartLineIndex = Math.max(0, startLineIndex);
@@ -153,7 +154,7 @@ export const CodeBlockContent = memo(
                   )}
                   // biome-ignore lint/suspicious/noArrayIndexKey: "This is a stable key."
                   key={tokenIndex}
-                  style={tokenStyle as CSSProperties}
+                  style={tokenStyle}
                   {...token.htmlAttrs}
                 >
                   {token.content}

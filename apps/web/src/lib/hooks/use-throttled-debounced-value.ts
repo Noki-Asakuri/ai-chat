@@ -8,7 +8,7 @@ export function useThrottledDebouncedValue<T>(value: T, delayMs: number): T {
     if (delayMs <= 0) {
       lastExecutedRef.current = Date.now();
       setRenderValue(value);
-      return;
+      return undefined;
     }
 
     const now = Date.now();
@@ -17,7 +17,7 @@ export function useThrottledDebouncedValue<T>(value: T, delayMs: number): T {
     if (elapsed >= delayMs) {
       lastExecutedRef.current = now;
       setRenderValue(value);
-      return;
+      return undefined;
     }
 
     const remaining = delayMs - elapsed;

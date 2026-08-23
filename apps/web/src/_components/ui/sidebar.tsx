@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { useIsMobile } from "@/lib/hooks/use-mobile";
-import { cn } from "@/lib/utils";
+import { cn, cssVariables } from "@/lib/utils";
 
 export const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -70,7 +70,7 @@ function SidebarProvider({
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
-      const openState = typeof value === "function" ? value(open) : value;
+      const openState = value === true || value === false ? value : value(open);
       if (setOpenProp) {
         setOpenProp(openState);
       } else {
@@ -85,8 +85,8 @@ function SidebarProvider({
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-  }, [isMobile, setOpen, setOpenMobile]);
+    return isMobile ? setOpenMobile((currentOpen) => !currentOpen) : setOpen((currentOpen) => !currentOpen);
+  }, [isMobile, setOpen]);
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -122,13 +122,11 @@ function SidebarProvider({
     <SidebarContext.Provider value={contextValue}>
       <div
         data-slot="sidebar-wrapper"
-        style={
-          {
+        style={cssVariables({
             "--sidebar-width": SIDEBAR_WIDTH,
             "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
             ...style,
-          } as React.CSSProperties
-        }
+          })}
         className={cn(
           "group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-sidebar",
           className,
@@ -178,11 +176,9 @@ function Sidebar({
           data-slot="sidebar"
           data-mobile="true"
           className="w-(--sidebar-width) p-0 text-sidebar-foreground [&>button]:hidden"
-          style={
-            {
+          style={cssVariables({
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-            } as React.CSSProperties
-          }
+            })}
           side={side}
         >
           <SheetHeader className="sr-only">
@@ -510,11 +506,8 @@ function SidebarMenuButton({
     return comp;
   }
 
-  if (typeof tooltip === "string") {
-    tooltip = {
-      children: tooltip,
-    };
-  }
+  const tooltipText = String(tooltip);
+  const tooltipProps = React.isValidElement(tooltip) ? { children: tooltip } : { children: tooltipText };
 
   return (
     <Tooltip>
@@ -523,7 +516,7 @@ function SidebarMenuButton({
         side="right"
         align="center"
         hidden={state !== "collapsed" || isMobile}
-        {...tooltip}
+        {...tooltipProps}
       />
     </Tooltip>
   );
@@ -596,11 +589,9 @@ function SidebarMenuSkeleton({
       <Skeleton
         className="h-4 max-w-(--skeleton-width) flex-1"
         data-sidebar="menu-skeleton-text"
-        style={
-          {
+        style={cssVariables({
             "--skeleton-width": width,
-          } as React.CSSProperties
-        }
+          })}
       />
     </div>
   );

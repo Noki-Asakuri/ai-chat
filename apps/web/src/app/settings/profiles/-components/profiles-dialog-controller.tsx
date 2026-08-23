@@ -32,8 +32,8 @@ export type ProfilesDialogControllerHandle = {
 
 type ProfilesDialogControllerProps = {
   ref?: React.Ref<ProfilesDialogControllerHandle>;
-  createProfile: (args: CreateProfileArgs) => Promise<unknown>;
-  updateProfile: (args: UpdateProfileArgs) => Promise<unknown>;
+  createProfile: (args: CreateProfileArgs) => Promise<Id<"profiles">>;
+  updateProfile: (args: UpdateProfileArgs) => Promise<null>;
   onAfterSubmit: () => void;
 };
 
@@ -55,7 +55,7 @@ export function ProfilesDialogController({
   useEffect(() => {
     if (!file) {
       setFilePreviewUrl(null);
-      return;
+      return undefined;
     }
 
     const objectUrl = URL.createObjectURL(file);
@@ -105,14 +105,6 @@ export function ProfilesDialogController({
           return;
         }
 
-        const uploadImage = uploadInput
-          ? function uploadImage() {
-              return uploadAiProfileImage(uploadInput.file);
-            }
-          : function uploadImage() {
-              return Promise.resolve(undefined);
-            };
-
         const saveProfile = editing
           ? function saveProfile(imageKey: string | undefined) {
               return updateProfile({
@@ -127,7 +119,7 @@ export function ProfilesDialogController({
             };
 
         try {
-          const imageKey = await uploadImage();
+          const imageKey = uploadInput ? await uploadAiProfileImage(uploadInput.file) : undefined;
           await saveProfile(imageKey);
 
           setOpen(false);

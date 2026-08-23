@@ -55,8 +55,8 @@ export function groupByDate(threads: Thread[]) {
     }
   });
 
-  for (const key in groupedThreads) {
-    groupedThreads[key as keyof GroupThreadsType].sort((a, b) => b.updatedAt - a.updatedAt);
+  for (const group of Object.values(groupedThreads)) {
+    group.sort((a, b) => b.updatedAt - a.updatedAt);
   }
 
   return groupedThreads;

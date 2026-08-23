@@ -1,3 +1,4 @@
+/* oxlint-disable no-await-in-loop -- Share-token collision checks must be sequential. */
 import { getAll } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
 
@@ -134,11 +135,10 @@ function buildThreadMessageGraph(messages: MessageDoc[]): ThreadMessageGraph {
     parentUserIdByAssistantId[assistantMessage._id] = parentUserMessageId;
   }
 
-  const groupedUserMessageIds = Object.keys(assistantsByUserId) as Array<Id<"messages">>;
-  for (const userMessageId of groupedUserMessageIds) {
-    const variants = assistantsByUserId[userMessageId];
+  for (const userMessage of users) {
+    const variants = assistantsByUserId[userMessage._id];
     if (!variants || variants.length === 0) continue;
-    assistantsByUserId[userMessageId] = sortAssistantVariants(variants);
+    assistantsByUserId[userMessage._id] = sortAssistantVariants(variants);
   }
 
   const activeAssistantByUserId: Record<Id<"messages">, AssistantMessageDoc> = {};
@@ -557,7 +557,7 @@ export const getSharedThread = query({
       variantMessageIdsByUserMessageId[userMessageId] = [];
 
       for (const variant of variants) {
-        variantMessageIdsByUserMessageId[userMessageId]!.push(variant._id);
+        variantMessageIdsByUserMessageId[userMessageId].push(variant._id);
       }
     }
 

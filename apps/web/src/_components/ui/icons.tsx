@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/prefer-tag-over-role -- Brand SVGs intentionally expose image semantics. */
 import type { Provider } from "@/lib/chat/models";
 
 type IconProps = React.HTMLAttributes<SVGElement>;

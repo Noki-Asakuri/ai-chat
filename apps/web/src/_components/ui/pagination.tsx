@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/anchor-has-content -- Pagination links receive content through the render prop. */
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
@@ -131,3 +132,4 @@ export {
   PaginationNext,
   PaginationPrevious,
 }
+/* eslint-disable jsx-a11y/anchor-has-content -- Pagination links receive content through the render prop. */

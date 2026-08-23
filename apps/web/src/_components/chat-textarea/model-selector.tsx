@@ -1,3 +1,5 @@
+/* eslint-disable jsx-a11y/prefer-tag-over-role -- Base UI requires ARIA combobox/listbox roles on its composed primitives. */
+/* eslint-disable jsx-a11y/click-events-have-key-events -- Base UI provides keyboard handling for composed options. */
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { useParams } from "@tanstack/react-router";
@@ -46,8 +48,37 @@ type ModelGroup = {
 
 export const PROVIDER_ORDER: Array<Provider> = ["google", "openai", "deepseek", "kimi", "zai"];
 
-export function createEmptyProviderModels<T>(): Record<Provider, Array<T>> {
-  return { google: [], openai: [], deepseek: [], kimi: [], zai: [] };
+export function createEmptyProviderModels<T>() {
+  return {
+    google: Array<T>(),
+    openai: Array<T>(),
+    deepseek: Array<T>(),
+    kimi: Array<T>(),
+    zai: Array<T>(),
+  };
+}
+
+function stopFavoriteMouseDown(event: React.MouseEvent<HTMLButtonElement>): void {
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function renderTriggerValue(nextValue: string) {
+  const modelData = tryGetModelData(nextValue);
+  if (!modelData) {
+    return (
+      <div className="flex min-w-0 items-center gap-2">
+        <Icons.unknown className="size-4 shrink-0" />
+        <span className="min-w-0 truncate">Unknown model</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <Icons.provider provider={modelData.provider} className="size-4 shrink-0" />
+      <span className="min-w-0 truncate">{modelData.display.unique ?? modelData.display.name}</span>
+    </div>
+  );
 }
 
 export function compareModelLabelsNewestFirst(a: { label: string }, b: { label: string }): number {
@@ -362,26 +393,6 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
     }
   }
 
-  function renderTriggerValue(nextValue: string) {
-    const modelData = tryGetModelData(nextValue);
-
-    if (!modelData) {
-      return (
-        <div className="flex min-w-0 items-center gap-2">
-          <Icons.unknown className="size-4 shrink-0" />
-          <span className="min-w-0 truncate">Unknown model</span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex min-w-0 items-center gap-2">
-        <Icons.provider provider={modelData.provider} className="size-4 shrink-0" />
-        <span className="min-w-0 truncate">{modelData.display.unique ?? modelData.display.name}</span>
-      </div>
-    );
-  }
-
   return (
     <Popover
       onOpenChange={(open) => {
@@ -416,7 +427,6 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
           <div className="border-b border-border px-3 py-2.5">
             <InputGroup className="h-9 border-input bg-background/70 shadow-none! *:data-[slot=input-group-addon]:pl-2.5!">
               <InputGroupInput
-                autoFocus
                 role="combobox"
                 aria-expanded="true"
                 aria-controls={listId}
@@ -609,11 +619,6 @@ function ModelItem({
     onChange?.(modelId);
   }
 
-  function handleFavoriteMouseDown(event: React.MouseEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
   function handleFavoriteClick(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.stopPropagation();
@@ -622,6 +627,7 @@ function ModelItem({
 
   return (
     <div
+      tabIndex={0}
       id={optionId}
       role="option"
       aria-selected={selected}
@@ -647,7 +653,7 @@ function ModelItem({
 
         <button
           type="button"
-          onMouseDown={handleFavoriteMouseDown}
+          onMouseDown={stopFavoriteMouseDown}
           onClick={handleFavoriteClick}
           disabled={pendingFavorite}
           aria-label={favorite ? `Remove ${displayName} from favorites` : `Favorite ${displayName}`}

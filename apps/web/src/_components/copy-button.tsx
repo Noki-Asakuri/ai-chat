@@ -12,9 +12,9 @@ export function CopyButton({ content, className, ...props }: CopyButtonProps) {
   const [pending, startTransition] = useTransition();
   const [, copyToClipboard] = useCopyToClipboard();
 
-  function copeMessageContent(content: string) {
+  function copeMessageContent(text: string) {
     startTransition(async () => {
-      await copyToClipboard(content.trim());
+      await copyToClipboard(text.trim());
       await new Promise((resolve) => setTimeout(resolve, 1000));
     });
   }

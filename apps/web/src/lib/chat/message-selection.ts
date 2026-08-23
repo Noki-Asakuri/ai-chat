@@ -6,6 +6,12 @@ export type MessageSelection = {
   y: number;
 };
 
+declare global {
+  interface WindowEventMap {
+    [MESSAGE_SELECTION_EVENT]: CustomEvent<MessageSelection | null>;
+  }
+}
+
 export function clearMessageSelection(): void {
   window.dispatchEvent(new CustomEvent<MessageSelection | null>(MESSAGE_SELECTION_EVENT, { detail: null }));
 }

@@ -1,3 +1,4 @@
+/* oxlint-disable no-await-in-loop -- Convex transaction writes are intentionally sequenced. */
 import { v } from "convex/values";
 
 import { internalMutation } from "../_generated/server";

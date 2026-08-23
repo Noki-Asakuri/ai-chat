@@ -11,9 +11,9 @@ import { cn } from "@/lib/utils";
 export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
   const configStore = useConfigStoreState();
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
-  const state = useConfigStore((state) => state);
+  const configState = useConfigStore((currentState) => currentState);
 
-  const isActive = state.modelParams.profile === profile._id;
+  const isActive = configState.modelParams.profile === profile._id;
   const profileImageUrl = profile.imageKey ? buildImageAssetUrl(profile.imageKey) : undefined;
 
   return (

@@ -49,9 +49,9 @@ function shortUserAgent(value: string | null): string {
   return value.length > 80 ? `${value.slice(0, 80)}…` : value;
 }
 
-function getQueryErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.length > 0) {
-    return error.message;
+function getQueryErrorMessage(cause: unknown): string {
+  if (cause instanceof Error && cause.message.length > 0) {
+    return cause.message;
   }
 
   return "Failed to load active sessions";
@@ -163,8 +163,8 @@ export function AccountSessionsCard() {
         closeRevokeDialog();
         await refetch();
         await router.invalidate();
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to revoke session");
+      } catch (cause) {
+        toast.error(cause instanceof Error ? cause.message : "Failed to revoke session");
       }
     });
   }

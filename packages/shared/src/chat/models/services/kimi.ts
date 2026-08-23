@@ -1,6 +1,6 @@
 import type { ModelData, ModelIdKey } from "..";
 
-export const kimi: Record<ModelIdKey, ModelData> = {
+export const kimi = {
   "kimi/kimi-k2.5": {
     display: { name: "Kimi K2.5" },
     id: "kimi/kimi-k2.5",
@@ -110,4 +110,4 @@ export const kimi: Record<ModelIdKey, ModelData> = {
       replacementModelId: "kimi/kimi-k3",
     },
   },
-};
+} satisfies Record<ModelIdKey, ModelData>;

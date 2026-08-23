@@ -1,6 +1,6 @@
 import type { ModelData, ModelIdKey } from "..";
 
-export const zai: Record<ModelIdKey, ModelData> = {
+export const zai = {
   "zai/glm-5.2": {
     display: { name: "ZAI GLM 5.2" },
     id: "zai/glm-5.2",
@@ -65,4 +65,4 @@ export const zai: Record<ModelIdKey, ModelData> = {
       toolCalling: true,
     },
   },
-};
+} satisfies Record<ModelIdKey, ModelData>;

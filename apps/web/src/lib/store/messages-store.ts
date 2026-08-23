@@ -123,34 +123,86 @@ export type MessagesStore = {
   finishRetryOperation: (threadId: Id<"threads">, operationId: string) => void;
 };
 
+function sortMessagesByCreatedAt(messages: ChatMessage[]): ChatMessage[] {
+  const sorted = [...messages];
+
+  sorted.sort((a, b) => {
+    const createdAtDelta = a.createdAt - b.createdAt;
+    if (createdAtDelta !== 0) return createdAtDelta;
+
+    const creationTimeDelta = a._creationTime - b._creationTime;
+    if (creationTimeDelta !== 0) return creationTimeDelta;
+
+    return a.updatedAt - b.updatedAt;
+  });
+
+  return sorted;
+}
+
+function updateCurrentViewFromThread(
+  state: MessagesStore,
+  threadId: Id<"threads"> | null,
+): void {
+  const thread = threadId ? state.threadsById[threadId] : undefined;
+  if (!thread) {
+    state.allMessageIds = [];
+    state.messageIds = [];
+    state.messagesById = {};
+    state.variantMessageIdsByUserMessageId = {};
+    state.userMessageIdByMessageId = {};
+    state.activeAssistantMessageIdByUserMessageId = {};
+    return;
+  }
+
+  state.allMessageIds = thread.allMessageIds;
+  state.messageIds = thread.messageIds;
+  state.messagesById = thread.messagesById;
+  state.variantMessageIdsByUserMessageId = thread.variantMessageIdsByUserMessageId;
+  state.userMessageIdByMessageId = thread.userMessageIdByMessageId;
+  state.activeAssistantMessageIdByUserMessageId =
+    thread.activeAssistantMessageIdByUserMessageId;
+}
+
+function mergeServerMessage(
+  existing: ChatMessage,
+  incoming: ChatMessage,
+  localMeta: LocalMessageMeta | undefined,
+): ChatMessage {
+  const localComparableTime = Math.max(existing.updatedAt, localMeta?.localUpdatedAt ?? 0);
+  const localHasStreamProgress = (localMeta?.localRevision ?? 0) > 0;
+
+  if (localHasStreamProgress && incoming.updatedAt < localComparableTime) {
+    const isAbortUpdate =
+      incoming.metadata?.finishReason === "aborted" ||
+      (incoming.status === "complete" && incoming.resumableStreamId === null);
+
+    return {
+      ...incoming,
+      parts: existing.parts,
+      status: isAbortUpdate ? incoming.status : existing.status,
+      metadata: isAbortUpdate ? incoming.metadata : existing.metadata,
+      error: incoming.error ?? existing.error,
+      resumableStreamId: isAbortUpdate
+        ? incoming.resumableStreamId
+        : (incoming.resumableStreamId ?? existing.resumableStreamId),
+      attachments: incoming.attachments.length ? incoming.attachments : existing.attachments,
+    };
+  }
+
+  return incoming;
+}
+
 export const useMessageStore = create<MessagesStore>()(
   immer((set) => {
-    function sortMessagesByCreatedAt(messages: ChatMessage[]): ChatMessage[] {
-      const sorted = [...messages];
-
-      sorted.sort((a, b) => {
-        const createdAtDelta = a.createdAt - b.createdAt;
-        if (createdAtDelta !== 0) return createdAtDelta;
-
-        const creationTimeDelta = a._creationTime - b._creationTime;
-        if (creationTimeDelta !== 0) return creationTimeDelta;
-
-        return a.updatedAt - b.updatedAt;
-      });
-
-      return sorted;
-    }
-
     function sanitizeVariantMap(
       variantMap: VariantMessageIdsByUserMessageId,
       messagesById: Record<Id<"messages">, ChatMessage>,
-    ): VariantMessageIdsByUserMessageId {
+    ) {
       const next: VariantMessageIdsByUserMessageId = {};
 
-      const userMessageIds = Object.keys(variantMap) as Array<Id<"messages">>;
-      for (const userMessageId of userMessageIds) {
-        const userMessage = messagesById[userMessageId];
-        if (!userMessage || userMessage.role !== "user") continue;
+      for (const userMessage of Object.values(messagesById)) {
+        if (userMessage.role !== "user") continue;
+        const userMessageId = userMessage._id;
 
         const variants = variantMap[userMessageId] ?? [];
         const nextVariants: Array<Id<"messages">> = [];
@@ -170,7 +222,7 @@ export const useMessageStore = create<MessagesStore>()(
 
     function buildVariantMapFromCanonical(
       messages: ChatMessage[],
-    ): VariantMessageIdsByUserMessageId {
+    ) {
       const next: VariantMessageIdsByUserMessageId = {};
 
       let previousUserMessageId: Id<"messages"> | null = null;
@@ -197,7 +249,7 @@ export const useMessageStore = create<MessagesStore>()(
       canonicalMessages: ChatMessage[],
       allMessagesById: Record<Id<"messages">, ChatMessage>,
       variantMap: VariantMessageIdsByUserMessageId,
-    ): UserMessageIdByMessageId {
+    ) {
       const next: UserMessageIdByMessageId = {};
 
       for (const message of canonicalMessages) {
@@ -221,8 +273,9 @@ export const useMessageStore = create<MessagesStore>()(
         next[message._id] = parentUserMessageId;
       }
 
-      const userMessageIds = Object.keys(variantMap) as Array<Id<"messages">>;
-      for (const userMessageId of userMessageIds) {
+      for (const message of Object.values(allMessagesById)) {
+        if (message.role !== "user") continue;
+        const userMessageId = message._id;
         next[userMessageId] = userMessageId;
 
         const variants = variantMap[userMessageId] ?? [];
@@ -231,13 +284,11 @@ export const useMessageStore = create<MessagesStore>()(
         }
       }
 
-      const messageIds = Object.keys(allMessagesById) as Array<Id<"messages">>;
-      for (const messageId of messageIds) {
-        const message = allMessagesById[messageId];
-        if (!message || message.role !== "assistant") continue;
+      for (const message of Object.values(allMessagesById)) {
+        if (message.role !== "assistant") continue;
 
         if (!message.parentUserMessageId) continue;
-        next[messageId] = message.parentUserMessageId;
+        next[message._id] = message.parentUserMessageId;
       }
 
       return next;
@@ -247,7 +298,7 @@ export const useMessageStore = create<MessagesStore>()(
       canonicalMessages: ChatMessage[],
       variantMap: VariantMessageIdsByUserMessageId,
       userMessageMap: UserMessageIdByMessageId,
-    ): ActiveAssistantMessageIdByUserMessageId {
+    ) {
       const next: ActiveAssistantMessageIdByUserMessageId = {};
 
       let previousUserMessageId: Id<"messages"> | null = null;
@@ -265,8 +316,9 @@ export const useMessageStore = create<MessagesStore>()(
         next[userMessageId] = message._id;
       }
 
-      const userMessageIds = Object.keys(variantMap) as Array<Id<"messages">>;
-      for (const userMessageId of userMessageIds) {
+      for (const message of canonicalMessages) {
+        if (message.role !== "user") continue;
+        const userMessageId = message._id;
         if (next[userMessageId]) continue;
 
         const variants = variantMap[userMessageId] ?? [];
@@ -376,13 +428,12 @@ export const useMessageStore = create<MessagesStore>()(
       existingMap: VariantMessageIdsByUserMessageId,
       incomingMap: VariantMessageIdsByUserMessageId,
       messagesById: Record<Id<"messages">, ChatMessage>,
-    ): VariantMessageIdsByUserMessageId {
+    ) {
       const merged: VariantMessageIdsByUserMessageId = {};
 
-      const existingUserIds = Object.keys(existingMap) as Array<Id<"messages">>;
-      for (const userMessageId of existingUserIds) {
-        const userMessage = messagesById[userMessageId];
-        if (!userMessage || userMessage.role !== "user") continue;
+      for (const userMessage of Object.values(messagesById)) {
+        if (userMessage.role !== "user") continue;
+        const userMessageId = userMessage._id;
 
         const variants = existingMap[userMessageId] ?? [];
         const validVariants: Array<Id<"messages">> = [];
@@ -398,10 +449,9 @@ export const useMessageStore = create<MessagesStore>()(
         }
       }
 
-      const incomingUserIds = Object.keys(incomingMap) as Array<Id<"messages">>;
-      for (const userMessageId of incomingUserIds) {
-        const userMessage = messagesById[userMessageId];
-        if (!userMessage || userMessage.role !== "user") continue;
+      for (const userMessage of Object.values(messagesById)) {
+        if (userMessage.role !== "user") continue;
+        const userMessageId = userMessage._id;
 
         const previousVariants = merged[userMessageId] ?? [];
         const incomingVariants = incomingMap[userMessageId] ?? [];
@@ -431,75 +481,6 @@ export const useMessageStore = create<MessagesStore>()(
       }
 
       return merged;
-    }
-
-    function updateCurrentViewFromThread(
-      state: MessagesStore,
-      threadId: Id<"threads"> | null,
-    ): void {
-      if (!threadId) {
-        state.allMessageIds = [];
-        state.messageIds = [];
-        state.messagesById = {};
-
-        state.variantMessageIdsByUserMessageId = {};
-        state.userMessageIdByMessageId = {};
-        state.activeAssistantMessageIdByUserMessageId = {};
-        return;
-      }
-
-      const thread = state.threadsById[threadId];
-      if (!thread) {
-        state.allMessageIds = [];
-        state.messageIds = [];
-        state.messagesById = {};
-
-        state.variantMessageIdsByUserMessageId = {};
-        state.userMessageIdByMessageId = {};
-        state.activeAssistantMessageIdByUserMessageId = {};
-        return;
-      }
-
-      state.allMessageIds = thread.allMessageIds;
-      state.messageIds = thread.messageIds;
-      state.messagesById = thread.messagesById;
-
-      state.variantMessageIdsByUserMessageId = thread.variantMessageIdsByUserMessageId;
-      state.userMessageIdByMessageId = thread.userMessageIdByMessageId;
-      state.activeAssistantMessageIdByUserMessageId =
-        thread.activeAssistantMessageIdByUserMessageId;
-    }
-
-    function mergeServerMessage(
-      existing: ChatMessage,
-      incoming: ChatMessage,
-      localMeta: LocalMessageMeta | undefined,
-    ): ChatMessage {
-      const localComparableTime = Math.max(existing.updatedAt, localMeta?.localUpdatedAt ?? 0);
-      const localHasStreamProgress = (localMeta?.localRevision ?? 0) > 0;
-
-      if (localHasStreamProgress && incoming.updatedAt < localComparableTime) {
-        const isAbortUpdate =
-          incoming.metadata?.finishReason === "aborted" ||
-          (incoming.status === "complete" && incoming.resumableStreamId === null);
-
-        // Server snapshot is behind what the client has already accumulated from streaming.
-        // Keep local streaming-sensitive fields while still allowing server to fill in other fields.
-        // Exception: abort completion is a terminal update, so we must accept it even if timestamps race.
-        return {
-          ...incoming,
-          parts: existing.parts,
-          status: isAbortUpdate ? incoming.status : existing.status,
-          metadata: isAbortUpdate ? incoming.metadata : existing.metadata,
-          error: incoming.error ?? existing.error,
-          resumableStreamId: isAbortUpdate
-            ? incoming.resumableStreamId
-            : (incoming.resumableStreamId ?? existing.resumableStreamId),
-          attachments: incoming.attachments.length ? incoming.attachments : existing.attachments,
-        };
-      }
-
-      return incoming;
     }
 
     return {
@@ -879,7 +860,7 @@ export const useMessageStore = create<MessagesStore>()(
 
       controllers: {},
       setController: function setController(threadId, entry) {
-        set(function set(state) {
+        set(function updateController(state) {
           state.controllers[threadId] = entry;
         });
       },
@@ -915,5 +896,5 @@ export const useMessageStore = create<MessagesStore>()(
   }),
 );
 
-export const messageStoreActions =
-  useMessageStore.getInitialState() as RemoveAllExceptFunctions<MessagesStore>;
+export const messageStoreActions: RemoveAllExceptFunctions<MessagesStore> =
+  useMessageStore.getInitialState();

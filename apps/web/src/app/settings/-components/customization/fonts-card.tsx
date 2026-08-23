@@ -28,6 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { CodeBlock } from "@/components/ui/code-block";
 import { cn } from "@/lib/utils";
+import { z } from "zod/v4";
 
 const SUPPORTED_FONTS = ["JetBrains Mono", "Space Grotesk"];
 const FONT_SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
@@ -41,7 +42,7 @@ const CODE_PREVIEW = `type User = {
 
 export function formatUser(user: User) {
   const displayName = user.name.trim();
-  return \`${"${displayName}"} <${"${user.email}"}>\`;
+  return \`\${displayName} <\${user.email}>\`;
 }`;
 const CODE_PREVIEW_HIGHLIGHT: HighlightResult = {
   bg: "transparent",
@@ -139,7 +140,7 @@ export function FontsCard(props: FontsCardProps) {
   const [deviceFonts, setDeviceFonts] = useState<string[]>([]);
   const [fontAccessStatus, setFontAccessStatus] = useState<FontAccessStatus>("idle");
 
-  const availableFonts = [...new Set([...SUPPORTED_FONTS, ...deviceFonts])].sort((left, right) =>
+  const availableFonts = [...new Set([...SUPPORTED_FONTS, ...deviceFonts])].toSorted((left, right) =>
     left.localeCompare(right),
   );
 
@@ -162,7 +163,7 @@ export function FontsCard(props: FontsCardProps) {
         if (family.length > 0) families.push(family);
       }
 
-      const nextDeviceFonts = [...new Set(families)].sort((left, right) => left.localeCompare(right));
+      const nextDeviceFonts = [...new Set(families)].toSorted((left, right) => left.localeCompare(right));
       window.localStorage.setItem(FONT_ACCESS_STORAGE_KEY, "granted");
       window.localStorage.setItem(DEVICE_FONTS_STORAGE_KEY, JSON.stringify(nextDeviceFonts));
       setDeviceFonts(nextDeviceFonts);
@@ -195,14 +196,8 @@ export function FontsCard(props: FontsCardProps) {
 
     if (storedFonts) {
       try {
-        const parsedFonts: unknown = JSON.parse(storedFonts);
-        if (Array.isArray(parsedFonts)) {
-          const validFonts: string[] = [];
-          for (const font of parsedFonts) {
-            if (typeof font === "string" && font.trim().length > 0) validFonts.push(font);
-          }
-          setDeviceFonts([...new Set(validFonts)]);
-        }
+        const parsedFonts = z.array(z.string().trim().min(1)).safeParse(JSON.parse(storedFonts));
+        if (parsedFonts.success) setDeviceFonts([...new Set(parsedFonts.data)]);
       } catch {
         window.localStorage.removeItem(DEVICE_FONTS_STORAGE_KEY);
       }
@@ -438,7 +433,7 @@ function FontCombobox(props: FontComboboxProps) {
         className="w-[var(--anchor-width)] min-w-64 gap-0 overflow-hidden p-0"
       >
         <Command shouldFilter={false}>
-          <CommandInput placeholder="Search fonts…" value={query} onValueChange={setQuery} autoFocus />
+          <CommandInput placeholder="Search fonts…" value={query} onValueChange={setQuery}  />
           <CommandList className="max-h-72 p-1">
             {visibleFonts.length === 0 ? (
               <CommandEmpty>No fonts found.</CommandEmpty>

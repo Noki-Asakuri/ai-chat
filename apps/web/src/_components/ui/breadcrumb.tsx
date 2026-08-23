@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/anchor-has-content -- Breadcrumb links receive content through the render prop. */
 import * as React from "react"
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
@@ -59,11 +60,10 @@ function BreadcrumbLink({
   })
 }
 
-function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
+function BreadcrumbPage({ className, ...props }: React.ComponentProps<"a">) {
   return (
-    <span
+    <a
       data-slot="breadcrumb-page"
-      role="link"
       aria-disabled="true"
       aria-current="page"
       className={cn("text-foreground font-normal", className)}
@@ -124,3 +124,4 @@ export {
   BreadcrumbSeparator,
   BreadcrumbEllipsis,
 }
+/* eslint-disable jsx-a11y/anchor-has-content -- Breadcrumb links receive content through the render prop. */

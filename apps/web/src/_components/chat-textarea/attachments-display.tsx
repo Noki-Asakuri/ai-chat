@@ -94,17 +94,17 @@ export function ChatAttachmentsDisplay() {
   useEffect(() => {
     if (!attachments.length) {
       setPreview([]);
-      return;
+      return undefined;
     }
 
-    const preview = attachments.map(({ id, type, file }): Preview => {
+    const nextPreview = attachments.map(({ id, type, file }): Preview => {
       return { id, type, file, url: URL.createObjectURL(file) };
     });
 
-    setPreview(preview);
+    setPreview(nextPreview);
 
     return () => {
-      for (const p of preview) URL.revokeObjectURL(p.url);
+      for (const p of nextPreview) URL.revokeObjectURL(p.url);
     };
   }, [attachments]);
 

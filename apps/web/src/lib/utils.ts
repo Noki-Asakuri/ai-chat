@@ -2,10 +2,16 @@ import { tryCatch, tryCatchSync } from "@ai-chat/shared/utils/async";
 
 export { cn } from "cnfast";
 
+type CSSVariables = React.CSSProperties & Partial<Record<`--${string}`, string | number>>;
+
+export function cssVariables(variables: CSSVariables): CSSVariables {
+  return variables;
+}
+
 const BYTE_UNITS = ["byte", "kilobyte", "megabyte", "gigabyte"] as const;
 type ByteUnit = (typeof BYTE_UNITS)[number];
 
-const defaultByteFormatters: Record<ByteUnit, Intl.NumberFormat> = {
+const defaultByteFormatters = {
   byte: new Intl.NumberFormat("en-US", {
     style: "unit",
     unit: "byte",
@@ -30,7 +36,7 @@ const defaultByteFormatters: Record<ByteUnit, Intl.NumberFormat> = {
     unitDisplay: "short",
     maximumFractionDigits: 2,
   }),
-};
+} satisfies Record<ByteUnit, Intl.NumberFormat>;
 
 const byteFormatters = new Map<string, Intl.NumberFormat>();
 
@@ -71,6 +77,8 @@ export function fromUUID<T extends string>(uuid: T | string | null): T | null;
 export function fromUUID<T extends string>(uuid: T | string | undefined): T | undefined;
 
 export function fromUUID<T extends string>(uuid?: T | string | null) {
+  // SAFETY: This removes only UUID separators and preserves the caller's branded string identity.
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion
   return uuid?.replaceAll("-", "") as T | undefined;
 }
 

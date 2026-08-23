@@ -74,7 +74,7 @@ export function ThreadDeleteDialog({
           <Checkbox
             id="delete-attachments"
             checked={checked}
-            onCheckedChange={(value) => setChecked(value === true)}
+            onCheckedChange={(value) => setChecked(value)}
             className="size-5"
           />
 

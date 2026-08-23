@@ -47,14 +47,14 @@ export async function generateNewThreadTitleAndSave(
     ],
   });
 
-  return convexClient.mutation(api.functions.threads.updateThreadTitle, {
+  await convexClient.mutation(api.functions.threads.updateThreadTitle, {
     threadId: options.threadId,
     title: text.trim(),
   });
 }
 
 function extractUserMessage(message: ModelMessage) {
-  if (typeof message.content === "string") return message.content;
+  if (!Array.isArray(message.content)) return message.content;
 
   const textParts = message.content.filter((part) => part.type === "text");
   if (!textParts.length) return "Empty Message";

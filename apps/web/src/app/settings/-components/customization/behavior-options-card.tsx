@@ -142,6 +142,7 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
               if (shouldSave) {
                 props.onBehaviorChange();
               }
+              return shouldSave;
             });
           }}
           aria-label="Desktop notifications"

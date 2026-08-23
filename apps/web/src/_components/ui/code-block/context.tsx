@@ -1,3 +1,4 @@
+/* oxlint-disable react/jsx-no-constructed-context-values -- React Compiler stabilizes provider values. */
 import { createContext, use, useState, type Dispatch } from "react";
 import { useShallow } from "zustand/shallow";
 
@@ -52,8 +53,11 @@ interface CodeBlockContextType {
 
 export const CodeBlockContext = createContext<CodeBlockContextType | null>(null);
 
-export const useCodeBlockContext = () =>
-  use(CodeBlockContext as React.Context<CodeBlockContextType>);
+export const useCodeBlockContext = () => {
+  const context = use(CodeBlockContext);
+  if (!context) throw new Error("useCodeBlockContext must be used inside CodeBlockProvider");
+  return context;
+};
 
 type CodeBlockProviderProps = {
   code: string;

@@ -167,7 +167,7 @@ function AiProfilesPage() {
     }),
     placeholderData: keepPreviousData,
   });
-  const profiles = (data ?? []) as Array<ProfileListItem>;
+  const profiles: Array<ProfileListItem> = data ?? [];
 
   const createProfile = useMutation(api.functions.profiles.createProfile);
   const updateProfile = useMutation(api.functions.profiles.updateProfile);

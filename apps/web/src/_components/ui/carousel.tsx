@@ -1,3 +1,5 @@
+/* eslint-disable jsx-a11y/prefer-tag-over-role -- The carousel API composes ARIA semantics onto configurable elements. */
+/* oxlint-disable react/jsx-no-constructed-context-values -- React Compiler stabilizes provider values. */
 import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
@@ -59,10 +61,10 @@ function Carousel({
   const [canScrollPrev, setCanScrollPrev] = React.useState(false)
   const [canScrollNext, setCanScrollNext] = React.useState(false)
 
-  const onSelect = React.useCallback((api: CarouselApi) => {
-    if (!api) return
-    setCanScrollPrev(api.canScrollPrev())
-    setCanScrollNext(api.canScrollNext())
+  const onSelect = React.useCallback((carouselApi: CarouselApi) => {
+    if (!carouselApi) return
+    setCanScrollPrev(carouselApi.canScrollPrev())
+    setCanScrollNext(carouselApi.canScrollNext())
   }, [])
 
   const scrollPrev = React.useCallback(() => {
@@ -92,7 +94,7 @@ function Carousel({
   }, [api, setApi])
 
   React.useEffect(() => {
-    if (!api) return
+    if (!api) return undefined
     onSelect(api)
     api.on("reInit", onSelect)
     api.on("select", onSelect)
@@ -240,3 +242,4 @@ export {
   CarouselNext,
   useCarousel,
 }
+/* eslint-disable jsx-a11y/prefer-tag-over-role -- The carousel API composes ARIA semantics onto configurable elements. */

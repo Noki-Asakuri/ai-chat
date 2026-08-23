@@ -1,3 +1,5 @@
+import { z } from "zod/v4";
+
 export const AUTH_ERROR_COOKIE_NAME = "auth-error";
 
 const STACK_TRACE_MAX_LENGTH = 1_000;
@@ -9,37 +11,24 @@ export type AuthErrorDiagnostic = {
   stackTruncated: boolean;
 };
 
-export function createAuthErrorDiagnostic(error: unknown): AuthErrorDiagnostic {
-  let code = "UnknownError";
-  let message = "Unknown authentication error";
-  let stack: string | null = null;
+const authErrorDiagnosticSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  stack: z.string().nullable(),
+  stackTruncated: z.boolean(),
+});
 
-  if (error instanceof Error) {
-    code = error.name;
-    message = error.message;
-    stack = error.stack ?? null;
+function getErrorCode(error: Error): string {
+  if (!("code" in error)) return error.name;
+  const result = z.string().safeParse(error.code);
+  return result.success ? result.data : error.name;
+}
 
-    if ("code" in error && typeof error.code === "string") {
-      code = error.code;
-    }
-  } else if (typeof error === "string") {
-    code = "Error";
-    message = error;
-  } else if (typeof error === "object" && error !== null) {
-    if ("code" in error && typeof error.code === "string") {
-      code = error.code;
-    } else if ("name" in error && typeof error.name === "string") {
-      code = error.name;
-    }
-
-    if ("message" in error && typeof error.message === "string") {
-      message = error.message;
-    }
-
-    if ("stack" in error && typeof error.stack === "string") {
-      stack = error.stack;
-    }
-  }
+export function createAuthErrorDiagnostic(cause: unknown): AuthErrorDiagnostic {
+  const error = cause instanceof Error ? cause : new Error(String(cause));
+  const code = getErrorCode(error);
+  const message = error.message || "Unknown authentication error";
+  const stack = error.stack ?? null;
 
   if (stack !== null && stack.length > STACK_TRACE_MAX_LENGTH) {
     return {
@@ -57,24 +46,8 @@ export function parseAuthErrorDiagnostic(value: string | undefined): AuthErrorDi
   if (!value) return null;
 
   try {
-    const parsed: unknown = JSON.parse(value);
-    if (
-      typeof parsed !== "object" ||
-      parsed === null ||
-      !("code" in parsed) ||
-      typeof parsed.code !== "string" ||
-      !("message" in parsed) ||
-      typeof parsed.message !== "string" ||
-      !("stack" in parsed) ||
-      (parsed.stack !== null && typeof parsed.stack !== "string") ||
-      !("stackTruncated" in parsed) ||
-      typeof parsed.stackTruncated !== "boolean"
-    ) {
-      return null;
-    }
-
-    const { code, message, stack, stackTruncated } = parsed;
-    return { code, message, stack, stackTruncated };
+    const result = authErrorDiagnosticSchema.safeParse(JSON.parse(value));
+    return result.success ? result.data : null;
   } catch {
     return null;
   }

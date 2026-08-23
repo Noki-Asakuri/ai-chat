@@ -7,7 +7,7 @@ import type { UserAttachment } from "../types";
 export function prepareAttachmentsForModel(
   files: ReadonlyArray<File>,
   modelId: string,
-): { attachments: Array<UserAttachment>; rejectedCount: number } {
+) {
   const model = tryGetModelData(modelId);
   const attachments: Array<UserAttachment> = [];
   let rejectedCount = 0;

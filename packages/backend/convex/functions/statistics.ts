@@ -28,7 +28,7 @@ function normalizeActivity(
 
   return Object.entries(normalizedActivity)
     .map(([day, value]) => ({ day, value }))
-    .sort((left, right) => left.day.localeCompare(right.day));
+    .toSorted((left, right) => left.day.localeCompare(right.day));
 }
 
 export const getStatistics = authenticatedQuery({
@@ -90,7 +90,7 @@ export const getStatistics = authenticatedQuery({
 
     const modelRank = Object.entries(yearModelRequestCounts)
       .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+      .toSorted((a, b) => b.value - a.value);
 
     const activity = normalizeActivity(statsDoc?.activityCounts ?? {});
 
@@ -112,7 +112,7 @@ export const getStatistics = authenticatedQuery({
 
         return [{ name, value }];
       })
-      .sort((a, b) => b.value - a.value);
+      .toSorted((a, b) => b.value - a.value);
 
     return {
       threadsCount: statsDoc?.threadsCount ?? 0,

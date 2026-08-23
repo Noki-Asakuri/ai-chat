@@ -29,7 +29,7 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
   const threadId = fromUUID<Id<"threads">>(params?.threadId);
 
   const { data, isFetching } = useQuery({
-    enabled: typeof params?.threadId === "string" && !isSkeleton,
+    enabled: Boolean(params?.threadId) && !isSkeleton,
     ...convexSessionQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
   });
 

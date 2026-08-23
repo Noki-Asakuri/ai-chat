@@ -75,7 +75,7 @@ export function useSendChatMessage() {
 
     const messagesHistory = messageState.messageIds
       .map((id) => messageState.messagesById[id]!)
-      .sort((a, b) => a.createdAt - b.createdAt);
+      .toSorted((a, b) => a.createdAt - b.createdAt);
 
     const lastMessage = messagesHistory[messagesHistory.length - 1];
 
@@ -126,7 +126,7 @@ export function useSendChatMessage() {
     });
 
     // Sending a new message is explicit intent to follow the latest response.
-    if (typeof window !== "undefined") {
+    if ("window" in globalThis) {
       setStickyToBottom(true);
       window.dispatchEvent(new Event("chat:force-scroll-bottom"));
     }
@@ -200,6 +200,7 @@ export function useSendChatMessage() {
         desktopEnabled: desktopNotification,
       });
     } catch (error) {
+      messageStoreActions.removeController(threadId, abortController);
       if (isAbortError(error)) return;
 
       const errorMessage = getClientErrorMessage(error);
@@ -248,9 +249,10 @@ export function useSendChatMessage() {
       }
 
       toast.error("Failed to send message", { description: errorMessage });
-    } finally {
-      messageStoreActions.removeController(threadId, abortController);
+      return;
     }
+
+    messageStoreActions.removeController(threadId, abortController);
   }
 
   return { sendChatRequest };

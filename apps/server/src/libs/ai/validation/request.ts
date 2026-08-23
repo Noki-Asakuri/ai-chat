@@ -1,8 +1,13 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { getFileInputModality, resolveReasoning } from "@ai-chat/shared/chat/models";
-import { chatRequestBodySchema, type ChatRequestBody } from "@ai-chat/shared/chat/request";
+import {
+  chatModelParamsSchema,
+  chatRequestBodySchema,
+  type ChatRequestBody,
+} from "@ai-chat/shared/chat/request";
 
 import { Result } from "better-result";
+import type { JSONValue } from "hono/utils/types";
 import { z } from "zod/v4";
 
 import { MessagesValidationError, RequestBodySchemaError, type ChatRequestValidationError } from "./errors";
@@ -13,8 +18,17 @@ import type { ValidatedChatRequestBody } from "./types";
 
 import type { ChatModelParams } from "../types";
 
-function parseChatRequestBody(body: Record<string, unknown>) {
-  const parsed = chatRequestBodySchema.safeParse(body);
+const convexChatRequestBodySchema = chatRequestBodySchema.extend({
+  assistantMessageId: z.string().min(1).pipe(z.custom<Id<"messages">>()),
+  retryAttemptId: z.string().min(1).pipe(z.custom<Id<"retryAttempts">>()).optional(),
+  threadId: z.string().min(1).pipe(z.custom<Id<"threads">>()),
+  modelParams: chatModelParamsSchema.extend({
+    profile: z.string().pipe(z.custom<Id<"profiles">>()).nullish().default(null),
+  }),
+});
+
+function parseChatRequestBody(body: JSONValue) {
+  const parsed = convexChatRequestBodySchema.safeParse(body);
   if (parsed.success) return Result.ok(parsed.data);
 
   return Result.err(
@@ -23,7 +37,7 @@ function parseChatRequestBody(body: Record<string, unknown>) {
 }
 
 async function validateRequestBody(
-  body: Record<string, unknown>,
+  body: JSONValue,
 ): Promise<Result<ValidatedChatRequestBody, ChatRequestValidationError>> {
   const result = await Result.gen(async function* () {
     const data = yield* parseChatRequestBody(body);
@@ -74,7 +88,7 @@ async function validateRequestBody(
       : reasoning;
   const providerOptions = buildProviderOptions(modelInfo, reasoning);
   const modelParams: ChatModelParams = {
-    ...(data.modelParams as ChatModelParams),
+    ...data.modelParams,
     effort: reasoning,
   };
 
@@ -82,9 +96,9 @@ async function validateRequestBody(
     messages,
     modelMessages,
 
-    threadId: data.threadId as Id<"threads">,
-    assistantMessageId: data.assistantMessageId as Id<"messages">,
-    retryAttemptId: data.retryAttemptId as Id<"retryAttempts"> | undefined,
+    threadId: data.threadId,
+    assistantMessageId: data.assistantMessageId,
+    retryAttemptId: data.retryAttemptId,
 
     tools,
     providerOptions,
@@ -101,44 +115,40 @@ type ValidationErrorResponse = {
 };
 
 function getValidationErrorResponse(error: ChatRequestValidationError): ValidationErrorResponse {
-  return error.match<ChatRequestValidationError, ValidationErrorResponse>({
-    DeprecatedModelError: function getDeprecatedModelMessage(deprecatedModelError) {
+  switch (error._tag) {
+    case "DeprecatedModelError":
       return {
-        message: `This model is no longer available. Please switch to ${deprecatedModelError.details.replacementModelName} and try again.`,
+        message: `This model is no longer available. Please switch to ${error.details.replacementModelName} and try again.`,
         status: 409,
       };
-    },
-    MessagesValidationError: function getMessagesValidationMessage() {
+    case "MessagesValidationError":
       return {
         message: "The chat messages could not be read. Please refresh the page and try again.",
         status: 400,
       };
-    },
-    MissingModelError: function getMissingModelMessage() {
+    case "MissingModelError":
       return {
         message: "Please choose a model before sending a message.",
         status: 400,
       };
-    },
-    ModelMessagesConversionError: function getModelMessagesConversionMessage() {
+    case "ModelMessagesConversionError":
       return {
         message: "The chat history could not be prepared. Please refresh the page and try again.",
         status: 400,
       };
-    },
-    RequestBodySchemaError: function getRequestBodySchemaMessage() {
+    case "RequestBodySchemaError":
       return {
         message: "The chat request was invalid. Please refresh the page and try again.",
         status: 400,
       };
-    },
-    UnknownModelError: function getUnknownModelMessage() {
+    case "UnknownModelError":
       return {
         message: "The selected model is not available. Please choose another model and try again.",
         status: 400,
       };
-    },
-  });
+    default:
+      throw new Error("Unhandled validation error");
+  }
 }
 
 export { getValidationErrorResponse, validateRequestBody, type ChatRequestBody };

@@ -24,7 +24,7 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const snoozeStoreListeners = new Set<() => void>();
 
 function getSnoozeSnapshot() {
-  if (typeof window === "undefined") return "0:";
+  if (!("window" in globalThis)) return "0:";
 
   const [isSnoozedForSession] = tryCatchSync(
     () => window.sessionStorage.getItem(SESSION_SNOOZE_STORAGE_KEY) === "true",
@@ -76,7 +76,7 @@ export function VersionUpdateNotifier() {
   const snoozedUntilMs = storedSnoozeUntilMs > 0 ? storedSnoozeUntilMs : null;
 
   useEffect(() => {
-    if (snoozedUntilMs === null) return;
+    if (snoozedUntilMs === null) return undefined;
 
     const timeoutId = setTimeout(
       () => {
@@ -100,10 +100,10 @@ export function VersionUpdateNotifier() {
   }
 
   function handleDaySnooze() {
-    const snoozedUntilMs = Date.now() + ONE_DAY_MS;
+    const nextSnoozedUntilMs = Date.now() + ONE_DAY_MS;
 
     tryCatchSync(() => {
-      window.localStorage.setItem(SNOOZE_UNTIL_STORAGE_KEY, String(snoozedUntilMs));
+      window.localStorage.setItem(SNOOZE_UNTIL_STORAGE_KEY, String(nextSnoozedUntilMs));
     });
     setIsSnoozeDialogOpen(false);
     notifySnoozeStoreListeners();

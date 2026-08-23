@@ -1,6 +1,6 @@
 import type { ModelData, ModelIdKey } from "..";
 
-export const openai: Record<ModelIdKey, ModelData> = {
+export const openai = {
   "openai/gpt-4.1": {
     display: { name: "GPT 4.1" },
     id: "openai/gpt-4.1",
@@ -377,4 +377,4 @@ export const openai: Record<ModelIdKey, ModelData> = {
       },
     },
   },
-};
+} satisfies Record<ModelIdKey, ModelData>;

@@ -1,5 +1,7 @@
+/* oxlint-disable no-await-in-loop -- Stream reads depend on the preceding read result. */
 import { Result, TaggedError } from "better-result";
 import type { Redis } from "ioredis";
+import { z } from "zod/v4";
 
 import { redis } from "@/libs/redis";
 
@@ -39,7 +41,7 @@ type PublishedMessage =
 type MemorySubscriber = {
   enqueue(value: string): void;
   close(): void;
-  error(error: unknown): void;
+  error(cause: unknown): void;
 };
 
 type MemoryStream = {
@@ -111,39 +113,27 @@ function getStreamKeys(streamId: string): StreamKeys {
   };
 }
 
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
+const publishedMessageSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("done") }),
+  z.object({ type: z.literal("cancelled") }),
+  z.object({
+    type: z.literal("chunks"),
+    chunks: z.array(z.object({ index: z.number().int().safe(), value: z.string() })),
+  }),
+]);
+
+function getErrorMessage(cause: unknown): string {
+  if (cause instanceof Error) return cause.message;
+  return String(cause);
 }
 
 function parsePublishedMessage(message: string): PublishedMessage | null {
-  let parsed: unknown;
-
   try {
-    parsed = JSON.parse(message) as unknown;
+    const parsed = publishedMessageSchema.safeParse(JSON.parse(message));
+    return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }
-
-  if (typeof parsed !== "object" || parsed === null || !("type" in parsed)) return null;
-
-  if (parsed.type === "done") return { type: "done" };
-  if (parsed.type === "cancelled") return { type: "cancelled" };
-
-  if (parsed.type !== "chunks" || !("chunks" in parsed) || !Array.isArray(parsed.chunks)) {
-    return null;
-  }
-
-  const chunks: PublishedChunk[] = [];
-  for (const chunk of parsed.chunks) {
-    if (typeof chunk !== "object" || chunk === null) return null;
-    if (!("index" in chunk) || !("value" in chunk)) return null;
-    if (!Number.isSafeInteger(chunk.index) || typeof chunk.value !== "string") return null;
-
-    chunks.push({ index: chunk.index, value: chunk.value });
-  }
-
-  return { type: "chunks", chunks };
 }
 
 async function cleanupSubscriber(subscriber: Redis, channel: string): Promise<void> {
@@ -174,13 +164,13 @@ function closeMemoryStream(streamId: string, state: "done" | "cancelled"): void 
   memoryStreams.delete(streamId);
 }
 
-function failMemoryStream(streamId: string, error: unknown): void {
+function failMemoryStream(streamId: string, cause: unknown): void {
   const memoryStream = memoryStreams.get(streamId);
   if (!memoryStream) return;
 
   clearTimeout(memoryStream.timeout);
   for (const subscriber of memoryStream.subscribers) {
-    subscriber.error(error);
+    subscriber.error(cause);
   }
 
   memoryStream.subscribers.clear();
@@ -256,10 +246,10 @@ function createMemoryResumeStream(streamId: string, memoryStream: MemoryStream):
     },
 
     cancel() {
-      const memoryStream = memoryStreams.get(streamId);
-      if (!memoryStream) return;
+      const storedMemoryStream = memoryStreams.get(streamId);
+      if (!storedMemoryStream) return;
 
-      if (activeSubscriber) memoryStream.subscribers.delete(activeSubscriber);
+      if (activeSubscriber) storedMemoryStream.subscribers.delete(activeSubscriber);
       activeSubscriber = null;
     },
   });
@@ -353,14 +343,14 @@ export function createRedisStreamClient(client: Redis = redis): RedisStreamClien
           let nextIndex = 0;
           let flushTimer: ReturnType<typeof setTimeout> | undefined;
           let writeQueue = Promise.resolve();
-          let writeError: unknown = null;
+          let writeError: Error | null = null;
 
           function enqueueWrite(chunks: PublishedChunk[]): void {
             if (writeError !== null) return;
 
             writeQueue = writeQueue
               .then(async function writeBatch() {
-                if (writeError !== null) return;
+                if (writeError !== null) return undefined;
 
                 const values: string[] = [];
                 for (const chunk of chunks) {
@@ -373,9 +363,12 @@ export function createRedisStreamClient(client: Redis = redis): RedisStreamClien
                   .expire(keys.chunks, STREAM_TTL_SECONDS)
                   .publish(keys.channel, JSON.stringify({ type: "chunks", chunks }))
                   .exec();
+                return undefined;
               })
               .catch(function storeWriteError(cause) {
-                if (writeError === null) writeError = cause;
+                if (writeError === null) {
+                  writeError = cause instanceof Error ? cause : new Error(String(cause));
+                }
               });
           }
 
@@ -559,12 +552,12 @@ export function createRedisStreamClient(client: Redis = redis): RedisStreamClien
               controller.close();
             }
 
-            function failStream(error: unknown): void {
+            function failStream(cause: unknown): void {
               if (isClosed) return;
 
               isClosed = true;
               void cleanupSubscriber(subscriber, keys.channel);
-              controller.error(error);
+              controller.error(cause);
             }
 
             function enqueueChunk(index: number, value: string): void {

@@ -102,31 +102,23 @@ function getAttachmentFileUrl(path: string): string {
   return buildRawFileUrl(path);
 }
 
-const SOURCE_FILTER_OPTIONS: Record<SourceFilter, { label: string; Icon: typeof ArrowDownAZIcon }> = {
+const SOURCE_FILTER_OPTIONS = {
   all: { label: "All sources", Icon: LayersIcon },
   user: { label: "User uploads", Icon: UserIcon },
   assistant: { label: "Assistant generated", Icon: BotIcon },
-};
+} satisfies Record<SourceFilter, { label: string; Icon: typeof ArrowDownAZIcon }>;
 
 const SOURCE_FILTER_ORDER: Array<SourceFilter> = ["all", "user", "assistant"];
 
-const TYPE_FILTER_OPTIONS: Record<AttachmentTypeFilter, { label: string; Icon: typeof ArrowDownAZIcon }> = {
+const TYPE_FILTER_OPTIONS = {
   all: { label: "All types", Icon: PaperclipIcon },
   image: { label: "Images only", Icon: ImageIcon },
   pdf: { label: "PDFs only", Icon: FileTextIcon },
-};
+} satisfies Record<AttachmentTypeFilter, { label: string; Icon: typeof ArrowDownAZIcon }>;
 
 const TYPE_FILTER_ORDER: Array<AttachmentTypeFilter> = ["all", "image", "pdf"];
 
-const ATTACHMENT_SORT_OPTIONS: Record<
-  AttachmentSortValue,
-  {
-    label: string;
-    sortField: AttachmentSortField;
-    sortDirection: SortDirection;
-    Icon: typeof ArrowDownAZIcon;
-  }
-> = {
+const ATTACHMENT_SORT_OPTIONS = {
   createdAt_desc: {
     label: "Date (newest first)",
     sortField: "createdAt",
@@ -163,7 +155,10 @@ const ATTACHMENT_SORT_OPTIONS: Record<
     sortDirection: "asc",
     Icon: ArrowDownNarrowWideIcon,
   },
-};
+} satisfies Record<
+  AttachmentSortValue,
+  { label: string; sortField: AttachmentSortField; sortDirection: SortDirection; Icon: typeof ArrowDownAZIcon }
+>;
 
 const ATTACHMENT_SORT_ORDER: Array<AttachmentSortValue> = [
   "createdAt_desc",

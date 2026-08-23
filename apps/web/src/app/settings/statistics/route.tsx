@@ -5,12 +5,13 @@ import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { z } from "zod/v4";
 import {
   Pie,
   PieChart,
   Sector,
   type DefaultTooltipContentProps,
-  type PieSectorShapeProps,
+  type PieSectorShapeProps as PieSectorProps, // eslint-disable-line anti-slop/no-shape-in-symbol-names -- Recharts owner type.
   type TooltipProps,
 } from "recharts";
 
@@ -277,7 +278,7 @@ function getAvailableYears(activity: Array<{ day: string; value: number }>): num
   }
 
   years.add(new Date().getUTCFullYear());
-  return Array.from(years).sort((a, b) => b - a);
+  return Array.from(years).toSorted((a, b) => b - a);
 }
 
 function CalendarTooltip({ day, value, color }: CalendarTooltipProps) {
@@ -321,7 +322,7 @@ function RankPieChart(props: {
                   dataKey="value"
                   nameKey="name"
                   outerRadius={122}
-                  shape={PieChartSector}
+                  shape={PieChartSector} // eslint-disable-line anti-slop/no-shape-in-symbol-names -- Recharts API prop.
                 />
               </PieChart>
             </ChartContainer>
@@ -371,7 +372,8 @@ function PieTooltipContent(
     },
 ) {
   if (!props.active || !props.payload?.length) return null;
-  const payload = props.payload[0]?.payload as PieChartItem;
+  const payload = props.payload[0]?.payload;
+  if (!isPieChartItem(payload)) return null;
 
   return (
     <Card className="rounded-md border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
@@ -391,12 +393,20 @@ function PieTooltipContent(
   );
 }
 
-function PieChartSector(props: PieSectorShapeProps) {
-  const payload: unknown = props.payload;
-  const fill =
-    typeof payload === "object" && payload !== null && "color" in payload && typeof payload.color === "string"
-      ? payload.color
-      : props.fill;
+const pieChartItemSchema = z.object({
+  name: z.string(),
+  value: z.number(),
+  color: z.string(),
+  percentage: z.number(),
+  provider: z.string().optional(),
+});
+
+function isPieChartItem(cause: unknown): cause is PieChartItem {
+  return pieChartItemSchema.safeParse(cause).success;
+}
+
+function PieChartSector(props: PieSectorProps) {
+  const fill = isPieChartItem(props.payload) ? props.payload.color : props.fill;
 
   return <Sector {...props} fill={fill} stroke="var(--card)" strokeWidth={2} />;
 }

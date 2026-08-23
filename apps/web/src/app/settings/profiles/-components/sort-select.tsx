@@ -12,25 +12,25 @@ import { cn } from "@/lib/utils";
 
 export type SortOption = "az" | "za" | "newest" | "oldest" | "recently-updated";
 
-const sortOptionExists: Record<SortOption, true> = {
+const sortOptionExists = {
   az: true,
   za: true,
   newest: true,
   oldest: true,
   "recently-updated": true,
-};
+} satisfies Record<SortOption, true>;
 
 function isSortOption(value: string): value is SortOption {
   return value in sortOptionExists;
 }
 
-const sortOptions: Record<SortOption, { label: string; Icon: typeof ArrowDownAZIcon }> = {
+const sortOptions = {
   "recently-updated": { label: "Recently updated", Icon: CalendarArrowUpIcon },
   newest: { label: "Newest", Icon: ClockArrowUpIcon },
   oldest: { label: "Oldest", Icon: ClockArrowDownIcon },
   az: { label: "A-Z", Icon: ArrowDownAZIcon },
   za: { label: "Z-A", Icon: ArrowUpZAIcon },
-};
+} satisfies Record<SortOption, { label: string; Icon: typeof ArrowDownAZIcon }>;
 
 const sortOrder: Array<SortOption> = ["recently-updated", "newest", "oldest", "az", "za"];
 
@@ -46,10 +46,9 @@ export function SortSelect({
   return (
     <Select
       value={value}
-      onValueChange={(v) => {
-        if (typeof v !== "string") return;
-        if (!isSortOption(v)) return;
-        onValueChange(v);
+      onValueChange={(nextValue) => {
+        if (nextValue === null || !isSortOption(nextValue)) return;
+        onValueChange(nextValue);
       }}
     >
       <SelectTrigger className={cn("h-9 text-xs", className)}>

@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/anchor-has-content, jsx-a11y/control-has-associated-label -- The composed Button supplies accessible link content. */
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
@@ -59,3 +60,4 @@ function AuthErrorPage() {
     </main>
   );
 }
+/* eslint-disable jsx-a11y/anchor-has-content, jsx-a11y/control-has-associated-label -- The composed Button supplies accessible link content. */

@@ -6,6 +6,7 @@ import {
   sessionEncryption,
   type AuthKitConfig,
   type AuthResult,
+  type BaseTokenClaims,
   type HeadersBag,
 } from "@workos/authkit-session";
 import { decodeJwt } from "jose";
@@ -122,6 +123,10 @@ function toAuthKitConfig(config: AuthSessionConfig): AuthKitConfig {
   };
 }
 
+function encryptionFactory() {
+  return sessionEncryption;
+}
+
 function createRequestAuthService(config: AuthSessionConfig) {
   const authKitConfig = toAuthKitConfig(config);
   configure(authKitConfig);
@@ -130,9 +135,7 @@ function createRequestAuthService(config: AuthSessionConfig) {
     sessionStorageFactory: function sessionStorageFactory() {
       return new RequestCookieSessionStorage(authKitConfig);
     },
-    encryptionFactory: function encryptionFactory() {
-      return sessionEncryption;
-    },
+    encryptionFactory,
   });
 }
 
@@ -145,8 +148,8 @@ function extractSetCookieHeader(options: {
   };
 }): string | null {
   const headerValue = options.headers?.["Set-Cookie"];
-  if (typeof headerValue === "string") return headerValue;
-  if (Array.isArray(headerValue) && headerValue[0]) return headerValue[0];
+  if (Array.isArray(headerValue)) return headerValue[0] ?? null;
+  if (headerValue) return headerValue;
 
   return options.response?.headers?.get("Set-Cookie") ?? null;
 }
@@ -164,8 +167,7 @@ function createAuthRequestWithSessionData(options: { cookieName: string; session
 
 function getSessionId(session: Session): string | null {
   try {
-    const claims = decodeJwt(session.accessToken);
-    return typeof claims.sid === "string" ? claims.sid : null;
+    return decodeJwt<BaseTokenClaims>(session.accessToken).sid;
   } catch {
     return null;
   }
@@ -199,8 +201,8 @@ async function tryDecryptSessionData(options: {
 
 function isTokenExpiringSoon(accessToken: string, bufferSeconds: number): boolean {
   try {
-    const claims = decodeJwt(accessToken);
-    if (typeof claims.exp !== "number") return true;
+    const claims = decodeJwt<BaseTokenClaims>(accessToken);
+    if (claims.exp === undefined) return true;
 
     const currentTimestamp = Math.floor(Date.now() / 1000);
     return claims.exp - currentTimestamp <= bufferSeconds;
@@ -309,8 +311,8 @@ export async function authenticateRequestSession(options: {
         throw new Error("Refreshed session is unauthenticated");
       }
 
-      const previousRefreshToken = sessionState.refreshToken;
-      const previousSessionId = getSessionId(sessionState);
+      const refreshTokenBeforeRefresh = sessionState.refreshToken;
+      const sessionIdBeforeRefresh = getSessionId(sessionState);
 
       sessionState = {
         accessToken: refreshed.auth.accessToken,
@@ -326,8 +328,8 @@ export async function authenticateRequestSession(options: {
 
       await options.persistence?.persistLatestSessionData?.({
         sessionId: getSessionId(sessionState),
-        previousRefreshToken,
-        previousSessionId,
+        previousRefreshToken: refreshTokenBeforeRefresh,
+        previousSessionId: sessionIdBeforeRefresh,
         session: sessionState,
         sessionData: refreshed.encryptedSession,
         userId: sessionState.user.id,

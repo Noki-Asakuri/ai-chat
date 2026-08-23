@@ -74,7 +74,7 @@ export async function downloadImage(image: LightboxImage): Promise<void> {
 
 function isClipboardImageWriteSupported(): boolean {
   return (
-    window.isSecureContext && !!navigator.clipboard?.write && typeof window.ClipboardItem !== "undefined"
+    window.isSecureContext && !!navigator.clipboard?.write && "ClipboardItem" in globalThis
   );
 }
 
@@ -83,17 +83,8 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   image.crossOrigin = "anonymous";
   image.decoding = "async";
 
-  if (typeof image.decode === "function") {
-    image.src = url;
-    await image.decode();
-    return image;
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    image.onload = () => resolve();
-    image.onerror = () => reject(new Error("Failed to load image"));
-    image.src = url;
-  });
+  image.src = url;
+  await image.decode();
   return image;
 }
 

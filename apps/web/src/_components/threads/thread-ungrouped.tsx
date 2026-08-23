@@ -34,8 +34,8 @@ export function UngroupedThreadGroup({
     { groupId, query: searchQuery },
     { initialNumItems: SETTLED_THREADS_PAGE_SIZE },
   );
-  const pinnedThreads = threads.filter((thread) => thread.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
-  const recentThreads = threads.filter((thread) => !thread.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
+  const pinnedThreads = threads.filter((thread) => thread.pinned).toSorted((a, b) => b.updatedAt - a.updatedAt);
+  const recentThreads = threads.filter((thread) => !thread.pinned).toSorted((a, b) => b.updatedAt - a.updatedAt);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 60_000);

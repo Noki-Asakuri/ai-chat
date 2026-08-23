@@ -1,6 +1,6 @@
 import type { ModelData, ModelIdKey } from "..";
 
-export const google: Record<ModelIdKey, ModelData> = {
+export const google = {
   "google/gemini-2.5-flash-lite": {
     display: { name: "Gemini 2.5 Flash Lite" },
     id: "google/gemini-2.5-flash-lite",
@@ -219,4 +219,4 @@ export const google: Record<ModelIdKey, ModelData> = {
       },
     },
   },
-};
+} satisfies Record<ModelIdKey, ModelData>;

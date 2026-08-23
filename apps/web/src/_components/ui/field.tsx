@@ -1,4 +1,5 @@
 "use client"
+/* oxlint-disable react/no-array-index-key -- Validation messages do not expose stable identifiers. */
 
 import { useMemo } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -65,10 +66,9 @@ function Field({
   className,
   orientation = "vertical",
   ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof fieldVariants>) {
+}: React.ComponentProps<"fieldset"> & VariantProps<typeof fieldVariants>) {
   return (
-    <div
-      role="group"
+    <fieldset
       data-slot="field"
       data-orientation={orientation}
       className={cn(fieldVariants({ orientation }), className)}

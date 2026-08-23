@@ -14,20 +14,16 @@ import { Button } from "@/components/ui/button";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 
 type SharedQueryResult = (typeof api.functions.threadShares.getSharedThread)["_returnType"];
-const getSharedThreadRef = makeFunctionReference<
-  "query",
-  { shareId: string },
-  SharedQueryResult
->("functions/threadShares:getSharedThread");
+const getSharedThreadRef = makeFunctionReference<"query", { shareId: string }, SharedQueryResult>(
+  "functions/threadShares:getSharedThread",
+);
 
 type SharedPayload = SharedQueryResult;
 
 export const Route = createFileRoute("/share/$shareId")({
   component: SharedThreadPage,
   loader: async ({ params, context }) => {
-    void context.queryClient.prefetchQuery(
-      convexQuery(getSharedThreadRef, { shareId: params.shareId }),
-    );
+    void context.queryClient.prefetchQuery(convexQuery(getSharedThreadRef, { shareId: params.shareId }));
   },
   head: () => ({
     meta: [{ name: "robots", content: "noindex, nofollow" }],
@@ -69,16 +65,10 @@ function SharedThreadPage() {
     );
   }
 
-  const payload = data as SharedQueryResult;
-
-  return <SharedThreadViewer data={payload} isFetching={isFetching} onRefresh={refetch} />;
+  return <SharedThreadViewer data={data} isFetching={isFetching} onRefresh={refetch} />;
 }
 
-function SharedThreadViewer(props: {
-  data: SharedPayload;
-  isFetching: boolean;
-  onRefresh: () => void;
-}) {
+function SharedThreadViewer(props: { data: SharedPayload; isFetching: boolean; onRefresh: () => void }) {
   const data = props.data;
   const isFetching = props.isFetching;
   const onRefresh = props.onRefresh;
@@ -100,13 +90,7 @@ function SharedThreadViewer(props: {
       syncToken,
       "replace",
     );
-  }, [
-    data.allMessages,
-    data.messages,
-    data.thread._id,
-    data.variantMessageIdsByUserMessageId,
-    syncToken,
-  ]);
+  }, [data.allMessages, data.messages, data.thread._id, data.variantMessageIdsByUserMessageId, syncToken]);
 
   const subtitle =
     data.share.mode === "snapshot"

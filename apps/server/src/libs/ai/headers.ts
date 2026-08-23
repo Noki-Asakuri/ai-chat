@@ -1,6 +1,6 @@
 import { UI_MESSAGE_STREAM_HEADERS } from "ai";
 
-export function getStreamResponseHeaders(streamId: string): Record<string, string> {
+export function getStreamResponseHeaders(streamId: string) {
   return {
     ...UI_MESSAGE_STREAM_HEADERS,
     "Transfer-Encoding": "chunked",

@@ -8,7 +8,7 @@
     "@convex-dev/crons": "^0.2.2",
     "@convex-dev/migrations": "^0.3.6",
     "@convex-dev/r2": "^0.10.2",
-    "@convex-dev/workos-authkit": "^0.2.7",
+    "@convex-dev/workos-authkit": "^0.2.9",
     "convex": "catalog:backend",
     "convex-helpers": "catalog:backend"
   },
@@ -16,11 +16,11 @@
     "@edge-runtime/vm": "^5.0.0",
     "@types/node": "catalog:tooling",
     "@typescript/native-preview": "catalog:tooling",
-    "convex-test": "^0.0.55",
+    "convex-test": "^0.0.56",
     "oxlint": "catalog:tooling",
     "oxlint-tsgolint": "catalog:tooling",
     "typescript": "catalog:tooling",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "scripts": {
     "dev": "convex dev --typecheck disable",

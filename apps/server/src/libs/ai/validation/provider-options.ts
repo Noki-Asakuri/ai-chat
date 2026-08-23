@@ -19,14 +19,17 @@ export function buildProviderOptions(modelInfo: ModelData, reasoning: ReasoningE
         : modelInfo.provider === "kimi" && modelInfo.capabilities.reasoning?.type === "selectable"
           ? { thinking: { type: reasoning === "none" ? "disabled" : "enabled" } }
           : {},
-    zai:
-      modelInfo.provider === "zai"
-        ? {
-            thinking: { type: reasoning === "none" ? "disabled" : "enabled" },
-            ...(modelInfo.id === "zai/glm-5.2" ? { reasoningEffort: reasoning } : {}),
-          }
-        : {},
+    zai: {},
   };
+
+  if (modelInfo.provider === "zai") {
+    reasoningProviderOptions.zai.thinking = {
+      type: reasoning === "none" ? "disabled" : "enabled",
+    };
+    if (modelInfo.id === "zai/glm-5.2") {
+      reasoningProviderOptions.zai.reasoningEffort = reasoning;
+    }
+  }
 
   if (!modelInfo.modalities.output.includes("image") || modelInfo.provider !== "google") {
     return reasoningProviderOptions;
@@ -46,12 +49,14 @@ function buildOpenAIProviderOptions(
     return { store: false };
   }
 
-  return {
+  const providerOptions: ChatProviderOptions["openai"] = {
     store: false,
-    ...(reasoning === "max" ? { reasoningEffort: reasoning } : {}),
     reasoningSummary: "detailed",
     include: ["reasoning.encrypted_content"],
   };
+
+  if (reasoning === "max") providerOptions.reasoningEffort = reasoning;
+  return providerOptions;
 }
 
 function buildGoogleImageProviderOptions(modelInfo: ModelData): ChatProviderOptions["google"] {

@@ -135,7 +135,7 @@ export function ZoomableImage(props: ZoomableImageProps) {
 
   React.useEffect(() => {
     const viewport = viewportRef.current;
-    if (!viewport) return;
+    if (!viewport) return undefined;
 
     const observer = new ResizeObserver(() => {
       transformRef.current = clampPosition(transformRef.current);
@@ -148,7 +148,7 @@ export function ZoomableImage(props: ZoomableImageProps) {
 
   React.useEffect(() => {
     const viewport = viewportRef.current;
-    if (!viewport) return;
+    if (!viewport) return undefined;
     const wheelViewport = viewport;
 
     function handleWheel(event: WheelEvent): void {

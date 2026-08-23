@@ -1,5 +1,6 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import { z } from "zod/v4";
 
 import { consumeUIMessageStreamResponse } from "./stream-handler";
 
@@ -8,42 +9,24 @@ import { uploadFileToR2 } from "../convex/upload-files";
 import { messageStoreActions } from "../store/messages-store";
 import type { ChatMessage, UIChatMessage, UserAttachment } from "../types";
 
-type JsonRecord = Record<string, unknown>;
+const errorResponseSchema = z
+  .object({
+    error: z.object({ message: z.string().optional() }).optional(),
+    message: z.string().optional(),
+  })
+  .loose();
 
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === "object" && value !== null;
+function normalizeError(cause: unknown): Error {
+  if (cause instanceof Error) return cause;
+  return new Error(String(cause));
 }
 
-function parseJson(value: string): unknown {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
-}
+function extractErrorMessageFromBody(body: string): string | null {
+  const result = errorResponseSchema.safeParse(JSON.parse(body));
+  if (!result.success) return null;
 
-function normalizeError(error: unknown): Error {
-  if (error instanceof Error) return error;
-  return new Error(String(error));
-}
-
-function extractErrorMessageFromParsedBody(body: unknown): string | null {
-  if (!isRecord(body)) return null;
-
-  const payloadError = body["error"];
-  if (isRecord(payloadError)) {
-    const message = payloadError["message"];
-    if (typeof message === "string" && message.length > 0) {
-      return message;
-    }
-  }
-
-  const message = body["message"];
-  if (typeof message === "string" && message.length > 0) {
-    return message;
-  }
-
-  return null;
+  const message = result.data.error?.message ?? result.data.message;
+  return message && message.length > 0 ? message : null;
 }
 
 function getErrorFallbackMessage(status: number): string {
@@ -79,9 +62,12 @@ export async function readResponseErrorMessage(response: Response): Promise<stri
   const trimmedBody = bodyText.trim();
   if (trimmedBody.length === 0) return fallback;
 
-  const parsed = parseJson(trimmedBody);
-  const parsedMessage = extractErrorMessageFromParsedBody(parsed);
-  if (parsedMessage) return parsedMessage;
+  try {
+    const parsedMessage = extractErrorMessageFromBody(trimmedBody);
+    if (parsedMessage) return parsedMessage;
+  } catch {
+    // The response is plain text rather than JSON.
+  }
 
   return trimmedBody;
 }
@@ -91,6 +77,8 @@ export function convertToUIChatMessages(messages: UIConvertibleMessage[]): UICha
     (message): UIChatMessage => ({
       id: message.messageId,
       role: message.role,
+      // SAFETY: Convex validates persisted message parts with AISDKParts, which mirrors UIMessagePart.
+      // eslint-disable-next-line typescript/no-unsafe-type-assertion
       parts: message.parts as UIChatMessage["parts"],
       metadata: message.metadata,
     }),
@@ -121,6 +109,8 @@ export async function processStreamResponse(
         messageStoreActions.setMessageParts(
           threadId,
           messageId,
+          // SAFETY: UIChatMessage parts and the persisted AISDKParts validator model the same wire format.
+          // eslint-disable-next-line typescript/no-unsafe-type-assertion
           event.message.parts as ChatMessage["parts"],
         );
       }

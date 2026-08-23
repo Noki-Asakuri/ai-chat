@@ -38,7 +38,8 @@ export const useThreadStore = create<ThreadStore>()(
       threadCommandOpen: false,
       setThreadCommandOpen: (open) =>
         set((state) => ({
-          threadCommandOpen: typeof open === "function" ? open(state.threadCommandOpen) : open,
+          threadCommandOpen:
+            open === true || open === false ? open : open(state.threadCommandOpen),
         })),
     }),
     {
@@ -54,5 +55,5 @@ export const useThreadStore = create<ThreadStore>()(
   ),
 );
 
-export const threadStoreActions =
-  useThreadStore.getInitialState() as RemoveAllExceptFunctions<ThreadStore>;
+export const threadStoreActions: RemoveAllExceptFunctions<ThreadStore> =
+  useThreadStore.getInitialState();

@@ -7,8 +7,14 @@ export type NavigateToThreadEventDetail = {
   source: "notification" | "toast";
 };
 
+declare global {
+  interface WindowEventMap {
+    [CHAT_NAVIGATE_TO_THREAD_EVENT]: CustomEvent<NavigateToThreadEventDetail>;
+  }
+}
+
 export function dispatchNavigateToThreadEvent(detail: NavigateToThreadEventDetail): void {
-  if (typeof window === "undefined") return;
+  if (!("window" in globalThis)) return;
 
   const event = new CustomEvent<NavigateToThreadEventDetail>(CHAT_NAVIGATE_TO_THREAD_EVENT, {
     detail,

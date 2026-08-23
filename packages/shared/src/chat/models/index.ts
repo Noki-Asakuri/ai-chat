@@ -54,13 +54,13 @@ export type ResolvedModel = {
   data: ModelData;
 };
 
-export const ModelsData: Record<ModelIdKey, ModelData> = {
+export const ModelsData = {
   ...google,
   ...openai,
   ...deepseek,
   ...kimi,
   ...zai,
-};
+} satisfies Record<ModelIdKey, ModelData>;
 
 function isProvider(provider: string): provider is Provider {
   return (
@@ -87,7 +87,7 @@ function buildModelIndexes() {
   const byRequestedId = new Map<ModelIdKey, ModelData>();
   const aliasToRequestedId = new Map<string, ModelIdKey>();
 
-  for (const [requestedIdRaw, data] of Object.entries(ModelsData)) {
+  for (const [requestedIdRaw, data] of Object.entries<ModelData>(ModelsData)) {
     if (!isModelIdKey(requestedIdRaw)) {
       throw new Error(`Invalid requested model id: ${requestedIdRaw}`);
     }

@@ -63,6 +63,6 @@ export function createMessageMetadataHandler({
         return metadata;
     }
 
-    return;
+    return undefined;
   };
 }

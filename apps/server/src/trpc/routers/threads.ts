@@ -1,6 +1,5 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
-import type { ReasoningEffort } from "@ai-chat/shared/chat/metadata";
 import { chatModelParamsSchema } from "@ai-chat/shared/chat/request";
 
 import { TRPCError } from "@trpc/server";
@@ -12,52 +11,47 @@ import { createServerConvexClient } from "../../libs/convex";
 
 import { protectedProcedure, router } from "../index";
 
+const threadIdSchema = z.string().pipe(z.custom<Id<"threads">>());
+const profileIdSchema = z.string().pipe(z.custom<Id<"profiles">>());
+
 export const threadRouter = router({
   syncModelConfig: protectedProcedure
     .input(
       z.object({
-        threadId: z.string().optional(),
+        threadId: threadIdSchema.optional(),
         model: z.string(),
-        modelParams: chatModelParamsSchema,
+        modelParams: chatModelParamsSchema.extend({
+          profile: profileIdSchema.nullish().default(null),
+        }),
       }),
     )
     .mutation(async function ({ ctx, input }) {
       const convexClient = await createServerConvexClient(ctx.honoCtx);
 
-      const options = {
-        threadId: input.threadId as Id<"threads">,
-        model: input.model,
-        modelParams: input.modelParams as {
-          webSearch: boolean;
-          effort: ReasoningEffort;
-          profile: Id<"profiles"> | null;
-        },
-      };
-
       if (input.threadId) {
         await convexClient.mutation(api.functions.threads.updateThreadModelConfig, {
-          threadId: options.threadId,
-          latestModel: options.model,
-          latestModelParams: options.modelParams,
+          threadId: input.threadId,
+          latestModel: input.model,
+          latestModelParams: input.modelParams,
         });
 
         return { ok: true };
       }
 
       await convexClient.mutation(api.functions.users.updateUserDefaultModelConfig, {
-        defaultModel: options.model,
-        modelParams: options.modelParams,
+        defaultModel: input.model,
+        modelParams: input.modelParams,
       });
 
       return { ok: true };
     }),
 
-  regenerateTitle: protectedProcedure.input(z.object({ threadId: z.string() })).mutation(async function ({
+  regenerateTitle: protectedProcedure.input(z.object({ threadId: threadIdSchema })).mutation(async function ({
     ctx,
     input,
   }) {
     const convexClient = await createServerConvexClient(ctx.honoCtx);
-    const threadId = input.threadId as Id<"threads">;
+    const threadId = input.threadId;
 
     const { title } = await convexClient.query(api.functions.threads.getThreadTitle, { threadId });
 

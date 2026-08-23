@@ -1,3 +1,4 @@
+/* oxlint-disable no-await-in-loop -- Queued preference saves must complete in order. */
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/settings/customization")({
 
 function getFormString(key: string, formData: FormData): string {
   const value = formData.get(key);
-  return typeof value === "string" ? value : "";
+  return value instanceof File ? "" : (value ?? "");
 }
 
 function RouteComponent() {

@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/label-has-associated-control -- This primitive receives its control association from callers. */
 "use client"
 
 import * as React from "react"

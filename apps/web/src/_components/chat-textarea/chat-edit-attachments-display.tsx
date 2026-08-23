@@ -31,7 +31,7 @@ export function ChatEditAttachmentsDisplay() {
   useEffect(() => {
     if (!editMessage?.attachments.length) {
       setLocalPreview([]);
-      return;
+      return undefined;
     }
 
     const nextPreview: Array<LocalPreview> = editMessage.attachments.map(

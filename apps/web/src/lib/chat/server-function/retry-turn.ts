@@ -1,3 +1,4 @@
+/* oxlint-disable no-await-in-loop -- Retry polling depends on the previous status. */
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
@@ -47,6 +48,12 @@ function waitForRetryPreparationPoll(): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, RETRY_PREPARATION_POLL_MS));
 }
 
+function getResponseStreamId(response: Response): string {
+  const streamId = response.headers.get("X-Stream-Id");
+  if (!streamId) throw new Error("The server did not return a resumable stream ID");
+  return streamId;
+}
+
 export function useRetryTurn() {
   const convexClient = useConvex();
 
@@ -84,7 +91,7 @@ export function useRetryTurn() {
     const messagesHistory = threadState.messageIds
       .map((id) => threadState.messagesById[id])
       .filter((message): message is ChatMessage => message !== undefined)
-      .sort((a, b) => a.createdAt - b.createdAt);
+      .toSorted((a, b) => a.createdAt - b.createdAt);
 
     const userMessageIndex = messagesHistory.findIndex((message) => message._id === userMessageId);
     if (userMessageIndex < 0) {
@@ -201,7 +208,7 @@ export function useRetryTurn() {
       });
 
       // Retrying is explicit intent to follow the latest response.
-      if (typeof window !== "undefined") {
+      if ("window" in globalThis) {
         setStickyToBottom(true);
         window.dispatchEvent(new Event("chat:force-scroll-bottom"));
       }
@@ -225,8 +232,7 @@ export function useRetryTurn() {
 
       await throwIfChatResponseError(response);
 
-      const responseStreamId = response.headers.get("X-Stream-Id");
-      if (!responseStreamId) throw new Error("The server did not return a resumable stream ID");
+      const responseStreamId = getResponseStreamId(response);
 
       streamStarted = true;
       messageStoreActions.setController(threadId, {

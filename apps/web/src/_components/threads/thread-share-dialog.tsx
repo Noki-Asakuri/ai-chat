@@ -65,7 +65,7 @@ export function ThreadShareDialog({ threadId, threadTitle, open, onOpenChange }:
   const currentPath = localSharePath ?? data?.urlPath ?? null;
   const shareUrl = useMemo(() => {
     if (!currentPath) return "";
-    if (typeof window === "undefined") return currentPath;
+    if (!("window" in globalThis)) return currentPath;
     return new URL(currentPath, window.location.origin).toString();
   }, [currentPath]);
 

@@ -13,20 +13,22 @@ type UploadSuccess = { attachmentDocId: Id<"attachments">; filePathname: string 
 
 type AttachmentType = "image" | "pdf";
 
-const extensionByMediaType: Record<string, string> = {
-  "application/pdf": "pdf",
-  "image/jpeg": "jpg",
-  "image/jpg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
+const extensionByMediaType = new Map<string, string>([
+  ["application/pdf", "pdf"],
+  ["image/jpeg", "jpg"],
+  ["image/jpg", "jpg"],
+  ["image/png", "png"],
+  ["image/webp", "webp"],
+]);
 
-function createAttachmentMetadata(fileAttachmentId: string, mediaType: string): { name: string; type: AttachmentType } {
+type AttachmentMetadata = { name: string; type: AttachmentType };
+
+function createAttachmentMetadata(fileAttachmentId: string, mediaType: string): AttachmentMetadata {
   const normalizedMediaType = mediaType.toLowerCase().split(";")[0]?.trim() ?? "";
   const mediaTypeMajor = normalizedMediaType.split("/")[0] ?? "";
   const mediaTypeSubtype = normalizedMediaType.split("/")[1] ?? "";
   const safeSubtype = mediaTypeSubtype.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const extension = extensionByMediaType[normalizedMediaType] ?? (safeSubtype || "bin");
+  const extension = extensionByMediaType.get(normalizedMediaType) ?? (safeSubtype || "bin");
   const type = mediaTypeMajor === "image" ? "image" : "pdf";
 
   return { name: `${fileAttachmentId}.${extension}`, type };

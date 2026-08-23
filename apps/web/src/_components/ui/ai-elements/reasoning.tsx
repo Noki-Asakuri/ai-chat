@@ -1,4 +1,5 @@
 "use client";
+/* oxlint-disable react/jsx-no-constructed-context-values -- React Compiler stabilizes provider values. */
 
 import { Collapsible } from "@base-ui/react/collapsible";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
@@ -64,6 +65,7 @@ export const Reasoning = memo(
 
         return () => clearTimeout(timer);
       }
+      return undefined;
     }, [isStreaming, isOpen, defaultOpen, setIsOpen, hasAutoClosed]);
 
     const handleOpenChange = (newOpen: boolean) => {
@@ -147,6 +149,7 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
       )}
       {...props}
     >
+      {/* eslint-disable-next-line jsx-a11y/aria-role -- Streamdown uses role as a message-domain prop. */}
       <StreamDownWrapper className="w-full max-w-none" role="assistant">
         {children}
       </StreamDownWrapper>

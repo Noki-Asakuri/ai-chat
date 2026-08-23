@@ -1,3 +1,4 @@
+/* oxlint-disable no-await-in-loop -- Queued preference saves must complete in order. */
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
 
@@ -125,7 +126,7 @@ function RouteComponent() {
       return true;
     }
 
-    if (typeof Notification === "undefined") {
+    if (!("Notification" in globalThis)) {
       toast.error("Desktop notifications are not supported in this browser.");
       setDesktopNotification(false);
       return false;

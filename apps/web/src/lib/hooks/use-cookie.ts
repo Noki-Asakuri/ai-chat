@@ -1,16 +1,22 @@
 import type { UseStorage } from "convex-helpers/react/sessions";
+import type { SessionId } from "convex-helpers/server/sessions";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/**
- * This is a wrapper around useCookie so that React Compiler don't mark it as a hook.
- * And not auto memoize it.
- */
-export const sessionUseCookie = useCookie;
+type SessionValue = SessionId | undefined;
 
-export function useCookie<T>(key: string, initialValue: T): ReturnType<UseStorage<T>> {
+/**
+ * Cookie-backed storage for Convex sessions. The alias prevents React Compiler
+ * from treating the callback passed to SessionProvider as a hook invocation.
+ */
+export const sessionUseCookie: UseStorage<SessionValue> = useSessionCookie;
+
+function useSessionCookie(
+  key: string,
+  initialValue: SessionValue,
+): ReturnType<UseStorage<SessionValue>> {
   const initialRef = useRef(initialValue);
 
-  const [value, setValueState] = useState<T>(function () {
+  const [value, setValueState] = useState<SessionValue>(function () {
     return readCookieValue(key, initialValue);
   });
 
@@ -22,9 +28,9 @@ export function useCookie<T>(key: string, initialValue: T): ReturnType<UseStorag
   );
 
   const setValue = useCallback(
-    function (next: T) {
+    function (next: SessionValue) {
       setValueState(next);
-      writeCookieValue(key, next, initialRef.current);
+      writeCookieValue(key, next);
     },
     [key],
   );
@@ -37,136 +43,78 @@ export function useCookie<T>(key: string, initialValue: T): ReturnType<UseStorag
     [key],
   );
 
-  return [value, setValue, remove] as const;
+  return [value, setValue, remove];
 }
 
-function readCookieValue<T>(key: string, initialValue: T): T {
-  if (!canUseDOM()) return initialValue;
+function readCookieValue(key: string, initialValue: SessionValue): SessionValue {
+  if (!("document" in globalThis)) return initialValue;
 
   const raw = getCookieRaw(key);
   if (raw === null) return initialValue;
 
-  let decoded: string;
   try {
-    decoded = decodeURIComponent(raw);
+    const decoded = decodeURIComponent(raw);
+    return isSessionId(decoded) ? decoded : initialValue;
   } catch {
     return initialValue;
   }
-
-  return deserialize(decoded, initialValue);
 }
 
-function writeCookieValue<T>(key: string, value: T, initialValue: T): void {
-  if (!canUseDOM()) return;
+function writeCookieValue(key: string, value: SessionValue): void {
+  if (!("document" in globalThis)) return;
 
-  const serialized = serialize(value, initialValue);
-
-  if (serialized === null) {
+  if (value === undefined) {
     deleteCookie(key);
     return;
   }
 
-  setCookieRaw(key, serialized);
+  setCookieRaw(key, value);
 }
 
-function serialize<T>(value: T, initialValue: T): string | null {
-  if (value === undefined) return null;
-
-  if (typeof initialValue === "string") return String(value);
-
-  if (typeof initialValue === "bigint") {
-    return (value as unknown as bigint).toString();
-  }
-
-  if (initialValue instanceof Date) {
-    return (value as unknown as Date).toISOString();
-  }
-
-  try {
-    const json = JSON.stringify(value);
-    return typeof json === "string" ? json : null;
-  } catch {
-    return null;
-  }
-}
-
-function deserialize<T>(raw: string, initialValue: T): T {
-  if (typeof initialValue === "string") return raw as unknown as T;
-
-  if (typeof initialValue === "bigint") {
-    try {
-      return BigInt(raw) as unknown as T;
-    } catch {
-      return initialValue;
-    }
-  }
-
-  if (initialValue instanceof Date) {
-    const d = new Date(raw);
-    if (Number.isNaN(d.getTime())) return initialValue;
-    return d as unknown as T;
-  }
-
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    if (typeof initialValue === "number") {
-      const n = Number(raw);
-      return Number.isFinite(n) ? (n as unknown as T) : initialValue;
-    }
-
-    if (typeof initialValue === "boolean") {
-      if (raw === "true") return true as unknown as T;
-      if (raw === "false") return false as unknown as T;
-    }
-
-    return initialValue;
-  }
-}
-
-function canUseDOM(): boolean {
-  return typeof document !== "undefined" && typeof document.cookie === "string";
+function isSessionId(value: string): value is SessionId {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+    value,
+  );
 }
 
 function getCookieRaw(name: string): string | null {
   const encodedName = encodeURIComponent(name);
-
   const all = document.cookie;
   if (!all) return null;
 
-  const parts = all.split(";");
-  const matchingPart = parts.find((rawPart) => rawPart.trim().startsWith(`${encodedName}=`));
+  const matchingPart = all
+    .split(";")
+    .find((rawPart) => rawPart.trim().startsWith(`${encodedName}=`));
   if (!matchingPart) return null;
 
   return matchingPart.trim().slice(encodedName.length + 1);
 }
 
 function setCookieRaw(name: string, value: string): void {
-  const encodedName = encodeURIComponent(name);
-  const encodedValue = encodeURIComponent(value);
-
-  const parts: string[] = [];
-  parts.push(encodedName + "=" + encodedValue);
-  parts.push("Path=/");
-  parts.push("SameSite=Lax");
+  const parts = [
+    `${encodeURIComponent(name)}=${encodeURIComponent(value)}`,
+    "Path=/",
+    "SameSite=Lax",
+  ];
   if (isLikelyHttps()) parts.push("Secure");
 
   document.cookie = parts.join("; ");
 }
 
 function deleteCookie(name: string): void {
-  if (!canUseDOM()) return;
+  if (!("document" in globalThis)) return;
 
-  const parts: string[] = [];
-  parts.push(encodeURIComponent(name) + "=");
-  parts.push("Path=/");
-  parts.push("SameSite=Lax");
-  parts.push("Max-Age=0");
+  const parts = [
+    `${encodeURIComponent(name)}=`,
+    "Path=/",
+    "SameSite=Lax",
+    "Max-Age=0",
+  ];
   if (isLikelyHttps()) parts.push("Secure");
 
   document.cookie = parts.join("; ");
 }
 
 function isLikelyHttps(): boolean {
-  return typeof location !== "undefined" && location.protocol === "https:";
+  return "location" in globalThis && location.protocol === "https:";
 }

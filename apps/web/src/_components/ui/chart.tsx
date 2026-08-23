@@ -3,11 +3,16 @@
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 import type { TooltipValueType } from "recharts";
+import { z } from "zod/v4";
 
-import { cn } from "@/lib/utils";
+import { cn, cssVariables } from "@/lib/utils";
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
+const THEME_ENTRIES = [
+  ["light", ""],
+  ["dark", ".dark"],
+] as const;
 
 const INITIAL_DIMENSION = { width: 320, height: 200 } as const;
 type TooltipNameType = number | string;
@@ -23,6 +28,10 @@ export type ChartConfig = Record<
 type ChartContextProps = {
   config: ChartConfig;
 };
+
+const chartPayloadSchema = z
+  .object({ payload: z.record(z.string(), z.unknown()).optional() })
+  .catchall(z.unknown());
 
 const ChartContext = React.createContext<ChartContextProps | null>(null);
 
@@ -54,8 +63,10 @@ function ChartContainer({
   const uniqueId = React.useId();
   const chartId = `chart-${id ?? uniqueId.replace(/:/g, "")}`;
 
+  const contextValue = React.useMemo(() => ({ config }), [config]);
+
   return (
-    <ChartContext.Provider value={{ config }}>
+    <ChartContext.Provider value={contextValue}>
       <div
         data-slot="chart"
         data-chart={chartId}
@@ -75,7 +86,9 @@ function ChartContainer({
 }
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
-  const colorConfig = Object.entries(config).filter(([, config]) => config.theme ?? config.color);
+  const colorConfig = Object.entries(config).filter(([, itemConfig]) =>
+    Boolean(itemConfig.theme ?? itemConfig.color),
+  );
 
   if (!colorConfig.length) {
     return null;
@@ -84,13 +97,13 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   return (
     <style
       dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
+        __html: THEME_ENTRIES
           .map(
             ([theme, prefix]) => `
 ${prefix} [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
-    const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ?? itemConfig.color;
+    const color = itemConfig.theme?.[theme] ?? itemConfig.color;
     return color ? `  --color-${key}: ${color};` : null;
   })
   .join("\n")}
@@ -141,9 +154,10 @@ function ChartTooltipContent({
     const key = `${labelKey ?? item?.dataKey ?? item?.name ?? "value"}`;
     const itemConfig = getPayloadConfigFromPayload(config, item, key);
 
+    const parsedLabel = z.string().safeParse(label);
     const value =
-      !labelKey && typeof label === "string"
-        ? (config[label]?.label ?? label)
+      !labelKey && parsedLabel.success
+        ? (config[parsedLabel.data]?.label ?? parsedLabel.data)
         : itemConfig?.label;
 
     if (labelFormatter) {
@@ -181,7 +195,7 @@ function ChartTooltipContent({
 
           items.push(
             <div
-              key={index}
+              key={`${item.dataKey ?? item.name ?? "value"}-${item.value ?? index}`}
               className={cn(
                 "flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground",
                 indicator === "dot" && "items-center",
@@ -202,12 +216,10 @@ function ChartTooltipContent({
                           "w-0 border-[1.5px] border-dashed bg-transparent": indicator === "dashed",
                           "my-0.5": nestLabel && indicator === "dashed",
                         })}
-                        style={
-                          {
-                            "--color-bg": indicatorColor,
-                            "--color-border": indicatorColor,
-                          } as React.CSSProperties
-                        }
+                        style={cssVariables({
+                          "--color-bg": indicatorColor,
+                          "--color-border": indicatorColor,
+                        })}
                       />
                     )
                   )}
@@ -225,8 +237,8 @@ function ChartTooltipContent({
 
                     {item.value != null && (
                       <span className="font-mono font-medium text-foreground tabular-nums">
-                        {typeof item.value === "number"
-                          ? item.value.toLocaleString()
+                        {z.number().safeParse(item.value).success
+                          ? Number(item.value).toLocaleString()
                           : String(item.value)}
                       </span>
                     )}
@@ -300,27 +312,18 @@ function ChartLegendContent({
   );
 }
 
-function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key: string) {
-  if (typeof payload !== "object" || payload === null) {
-    return undefined;
-  }
-
-  const payloadPayload =
-    "payload" in payload && typeof payload.payload === "object" && payload.payload !== null
-      ? payload.payload
-      : undefined;
+function getPayloadConfigFromPayload(config: ChartConfig, cause: unknown, key: string) {
+  const result = chartPayloadSchema.safeParse(cause);
+  if (!result.success) return undefined;
+  const payload = result.data;
+  const payloadPayload = payload.payload;
 
   let configLabelKey: string = key;
 
-  if (key in payload && typeof payload[key as keyof typeof payload] === "string") {
-    configLabelKey = payload[key as keyof typeof payload] as string;
-  } else if (
-    payloadPayload &&
-    key in payloadPayload &&
-    typeof payloadPayload[key as keyof typeof payloadPayload] === "string"
-  ) {
-    configLabelKey = payloadPayload[key as keyof typeof payloadPayload] as string;
-  }
+  const directKey = z.string().safeParse(payload[key]);
+  const nestedKey = z.string().safeParse(payloadPayload?.[key]);
+  if (directKey.success) configLabelKey = directKey.data;
+  else if (nestedKey.success) configLabelKey = nestedKey.data;
 
   return configLabelKey in config ? config[configLabelKey] : config[key];
 }

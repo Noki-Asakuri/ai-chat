@@ -2,8 +2,7 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 
-export function useAbortChatStream() {
-  async function abortChatStream(threadId: Id<"threads">): Promise<void> {
+async function abortChatStream(threadId: Id<"threads">): Promise<void> {
     const state = useMessageStore.getState();
     const controllerEntry = state.controllers[threadId];
 
@@ -40,7 +39,8 @@ export function useAbortChatStream() {
     } finally {
       messageStoreActions.removeController(threadId, abortController);
     }
-  }
+}
 
+export function useAbortChatStream() {
   return { abortChatStream };
 }

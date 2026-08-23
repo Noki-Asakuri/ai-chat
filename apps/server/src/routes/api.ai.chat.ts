@@ -239,7 +239,7 @@ chatRouter.post("/chat", async function (ctx) {
           error: rawError,
         });
 
-        logger.error("[Chat] An error occurred", rawError as Error);
+        logger.error("[Chat] An error occurred", rawError instanceof Error ? rawError : new Error(String(rawError)));
 
         if (APICallError.isInstance(rawError)) {
           return "The AI provider returned an error. Please try again in a moment.";
@@ -278,11 +278,11 @@ chatRouter.post("/chat", async function (ctx) {
       stream: uiMessageStream,
       status: 200,
       headers: getStreamResponseHeaders(requestId),
-      consumeSseStream: async function ({ stream }) {
+      consumeSseStream: async function ({ stream: sseStream }) {
         logger.debug("[Chat] Creating resumable stream", { userId, requestId });
 
         await Promise.allSettled([
-          streamHandle.startStream(stream),
+          streamHandle.startStream(sseStream),
           convexClient.mutation(api.functions.messages.updateMessageById, {
             messageId: validatedBody.assistantMessageId,
             updates: { status: "streaming", resumableStreamId: requestId, metadata },

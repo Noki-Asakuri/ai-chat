@@ -1,3 +1,4 @@
+/* oxlint-disable no-await-in-loop -- Migration writes are intentionally sequenced within each batch. */
 import { Migrations } from "@convex-dev/migrations";
 
 import { components, internal } from "./_generated/api";
@@ -47,10 +48,12 @@ function getThreadModelConfigFromMessages(messages: Doc<"messages">[]): {
   return null;
 }
 
-function finalizeStreamingParts(parts: Doc<"messages">["parts"]): {
+type FinalizedStreamingParts = {
   changed: boolean;
   parts: Doc<"messages">["parts"];
-} {
+};
+
+function finalizeStreamingParts(parts: Doc<"messages">["parts"]): FinalizedStreamingParts {
   let changed = false;
   const nextParts: Array<Doc<"messages">["parts"][number]> = [];
 
@@ -98,7 +101,7 @@ export const backfillThreadModelConfig = migrations.define({
   },
 });
 
-export const backfillUserPreferencesShape = migrations.define({
+export const backfillUserPreferenceDefaults = migrations.define({
   table: "users",
   migrateOne: async (ctx, user) => {
     await ctx.db.patch(user._id, { preferences: mergeUserPreferences(user.preferences) });
@@ -130,7 +133,7 @@ export const prepareMessageGraphMigration = migrations.define({
   table: "threads",
   batchSize: 50,
   migrateOne: async (_ctx, thread) => {
-    if (thread.messageGraphVersion === undefined) return;
+    if (thread.messageGraphVersion === undefined) return undefined;
     return { messageGraphVersion: undefined };
   },
 });
@@ -145,7 +148,7 @@ export const backfillMessageGraphParents = migrations.define({
 
     if (message.role === "user") {
       if (message.parentUserMessageId === undefined && message.variantIndex === undefined) {
-        if (message.messageGraphVersion === undefined) return;
+        if (message.messageGraphVersion === undefined) return undefined;
         return { messageGraphVersion: undefined };
       }
       return {
@@ -162,7 +165,7 @@ export const backfillMessageGraphParents = migrations.define({
         parent.threadId === message.threadId &&
         parent.userId === message.userId
       ) {
-        if (message.messageGraphVersion === undefined) return;
+        if (message.messageGraphVersion === undefined) return undefined;
         return { messageGraphVersion: undefined };
       }
 
@@ -253,7 +256,7 @@ export const normalizeMessageGraphVariantIndexes = migrations.define({
   table: "messages",
   batchSize: 1,
   migrateOne: async (ctx, message) => {
-    if (message.role !== "user") return;
+    if (message.role !== "user") return undefined;
     if (message.messageGraphIssue === "variantLimit") {
       return { messageGraphVersion: undefined };
     }
@@ -299,7 +302,7 @@ export const normalizeMessageGraphVariantIndexes = migrations.define({
       });
     }
 
-    if (!changed) return;
+    if (!changed) return undefined;
 
     await ctx.db.patch("threads", message.threadId, { messageGraphVersion: undefined });
     return { messageGraphVersion: undefined };
@@ -311,11 +314,11 @@ export const repairMessageGraphActiveAssistants = migrations.define({
   batchSize: 50,
   migrateOne: async (ctx, message) => {
     if (message.role === "assistant") {
-      if (message.activeAssistantMessageId === undefined) return;
+      if (message.activeAssistantMessageId === undefined) return undefined;
       return { activeAssistantMessageId: undefined, messageGraphVersion: undefined };
     }
 
-    if (!message.activeAssistantMessageId) return;
+    if (!message.activeAssistantMessageId) return undefined;
 
     const activeAssistant = await ctx.db.get("messages", message.activeAssistantMessageId);
     if (
@@ -324,7 +327,7 @@ export const repairMessageGraphActiveAssistants = migrations.define({
       activeAssistant.userId === message.userId &&
       activeAssistant.parentUserMessageId === message._id
     ) {
-      return;
+      return undefined;
     }
 
     console.warn("User has an invalid active assistant", {
@@ -340,12 +343,12 @@ export const certifyMessageGraphs = migrations.define({
   table: "messages",
   batchSize: 1,
   migrateOne: async (ctx, message) => {
-    if (message.role !== "user") return;
-    if (message.parentUserMessageId !== undefined || message.variantIndex !== undefined) return;
-    if (message.messageGraphIssue !== undefined) return;
+    if (message.role !== "user") return undefined;
+    if (message.parentUserMessageId !== undefined || message.variantIndex !== undefined) return undefined;
+    if (message.messageGraphIssue !== undefined) return undefined;
 
     const thread = await ctx.db.get("threads", message.threadId);
-    if (!thread || thread.userId !== message.userId) return;
+    if (!thread || thread.userId !== message.userId) return undefined;
 
     const variants = await ctx.db
       .query("messages")
@@ -353,7 +356,7 @@ export const certifyMessageGraphs = migrations.define({
         q.eq("threadId", message.threadId).eq("parentUserMessageId", message._id),
       )
       .take(MAX_ASSISTANT_VARIANTS_PER_TURN + 1);
-    if (variants.length > MAX_ASSISTANT_VARIANTS_PER_TURN) return;
+    if (variants.length > MAX_ASSISTANT_VARIANTS_PER_TURN) return undefined;
 
     variants.sort((left, right) => (left.variantIndex ?? -1) - (right.variantIndex ?? -1));
     for (let variantIndex = 0; variantIndex < variants.length; variantIndex += 1) {
@@ -366,7 +369,7 @@ export const certifyMessageGraphs = migrations.define({
         variant.messageGraphIssue !== undefined ||
         variant.variantIndex !== variantIndex
       ) {
-        return;
+        return undefined;
       }
     }
 
@@ -374,7 +377,7 @@ export const certifyMessageGraphs = migrations.define({
       const activeAssistant = variants.find(
         (variant) => variant._id === message.activeAssistantMessageId,
       );
-      if (!activeAssistant) return;
+      if (!activeAssistant) return undefined;
     }
 
     for (const variant of variants) {
@@ -422,7 +425,7 @@ export const markMigratedMessageGraphs = migrations.define({
           uncertifiedMessage?._id ?? olderMessage?._id ?? newerMessage?._id ?? firstMessage._id,
         threadId: thread._id,
       });
-      return;
+      return undefined;
     }
 
     return { messageGraphVersion: CURRENT_MESSAGE_GRAPH_VERSION };
@@ -433,8 +436,8 @@ export const runBackfillThreadModelConfig = migrations.runner([
   internal.migrations.backfillThreadModelConfig,
 ]);
 
-export const runBackfillUserPreferencesShape = migrations.runner([
-  internal.migrations.backfillUserPreferencesShape,
+export const runBackfillUserPreferenceDefaults = migrations.runner([
+  internal.migrations.backfillUserPreferenceDefaults,
 ]);
 
 export const runFinalizeStreamingMessageParts = migrations.runner([

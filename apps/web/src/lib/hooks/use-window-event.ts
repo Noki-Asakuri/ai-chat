@@ -6,9 +6,9 @@ export function useWindowEvent<K extends keyof WindowEventMap>(
   options?: boolean | AddEventListenerOptions,
 ): void;
 
-export function useWindowEvent<E extends Event = Event>(
+export function useWindowEvent(
   type: string,
-  callback: (event: E) => void,
+  callback: (event: Event) => void,
   options?: boolean | AddEventListenerOptions,
 ): void;
 
@@ -21,7 +21,7 @@ export function useWindowEvent(
 
   useEffect(
     function subscribe() {
-      if (typeof window === "undefined") return;
+      if (!("window" in globalThis)) return undefined;
 
       function listener(event: Event) {
         onEvent(event);

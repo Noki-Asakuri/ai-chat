@@ -170,5 +170,5 @@ export const useChatStore = create<ChatStore>()(
   ),
 );
 
-export const chatStoreActions =
-  useChatStore.getInitialState() as RemoveAllExceptFunctions<ChatStore>;
+export const chatStoreActions: RemoveAllExceptFunctions<ChatStore> =
+  useChatStore.getInitialState();

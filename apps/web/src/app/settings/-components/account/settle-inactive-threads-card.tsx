@@ -1,3 +1,4 @@
+/* oxlint-disable no-await-in-loop -- Cursor pagination is inherently sequential. */
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { useMutation } from "convex/react";

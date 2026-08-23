@@ -4,7 +4,7 @@ export async function tryCatch<T>(
   promiseFn: (() => Promise<T>) | Promise<T>,
 ): Promise<GoResult<T>> {
   try {
-    const data = await (typeof promiseFn === "function" ? promiseFn() : promiseFn);
+    const data = await ("then" in promiseFn ? promiseFn : promiseFn());
     return [data, null];
   } catch (error) {
     if (error instanceof Error) {

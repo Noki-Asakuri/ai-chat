@@ -67,13 +67,13 @@ export const listProfilesWithQuery = authenticatedQuery({
         .collect();
 
       if (args.sort === "az") {
-        return docs.sort((a, b) =>
+        return docs.toSorted((a, b) =>
           a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
         );
       }
 
       if (args.sort === "za") {
-        return docs.sort((a, b) =>
+        return docs.toSorted((a, b) =>
           b.name.localeCompare(a.name, undefined, { sensitivity: "base" }),
         );
       }
@@ -89,19 +89,19 @@ export const listProfilesWithQuery = authenticatedQuery({
 
     switch (args.sort) {
       case "az":
-        return searched.sort((a, b) =>
+        return searched.toSorted((a, b) =>
           a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
         );
       case "za":
-        return searched.sort((a, b) =>
+        return searched.toSorted((a, b) =>
           b.name.localeCompare(a.name, undefined, { sensitivity: "base" }),
         );
       case "newest":
-        return searched.sort((a, b) => b.createdAt - a.createdAt);
+        return searched.toSorted((a, b) => b.createdAt - a.createdAt);
       case "oldest":
-        return searched.sort((a, b) => a.createdAt - b.createdAt);
+        return searched.toSorted((a, b) => a.createdAt - b.createdAt);
       case "recently-updated":
-        return searched.sort((a, b) => b.updatedAt - a.updatedAt);
+        return searched.toSorted((a, b) => b.updatedAt - a.updatedAt);
       default:
         return searched;
     }
@@ -185,8 +185,8 @@ export const updateProfile = authenticatedMutation({
 
     const updates: Partial<Doc<"profiles">> = { updatedAt: Date.now() };
 
-    if (typeof args.name === "string") updates.name = args.name;
-    if (typeof args.systemPrompt === "string") updates.systemPrompt = args.systemPrompt;
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.systemPrompt !== undefined) updates.systemPrompt = args.systemPrompt;
 
     if (args.imageKey !== undefined) {
       if (args.imageKey === null) {

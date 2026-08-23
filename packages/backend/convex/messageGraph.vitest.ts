@@ -1,23 +1,21 @@
 /// <reference types="vite/client" />
+/* oxlint-disable no-await-in-loop -- Test fixtures and paginated migrations are intentionally sequential. */
 
-import migrationsTest from "@convex-dev/migrations/test";
+import { register } from "@convex-dev/migrations/test";
 import { convexTest } from "convex-test";
 import { describe, expect, test, vi } from "vitest";
 
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { DEFAULT_USER_PREFERENCES } from "./functions/users";
-import schema, {
-  CURRENT_MESSAGE_GRAPH_VERSION,
-  MAX_ASSISTANT_VARIANTS_PER_TURN,
-} from "./schema";
+import schema, { CURRENT_MESSAGE_GRAPH_VERSION, MAX_ASSISTANT_VARIANTS_PER_TURN } from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
 const USER_ID = "user_legacy_graph_test";
 
 function setup() {
   const t = convexTest(schema, modules);
-  migrationsTest.register(t);
+  register(t);
   return t.withIdentity({ subject: USER_ID });
 }
 
@@ -201,10 +199,7 @@ describe("message graph migration", () => {
 
     expect(page.hasMore).toBe(true);
     expect(page.nextBefore).not.toBeNull();
-    expect(page.messages.map((message) => message._id)).toEqual([
-      secondUserId,
-      secondAssistantId,
-    ]);
+    expect(page.messages.map((message) => message._id)).toEqual([secondUserId, secondAssistantId]);
   });
 
   test("normalizes invalid public pagination inputs", async () => {
@@ -219,10 +214,7 @@ describe("message graph migration", () => {
       limit: Number.NaN,
     });
 
-    expect(page.messages.map((message) => message._id)).toEqual([
-      userMessageId,
-      assistantMessageId,
-    ]);
+    expect(page.messages.map((message) => message._id)).toEqual([userMessageId, assistantMessageId]);
   });
 
   test("keeps branches with invalid copied parents on the legacy fallback", async () => {
@@ -347,14 +339,7 @@ describe("message graph migration", () => {
     let firstAssistantId: Id<"messages"> | undefined;
 
     for (let index = 0; index < MAX_ASSISTANT_VARIANTS_PER_TURN; index += 1) {
-      const assistantId = await insertMessage(
-        t,
-        threadId,
-        "assistant",
-        index + 2,
-        userMessageId,
-        index,
-      );
+      const assistantId = await insertMessage(t, threadId, "assistant", index + 2, userMessageId, index);
       firstAssistantId ??= assistantId;
     }
 
@@ -384,27 +369,13 @@ describe("message graph migration", () => {
     let firstAssistantId: Id<"messages"> | undefined;
 
     for (let index = 0; index < MAX_ASSISTANT_VARIANTS_PER_TURN; index += 1) {
-      const assistantId = await insertMessage(
-        t,
-        threadId,
-        "assistant",
-        index + 2,
-        firstUserMessageId,
-        index,
-      );
+      const assistantId = await insertMessage(t, threadId, "assistant", index + 2, firstUserMessageId, index);
       firstAssistantId ??= assistantId;
     }
 
     if (!firstAssistantId) throw new Error("Expected an assistant variant");
     const laterUserMessageId = await insertMessage(t, threadId, "user", 20);
-    const laterAssistantMessageId = await insertMessage(
-      t,
-      threadId,
-      "assistant",
-      21,
-      laterUserMessageId,
-      0,
-    );
+    const laterAssistantMessageId = await insertMessage(t, threadId, "assistant", 21, laterUserMessageId, 0);
 
     await expect(
       t.mutation(api.functions.messages.prepareRetryTurn, {
@@ -476,14 +447,7 @@ describe("message graph migration", () => {
       await insertUser(t);
       const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
       const userMessageId = await insertMessage(t, threadId, "user", 1);
-      const assistantMessageId = await insertMessage(
-        t,
-        threadId,
-        "assistant",
-        2,
-        userMessageId,
-        0,
-      );
+      const assistantMessageId = await insertMessage(t, threadId, "assistant", 2, userMessageId, 0);
 
       await t.run(async (ctx) => {
         await ctx.db.patch(userMessageId, { activeAssistantMessageId: assistantMessageId });
@@ -521,14 +485,7 @@ describe("message graph migration", () => {
     await insertUser(t);
     const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
     const userMessageId = await insertMessage(t, threadId, "user", 1);
-    const assistantMessageId = await insertMessage(
-      t,
-      threadId,
-      "assistant",
-      2,
-      userMessageId,
-      0,
-    );
+    const assistantMessageId = await insertMessage(t, threadId, "assistant", 2, userMessageId, 0);
 
     await t.run(async (ctx) => {
       await ctx.db.patch(userMessageId, { activeAssistantMessageId: assistantMessageId });
@@ -564,14 +521,7 @@ describe("message graph migration", () => {
     await insertUser(t);
     const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
     const userMessageId = await insertMessage(t, threadId, "user", 1);
-    const assistantMessageId = await insertMessage(
-      t,
-      threadId,
-      "assistant",
-      2,
-      userMessageId,
-      0,
-    );
+    const assistantMessageId = await insertMessage(t, threadId, "assistant", 2, userMessageId, 0);
 
     await t.run(async (ctx) => {
       await ctx.db.patch(userMessageId, { activeAssistantMessageId: assistantMessageId });
@@ -608,14 +558,7 @@ describe("message graph migration", () => {
     const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
     const firstUserMessageId = await insertMessage(t, threadId, "user", 1);
     const secondUserMessageId = await insertMessage(t, threadId, "user", 2);
-    const secondAssistantMessageId = await insertMessage(
-      t,
-      threadId,
-      "assistant",
-      3,
-      secondUserMessageId,
-      0,
-    );
+    const secondAssistantMessageId = await insertMessage(t, threadId, "assistant", 3, secondUserMessageId, 0);
 
     await expect(
       t.mutation(api.functions.messages.prepareRetryTurn, {
@@ -652,7 +595,7 @@ describe("message graph migration", () => {
             attachments: [attachmentId],
           },
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(/attachment/i);
     }
   });
 
@@ -787,10 +730,75 @@ describe("message graph migration", () => {
       error: "stale retry failure",
     });
 
-    const secondMessage = await t.run(async (ctx) =>
-      ctx.db.get("messages", second.assistantMessageId),
-    );
+    const secondMessage = await t.run(async (ctx) => ctx.db.get("messages", second.assistantMessageId));
     expect(secondMessage?.status).toBe("pending");
+  });
+
+  test("initializes missing metadata from an error update", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const userMessageId = await insertMessage(t, threadId, "user", 1);
+    const assistantMessageId = await insertMessage(t, threadId, "assistant", 2, userMessageId, 0);
+
+    await t.mutation(api.functions.messages.updateErrorMessage, {
+      messageId: assistantMessageId,
+      error: "Provider unavailable",
+      metadata: {
+        model: { request: "test/error-model", response: null },
+        modelParams: { effort: "high", webSearch: true, profile: null },
+      },
+    });
+
+    const message = await t.run(async (ctx) => ctx.db.get("messages", assistantMessageId));
+    expect(message?.metadata).toEqual({
+      model: { request: "test/error-model", response: null },
+      modelParams: { effort: "high", webSearch: true, profile: null },
+      finishReason: null,
+      usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+      timeToFirstTokenMs: 0,
+      durations: { request: 0, reasoning: 0, text: 0 },
+    });
+  });
+
+  test("preserves existing telemetry on an error update", async () => {
+    const t = setup();
+    await insertUser(t);
+    const threadId = await insertThread(t, CURRENT_MESSAGE_GRAPH_VERSION);
+    const userMessageId = await insertMessage(t, threadId, "user", 1);
+    const assistantMessageId = await insertMessage(t, threadId, "assistant", 2, userMessageId, 0);
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(assistantMessageId, {
+        metadata: {
+          model: { request: "test/original-model", response: "test/provider-model" },
+          finishReason: "stop",
+          usages: { inputTokens: 12, outputTokens: 4, reasoningTokens: 2 },
+          timeToFirstTokenMs: 25,
+          durations: { request: 100, reasoning: 20, text: 55 },
+          modelParams: { effort: "medium", webSearch: false, profile: null },
+        },
+      });
+    });
+
+    await t.mutation(api.functions.messages.updateErrorMessage, {
+      messageId: assistantMessageId,
+      error: "Provider unavailable",
+      metadata: {
+        model: { request: "test/retry-model", response: null },
+        modelParams: { effort: "high", webSearch: true, profile: null },
+      },
+    });
+
+    const message = await t.run(async (ctx) => ctx.db.get("messages", assistantMessageId));
+    expect(message?.metadata).toEqual({
+      model: { request: "test/retry-model", response: null },
+      modelParams: { effort: "high", webSearch: true, profile: null },
+      finishReason: "stop",
+      usages: { inputTokens: 12, outputTokens: 4, reasoningTokens: 2 },
+      timeToFirstTokenMs: 25,
+      durations: { request: 100, reasoning: 20, text: 55 },
+    });
   });
 
   test("deletes large descendant histories in bounded retry batches", async () => {
@@ -961,9 +969,7 @@ describe("message graph migration", () => {
       sourceAssistant: await ctx.db.get("messages", ambiguousAssistantId),
       sourceThread: await ctx.db.get("threads", threadId),
     }));
-    const copiedAmbiguousAssistant = result.branchMessages.find(
-      (message) => message.role === "assistant",
-    );
+    const copiedAmbiguousAssistant = result.branchMessages.find((message) => message.role === "assistant");
 
     expect(result.sourceAssistant?.messageGraphIssue).toBe("ambiguousParent");
     expect(result.sourceThread?.messageGraphVersion).toBeUndefined();
@@ -991,13 +997,14 @@ describe("message graph migration", () => {
       deleteScope: "assistantVariantOnly",
     });
 
-    const variants = await t.run(async (ctx) =>
-      await ctx.db
-        .query("messages")
-        .withIndex("by_threadId_parentUserMessageId", (q) =>
-          q.eq("threadId", threadId).eq("parentUserMessageId", userMessageId),
-        )
-        .collect(),
+    const variants = await t.run(
+      async (ctx) =>
+        await ctx.db
+          .query("messages")
+          .withIndex("by_threadId_parentUserMessageId", (q) =>
+            q.eq("threadId", threadId).eq("parentUserMessageId", userMessageId),
+          )
+          .collect(),
     );
     variants.sort((left, right) => (left.variantIndex ?? -1) - (right.variantIndex ?? -1));
 

@@ -1,3 +1,5 @@
+/* eslint-disable react/no-unstable-nested-components -- TanStack Table column renderers are defined with their column configuration. */
+/* eslint-disable jsx-a11y/control-has-associated-label -- Table controls receive dynamic labels from their composed content. */
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
@@ -509,7 +511,7 @@ export function AccountThreadsTable() {
         pageIndex === loadedPagesCount - 1 &&
         !isLoadingPage &&
         !pageInfo.isDone &&
-        typeof pageInfo.continueCursor === "string"
+        pageInfo.continueCursor !== null
       ) {
         return loadedPagesCount + 1;
       }
@@ -605,7 +607,7 @@ export function AccountThreadsTable() {
 
       const nextIndex = pageIndex + 1;
       const existing = pageCursors[nextIndex];
-      if (typeof existing === "string") {
+      if (existing !== undefined) {
         setMenuThreadId(null);
         setSelected(new Set());
         setIsLoadingPage(true);
@@ -709,7 +711,7 @@ export function AccountThreadsTable() {
                 aria-label="Select all"
                 checked={allSelected ? true : someSelected ? undefined : false}
                 indeterminate={someSelected}
-                onCheckedChange={(value) => setAllVisibleSelection(value === true)}
+                onCheckedChange={(value) => setAllVisibleSelection(value)}
                 disabled={isLoadingPage}
                 className="size-5"
               />

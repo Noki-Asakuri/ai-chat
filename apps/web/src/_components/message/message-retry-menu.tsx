@@ -429,7 +429,7 @@ export function MessageRetryMenu({ userMessageId, message, ...props }: RetryMode
       </Menu.Portal>
       <CancelledRetryDialog
         open={retry.confirmationOpen}
-        onOpenChange={(open) => retry.setConfirmationOpen(open)}
+        onOpenChange={(nextOpen) => retry.setConfirmationOpen(nextOpen)}
         onCreateVariant={() => retry.createVariant()}
         onReplace={() => retry.replaceResponse()}
       />

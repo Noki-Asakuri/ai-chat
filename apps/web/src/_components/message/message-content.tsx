@@ -1,3 +1,4 @@
+/* oxlint-disable react/no-array-index-key -- Rendered content blocks can repeat without stable IDs. */
 import { useLoaderData } from "@tanstack/react-router";
 
 import { MessageContent as MessageBubble, MessageAvatar as UserAvatar } from "../ui/ai-elements/message";
@@ -109,8 +110,8 @@ function buildAssistantFlowBlocks(parts: MessagePart[]): AssistantFlowBlock[] {
       const lastBlock = getLastBlock();
 
       if (lastBlock?.kind === "reasoning") {
-        const { parts } = lastBlock;
-        parts.push(part);
+        const { parts: reasoningParts } = lastBlock;
+        reasoningParts.push(part);
       } else {
         blocks.push({ kind: "reasoning", key: `reasoning-${index}`, parts: [part] });
       }
@@ -309,6 +310,7 @@ function MessageError({ message }: { message: string }) {
       data-slot="message-error"
       className="rounded-md bg-destructive/80 px-4 py-2 text-destructive-foreground backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:bg-destructive"
     >
+      {/* eslint-disable-next-line jsx-a11y/aria-role -- Streamdown uses role as a message-domain prop. */}
       <StreamDownWrapper role="assistant" isAnimating={false}>
         {message}
       </StreamDownWrapper>

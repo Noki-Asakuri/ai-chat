@@ -1,3 +1,4 @@
+/* oxlint-disable no-await-in-loop -- Attachment queries and transaction writes are intentionally sequenced. */
 import { getAll } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
 
@@ -78,7 +79,7 @@ export const getAllAttachments = authenticatedQuery({
     return await Promise.all(
       attachments.map(async (attachment) => {
         const thread = await ctx.db.get("threads", attachment.threadId);
-        return { ...attachment, thread };
+        return Object.assign(attachment, { thread });
       }),
     );
   },
@@ -181,10 +182,7 @@ export const listAttachmentsPage = authenticatedQuery({
       threadMap.set(thread._id, { _id: thread._id, title: thread.title });
     }
 
-    const items = pageItems.map((attachment) => ({
-      ...attachment,
-      thread: threadMap.get(attachment.threadId) ?? null,
-    }));
+    const items = pageItems.map((attachment) => (Object.assign(attachment, { thread: threadMap.get(attachment.threadId) ?? null })));
 
     return {
       items,
@@ -248,7 +246,7 @@ export const deleteAttachments = authenticatedMutation({
     const notFound = attachments.findIndex((a) => a === null);
 
     if (notFound !== -1) throw new Error("Attachment not found");
-    const owned = attachments as NonNullable<(typeof attachments)[number]>[];
+    const owned = attachments.filter((attachment) => attachment !== null);
 
     for (const a of owned) {
       if (a.userId !== user.userId) throw new Error("Not authorized");

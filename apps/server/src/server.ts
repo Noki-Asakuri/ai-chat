@@ -39,14 +39,16 @@ app.use(
 app.use("/api/*", async function enforceSameOrigin(ctx, next) {
   if (["GET", "HEAD", "OPTIONS"].includes(ctx.req.method)) {
     await next();
-    return;
+    return undefined;
   }
 
   if (ctx.req.header("Origin") !== env.WEB_APP_ORIGIN) {
-    return ctx.json({ error: { message: "Cross-origin request rejected" } }, 403);
+    ctx.res = ctx.json({ error: { message: "Cross-origin request rejected" } }, 403);
+    return undefined;
   }
 
   await next();
+  return undefined;
 });
 
 app.get("/health", (ctx) => ctx.text("OK"));
@@ -65,5 +67,5 @@ const server = Bun.serve({
   development: env.NODE_ENV === "development",
 });
 
-printStartupBanner(PORT);
+await printStartupBanner(PORT);
 registerShutdownHandler(server);

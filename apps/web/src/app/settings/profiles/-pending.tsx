@@ -1,3 +1,4 @@
+/* oxlint-disable react/no-array-index-key -- Static skeleton placeholders are positionally stable. */
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 

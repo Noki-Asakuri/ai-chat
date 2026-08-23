@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/no-noninteractive-element-interactions -- Drag-and-drop augments the main content region without making it keyboard-interactive. */
 import { useRef } from "react";
 import { toast } from "@/components/ui/toast";
 
@@ -88,3 +89,4 @@ function GlobalDropzoneOverlay() {
     </div>
   );
 }
+/* eslint-disable jsx-a11y/no-noninteractive-element-interactions -- Drag-and-drop augments the main content region without making it keyboard-interactive. */

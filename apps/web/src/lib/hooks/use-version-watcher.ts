@@ -25,8 +25,8 @@ export function useVersionWatcher() {
 
   useEffect(() => {
     // Don't run this on the server or in local dev.
-    if (typeof window === "undefined" || !import.meta.env.PROD) {
-      return;
+    if (!("window" in globalThis) || !import.meta.env.PROD) {
+      return undefined;
     }
 
     async function checkVersion() {

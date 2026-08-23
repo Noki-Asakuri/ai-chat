@@ -52,7 +52,7 @@ export function ThreadContents() {
 
 function ThreadListFallback() {
   return (
-    <div className="flex min-h-0 flex-1 flex-col" role="status" aria-label="Loading conversations">
+    <output className="flex min-h-0 flex-1 flex-col" aria-label="Loading conversations">
       <span className="sr-only">Loading conversations</span>
 
       <div aria-hidden="true" className="flex min-h-0 flex-1 flex-col">
@@ -90,7 +90,7 @@ function ThreadListFallback() {
           <ThreadRowsSkeleton />
         </div>
       </div>
-    </div>
+    </output>
   );
 }
 
@@ -190,7 +190,7 @@ function CreateGroupButton() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Group name"
-                autoFocus
+
               />
 
               <div className="flex justify-end gap-2">
@@ -274,8 +274,8 @@ function ActiveGroupThreadList({ activeGroupId }: { activeGroupId: Id<"groups"> 
     )
       return;
 
-    void markThreadViewed({ threadId: routeThreadId }).catch((error: unknown) => {
-      console.error("[Thread] Mark thread viewed error:", error);
+    void markThreadViewed({ threadId: routeThreadId }).catch((cause: unknown) => {
+      console.error("[Thread] Mark thread viewed error:", cause);
     });
   }, [data, markThreadViewed, routeThreadId, routeThreadTitle]);
 
@@ -538,7 +538,7 @@ function ThreadList({ data, groups }: ThreadListProps) {
                   value={editTitle}
                   onChange={(event) => setEditTitle(event.target.value)}
                   placeholder="Thread title"
-                  autoFocus
+
                 />
 
                 <div className="flex justify-end gap-2">

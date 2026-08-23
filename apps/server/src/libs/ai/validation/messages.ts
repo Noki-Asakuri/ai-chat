@@ -7,9 +7,22 @@ import { convertToModelMessages, validateUIMessages } from "ai";
 import { Result, type Result as BetterResult } from "better-result";
 
 import { MessagesValidationError, ModelMessagesConversionError } from "./errors";
-import { getErrorMessage } from "./utils";
 
 type AssistantFilePart = UIChatMessage["parts"][number];
+type SplitFileParts = {
+  fileParts: Array<AssistantFilePart>;
+  nonFileParts: Array<AssistantFilePart>;
+};
+
+function mapMessagesValidationError(cause: unknown): MessagesValidationError {
+  const message = cause instanceof Error ? cause.message : "Unknown error";
+  return new MessagesValidationError({ cause, message: `Invalid messages format: ${message}` });
+}
+
+function mapModelMessagesConversionError(cause: unknown): ModelMessagesConversionError {
+  const message = cause instanceof Error ? cause.message : "Unknown error";
+  return new ModelMessagesConversionError({ cause, message: `Could not convert messages: ${message}` });
+}
 
 export async function validateMessages(
   messages: ChatRequestBody["messages"],
@@ -18,19 +31,14 @@ export async function validateMessages(
     try: function validateMessagesFormat() {
       return validateUIMessages<UIChatMessage>({ messages, metadataSchema });
     },
-    catch: function mapMessagesValidationError(cause) {
-      return new MessagesValidationError({
-        cause,
-        message: `Invalid messages format: ${getErrorMessage(cause)}`,
-      });
-    },
+    catch: mapMessagesValidationError,
   });
 }
 
 export function moveAssistantFilePartsToNextUserMessage(
   messages: Array<UIChatMessage>,
 ): Array<UIChatMessage> {
-  let output: Array<UIChatMessage> = [];
+  const output: Array<UIChatMessage> = [];
 
   for (let index = 0; index < messages.length; index++) {
     const message = messages[index];
@@ -44,7 +52,7 @@ export function moveAssistantFilePartsToNextUserMessage(
         ? [...messageWithoutAssistantFileParts.parts, ...previousAssistantFileParts]
         : messageWithoutAssistantFileParts.parts;
 
-    output = [...output, { ...messageWithoutAssistantFileParts, parts: nextParts }];
+    output.push({ ...messageWithoutAssistantFileParts, parts: nextParts });
   }
 
   return output;
@@ -62,18 +70,15 @@ function removeAssistantFileParts(message: UIChatMessage): UIChatMessage {
   return { ...message, parts: splitFileParts(message.parts).nonFileParts };
 }
 
-function splitFileParts(parts: UIChatMessage["parts"]): {
-  fileParts: Array<AssistantFilePart>;
-  nonFileParts: Array<AssistantFilePart>;
-} {
-  let fileParts: Array<AssistantFilePart> = [];
-  let nonFileParts: Array<AssistantFilePart> = [];
+function splitFileParts(parts: UIChatMessage["parts"]): SplitFileParts {
+  const fileParts: Array<AssistantFilePart> = [];
+  const nonFileParts: Array<AssistantFilePart> = [];
 
   for (const part of parts) {
     if (part.type === "file") {
-      fileParts = [...fileParts, part];
+      fileParts.push(part);
     } else {
-      nonFileParts = [...nonFileParts, part];
+      nonFileParts.push(part);
     }
   }
 
@@ -87,11 +92,6 @@ export async function convertMessages(
     try: function convertMessagesToModelMessages() {
       return convertToModelMessages(messages);
     },
-    catch: function mapModelMessagesConversionError(cause) {
-      return new ModelMessagesConversionError({
-        cause,
-        message: `Could not convert messages: ${getErrorMessage(cause)}`,
-      });
-    },
+    catch: mapModelMessagesConversionError,
   });
 }

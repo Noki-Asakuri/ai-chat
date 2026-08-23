@@ -1,3 +1,4 @@
+/* oxlint-disable no-await-in-loop -- Thread graph cloning and transaction writes are order-dependent. */
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 
@@ -412,10 +413,7 @@ export const getAllThreads = authenticatedQuery({
         .filter((q) => q.neq(q.field("pinned"), true))
         .take(limit);
 
-      return [...pinned, ...nonPinned].map((thread) => ({
-        ...thread,
-        pinned: thread.pinned ?? false,
-      }));
+      return [...pinned, ...nonPinned].map((thread) => (Object.assign(thread, { pinned: thread.pinned ?? false })));
     }
 
     // With search query: include only pinned that match + up to N non-pinned that match
@@ -727,8 +725,7 @@ export const deleteThread = authenticatedMutation({
 
     if (args.deleteAttachments) {
       const attachments = messages
-        .map((message) => message.attachments ?? [])
-        .flat()
+        .flatMap((message) => message.attachments ?? [])
         .filter(Boolean);
 
       for (const attachmentId of attachments) {

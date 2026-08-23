@@ -1,11 +1,12 @@
 "use client"
+/* oxlint-disable react/jsx-no-constructed-context-values -- React Compiler stabilizes provider values. */
 
 import * as React from "react"
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle"
 import { ToggleGroup as ToggleGroupPrimitive } from "@base-ui/react/toggle-group"
 import { type VariantProps } from "class-variance-authority"
 
-import { cn } from "@/lib/utils"
+import { cn, cssVariables } from "@/lib/utils"
 import { toggleVariants } from "@/_components/ui/toggle"
 
 const ToggleGroupContext = React.createContext<
@@ -40,7 +41,7 @@ function ToggleGroup({
       data-size={size}
       data-spacing={spacing}
       data-orientation={orientation}
-      style={{ "--gap": spacing } as React.CSSProperties}
+      style={cssVariables({ "--gap": spacing })}
       className={cn(
         "rounded-md data-[size=sm]:rounded-md group/toggle-group flex w-fit flex-row items-center gap-[--spacing(var(--gap))] data-[orientation=vertical]:flex-col data-[orientation=vertical]:items-stretch",
         className

@@ -4,6 +4,7 @@ import {
   getAuth,
   getAuthkit,
 } from "@workos/authkit-tanstack-react-start";
+import { z } from "zod/v4";
 
 import { env } from "@/env";
 
@@ -23,26 +24,28 @@ function normalizeEmptyToUndefined(value: string): string | undefined {
   return trimmed.length === 0 ? undefined : trimmed;
 }
 
-function getErrorDetails(error: unknown): {
+type ErrorDetails = {
   name: string;
   message: string;
   code: string | null;
-} {
-  if (error instanceof Error) {
-    const hasCode = "code" in error;
-    const code = hasCode && typeof error.code === "string" ? error.code : null;
+};
+
+function getErrorDetails(cause: unknown): ErrorDetails {
+  if (cause instanceof Error) {
+    const codeResult = "code" in cause ? z.string().safeParse(cause.code) : null;
 
     return {
-      name: error.name,
-      message: error.message,
-      code,
+      name: cause.name,
+      message: cause.message,
+      code: codeResult?.success ? codeResult.data : null,
     };
   }
 
-  if (typeof error === "string") {
+  const stringResult = z.string().safeParse(cause);
+  if (stringResult.success) {
     return {
       name: "Error",
-      message: error,
+      message: stringResult.data,
       code: null,
     };
   }
@@ -208,10 +211,10 @@ export const listAccountSessions = createServerFn({ method: "GET" }).handler(asy
     });
 
     if (details.message === "Not authenticated") {
-      throw new Error("Not authenticated");
+      throw new Error("Not authenticated", { cause: error });
     }
 
-    throw new Error("Failed to load active sessions");
+    throw new Error("Failed to load active sessions", { cause: error });
   }
 });
 

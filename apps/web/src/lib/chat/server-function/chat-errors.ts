@@ -1,3 +1,5 @@
+import { z } from "zod/v4";
+
 const GENERIC_CLIENT_ERROR = "Failed to process your request. Please try again.";
 
 type DeprecatedModelError = {
@@ -12,22 +14,36 @@ type ChatApiErrorOptions = {
   message: string;
   status: number;
   code?: string | null;
-  details?: Record<string, unknown> | null;
+  details?: DeprecatedModelDetails | null;
 };
 
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
+type DeprecatedModelDetails = {
+  modelId: string;
+  modelName?: string;
+  replacementModelId: string;
+  replacementModelName?: string;
+};
 
-function readString(record: Record<string, unknown>, key: string): string | null {
-  const value = record[key];
-  return typeof value === "string" ? value : null;
-}
+const chatErrorResponseSchema = z.object({
+  error: z.object({
+    message: z.string().optional(),
+    code: z.string().nullable().optional(),
+    details: z
+      .object({
+        modelId: z.string(),
+        modelName: z.string().optional(),
+        replacementModelId: z.string(),
+        replacementModelName: z.string().optional(),
+      })
+      .nullable()
+      .optional(),
+  }),
+});
 
 export class ChatApiError extends Error {
   readonly status: number;
   readonly code: string | null;
-  readonly details: Record<string, unknown> | null;
+  readonly details: DeprecatedModelDetails | null;
 
   constructor(options: ChatApiErrorOptions) {
     super(options.message);
@@ -38,8 +54,8 @@ export class ChatApiError extends Error {
   }
 }
 
-export function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError";
+export function isAbortError(cause: unknown): boolean {
+  return cause instanceof DOMException && cause.name === "AbortError";
 }
 
 export async function throwIfChatResponseError(response: Response): Promise<void> {
@@ -51,24 +67,15 @@ export async function throwIfChatResponseError(response: Response): Promise<void
   }
 
   let code: string | null = null;
-  let details: Record<string, unknown> | null = null;
+  let details: DeprecatedModelDetails | null = null;
 
   try {
-    const payload = await response.clone().json();
-    if (isObjectRecord(payload) && isObjectRecord(payload.error)) {
-      const errorPayload = payload.error;
-
-      const apiMessage = readString(errorPayload, "message");
-      if (apiMessage && apiMessage.length > 0) {
-        message = apiMessage;
-      }
-
-      code = readString(errorPayload, "code");
-
-      const apiDetails = errorPayload.details;
-      if (isObjectRecord(apiDetails)) {
-        details = apiDetails;
-      }
+    const result = chatErrorResponseSchema.safeParse(await response.clone().json());
+    if (result.success) {
+      const errorPayload = result.data.error;
+      if (errorPayload.message) message = errorPayload.message;
+      code = errorPayload.code ?? null;
+      details = errorPayload.details ?? null;
     }
   } catch {
     // no-op
@@ -77,33 +84,28 @@ export async function throwIfChatResponseError(response: Response): Promise<void
   throw new ChatApiError({ message, status: response.status, code, details });
 }
 
-export function getDeprecatedModelError(error: unknown): DeprecatedModelError | null {
-  if (!(error instanceof ChatApiError)) return null;
-  if (error.code !== "MODEL_DEPRECATED") return null;
+export function getDeprecatedModelError(cause: unknown): DeprecatedModelError | null {
+  if (!(cause instanceof ChatApiError)) return null;
+  if (cause.code !== "MODEL_DEPRECATED") return null;
 
-  const details = error.details;
+  const details = cause.details;
   if (!details) return null;
 
-  const modelId = readString(details, "modelId");
-  const replacementModelId = readString(details, "replacementModelId");
-
-  if (!modelId || !replacementModelId) return null;
-
-  const modelName = readString(details, "modelName") ?? modelId;
-  const replacementModelName = readString(details, "replacementModelName") ?? replacementModelId;
+  const modelId = details.modelId;
+  const replacementModelId = details.replacementModelId;
 
   return {
-    message: error.message,
+    message: cause.message,
     modelId,
-    modelName,
+    modelName: details.modelName ?? modelId,
     replacementModelId,
-    replacementModelName,
+    replacementModelName: details.replacementModelName ?? replacementModelId,
   };
 }
 
-export function getClientErrorMessage(error: unknown): string {
-  if (error instanceof Error && typeof error.message === "string") {
-    const message = error.message.trim();
+export function getClientErrorMessage(cause: unknown): string {
+  if (cause instanceof Error) {
+    const message = cause.message.trim();
     if (message.length > 0) return message;
   }
 

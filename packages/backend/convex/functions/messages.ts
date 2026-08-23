@@ -1,3 +1,4 @@
+/* oxlint-disable no-await-in-loop -- Message graph reads and writes have ordering dependencies. */
 import { getAll } from "convex-helpers/server/relationships";
 import { v } from "convex/values";
 import { hasMessageContent } from "@ai-chat/shared/chat/message-content";
@@ -131,10 +132,7 @@ function buildThreadMessageGraph(messages: MessageDoc[]): ThreadMessageGraph {
 
   const assistantsByUserId: Record<Id<"messages">, AssistantMessageDoc[]> = {};
   const parentUserIdByAssistantId: Record<Id<"messages">, Id<"messages">> = {};
-  const reverseParentUserIdByAssistantId: Record<
-    Id<"messages">,
-    Id<"messages"> | null
-  > = {};
+  const reverseParentUserIdByAssistantId: Record<Id<"messages">, Id<"messages"> | null> = {};
 
   for (const userMessage of users) {
     const activeAssistantMessageId = userMessage.activeAssistantMessageId;
@@ -176,11 +174,10 @@ function buildThreadMessageGraph(messages: MessageDoc[]): ThreadMessageGraph {
     parentUserIdByAssistantId[assistantMessage._id] = parentUserMessageId;
   }
 
-  const groupedUserMessageIds = Object.keys(assistantsByUserId) as Array<Id<"messages">>;
-  for (const userMessageId of groupedUserMessageIds) {
-    const variants = assistantsByUserId[userMessageId];
+  for (const userMessage of users) {
+    const variants = assistantsByUserId[userMessage._id];
     if (!variants || variants.length === 0) continue;
-    assistantsByUserId[userMessageId] = sortAssistantVariants(variants);
+    assistantsByUserId[userMessage._id] = sortAssistantVariants(variants);
   }
 
   const activeAssistantByUserId: Record<Id<"messages">, AssistantMessageDoc> = {};
@@ -454,7 +451,7 @@ async function finishActiveRetryAttempt(
   ctx: MutationCtx,
   threadId: Id<"threads">,
   assistantMessageId: Id<"messages">,
-  status: "complete" | "failed",
+  retryStatus: "complete" | "failed",
   error?: string,
 ): Promise<void> {
   const thread = await ctx.db.get("threads", threadId);
@@ -464,7 +461,7 @@ async function finishActiveRetryAttempt(
   if (!attempt || attempt.preparedAssistantMessageId !== assistantMessageId) return;
 
   await Promise.all([
-    ctx.db.patch(attempt._id, { status, error, updatedAt: Date.now() }),
+    ctx.db.patch(attempt._id, { status: retryStatus, error, updatedAt: Date.now() }),
     ctx.db.patch(threadId, { retryAttemptId: undefined }),
   ]);
 }
@@ -581,9 +578,7 @@ export const getMessagePage = authenticatedUserIdQuery({
     if (thread.messageGraphVersion !== CURRENT_MESSAGE_GRAPH_VERSION) {
       const messages = await ctx.db
         .query("messages")
-        .withIndex("by_userId_threadId", (q) =>
-          q.eq("userId", ctx.userId).eq("threadId", args.threadId),
-        )
+        .withIndex("by_userId_threadId", (q) => q.eq("userId", ctx.userId).eq("threadId", args.threadId))
         .order("asc")
         .collect();
       const payload = await buildMessagePayload(ctx.db, messages);
@@ -611,7 +606,7 @@ export const getMessagePage = authenticatedUserIdQuery({
 
     const userTurns = await userTurnQuery.take(limit + 1);
     const hasMore = userTurns.length > limit;
-    const pageRows = userTurns.slice(0, limit).reverse();
+    const pageRows = userTurns.slice(0, limit).toReversed();
     const expandedPageRows = await expandMessagePage(ctx.db, pageRows);
     const payload = await buildMessagePayload(ctx.db, expandedPageRows);
 
@@ -698,10 +693,7 @@ export const addMessagesToThread = authenticatedMutation({
       await ctx.db.patch(args.threadId, { settled: false });
     }
 
-    const [userMessage, assistantMessage] = args.messages as [
-      (typeof args.messages)[0],
-      (typeof args.messages)[1],
-    ];
+    const [userMessage, assistantMessage] = args.messages;
 
     if (!userMessage || !assistantMessage) {
       throw new Error("Messages payload must contain user and assistant messages");
@@ -801,7 +793,22 @@ export const updateErrorMessage = authenticatedMutation({
       }
     }
 
-    const metadata = { ...message.metadata, ...args.metadata } as (typeof AISDKMetadata)["type"];
+    const metadata = message.metadata
+      ? { ...message.metadata, ...args.metadata }
+      : args.metadata?.model && args.metadata.modelParams
+        ? {
+            model: args.metadata.model,
+            modelParams: args.metadata.modelParams,
+            finishReason: args.metadata.finishReason ?? null,
+            usages: args.metadata.usages ?? {
+              inputTokens: 0,
+              outputTokens: 0,
+              reasoningTokens: 0,
+            },
+            timeToFirstTokenMs: args.metadata.timeToFirstTokenMs ?? 0,
+            durations: args.metadata.durations ?? { request: 0, reasoning: 0, text: 0 },
+          }
+        : undefined;
 
     await ctx.db.patch(args.messageId, {
       status: "error",
@@ -846,9 +853,11 @@ export const getAssistantCompletionTrackingPayloadById = authenticatedQuery({
       inputTokens: metadata.usages.inputTokens ?? 0,
       outputTokens: metadata.usages.outputTokens ?? 0,
       reasoningTokens: metadata.usages.reasoningTokens ?? 0,
-
-      ...(metadata.modelParams.profile ? { profileId: metadata.modelParams.profile } : {}),
     };
+
+    if (metadata.modelParams.profile) {
+      payload.profileId = metadata.modelParams.profile;
+    }
 
     return payload;
   },
@@ -867,7 +876,7 @@ export const applyAssistantCompletionTracking = internalMutation({
     await ctx.runMutation(internal.functions.userStats.incrementOnAssistantComplete, {
       userId: args.tracking.userId,
       modelUniqueId: args.tracking.modelUniqueId,
-      ...(args.tracking.profileId ? { profileId: args.tracking.profileId } : {}),
+      profileId: args.tracking.profileId,
 
       inputTokens: args.tracking.inputTokens,
       outputTokens: args.tracking.outputTokens,
@@ -1238,9 +1247,7 @@ async function processLegacyRetryPreparation(
 ): Promise<RetryPreparationResult> {
   const messages = await ctx.db
     .query("messages")
-    .withIndex("by_userId_threadId", (q) =>
-      q.eq("userId", attempt.userId).eq("threadId", attempt.threadId),
-    )
+    .withIndex("by_userId_threadId", (q) => q.eq("userId", attempt.userId).eq("threadId", attempt.threadId))
     .order("asc")
     .take(RETRY_LEGACY_MESSAGE_LIMIT + 1);
 
@@ -1303,9 +1310,7 @@ async function validateModernRetryTarget(
     !hasMessageContent(targetAssistantMessage.parts, targetAssistantMessage.attachments.length);
   const shouldReuseAssistantMessage =
     targetAssistantMessage !== null &&
-    (mode === "replace" ||
-      targetAssistantMessage.status === "error" ||
-      shouldReuseEmptyCancelledMessage);
+    (mode === "replace" || targetAssistantMessage.status === "error" || shouldReuseEmptyCancelledMessage);
 
   if (!shouldReuseAssistantMessage && variants.length >= MAX_ASSISTANT_VARIANTS_PER_TURN) {
     throw new Error("Assistant variant limit reached for this user turn");
@@ -1419,7 +1424,12 @@ export const prepareRetryTurn = authenticatedMutation({
         (activeAttempt.status === "deleting" || activeAttempt.status === "prepared") &&
         Date.now() - activeAttempt.updatedAt >= RETRY_ATTEMPT_STALE_MS;
 
-      if (!activeAttempt || activeAttempt.status === "complete" || activeAttempt.status === "failed" || activeAttempt.status === "cancelled") {
+      if (
+        !activeAttempt ||
+        activeAttempt.status === "complete" ||
+        activeAttempt.status === "failed" ||
+        activeAttempt.status === "cancelled"
+      ) {
         await ctx.db.patch(args.threadId, { retryAttemptId: undefined });
       } else if (isStale) {
         const preparedMessage = activeAttempt.preparedAssistantMessageId
@@ -1466,12 +1476,7 @@ export const prepareRetryTurn = authenticatedMutation({
       if (args.userMessage.messageId !== targetUserMessage._id) {
         throw new Error("Edited message must match the retried user turn");
       }
-      await validateRetryAttachments(
-        ctx,
-        user.userId,
-        args.threadId,
-        args.userMessage.attachments,
-      );
+      await validateRetryAttachments(ctx, user.userId, args.threadId, args.userMessage.attachments);
     }
 
     if (args.assistantMessageId) {
@@ -1480,7 +1485,10 @@ export const prepareRetryTurn = authenticatedMutation({
       if (!isAssistantMessage(requestedAssistantMessage)) {
         throw new Error("Retry response target is invalid");
       }
-      if (requestedAssistantMessage.userId !== user.userId || requestedAssistantMessage.threadId !== args.threadId) {
+      if (
+        requestedAssistantMessage.userId !== user.userId ||
+        requestedAssistantMessage.threadId !== args.threadId
+      ) {
         throw new Error("Assistant message does not belong to the retried user turn");
       }
       if (
@@ -1548,8 +1556,8 @@ export const continueRetryPreparation = internalMutation({
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to prepare retry";
       await ctx.db.patch(attempt._id, { status: "failed", error: message, updatedAt: Date.now() });
-      const thread = await ctx.db.get("threads", attempt.threadId);
-      if (thread?.retryAttemptId === attempt._id) {
+      const latestThread = await ctx.db.get("threads", attempt.threadId);
+      if (latestThread?.retryAttemptId === attempt._id) {
         await ctx.db.patch(attempt.threadId, {
           retryAttemptId: undefined,
           status: "complete",
@@ -1585,10 +1593,7 @@ export const getRetryAttempt = authenticatedQuery({
       throw new Error("Prepared retry is missing its assistant response");
     }
 
-    const preparedAssistantMessage = await ctx.db.get(
-      "messages",
-      attempt.preparedAssistantMessageId,
-    );
+    const preparedAssistantMessage = await ctx.db.get("messages", attempt.preparedAssistantMessageId);
     if (!preparedAssistantMessage || !isAssistantMessage(preparedAssistantMessage)) {
       throw new Error("Prepared assistant response not found");
     }

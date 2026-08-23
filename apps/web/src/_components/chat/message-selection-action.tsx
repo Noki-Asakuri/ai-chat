@@ -33,7 +33,7 @@ function appendBlockquote(input: string, text: string): string {
 export function MessageSelectionAction() {
   const [selection, setSelection] = useState<MessageSelection | null>(null);
 
-  useWindowEvent<CustomEvent<MessageSelection | null>>(
+  useWindowEvent(
     MESSAGE_SELECTION_EVENT,
     function handleMessageSelection(event) {
       if (useChatStore.getState().editMessage) {

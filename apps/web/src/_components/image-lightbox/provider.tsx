@@ -1,4 +1,5 @@
 "use client";
+/* oxlint-disable react/jsx-no-constructed-context-values -- React Compiler stabilizes provider values. */
 
 import { Dialog } from "@base-ui/react/dialog";
 import * as React from "react";

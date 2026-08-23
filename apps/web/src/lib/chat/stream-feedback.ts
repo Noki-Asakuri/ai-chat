@@ -19,7 +19,7 @@ type StreamFeedbackOptions = {
 };
 
 function isPageInactive(): boolean {
-  if (typeof document === "undefined") return false;
+  if (!("document" in globalThis)) return false;
 
   return document.hidden || !document.hasFocus();
 }
@@ -31,7 +31,7 @@ function isViewingDifferentThread(threadId: Id<"threads">): boolean {
 
 function shouldShowDesktopNotification(desktopEnabled: boolean): boolean {
   if (!desktopEnabled) return false;
-  if (typeof Notification === "undefined") return false;
+  if (!("Notification" in globalThis)) return false;
   if (Notification.permission !== "granted") return false;
 
   return isPageInactive();
@@ -53,17 +53,17 @@ function getThreadPath(threadId: Id<"threads">): string {
 }
 
 function openThread(threadId: Id<"threads">, source: "notification" | "toast"): void {
-  if (typeof window === "undefined") return;
+  if (!("window" in globalThis)) return;
 
   window.focus();
   dispatchNavigateToThreadEvent({ threadId, source });
 }
 
 function registerNotificationClick(notification: Notification, threadId: Id<"threads">): void {
-  notification.onclick = () => {
+  notification.addEventListener("click", () => {
     openThread(threadId, "notification");
     notification.close();
-  };
+  });
 }
 
 function getStreamFeedbackDescription(
@@ -77,7 +77,7 @@ function getStreamFeedbackDescription(
       : "The latest reply finished streaming while you were in another thread. Click to view.";
   }
 
-  if (typeof errorMessage === "string" && errorMessage.trim().length > 0) {
+  if (errorMessage && errorMessage.trim().length > 0) {
     return errorMessage;
   }
 

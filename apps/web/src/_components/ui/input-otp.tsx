@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/prefer-tag-over-role -- input-otp exposes separator semantics on a styled container. */
 import * as React from "react"
 import { OTPInput, OTPInputContext } from "input-otp"
 
@@ -83,3 +84,4 @@ function InputOTPSeparator({ ...props }: React.ComponentProps<"div">) {
 }
 
 export { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator }
+/* eslint-disable jsx-a11y/prefer-tag-over-role -- input-otp exposes separator semantics on a styled container. */

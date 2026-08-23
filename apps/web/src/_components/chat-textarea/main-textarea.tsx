@@ -37,7 +37,7 @@ export function ChatTextarea() {
   });
 
   useEffect(() => {
-    if (!parentRef.current) return;
+    if (!parentRef.current) return undefined;
 
     const resizeObserver = new ResizeObserver(onResize);
     resizeObserver.observe(parentRef.current);
@@ -77,10 +77,7 @@ function SettledThreadNotice() {
 
   const { data } = useQuery({
     enabled: threadId !== undefined,
-    ...convexSessionQuery(
-      api.functions.threads.getThreadPageMeta,
-      threadId ? { threadId } : "skip",
-    ),
+    ...convexSessionQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
   });
 
   if (!threadId || data?.settled !== true) return null;

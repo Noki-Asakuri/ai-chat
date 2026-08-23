@@ -19,7 +19,7 @@ type LanguageData = {
 const TRAILING_NEWLINES_REGEX = /\n+$/;
 
 export const LINE_CLAMP = 15;
-export const LANGUAGE_DISPLAY_NAME: Record<string, LanguageData> = {
+export const LANGUAGE_DISPLAY_NAME = {
   ts: { name: "TypeScript", icon: Icons.typescript },
   typescript: { name: "TypeScript", icon: Icons.typescript },
   tsx: { name: "Typescript React", icon: Icons.tsx },
@@ -44,7 +44,14 @@ export const LANGUAGE_DISPLAY_NAME: Record<string, LanguageData> = {
   html: { name: "HTML", icon: Icons.html },
   sql: { name: "SQL" },
   sh: { name: "Shell" },
-};
+} satisfies Record<string, LanguageData>;
+
+export function getLanguageData(language: string): LanguageData | undefined {
+  for (const [languageKey, languageData] of Object.entries(LANGUAGE_DISPLAY_NAME)) {
+    if (languageKey === language) return languageData;
+  }
+  return undefined;
+}
 
 type CodeBlockProps = CustomRendererProps & {
   showButtonActions?: boolean;
@@ -58,7 +65,7 @@ export function CodeBlock({
   showButtonActions = true,
   highlightedResult,
 }: CodeBlockProps) {
-  const code = String(rawCode).replace(TRAILING_NEWLINES_REGEX, "");
+  const code = rawCode.replace(TRAILING_NEWLINES_REGEX, "");
   const displayLanguage = extractOriginalFenceLanguage(meta) ?? language;
 
   if (highlightedResult) {
@@ -159,6 +166,8 @@ function HighlightedCodeBlock({
     const cachedResult = codePlugin.highlight(
       {
         code,
+        // SAFETY: Streamdown supplies the fence language string accepted by the highlighter.
+        // eslint-disable-next-line typescript/no-unsafe-type-assertion
         language: language as HighlightOptions["language"],
         themes: ["one-dark-pro", "one-dark-pro"],
       },

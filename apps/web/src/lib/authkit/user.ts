@@ -19,7 +19,7 @@ export function getUserAvatarUrl(user: WorkOSUserLike): string | undefined {
 }
 
 function isNonEmptyString(value: string | null): value is string {
-  return typeof value === "string" && value.length > 0;
+  return value !== null && value.length > 0;
 }
 
 export function getUserInitials(user: WorkOSUserLike): string {

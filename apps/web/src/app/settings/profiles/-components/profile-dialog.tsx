@@ -72,7 +72,7 @@ export function ProfileDialog({
                 <div className="relative aspect-square w-full">
                   <img
                     src={filePreviewUrl}
-                    alt="Selected profile image preview"
+                    alt="Selected profile preview"
                     className="absolute inset-0 size-full object-cover"
                   />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 via-black/25 to-transparent p-2">

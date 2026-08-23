@@ -1,10 +1,11 @@
-import type { DynamicToolUIPart, ToolUIPart, UITools } from "@ai-chat/shared/chat/ui";
+import type { DynamicToolUIPart, ToolUIPart } from "@ai-chat/shared/chat/ui";
+import { z } from "zod/v4";
 
 import { CheckIcon, CircleDashedIcon, XIcon } from "lucide-react";
 
 import type { ChatMessage } from "@/lib/types";
 
-export type ToolPart = ToolUIPart<UITools> | DynamicToolUIPart;
+export type ToolPart = ToolUIPart | DynamicToolUIPart;
 
 const TOOL_SUMMARY_MAX_LENGTH = 96;
 
@@ -22,13 +23,14 @@ export function getToolLabel(toolName: string): string {
   return toolName.replace(/_/g, " ");
 }
 
-export function stringifyForDetails(value: unknown): string {
-  if (typeof value === "string") return value;
+export function stringifyForDetails(cause: unknown): string {
+  const stringResult = z.string().safeParse(cause);
+  if (stringResult.success) return stringResult.data;
 
   try {
-    return JSON.stringify(value, null, 2);
+    return JSON.stringify(cause, null, 2);
   } catch {
-    return String(value);
+    return String(cause);
   }
 }
 
@@ -38,59 +40,53 @@ export function normalizeSummaryText(value: string): string {
   return `${normalized.slice(0, TOOL_SUMMARY_MAX_LENGTH)}...`;
 }
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function toNonEmptyString(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-
-  const normalized = value.trim();
-  if (normalized.length === 0) return null;
-
-  return normalized;
-}
-
-function summarizeInline(value: unknown): string {
-  if (typeof value === "string") {
+function summarizeInline(cause: unknown): string {
+  const stringResult = z.string().safeParse(cause);
+  if (stringResult.success) {
+    const value = stringResult.data;
     return JSON.stringify(value.length > 24 ? `${value.slice(0, 24)}...` : value);
   }
 
-  if (typeof value === "number" || typeof value === "boolean" || value === null) {
-    return String(value);
+  const scalarResult = z.union([z.number(), z.boolean(), z.null()]).safeParse(cause);
+  if (scalarResult.success) {
+    return String(scalarResult.data);
   }
 
-  if (Array.isArray(value)) {
-    return `[Array(${value.length})]`;
+  if (Array.isArray(cause)) {
+    return `[Array(${cause.length})]`;
   }
 
-  if (typeof value === "object" && value !== null) {
+  if (z.record(z.string(), z.unknown()).safeParse(cause).success) {
     return "{...}";
   }
 
-  return String(value);
+  return String(cause);
 }
 
-export function summarizeValue(value: unknown): string {
-  if (typeof value === "string") {
-    return normalizeSummaryText(value);
+export function summarizeValue(cause: unknown): string {
+  const stringResult = z.string().safeParse(cause);
+  if (stringResult.success) {
+    return normalizeSummaryText(stringResult.data);
   }
 
-  if (typeof value === "number" || typeof value === "boolean" || value === null) {
-    return String(value);
+  const scalarResult = z.union([z.number(), z.boolean(), z.null()]).safeParse(cause);
+  if (scalarResult.success) {
+    return String(scalarResult.data);
   }
 
-  if (Array.isArray(value)) {
-    const preview = value
+  if (Array.isArray(cause)) {
+    const preview = cause
       .slice(0, 3)
       .map((item) => summarizeInline(item))
       .join(", ");
-    const suffix = value.length > 3 ? ", ..." : "";
+    const suffix = cause.length > 3 ? ", ..." : "";
 
     return normalizeSummaryText(`[${preview}${suffix}]`);
   }
 
-  if (isRecord(value)) {
+  const recordResult = z.record(z.string(), z.unknown()).safeParse(cause);
+  if (recordResult.success) {
+    const value = recordResult.data;
     const preview: string[] = [];
     let hasMoreEntries = false;
     let seenEntries = 0;
@@ -116,7 +112,7 @@ export function summarizeValue(value: unknown): string {
     return normalizeSummaryText(`{ ${preview.join(", ")}${suffix} }`);
   }
 
-  return normalizeSummaryText(String(value));
+  return normalizeSummaryText(String(cause));
 }
 
 export function ToolStateBadge({ part }: { part: ToolPart }) {
@@ -173,7 +169,7 @@ export function ToolStateBadge({ part }: { part: ToolPart }) {
 
 export function isToolPart(
   part: ChatMessage["parts"][number],
-): part is ChatMessage["parts"][number] & (ToolUIPart<UITools> | DynamicToolUIPart) {
+): part is ChatMessage["parts"][number] & (ToolUIPart | DynamicToolUIPart) {
   if (part.type === "dynamic-tool") return true;
   if (part.type.startsWith("tool-")) return true;
   return part.type.startsWith("tools-");

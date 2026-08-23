@@ -4,8 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
-import babel from "@rolldown/plugin-babel";
-import viteReact, { reactCompilerPreset } from "@vitejs/plugin-react";
+import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 
 export default defineConfig({
@@ -22,7 +21,6 @@ export default defineConfig({
     nitro({ compatibilityDate: "latest" }),
     tailwindcss(),
 
-    viteReact(),
-    babel({ presets: [reactCompilerPreset()] }),
+    viteReact({ compiler: true }),
   ],
 });

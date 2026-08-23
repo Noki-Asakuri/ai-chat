@@ -75,7 +75,7 @@ export function ChatEditTextarea() {
   });
 
   useLayoutEffect(() => {
-    if (!editMessageId) return;
+    if (!editMessageId) return undefined;
 
     focusTextareaByIdAtEnd("textarea-user-message-edit");
 

@@ -24,7 +24,7 @@ export function BackgroundCard(props: BackgroundCardProps) {
   useEffect(() => {
     if (!backgroundImage) {
       setBackgroundPreviewUrl(null);
-      return;
+      return undefined;
     }
 
     const url = URL.createObjectURL(backgroundImage);

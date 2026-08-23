@@ -52,10 +52,10 @@ export function RegisterEventHandlers() {
   useWindowEvent("paste", function handlePaste(event) {
     // Handle pasted files
     if (event.clipboardData?.files.length) {
-      const target = event.target as HTMLTextAreaElement | null;
+      const target = event.target;
 
       // If paste is inside either composer textarea, let that component handle it
-      if (target && target.tagName === "TEXTAREA") return;
+      if (target instanceof HTMLTextAreaElement) return;
 
       // Default behavior: add files to the global chat composer
       const files = Array.from(event.clipboardData.files ?? []);
@@ -82,8 +82,8 @@ export function RegisterEventHandlers() {
     const text = event.clipboardData?.getData("text") ?? "";
     if (!text) return;
 
-    const target = event.target as HTMLElement;
-    if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") return;
+    const target = event.target;
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return;
 
     const chatInput = document.querySelector<HTMLTextAreaElement>("#textarea-chat-input");
     if (!chatInput) return;
@@ -108,7 +108,7 @@ export function RegisterEventHandlers() {
 
   // Handle global keyboard shortcuts
   useWindowEvent("keydown", async function handleKeyboardShortcut(event) {
-    const target = event.target as HTMLElement;
+    const target = event.target;
 
     const eventKey = event.key.toLowerCase();
     const metaKey = event.metaKey || event.ctrlKey;
@@ -117,7 +117,9 @@ export function RegisterEventHandlers() {
     const { status, threadId } = getStatusAndThreadId();
 
     const shouldFocusTextarea =
-      target.tagName !== "TEXTAREA" && target.tagName !== "INPUT" && !target.isContentEditable;
+      !(target instanceof HTMLTextAreaElement) &&
+      !(target instanceof HTMLInputElement) &&
+      !(target instanceof HTMLElement && target.isContentEditable);
 
     if (
       !event.ctrlKey &&
@@ -199,7 +201,8 @@ export function RegisterEventHandlers() {
         ? "button-edit-model-selector-trigger"
         : "button-chat-model-selector-trigger";
 
-      const btn = document.getElementById(targetId) as HTMLButtonElement | null;
+      const targetElement = document.getElementById(targetId);
+      const btn = targetElement instanceof HTMLButtonElement ? targetElement : null;
       btn?.click();
 
       // Re-focus the textarea after closing the model selector

@@ -58,9 +58,9 @@ async function ensureAuthSSRConvexClient(
   const auth = await getAuth();
 
   convexClient.setAuth(async function () {
-    const auth = await getAuth();
-    if (!auth.user) return null;
-    return auth.accessToken;
+    const refreshedAuth = await getAuth();
+    if (!refreshedAuth.user) return null;
+    return refreshedAuth.accessToken;
   });
 
   if (auth.user) {

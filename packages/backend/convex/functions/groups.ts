@@ -1,3 +1,4 @@
+/* oxlint-disable no-await-in-loop -- Convex transaction writes are intentionally sequenced. */
 import { v } from "convex/values";
 
 import { authenticatedMutation, authenticatedUserIdQuery } from "../components";
@@ -44,7 +45,7 @@ export const listGroups = authenticatedUserIdQuery({
     return {
       activeGroupId,
       groups,
-      threads: [...currentThreads, ...legacyThreads].sort(
+      threads: [...currentThreads, ...legacyThreads].toSorted(
         (left, right) => right.updatedAt - left.updatedAt,
       ),
     };

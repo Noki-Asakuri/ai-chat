@@ -1,3 +1,4 @@
+/* oxlint-disable react/no-array-index-key -- A message may contain repeated attachment URLs. */
 import type { FileUIPart } from "@ai-chat/shared/chat/ui";
 import { BotIcon, FileTextIcon, ImageOffIcon } from "lucide-react";
 import { useEffect, useState } from "react";

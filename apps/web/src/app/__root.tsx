@@ -41,7 +41,6 @@ import {
 } from "@/lib/appearance/typography";
 import {
   CHAT_NAVIGATE_TO_THREAD_EVENT,
-  type NavigateToThreadEventDetail,
 } from "@/lib/chat/notification-navigation";
 import { sessionUseCookie } from "@/lib/hooks/use-cookie";
 import { useWindowEvent } from "@/lib/hooks/use-window-event";
@@ -157,7 +156,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const { convexReactClient } = Route.useRouteContext();
   const typographyPrePaintScript = getTypographyPrePaintScript(loaderData.auth.user?.id);
 
-  useWindowEvent<CustomEvent<NavigateToThreadEventDetail>>(
+  useWindowEvent(
     CHAT_NAVIGATE_TO_THREAD_EVENT,
     async function handleNavigateToThread(event) {
       const detail = event.detail;

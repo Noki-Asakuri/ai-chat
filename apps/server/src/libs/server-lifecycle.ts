@@ -15,7 +15,7 @@ const ANSI = {
 } as const;
 
 const serverStartedAt = Date.now();
-const commitSha = await getCommitSha();
+const commitShaPromise = getCommitSha();
 
 const canUseColor = process.stdout.isTTY && process.env.NO_COLOR === undefined;
 
@@ -48,7 +48,7 @@ function getNetworkUrls(port: string | number): string[] {
     }
   }
 
-  return Array.from(addresses).sort((left, right) => left.localeCompare(right));
+  return Array.from(addresses).toSorted((left, right) => left.localeCompare(right));
 }
 
 export async function trackInFlightRequests(ctx: Context, next: Next) {
@@ -63,9 +63,12 @@ export async function trackInFlightRequests(ctx: Context, next: Next) {
   } finally {
     activeRequests = Math.max(0, activeRequests - 1);
   }
+
+  return undefined;
 }
 
-export function printStartupBanner(port: string | number): void {
+export async function printStartupBanner(port: string | number): Promise<void> {
+  const commitSha = await commitShaPromise;
   const readyInMs = Date.now() - serverStartedAt;
   const pointer = colorize("->", ANSI.green);
   const localUrl = colorize(`http://localhost:${port}/`, ANSI.cyan);

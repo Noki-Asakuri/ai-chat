@@ -22,7 +22,7 @@ async function handler(url: URL) {
 
   if (cachedBuffer && cachedMediaType) {
     logger.info(`[Chat Cache] ${url}`, { url: url.toString(), status: "HIT", cacheKey });
-    return { data: cachedBuffer!, mediaType: cachedMediaType! };
+    return { data: cachedBuffer, mediaType: cachedMediaType };
   }
 
   logger.info(`[Chat Cache] ${url}`, { url: url.toString(), status: "MISS", cacheKey });

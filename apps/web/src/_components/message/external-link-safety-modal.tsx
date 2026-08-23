@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- Backdrop clicks dismiss the dialog; the Escape listener provides equivalent keyboard dismissal. */
 import type { LinkSafetyModalProps } from "streamdown";
 
 import { CopyIcon, ExternalLinkIcon, XIcon } from "lucide-react";
@@ -62,7 +63,7 @@ export function ExternalLinkSafetyModal({ isOpen, onClose, onConfirm, url }: Lin
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
@@ -83,7 +84,7 @@ export function ExternalLinkSafetyModal({ isOpen, onClose, onConfirm, url }: Lin
     }
   }
 
-  if (!isPresent || typeof document === "undefined") return null;
+  if (!isPresent || !("document" in globalThis)) return null;
 
   return createPortal(
     <div
@@ -95,8 +96,8 @@ export function ExternalLinkSafetyModal({ isOpen, onClose, onConfirm, url }: Lin
       onClick={onClose}
       role="presentation"
     >
-      <div
-        role="dialog"
+      <dialog
+        open
         aria-label="Open external link"
         aria-modal="true"
         className={cn(
@@ -136,7 +137,7 @@ export function ExternalLinkSafetyModal({ isOpen, onClose, onConfirm, url }: Lin
             <span>Open link</span>
           </Button>
         </div>
-      </div>
+      </dialog>
     </div>,
     document.body,
   );

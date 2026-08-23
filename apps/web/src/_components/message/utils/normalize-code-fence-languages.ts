@@ -47,10 +47,12 @@ function escapeMetaString(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
-function stripBlockquotePrefix(line: string): {
+type BlockquoteLine = {
   content: string;
   prefix: string;
-} {
+};
+
+function stripBlockquotePrefix(line: string): BlockquoteLine {
   const match = line.match(BLOCKQUOTE_PREFIX_REGEX);
 
   if (!match) {

@@ -1,6 +1,6 @@
 import type { ModelData, ModelIdKey } from "..";
 
-export const deepseek: Record<ModelIdKey, ModelData> = {
+export const deepseek = {
   "deepseek/deepseek-v4-flash": {
     display: { name: "DeepSeek V4 Flash" },
     id: "deepseek/deepseek-v4-flash",
@@ -23,4 +23,4 @@ export const deepseek: Record<ModelIdKey, ModelData> = {
       toolCalling: true,
     },
   },
-};
+} satisfies Record<ModelIdKey, ModelData>;

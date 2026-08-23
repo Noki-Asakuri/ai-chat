@@ -1,7 +1,7 @@
 import { ExpandIcon, ShrinkIcon, TextIcon, WrapTextIcon } from "lucide-react";
 import { useCallback } from "react";
 
-import { LANGUAGE_DISPLAY_NAME, LINE_CLAMP } from ".";
+import { getLanguageData, LINE_CLAMP } from ".";
 import { useCodeBlockContext } from "./context";
 
 import { CopyButton } from "@/components/copy-button";
@@ -16,11 +16,11 @@ export function CodeBlockHeader({ showButtonActions = true }: { showButtonAction
   const { expanded, setExpanded, wrapline, toggleWrapline, code, language, totalLines, containerHeightPx } =
     useCodeBlockContext();
 
-  const languageData = LANGUAGE_DISPLAY_NAME[language];
+  const languageData = getLanguageData(language);
   const Icon = languageData?.icon;
 
   const calculateShouldStickyHeader = useCallback(() => {
-    if (!expanded || typeof window === "undefined") return false;
+    if (!expanded || !("window" in globalThis)) return false;
 
     const availableViewportPx = window.innerHeight - textareaHeight - 48;
     if (availableViewportPx <= 0) return false;

@@ -1,6 +1,8 @@
+/* oxlint-disable no-await-in-loop -- Cursor pagination is inherently sequential. */
 import { v } from "convex/values";
 
 import { tryGetModelData } from "@ai-chat/shared/chat/models";
+import type { PaginationResult } from "convex/server";
 
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
@@ -81,7 +83,7 @@ export const incrementOnUserMessage = internalMutation({
     const userStats = await getOrCreateUserStats(ctx, args.userId);
     const key = formatDateNumberToUTC(args.createdAt);
 
-    const activityCounts: Record<string, number> = { ...userStats.activityCounts };
+    const activityCounts = { ...userStats.activityCounts } satisfies Record<string, number>;
     activityCounts[key] = (activityCounts[key] ?? 0) + 1;
 
     await ctx.db.patch(userStats._id, {
@@ -112,10 +114,10 @@ export const incrementOnAssistantComplete = internalMutation({
     const normalizedModelId = tryGetModelData(args.modelUniqueId)?.id ?? args.modelUniqueId;
     const profileKey = args.profileId ?? "null";
 
-    const modelRequestCounts: Record<string, number> = { ...userStats.modelRequestCounts };
+    const modelRequestCounts = { ...userStats.modelRequestCounts } satisfies Record<string, number>;
     modelRequestCounts[normalizedModelId] = (modelRequestCounts[normalizedModelId] ?? 0) + 1;
 
-    const aiProfileRequestCounts: Record<string, number> = { ...userStats.aiProfileRequestCounts };
+    const aiProfileRequestCounts = { ...userStats.aiProfileRequestCounts } satisfies Record<string, number>;
     aiProfileRequestCounts[profileKey] = (aiProfileRequestCounts[profileKey] ?? 0) + 1;
 
     await ctx.db.patch(userStats._id, {
@@ -157,7 +159,7 @@ export const migrateUserStatsFromMessages = internalAction({
     const uniqueThreadIds = new Set<Id<"threads">>();
 
     for (;;) {
-      const paginationMessages = await ctx.runQuery(
+      const paginationMessages: PaginationResult<Doc<"messages">> = await ctx.runQuery(
         internal.functions.messages.queryMessagesWithCursor,
         { cursor, userId: args.userId },
       );
@@ -194,7 +196,7 @@ export const migrateUserStatsFromMessages = internalAction({
       }
 
       if (paginationMessages.isDone) break;
-      cursor = paginationMessages.continueCursor as string;
+      cursor = paginationMessages.continueCursor;
     }
 
     userStats.threadsCount = uniqueThreadIds.size;

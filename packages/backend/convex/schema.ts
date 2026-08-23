@@ -115,6 +115,7 @@ export const AISDKParts = v.array(
       output: v.any(),
       errorText: v.optional(v.string()),
       callProviderMetadata: providerMetadata,
+      resultProviderMetadata: providerMetadata,
       preliminary: v.optional(v.boolean()),
       approval: v.optional(
         v.object({
@@ -136,6 +137,7 @@ export const AISDKParts = v.array(
       output: v.optional(v.any()),
       errorText: v.string(),
       callProviderMetadata: providerMetadata,
+      resultProviderMetadata: providerMetadata,
       approval: v.optional(
         v.object({
           id: v.string(),
@@ -233,6 +235,7 @@ export const AISDKParts = v.array(
       output: v.any(),
       errorText: v.optional(v.string()),
       callProviderMetadata: providerMetadata,
+      resultProviderMetadata: providerMetadata,
       preliminary: v.optional(v.boolean()),
       approval: v.optional(
         v.object({
@@ -253,6 +256,7 @@ export const AISDKParts = v.array(
       output: v.optional(v.any()),
       errorText: v.string(),
       callProviderMetadata: providerMetadata,
+      resultProviderMetadata: providerMetadata,
       approval: v.optional(
         v.object({
           id: v.string(),

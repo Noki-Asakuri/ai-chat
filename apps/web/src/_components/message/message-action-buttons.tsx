@@ -325,10 +325,10 @@ function EditButton({ menu = false, message }: { menu?: boolean; message: ChatMe
     useShallow((state): EditState => {
       const lastMessageId = state.messageIds.at(-1);
       const lastStatus = lastMessageId ? state.messagesById[lastMessageId]?.status : "complete";
-      const isPending = lastStatus === "pending" || lastStatus === "streaming";
+      const pendingState = lastStatus === "pending" || lastStatus === "streaming";
 
       if (message.role === "assistant") {
-        return { canEdit: false, isPending, model: null, modelParams: null };
+        return { canEdit: false, isPending: pendingState, model: null, modelParams: null };
       }
 
       const activeAssistantMessageId = state.activeAssistantMessageIdByUserMessageId[message._id];
@@ -339,7 +339,7 @@ function EditButton({ menu = false, message }: { menu?: boolean; message: ChatMe
 
       return {
         canEdit: true,
-        isPending,
+        isPending: pendingState,
         model: pairedAssistantMetadata?.model.request ?? null,
         modelParams: pairedAssistantMetadata?.modelParams ?? null,
       };
@@ -447,21 +447,21 @@ function DeleteButton({ menu = false, message }: { menu?: boolean; message: Chat
         : -1;
 
       const turnDeleteMessageIds = new Set<Id<"messages">>();
-      let assistantTurnVariantCount = 0;
-      let assistantLaterDeleteCount = 0;
+      let selectedTurnVariantCount = 0;
+      let laterDeleteCount = 0;
 
       if (targetUserTurnIndex >= 0) {
         if (message.role === "assistant" && targetUserMessageId) {
           const targetVariants = state.variantMessageIdsByUserMessageId[targetUserMessageId] ?? [];
 
           if (targetVariants.length > 0) {
-            assistantTurnVariantCount = targetVariants.length;
+            selectedTurnVariantCount = targetVariants.length;
 
             for (const variantId of targetVariants) {
               turnDeleteMessageIds.add(variantId);
             }
           } else {
-            assistantTurnVariantCount = 1;
+            selectedTurnVariantCount = 1;
             turnDeleteMessageIds.add(message._id);
           }
         }
@@ -477,7 +477,7 @@ function DeleteButton({ menu = false, message }: { menu?: boolean; message: Chat
           const variants = state.variantMessageIdsByUserMessageId[userMessageId] ?? [];
 
           if (message.role === "assistant") {
-            assistantLaterDeleteCount += 1 + variants.length;
+            laterDeleteCount += 1 + variants.length;
           }
 
           for (const variantId of variants) {
@@ -497,19 +497,19 @@ function DeleteButton({ menu = false, message }: { menu?: boolean; message: Chat
         }
       }
 
-      let variantDeleteCount = 0;
-      let variantAttachmentCount = 0;
-      let canDeleteVariantOnly = false;
+      let selectedVariantDeleteCount = 0;
+      let selectedVariantAttachmentCount = 0;
+      let allowVariantOnlyDelete = false;
 
       if (message.role === "assistant") {
         const userMessageId = targetUserMessageId;
 
         if (userMessageId) {
           const variants = state.variantMessageIdsByUserMessageId[userMessageId] ?? [];
-          canDeleteVariantOnly = variants.length > 1;
+          allowVariantOnlyDelete = variants.length > 1;
 
-          if (canDeleteVariantOnly) {
-            variantDeleteCount = 1;
+          if (allowVariantOnlyDelete) {
+            selectedVariantDeleteCount = 1;
             const targetMessage = state.messagesById[message._id];
 
             if (targetMessage) {
@@ -519,7 +519,7 @@ function DeleteButton({ menu = false, message }: { menu?: boolean; message: Chat
                 variantAttachmentIds.add(attachment._id);
               }
 
-              variantAttachmentCount = variantAttachmentIds.size;
+              selectedVariantAttachmentCount = variantAttachmentIds.size;
             }
           }
         }
@@ -531,12 +531,12 @@ function DeleteButton({ menu = false, message }: { menu?: boolean; message: Chat
       return {
         threadId: state.currentThreadId,
         turnDeleteCount: turnDeleteMessageIds.size,
-        variantDeleteCount,
+        variantDeleteCount: selectedVariantDeleteCount,
         turnAttachmentCount: turnAttachmentIds.size,
-        variantAttachmentCount,
-        assistantTurnVariantCount,
-        assistantLaterDeleteCount,
-        canDeleteVariantOnly,
+        variantAttachmentCount: selectedVariantAttachmentCount,
+        assistantTurnVariantCount: selectedTurnVariantCount,
+        assistantLaterDeleteCount: laterDeleteCount,
+        canDeleteVariantOnly: allowVariantOnlyDelete,
         isStreaming: lastStatus === "pending" || lastStatus === "streaming",
       };
     }),
@@ -616,7 +616,7 @@ function DeleteButton({ menu = false, message }: { menu?: boolean; message: Chat
           toast.success(successTitle);
         }
 
-        if (typeof window !== "undefined") {
+        if ("window" in globalThis) {
           window.dispatchEvent(new Event("chat:scroll-if-sticky"));
         }
       } catch (error) {
@@ -696,7 +696,7 @@ function DeleteButton({ menu = false, message }: { menu?: boolean; message: Chat
               <Checkbox
                 id={`delete-message-attachments-${message._id}`}
                 checked={deleteAttachments}
-                onCheckedChange={(checked) => setDeleteAttachments(checked === true)}
+                onCheckedChange={(checked) => setDeleteAttachments(checked)}
                 className="size-5"
               />
 
@@ -745,39 +745,37 @@ function VariantPager({ message }: { message: ChatMessage }) {
         return {
           threadId: state.currentThreadId,
           userMessageId: null,
-          variants: [] as Array<Id<"messages">>,
+          variants: [],
           activeVariantIndex: -1,
           isStreaming: false,
         };
       }
 
-      const userMessageId = state.userMessageIdByMessageId[message._id] ?? message.parentUserMessageId;
-      if (!userMessageId) {
+      const selectedUserMessageId = state.userMessageIdByMessageId[message._id] ?? message.parentUserMessageId;
+      if (!selectedUserMessageId) {
         return {
           threadId: state.currentThreadId,
           userMessageId: null,
-          variants: [] as Array<Id<"messages">>,
+          variants: [],
           activeVariantIndex: -1,
           isStreaming: false,
         };
       }
 
-      const variants = state.variantMessageIdsByUserMessageId[userMessageId] ?? [];
-      const activeAssistantMessageId = state.activeAssistantMessageIdByUserMessageId[userMessageId];
-      const activeVariantIndex = activeAssistantMessageId
-        ? variants.indexOf(activeAssistantMessageId)
-        : variants.indexOf(message._id);
-
-      const nonNullUserMessageId: Id<"messages"> = userMessageId;
+      const selectedVariants = state.variantMessageIdsByUserMessageId[selectedUserMessageId] ?? [];
+      const activeAssistantMessageId = state.activeAssistantMessageIdByUserMessageId[selectedUserMessageId];
+      const selectedVariantIndex = activeAssistantMessageId
+        ? selectedVariants.indexOf(activeAssistantMessageId)
+        : selectedVariants.indexOf(message._id);
 
       const lastMessageId = state.messageIds.at(-1);
       const lastStatus = lastMessageId ? state.messagesById[lastMessageId]?.status : "complete";
 
       return {
         threadId: state.currentThreadId,
-        userMessageId: nonNullUserMessageId,
-        variants,
-        activeVariantIndex,
+        userMessageId: selectedUserMessageId,
+        variants: selectedVariants,
+        activeVariantIndex: selectedVariantIndex,
         isStreaming: lastStatus === "pending" || lastStatus === "streaming",
       };
     }),

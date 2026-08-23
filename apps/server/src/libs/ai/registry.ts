@@ -35,5 +35,7 @@ export function getLanguageModel(modelId: ModelIdKey): LanguageModel {
         : openai.languageModel(runtimeModelId);
     case "zai":
       return zai.languageModel(runtimeModelId);
+    default:
+      throw new Error(`Unsupported model provider: ${model.provider}`);
   }
 }

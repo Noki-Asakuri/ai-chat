@@ -32,7 +32,7 @@ export function ReasoningPicker(props: ReasoningPickerProps) {
   return <ReasoningPickerBase {...props} />;
 }
 
-export const REASONING_OPTIONS: Record<ReasoningEffort, { label: string }> = {
+export const REASONING_OPTIONS = {
   none: { label: "None" },
   minimal: { label: "Minimal" },
   low: { label: "Low" },
@@ -40,7 +40,7 @@ export const REASONING_OPTIONS: Record<ReasoningEffort, { label: string }> = {
   high: { label: "High" },
   xhigh: { label: "Extra High" },
   max: { label: "Max" },
-};
+} satisfies Record<ReasoningEffort, { label: string }>;
 
 type ReasoningPickerBaseInnerProps = ReasoningPickerProps & {
   modelData: NonNullable<ReturnType<typeof tryGetModelData>>;

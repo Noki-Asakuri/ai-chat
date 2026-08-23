@@ -1,4 +1,6 @@
+/* oxlint-disable no-await-in-loop -- Stream parsing depends on each preceding read and buffer state. */
 import {
+  parseUIMessageChunkStream,
   readUIMessageStream,
   type UIMessage,
   type UIMessageChunk,
@@ -66,83 +68,7 @@ export function createUIMessageChunkStreamFromResponse(options: {
     throw new Error("Response body is null (streaming not enabled / already consumed).");
   }
 
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  const pending: UIMessageChunk[] = [];
-
-  let buffer = "";
-  let streamDone = false;
-
-  function findBoundaryIndex(input: string): { index: number; length: number } | null {
-    const lf = input.indexOf("\n\n");
-    const crlf = input.indexOf("\r\n\r\n");
-
-    if (lf === -1 && crlf === -1) return null;
-    if (lf === -1) return { index: crlf, length: 4 };
-    if (crlf === -1) return { index: lf, length: 2 };
-    return lf < crlf ? { index: lf, length: 2 } : { index: crlf, length: 4 };
-  }
-
-  function extractData(eventBlock: string): string | null {
-    let data: string | null = null;
-
-    let lineStart = 0;
-    for (let i = 0; i <= eventBlock.length; i++) {
-      const isEnd = i === eventBlock.length;
-      const isLf = !isEnd && eventBlock.charCodeAt(i) === 10;
-
-      if (!isEnd && !isLf) continue;
-
-      let lineEnd = i;
-      if (lineEnd > lineStart && eventBlock.charCodeAt(lineEnd - 1) === 13) {
-        lineEnd--;
-      }
-
-      const line = eventBlock.slice(lineStart, lineEnd);
-      lineStart = i + 1;
-
-      if (!line.startsWith("data:")) continue;
-
-      let value = line.slice(5);
-      if (value.startsWith(" ")) value = value.slice(1);
-
-      if (data == null) data = value;
-      else data += `\n${value}`;
-    }
-
-    return data;
-  }
-
-  function parseBuffer(): void {
-    while (true) {
-      const boundary = findBoundaryIndex(buffer);
-      if (boundary == null) return;
-
-      const eventBlock = buffer.slice(0, boundary.index);
-      buffer = buffer.slice(boundary.index + boundary.length);
-
-      const data = extractData(eventBlock);
-      if (data == null) continue;
-
-      if (data === "[DONE]") {
-        streamDone = true;
-        return;
-      }
-
-      const parsed = JSON.parse(data) as unknown;
-
-      if (
-        typeof parsed === "object" &&
-        parsed != null &&
-        "type" in parsed &&
-        typeof (parsed as any).type === "string"
-      ) {
-        const chunk = parsed as UIMessageChunk;
-        pending.push(chunk);
-        options.onChunk?.(chunk);
-      }
-    }
-  }
+  const reader = parseUIMessageChunkStream(body).getReader();
 
   async function cancelUpstream(): Promise<void> {
     try {
@@ -163,35 +89,16 @@ export function createUIMessageChunkStreamFromResponse(options: {
       try {
         throwIfAborted();
 
-        if (pending.length > 0) {
-          controller.enqueue(pending.shift() as UIMessageChunk);
+        const { value, done } = await reader.read();
+        throwIfAborted();
+
+        if (done) {
+          controller.close();
           return;
         }
 
-        while (pending.length === 0 && !streamDone) {
-          const { value, done } = await reader.read();
-          throwIfAborted();
-
-          if (done) {
-            buffer += decoder.decode();
-            parseBuffer();
-            streamDone = true;
-            break;
-          }
-
-          buffer += decoder.decode(value, { stream: true });
-          parseBuffer();
-
-          if (pending.length > 0) break;
-        }
-
-        if (pending.length > 0) {
-          controller.enqueue(pending.shift() as UIMessageChunk);
-          return;
-        }
-
-        await cancelUpstream();
-        controller.close();
+        options.onChunk?.(value);
+        controller.enqueue(value);
       } catch (error) {
         await cancelUpstream();
         controller.error(error);
@@ -207,8 +114,7 @@ export function createUIMessageChunkStreamFromResponse(options: {
 export async function consumeUIMessageStreamResponse<UI_MESSAGE extends UIMessage = UIMessage>(
   options: ConsumeUIMessageStreamResponseOptions<UI_MESSAGE>,
 ): Promise<void> {
-  const flushMode =
-    options.flushMode ?? (typeof requestAnimationFrame === "function" ? "raf" : "timeout");
+  const flushMode = options.flushMode ?? ("requestAnimationFrame" in globalThis ? "raf" : "timeout");
   const flushIntervalMs = options.flushIntervalMs ?? 16;
 
   let latestMessage: UI_MESSAGE | undefined;
@@ -232,7 +138,7 @@ export async function consumeUIMessageStreamResponse<UI_MESSAGE extends UIMessag
   function flushMessage(): void {
     if (latestMessage == null) return;
 
-    const snapshot = { ...latestMessage } as UI_MESSAGE;
+    const snapshot = { ...latestMessage };
     latestMessage = undefined;
 
     emit({
@@ -246,7 +152,7 @@ export async function consumeUIMessageStreamResponse<UI_MESSAGE extends UIMessag
     if (flushScheduled) return;
     flushScheduled = true;
 
-    if (flushMode === "raf" && typeof requestAnimationFrame === "function") {
+    if (flushMode === "raf" && "requestAnimationFrame" in globalThis) {
       rafId = requestAnimationFrame(function handleFrame() {
         flushScheduled = false;
         rafId = undefined;
@@ -264,13 +170,13 @@ export async function consumeUIMessageStreamResponse<UI_MESSAGE extends UIMessag
 
   function cleanupTimers(): void {
     if (timeoutId != null) clearTimeout(timeoutId);
-    if (rafId != null && typeof cancelAnimationFrame === "function") {
+    if (rafId != null && "cancelAnimationFrame" in globalThis) {
       cancelAnimationFrame(rafId);
     }
   }
 
-  function handleStreamError(error: unknown): void {
-    emit({ type: "error", error });
+  function handleStreamError(cause: unknown): void {
+    emit({ type: "error", error: cause });
   }
 
   try {
@@ -282,10 +188,10 @@ export async function consumeUIMessageStreamResponse<UI_MESSAGE extends UIMessag
 
     const uiMessageStream = readUIMessageStream({
       stream: chunkStream,
-      message: options.message as UIMessage | undefined,
+      message: options.message,
       onError: handleStreamError,
       terminateOnError: options.terminateOnError,
-    }) as AsyncIterable<UI_MESSAGE>;
+    });
 
     for await (const uiMessage of uiMessageStream) {
       if (options.signal?.aborted) break;

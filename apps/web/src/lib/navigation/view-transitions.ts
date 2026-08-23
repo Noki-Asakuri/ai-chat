@@ -67,11 +67,10 @@ export function isChatEntryTransition(fromPath: string, toPath: string): boolean
 }
 
 export function shouldUseViewTransitions(): boolean {
-  if (typeof window === "undefined" || typeof document === "undefined") return false;
+  if (!("window" in globalThis) || !("document" in globalThis)) return false;
 
   const canStartViewTransition =
-    "startViewTransition" in document &&
-    typeof document.startViewTransition === "function";
+    "startViewTransition" in document;
 
   if (!canStartViewTransition) return false;
   return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;

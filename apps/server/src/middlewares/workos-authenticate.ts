@@ -1,4 +1,4 @@
-import type { AuthKitConfig, AuthResult, HeadersBag, Session } from "@workos/authkit-session";
+import type { AuthKitConfig, AuthResult, BaseTokenClaims, HeadersBag, Session } from "@workos/authkit-session";
 import {
   CookieSessionStorage,
   configure,
@@ -111,6 +111,10 @@ function getAuthSessionConfig(): AuthKitConfig {
   };
 }
 
+function encryptionFactory() {
+  return sessionEncryption;
+}
+
 function createHonoAuthService() {
   const config = getAuthSessionConfig();
   configure(config);
@@ -119,9 +123,7 @@ function createHonoAuthService() {
     sessionStorageFactory: function sessionStorageFactory(authConfig) {
       return new HonoCookieSessionStorage(authConfig);
     },
-    encryptionFactory: function encryptionFactory() {
-      return sessionEncryption;
-    },
+    encryptionFactory,
   });
 }
 
@@ -129,8 +131,8 @@ const authService = createHonoAuthService();
 
 function extractSetCookieHeader(headers?: HeadersBag): string | null {
   const header = headers?.["Set-Cookie"];
-  if (typeof header === "string") return header;
   if (Array.isArray(header)) return header[0] ?? null;
+  if (header) return header;
 
   return null;
 }
@@ -151,7 +153,7 @@ function toAuthSession(auth: AuthenticatedAuthResult): Session {
 function isTokenExpiringSoon(accessToken: string): boolean {
   const claimsResult = Result.try({
     try: function decodeAccessToken() {
-      return decodeJwt(accessToken);
+      return decodeJwt<BaseTokenClaims>(accessToken);
     },
     catch: function mapDecodeError(cause) {
       return new WorkOSAuthError({ operation: "decode access token", cause });
@@ -161,7 +163,7 @@ function isTokenExpiringSoon(accessToken: string): boolean {
   if (Result.isError(claimsResult)) return true;
 
   const claims = claimsResult.value;
-  if (typeof claims.exp !== "number") return true;
+  if (claims.exp === undefined) return true;
 
   const currentTimestamp = Math.floor(Date.now() / 1000);
   return claims.exp - currentTimestamp <= 60;
@@ -295,73 +297,25 @@ async function refreshAccessTokenResult(
 }
 
 function getAuthErrorStatus(error: AuthContextError): 401 | 500 {
-  return error.match<AuthContextError, 401 | 500>({
-    UnauthenticatedError: function getUnauthenticatedStatus() {
-      return 401;
-    },
-    SessionHeaderError: function getSessionHeaderStatus() {
-      return 500;
-    },
-    WorkOSAuthError: function getWorkOSAuthStatus() {
-      return 500;
-    },
-  });
+  return error._tag === "UnauthenticatedError" ? 401 : 500;
 }
 
 function getAuthErrorSetCookieHeader(error: AuthContextError): string | null {
-  return error.match({
-    UnauthenticatedError: function getUnauthenticatedHeader(unauthenticatedError) {
-      return unauthenticatedError.clearSessionHeader;
-    },
-    SessionHeaderError: function getSessionHeaderErrorHeader() {
-      return null;
-    },
-    WorkOSAuthError: function getWorkOSAuthErrorHeader() {
-      return null;
-    },
-  });
+  return error._tag === "UnauthenticatedError" ? error.clearSessionHeader : null;
 }
 
 function getAuthErrorResponseMessage(error: AuthContextError): string {
-  return error.match({
-    UnauthenticatedError: function getUnauthenticatedMessage() {
-      return "Error: Unauthenticated!";
-    },
-    SessionHeaderError: function getSessionHeaderMessage() {
-      return "Error: Authentication failed!";
-    },
-    WorkOSAuthError: function getWorkOSAuthMessage() {
-      return "Error: Authentication failed!";
-    },
-  });
+  return error._tag === "UnauthenticatedError"
+    ? "Error: Unauthenticated!"
+    : "Error: Authentication failed!";
 }
 
 function getAuthLogMessage(error: AuthContextError): string {
-  return error.match({
-    UnauthenticatedError: function getUnauthenticatedLogMessage() {
-      return "Unauthenticated";
-    },
-    SessionHeaderError: function getSessionHeaderLogMessage(sessionHeaderError) {
-      return sessionHeaderError.message;
-    },
-    WorkOSAuthError: function getWorkOSAuthLogMessage(workOSAuthError) {
-      return workOSAuthError.message;
-    },
-  });
+  return error._tag === "UnauthenticatedError" ? "Unauthenticated" : error.message;
 }
 
 function getAccessTokenErrorSetCookieHeader(error: AccessTokenError): string | null {
-  return error.match({
-    RefreshAccessTokenError: function getRefreshHeader(refreshError) {
-      return refreshError.clearSessionHeader;
-    },
-    SessionHeaderError: function getSessionHeaderErrorHeader() {
-      return null;
-    },
-    WorkOSAuthError: function getWorkOSAuthErrorHeader() {
-      return null;
-    },
-  });
+  return error._tag === "RefreshAccessTokenError" ? error.clearSessionHeader : null;
 }
 
 function createServerAuthContext(options: {
@@ -481,6 +435,7 @@ export const authenticate = createMiddleware(async function authenticate(ctx, ne
   }
 
   appendSessionHeader(ctx.res.headers, serverAuth.flushPendingSetCookieHeader());
+  return undefined;
 });
 
 function readCookieFromHeader(cookieHeader: string | undefined, cookieName: string): string | null {

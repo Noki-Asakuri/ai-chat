@@ -62,25 +62,30 @@ type PersistableModelSet = "hidden" | "favorite";
 type ModelCapabilityKey =
   "reasoning" | "toolCalling" | "imageInput" | "pdfInput" | "imageOutput" | "imageGeneration";
 
-const PROVIDER_ORDER_INDEX: Record<Provider, number> = {
+const PROVIDER_ORDER_INDEX = {
   google: 0,
   openai: 1,
   deepseek: 2,
   kimi: 3,
   zai: 4,
-};
+} satisfies Record<Provider, number>;
 
-const STATUS_BADGE_STYLES: Record<"visible" | "hidden" | "favorite" | "deprecated", string> = {
+const STATUS_BADGE_STYLES = {
   visible: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
   hidden: "border-sky-500/30 bg-sky-500/10 text-sky-300",
   favorite: "border-amber-500/30 bg-amber-500/10 text-amber-300",
   deprecated: "border-rose-500/30 bg-rose-500/10 text-rose-300",
-};
+} satisfies Record<"visible" | "hidden" | "favorite" | "deprecated", string>;
 
 const SAVE_DEBOUNCE_MS = 1000;
 const MODELS_GRID_OVERSCAN = 3;
 const MODELS_GRID_ESTIMATED_ROW_HEIGHT_PX = 220;
 const MODELS_GRID_VIRTUALIZATION_MIN_ROWS = 80;
+
+function stopFavoriteMouseDown(event: React.MouseEvent<HTMLButtonElement>): void {
+  event.preventDefault();
+  event.stopPropagation();
+}
 
 const CAPABILITY_FILTER_OPTIONS: Array<{
   value: ModelCapabilityKey;
@@ -98,7 +103,7 @@ const CAPABILITY_FILTER_OPTIONS: Array<{
 const SELECTABLE_MODEL_ID_SET: ReadonlySet<string> = new Set<string>(SelectableModelIds);
 
 const MODEL_ENTRIES: Array<ModelEntry> = AllModelIds.slice()
-  .sort((a, b) => a.localeCompare(b))
+  .toSorted((a, b) => a.localeCompare(b))
   .map((modelId) => {
     const data = getModelData(modelId);
 
@@ -196,8 +201,8 @@ function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
   return true;
 }
 
-function toErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
+function toErrorMessage(cause: unknown): string {
+  if (cause instanceof Error) return cause.message;
   return "Unknown error";
 }
 
@@ -776,7 +781,7 @@ function ModelsFilter(props: ModelsFilterProps) {
                   key={option.value}
                   checked={props.capabilityFilter.has(option.value)}
                   onCheckedChange={(checked) => {
-                    props.onSetCapabilityFilter(option.value, checked === true);
+                    props.onSetCapabilityFilter(option.value,  checked);
                   }}
                   onSelect={(event) => {
                     event.preventDefault();
@@ -1010,14 +1015,7 @@ const ModelVisibilityToggle = memo(function ModelVisibilityToggle(props: ModelVi
   );
 });
 
-const capabilityMetadata: Record<
-  ModelCapabilityKey,
-  {
-    label: string;
-    Icon: typeof BrainIcon;
-    className: string;
-  }
-> = {
+const capabilityMetadata = {
   reasoning: {
     label: "Reasoning",
     Icon: BrainIcon,
@@ -1048,7 +1046,10 @@ const capabilityMetadata: Record<
     Icon: ImagePlusIcon,
     className: "border-amber-500/30 bg-amber-500/10 text-amber-300",
   },
-};
+} satisfies Record<
+  ModelCapabilityKey,
+  { label: string; Icon: typeof BrainIcon; className: string }
+>;
 
 const capabilityOrder: Array<ModelCapabilityKey> = [
   "reasoning",
@@ -1068,11 +1069,6 @@ const ModelRow = memo(function ModelRow(props: ModelRowProps) {
   const visibilityToggleLabel = isDeprecated
     ? `${props.entry.displayName} is deprecated and unavailable`
     : `Toggle visibility for ${props.entry.displayName}`;
-
-  function handleFavoriteMouseDown(event: React.MouseEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
 
   function handleFavoriteClick(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -1114,7 +1110,7 @@ const ModelRow = memo(function ModelRow(props: ModelRowProps) {
 
           <button
             type="button"
-            onMouseDown={handleFavoriteMouseDown}
+          onMouseDown={stopFavoriteMouseDown}
             onClick={handleFavoriteClick}
             disabled={!canToggleFavorite}
             aria-label={

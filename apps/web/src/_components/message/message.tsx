@@ -55,7 +55,7 @@ export function Message({
   // Keep assistant message min-height in sync with live changes to the most recent user message
   useEffect(() => {
     // Only the last user message should drive `lastUserMessageHeight`.
-    if (message.role !== "user" || !isLast || !containerRef.current) return;
+    if (message.role !== "user" || !isLast || !containerRef.current) return undefined;
 
     const element = containerRef.current;
     let lastReportedHeight = -1;

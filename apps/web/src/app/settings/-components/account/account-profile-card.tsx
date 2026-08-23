@@ -24,6 +24,10 @@ import { convexSessionQuery } from "@/lib/convex/helpers";
 import { censorEmail } from "@/lib/email";
 import { useStorage } from "@/lib/hooks/use-storage";
 
+function reauthenticate(): void {
+  window.location.href = "/auth/login?rt=%2Fsettings%2Faccount&maxAge=300";
+}
+
 function getFormFile(key: string, formData: FormData): File | null {
   const value = formData.get(key);
   return value instanceof File ? value : null;
@@ -70,8 +74,8 @@ export function AccountProfileCard() {
 
     const avatarFile = getFormFile("avatar-file", formData);
 
-    const firstName = typeof firstNameRaw === "string" ? firstNameRaw : "";
-    const lastName = typeof lastNameRaw === "string" ? lastNameRaw : "";
+    const firstName = firstNameRaw instanceof File ? "" : (firstNameRaw ?? "");
+    const lastName = lastNameRaw instanceof File ? "" : (lastNameRaw ?? "");
 
     startTransition(async () => {
       const promise = (async () => {
@@ -104,10 +108,6 @@ export function AccountProfileCard() {
       setAvatarPreviewUrl(null);
       await router.invalidate();
     });
-  }
-
-  function reauthenticate() {
-    window.location.href = "/auth/login?rt=%2Fsettings%2Faccount&maxAge=300";
   }
 
   function startEmailChange() {
