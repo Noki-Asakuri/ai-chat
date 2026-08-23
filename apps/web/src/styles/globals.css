@@ -481,7 +481,7 @@
 }
 
 .katex-display {
-  @apply block w-full;
+  @apply block w-full max-w-full overflow-x-auto overflow-y-hidden;
 }
 
 ::view-transition-group(root),
