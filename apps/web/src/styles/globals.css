@@ -465,7 +465,7 @@
 }
 
 *::selection {
-  @apply bg-accent text-current;
+  @apply bg-primary text-primary-foreground;
 }
 
 #sidebar-provider[data-disable-blur="true"] .backdrop-blur-md {
