@@ -1,16 +1,25 @@
 /* oxlint-disable react/no-array-index-key -- Rendered content blocks can repeat without stable IDs. */
 import { useLoaderData } from "@tanstack/react-router";
+import { ChevronDownIcon, Clock3Icon } from "lucide-react";
 
 import { MessageContent as MessageBubble, MessageAvatar as UserAvatar } from "../ui/ai-elements/message";
 import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { Icons } from "../ui/icons";
 import { Message, MessageAvatar, MessageContent as MessageLayoutContent, MessageHeader } from "../ui/message";
 
+import {
+  buildAssistantFlowBlocks,
+  isFilePart,
+  isTextPart,
+  splitAssistantFlow,
+  type AssistantFlowBlock,
+} from "./message-flow";
 import { MessageAttachmentsDisplay } from "./message-attachments-display";
 import { StreamDownWrapper } from "./message-markdown";
 import { MessagePending } from "./message-pending";
 import { MessageReasoning } from "./message-reasoning";
-import { MessageStepDivider, MessageToolParts, isToolPart, type ToolPart } from "./message-tool-parts";
+import { MessageStepDivider, MessageToolParts } from "./message-tool-parts";
 
 import { getUserDisplayName } from "@/lib/authkit/user";
 import { clearMessageSelection, selectMessageText } from "@/lib/chat/message-selection";
@@ -18,132 +27,10 @@ import { tryGetModelData } from "@/lib/chat/models";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type MessagePart = ChatMessage["parts"][number];
-type ChatTextPart = MessagePart & { type: "text"; text: string; state?: "streaming" | "done" };
-type ChatFilePart = MessagePart & {
-  type: "file";
-  mediaType: string;
-  url: string;
-  filename?: string;
-};
-type ChatReasoningPart = MessagePart & {
-  type: "reasoning";
-  text: string;
-  state?: "streaming" | "done";
-};
-
-type ChatStepStartPart = MessagePart & { type: "step-start" };
-
-type AssistantFlowBlock =
-  | { kind: "text"; key: string; parts: ChatTextPart[] }
-  | { kind: "reasoning"; key: string; parts: ChatReasoningPart[] }
-  | { kind: "tools"; key: string; parts: ToolPart[] }
-  | { kind: "step-divider"; key: string };
-
 type MessageContentProps = {
   message: ChatMessage;
   showUserAvatar?: boolean;
 };
-
-function isTextPart(part: MessagePart): part is ChatTextPart {
-  return part.type === "text";
-}
-
-function isFilePart(part: MessagePart): part is ChatFilePart {
-  return part.type === "file";
-}
-
-function isReasoningPart(part: MessagePart): part is ChatReasoningPart {
-  return part.type === "reasoning";
-}
-
-function isStepStartPart(part: MessagePart): part is ChatStepStartPart {
-  return part.type === "step-start";
-}
-
-function isRenderableAssistantPart(part: MessagePart): boolean {
-  return isTextPart(part) || isReasoningPart(part) || isToolPart(part);
-}
-
-function buildAssistantFlowBlocks(parts: MessagePart[]): AssistantFlowBlock[] {
-  if (parts.length === 0) return [];
-
-  const renderableFromIndex: boolean[] = Array.from({ length: parts.length }, () => false);
-
-  let hasRenderableAhead = false;
-  for (let index = parts.length - 1; index >= 0; index -= 1) {
-    const part = parts[index]!;
-    hasRenderableAhead = hasRenderableAhead || isRenderableAssistantPart(part);
-    renderableFromIndex[index] = hasRenderableAhead;
-  }
-
-  const blocks: AssistantFlowBlock[] = [];
-  let hasRenderableBefore = false;
-
-  function getLastBlock(): AssistantFlowBlock | undefined {
-    return blocks[blocks.length - 1];
-  }
-
-  for (let index = 0; index < parts.length; index += 1) {
-    const part = parts[index]!;
-
-    if (isFilePart(part)) {
-      continue;
-    }
-
-    if (isStepStartPart(part)) {
-      const hasRenderableAfter = index + 1 < parts.length && renderableFromIndex[index + 1]!;
-      const lastBlock = getLastBlock();
-
-      if (
-        hasRenderableBefore &&
-        hasRenderableAfter &&
-        (lastBlock == null || lastBlock.kind !== "step-divider")
-      ) {
-        blocks.push({ kind: "step-divider", key: `step-${index}` });
-      }
-      continue;
-    }
-
-    if (isReasoningPart(part)) {
-      hasRenderableBefore = true;
-      const lastBlock = getLastBlock();
-
-      if (lastBlock?.kind === "reasoning") {
-        const { parts: reasoningParts } = lastBlock;
-        reasoningParts.push(part);
-      } else {
-        blocks.push({ kind: "reasoning", key: `reasoning-${index}`, parts: [part] });
-      }
-      continue;
-    }
-
-    if (isToolPart(part)) {
-      hasRenderableBefore = true;
-      const lastBlock = getLastBlock();
-
-      if (lastBlock?.kind === "tools") {
-        lastBlock.parts.push(part);
-      } else {
-        blocks.push({ kind: "tools", key: `tools-${index}`, parts: [part] });
-      }
-      continue;
-    }
-
-    if (isTextPart(part)) {
-      hasRenderableBefore = true;
-      const lastBlock = getLastBlock();
-
-      if (lastBlock?.kind === "text") {
-        lastBlock.parts.push(part);
-      } else {
-        blocks.push({ kind: "text", key: `text-${index}`, parts: [part] });
-      }
-    }
-  }
-
-  return blocks;
-}
 
 export function MessageContent({ message, showUserAvatar = true }: MessageContentProps) {
   const parts = message.parts ?? [];
@@ -152,6 +39,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
   const fileParts = parts.filter(isFilePart);
   const userTextParts = message.role === "user" ? parts.filter(isTextPart) : [];
   const assistantBlocks = message.role === "assistant" ? buildAssistantFlowBlocks(parts) : [];
+  const assistantFlow = splitAssistantFlow(assistantBlocks, message);
 
   const shouldRenderUserAvatar = showUserAvatar && message.role === "user";
   const shouldRenderPending =
@@ -220,46 +108,10 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
 
         {message.status !== "error" && message.role === "assistant" && assistantBlocks.length > 0 && (
           <div className="flex w-full min-w-0 flex-col gap-1.5">
-            {assistantBlocks.map((block) => {
-              if (block.kind === "step-divider") {
-                return <MessageStepDivider key={block.key} />;
-              }
-
-              if (block.kind === "reasoning") {
-                return (
-                  <MessageReasoning
-                    className="w-full"
-                    key={block.key}
-                    parts={block.parts}
-                    status={message.status}
-                    metadata={message.metadata}
-                  />
-                );
-              }
-
-              if (block.kind === "tools") {
-                return <MessageToolParts key={block.key} parts={block.parts} />;
-              }
-
-              return (
-                <div className="flex min-w-0 flex-col gap-1.5" key={block.key}>
-                  {block.parts.map((part, index) => (
-                    <MessageBubble
-                      key={`${message._id}-${block.key}-${index}`}
-                      className="surface-edge bg-background/75 backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
-                      onMouseDown={clearMessageSelection}
-                      onMouseUp={(event) =>
-                        selectMessageText(event.currentTarget, event.target, event.detail)
-                      }
-                    >
-                      <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>
-                        {part.text}
-                      </StreamDownWrapper>
-                    </MessageBubble>
-                  ))}
-                </div>
-              );
-            })}
+            {assistantFlow.hasFinalResponse && (
+              <MessageWorkLog blocks={assistantFlow.workBlocks} message={message} />
+            )}
+            <AssistantBlocks blocks={assistantFlow.responseBlocks} message={message} />
           </div>
         )}
 
@@ -286,6 +138,85 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
       </MessageLayoutContent>
     </Message>
   );
+}
+
+function AssistantBlocks({ blocks, message }: { blocks: AssistantFlowBlock[]; message: ChatMessage }) {
+  return blocks.map((block) => {
+    if (block.kind === "step-divider") return <MessageStepDivider key={block.key} />;
+
+    if (block.kind === "reasoning") {
+      return (
+        <MessageReasoning
+          className="w-full"
+          key={block.key}
+          parts={block.parts}
+          status={message.status}
+          metadata={message.metadata}
+        />
+      );
+    }
+
+    if (block.kind === "tools") {
+      return <MessageToolParts key={block.key} parts={block.parts} />;
+    }
+
+    return <AssistantTextBlock key={block.key} block={block} message={message} />;
+  });
+}
+
+function AssistantTextBlock({
+  block,
+  message,
+}: {
+  block: Extract<AssistantFlowBlock, { kind: "text" }>;
+  message: ChatMessage;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      {block.parts.map((part, index) => (
+        <MessageBubble
+          key={`${message._id}-${block.key}-${index}`}
+          className="surface-edge bg-background/75 backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
+          onMouseDown={clearMessageSelection}
+          onMouseUp={(event) => selectMessageText(event.currentTarget, event.target, event.detail)}
+        >
+          <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>
+            {part.text}
+          </StreamDownWrapper>
+        </MessageBubble>
+      ))}
+    </div>
+  );
+}
+
+function MessageWorkLog({ blocks, message }: { blocks: AssistantFlowBlock[]; message: ChatMessage }) {
+  const durationMs = message.metadata?.durations.request ?? 0;
+  const label = durationMs > 0 ? `Worked for ${formatWorkDuration(durationMs)}` : "Work log";
+
+  return (
+    <Collapsible className="w-full">
+      <CollapsibleTrigger className="surface-edge group flex min-h-8 w-full items-center gap-2 rounded-md border bg-background px-2 text-left text-sm text-muted-foreground transition-colors hover:border-ring hover:bg-background hover:text-foreground">
+        <Clock3Icon className="size-4" />
+        <span className="grow">{label}</span>
+        <ChevronDownIcon className="size-4 transition-transform group-data-panel-open:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="flex h-[var(--collapsible-panel-height)] flex-col overflow-hidden transition-[height] duration-150 ease-out data-ending-style:h-0 data-starting-style:h-0 [&[hidden]:not([hidden='until-found'])]:hidden">
+        <div className="flex flex-col gap-1.5 pt-1.5">
+          <p className="px-2 text-xs font-medium text-muted-foreground">Work log</p>
+          <AssistantBlocks blocks={blocks} message={message} />
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function formatWorkDuration(durationMs: number): string {
+  const totalSeconds = Math.max(1, Math.round(durationMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes === 0) return `${seconds}s`;
+  return `${minutes}m ${seconds}s`;
 }
 
 function UserMessageHeader() {

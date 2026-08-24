@@ -1,6 +1,9 @@
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, WrenchIcon } from "lucide-react";
 
 import * as React from "react";
+
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
+import { Separator } from "../../ui/separator";
 
 import {
   getToolLabel,
@@ -10,7 +13,6 @@ import {
   summarizeValue,
   ToolStateBadge,
   type ToolPart,
-  isToolPart,
 } from "./shared";
 import {
   isWebSearchToolName,
@@ -151,16 +153,36 @@ export function MessageToolParts({ parts, className }: MessageToolPartsProps) {
   if (toolParts.length === 0) return null;
 
   return (
-    <div className={cn("flex w-full flex-col gap-1", className)}>
-      {toolParts.map((part) => (
-        <MessageToolPart key={part.toolCallId} part={part} />
-      ))}
-    </div>
+    <Collapsible className={cn("w-full", className)}>
+      <CollapsibleTrigger className="group flex min-h-8 w-full items-center gap-2 rounded-md border bg-background/80 px-2 text-left text-sm text-muted-foreground backdrop-blur-md backdrop-saturate-150 transition-colors hover:text-foreground">
+        <WrenchIcon className="size-4" />
+        <span className="grow">{getToolGroupLabel(toolParts)}</span>
+        <ChevronDownIcon className="size-4 transition-transform group-data-panel-open:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="flex h-[var(--collapsible-panel-height)] flex-col overflow-hidden transition-[height] duration-150 ease-out data-ending-style:h-0 data-starting-style:h-0 [&[hidden]:not([hidden='until-found'])]:hidden">
+        <div className="flex flex-col gap-1 pt-1">
+          {toolParts.map((part) => (
+            <MessageToolPart key={part.toolCallId} part={part} />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
-export function MessageStepDivider({ className }: { className?: string }) {
-  return <hr className={cn("my-0.5 border-border/50", className)} />;
+function getToolGroupLabel(parts: ToolPart[]): string {
+  const failedCount = parts.filter((part) => part.state === "output-error").length;
+  const isRunning = parts.some(
+    (part) =>
+      part.state !== "output-available" && part.state !== "output-error" && part.state !== "output-denied",
+  );
+  const noun = parts.length === 1 ? "tool call" : "tool calls";
+  const label = isRunning ? `Running ${parts.length} ${noun}` : `Ran ${parts.length} ${noun}`;
+
+  if (failedCount === 0) return label;
+  return `${label} · ${failedCount} failed`;
 }
 
-export { isToolPart, type ToolPart };
+export function MessageStepDivider({ className }: { className?: string }) {
+  return <Separator className={cn("my-0.5 opacity-50", className)} />;
+}
