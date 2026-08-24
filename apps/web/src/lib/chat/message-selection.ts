@@ -20,8 +20,6 @@ export function selectMessageText(
   contentElement: HTMLElement,
   eventTarget: EventTarget,
   clickCount: number,
-  x: number,
-  y: number,
 ): void {
   if (
     eventTarget instanceof Element &&
@@ -37,8 +35,9 @@ export function selectMessageText(
     return;
   }
 
+  const range = selection.getRangeAt(0);
+
   if (clickCount === 1) {
-    const range = selection.getRangeAt(0);
     const contentRange = document.createRange();
     contentRange.selectNodeContents(contentElement);
 
@@ -61,9 +60,11 @@ export function selectMessageText(
     return;
   }
 
+  const bounds = range.getBoundingClientRect();
+
   window.dispatchEvent(
     new CustomEvent<MessageSelection>(MESSAGE_SELECTION_EVENT, {
-      detail: { text, x, y },
+      detail: { text, x: bounds.left + bounds.width / 2, y: bounds.bottom },
     }),
   );
 }

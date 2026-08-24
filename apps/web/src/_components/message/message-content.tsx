@@ -249,13 +249,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
                       className="surface-edge bg-background/75 backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
                       onMouseDown={clearMessageSelection}
                       onMouseUp={(event) =>
-                        selectMessageText(
-                          event.currentTarget,
-                          event.target,
-                          event.detail,
-                          event.clientX,
-                          event.clientY,
-                        )
+                        selectMessageText(event.currentTarget, event.target, event.detail)
                       }
                     >
                       <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>

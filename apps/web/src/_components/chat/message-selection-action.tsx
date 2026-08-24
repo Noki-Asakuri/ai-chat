@@ -1,7 +1,7 @@
 import { MessageSquarePlusIcon } from "lucide-react";
 import { useState } from "react";
 
-import { ButtonWithTip } from "../ui/button";
+import { Button } from "../ui/button";
 
 import { focusTextareaByIdAtEnd } from "@/lib/chat/focus-textarea";
 import { MESSAGE_SELECTION_EVENT, type MessageSelection } from "@/lib/chat/message-selection";
@@ -12,7 +12,7 @@ const MAX_SELECTED_CONTEXT_LENGTH = 4000;
 const ACTION_WIDTH_PX = 132;
 const ACTION_HEIGHT_PX = 28;
 const ACTION_GAP_PX = 8;
-const ACTION_VERTICAL_GAP_PX = 12;
+const ACTION_VERTICAL_GAP_PX = 16;
 
 function getSelectedContext(text: string): string {
   return text.length > MAX_SELECTED_CONTEXT_LENGTH
@@ -70,11 +70,9 @@ export function MessageSelectionAction() {
   }
 
   return (
-    <ButtonWithTip
+    <Button
       variant="outline"
       size="sm"
-      side="top"
-      title="Add selected text to chat"
       className="fixed z-50 h-7 gap-1.5 rounded-md border border-border bg-popover px-2 text-xs text-popover-foreground opacity-100 shadow-md hover:bg-muted dark:bg-popover dark:hover:bg-muted"
       style={{ left, top, transform: "translateX(-50%)" }}
       onMouseDown={(event) => {
@@ -85,6 +83,6 @@ export function MessageSelectionAction() {
     >
       <MessageSquarePlusIcon className="size-3.5" />
       Add to chat
-    </ButtonWithTip>
+    </Button>
   );
 }
