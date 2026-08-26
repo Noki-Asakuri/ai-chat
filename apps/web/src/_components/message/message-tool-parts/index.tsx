@@ -18,7 +18,6 @@ import {
   isWebSearchToolName,
   parseWebSearchOutput,
   summarizeWebSearchOutput,
-  WebSearchHeaderIcons,
   WebSearchOutputView,
 } from "./web-search-tool-part";
 
@@ -125,8 +124,6 @@ function MessageToolPart({ part }: { part: ToolPart }) {
         <span className="min-w-0 shrink text-xs font-medium text-foreground">{getToolLabel(toolName)}</span>
 
         <span className="text-2xs min-w-0 grow truncate text-muted-foreground">{summaryText}</span>
-
-        {webSearchOutput && <WebSearchHeaderIcons output={webSearchOutput} />}
 
         <ToolStateBadge part={part} />
       </button>
