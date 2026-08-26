@@ -148,7 +148,10 @@ function MessageToolPart({ part }: { part: ToolPart }) {
 }
 
 export function MessageToolParts({ parts, className }: MessageToolPartsProps) {
-  const toolParts = parts ?? [];
+  const toolParts = (parts ?? []).filter((part) => {
+    if (!isWebSearchToolName(getToolName(part))) return true;
+    return part.state !== "approval-responded" || part.approval.approved;
+  });
 
   if (toolParts.length === 0) return null;
 

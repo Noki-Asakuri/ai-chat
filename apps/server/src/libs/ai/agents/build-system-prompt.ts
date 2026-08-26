@@ -114,7 +114,8 @@ export async function buildSystemPrompts(ctx: Context, metadata: ChatMetadata) {
       body: dedent`
         - Use one language only for web search in this request. Prefer the same language as the user's latest message unless the user explicitly asks for a different language.
         - Do not run multilingual web searches for the same intent.
-        - Avoid multiple web search tool calls in the same step because they can return duplicate or overlapping results.
+        - Make at most one web search tool call in each step.
+        - Web search is limited to three calls for the entire request. Never attempt a fourth call.
         - If a previous step already contains enough web search context, do not search again.
         - Only call web search again when prior results are clearly insufficient, outdated, or not relevant enough to answer reliably.
       `,

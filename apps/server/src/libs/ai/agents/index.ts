@@ -4,8 +4,7 @@ import { getLanguageModel } from "@/libs/ai/registry";
 import type { ValidatedChatRequestBody } from "@/libs/ai/validation";
 
 import { handleImagesCaching } from "@/libs/redis/file-caching";
-
-const MAX_WEB_SEARCH_CALLS = 3;
+import { getActiveToolsWithinWebSearchLimit, WEB_SEARCH_TOOL_NAME } from "./web-search-limit";
 
 type BuildChatAgentOptions = {
   systemInstruction: string;
@@ -17,27 +16,24 @@ type BuildChatAgentOptions = {
 
 export function buildChatAgent(options: BuildChatAgentOptions): ToolLoopAgent<never, ToolSet> {
   const { modelId, reasoning, systemInstruction, providerOptions, tools } = options;
-  let webSearchCalls = 0;
+  const hasWebSearch = Object.hasOwn(tools, WEB_SEARCH_TOOL_NAME);
 
   return new ToolLoopAgent({
     model: getLanguageModel(modelId),
     instructions: systemInstruction,
     tools,
     maxRetries: 5,
-    providerOptions,
+    providerOptions: hasWebSearch
+      ? {
+          ...providerOptions,
+          openai: { ...providerOptions.openai, parallelToolCalls: false },
+        }
+      : providerOptions,
     reasoning,
-    toolApproval: function ({ toolCall }) {
-      if (toolCall.toolName !== "web_search") return undefined;
-
-      if (webSearchCalls >= MAX_WEB_SEARCH_CALLS) {
-        return {
-          type: "denied",
-          reason: "The web search limit for this request has been reached.",
-        };
-      }
-
-      webSearchCalls += 1;
-      return undefined;
+    prepareStep: function ({ steps }) {
+      return {
+        activeTools: getActiveToolsWithinWebSearchLimit(Object.keys(tools), steps),
+      };
     },
     stopWhen: isStepCount(20),
     experimental_download: handleImagesCaching,
