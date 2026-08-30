@@ -55,7 +55,12 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
       enabled: true,
       renderModal: (modalProps) => <ExternalLinkSafetyModal {...modalProps} />,
     },
-    className: cn("typeset typeset-docs w-full min-w-0", className),
+    className: cn(
+      "typeset typeset-docs w-full min-w-0",
+      props.role === "assistant" &&
+        "[&_[data-streamdown=link]]:cursor-pointer [&_[data-streamdown=link]]:underline [&_[data-streamdown=link]]:underline-offset-2 [&_[data-streamdown=link]:hover]:decoration-current",
+      className,
+    ),
     remarkPlugins: [...Object.values(defaultRemarkPlugins), remarkBreaks],
     ...props,
   };
