@@ -109,8 +109,7 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
       if (messageIndex < 0) return { canRetry: false, retryUserMessageId: null };
 
       if (message.role === "assistant") {
-        const userMessageId =
-          state.userMessageIdByMessageId[message._id] ?? message.parentUserMessageId;
+        const userMessageId = state.userMessageIdByMessageId[message._id] ?? message.parentUserMessageId;
         const userMessage = userMessageId ? state.messagesById[userMessageId] : undefined;
         if (userMessage?.role !== "user") {
           return { canRetry: false, retryUserMessageId: null };
@@ -346,17 +345,6 @@ function EditButton({ menu = false, message }: { menu?: boolean; message: ChatMe
     }),
   );
 
-  if (!canEdit) return null;
-
-  if (menu) {
-    return (
-      <DropdownMenuItem disabled={isPending} onClick={handleEditMessage}>
-        <PencilIcon />
-        Edit message
-      </DropdownMenuItem>
-    );
-  }
-
   function handleEditMessage() {
     chatStoreActions.setEditMessage({
       _id: message._id,
@@ -373,6 +361,17 @@ function EditButton({ menu = false, message }: { menu?: boolean; message: ChatMe
       model: model ?? configModel,
       modelParams: modelParams ?? configModelParams,
     });
+  }
+
+  if (!canEdit) return null;
+
+  if (menu) {
+    return (
+      <DropdownMenuItem disabled={isPending} onClick={handleEditMessage}>
+        <PencilIcon />
+        Edit message
+      </DropdownMenuItem>
+    );
   }
 
   return (
@@ -742,7 +741,8 @@ function VariantPager({ message }: { message: ChatMessage }) {
         };
       }
 
-      const selectedUserMessageId = state.userMessageIdByMessageId[message._id] ?? message.parentUserMessageId;
+      const selectedUserMessageId =
+        state.userMessageIdByMessageId[message._id] ?? message.parentUserMessageId;
       if (!selectedUserMessageId) {
         return {
           threadId: state.currentThreadId,
@@ -808,9 +808,9 @@ function VariantPager({ message }: { message: ChatMessage }) {
       toast.error("Failed to switch response", {
         description: error instanceof Error ? error.message : "Unknown error",
       });
-    } finally {
-      setPendingDirection(null);
     }
+
+    setPendingDirection(null);
   }
 
   return (

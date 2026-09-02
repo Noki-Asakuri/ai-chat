@@ -781,7 +781,7 @@ function ModelsFilter(props: ModelsFilterProps) {
                   key={option.value}
                   checked={props.capabilityFilter.has(option.value)}
                   onCheckedChange={(checked) => {
-                    props.onSetCapabilityFilter(option.value,  checked);
+                    props.onSetCapabilityFilter(option.value, checked);
                   }}
                   onSelect={(event) => {
                     event.preventDefault();
@@ -1048,10 +1048,7 @@ const capabilityMetadata = {
     Icon: ImagePlusIcon,
     className: "border-amber-500/30 bg-amber-500/10 text-amber-300",
   },
-} satisfies Record<
-  ModelCapabilityKey,
-  { label: string; Icon: typeof BrainIcon; className: string }
->;
+} satisfies Record<ModelCapabilityKey, { label: string; Icon: typeof BrainIcon; className: string }>;
 
 const capabilityOrder: Array<ModelCapabilityKey> = [
   "reasoning",
@@ -1112,7 +1109,7 @@ const ModelRow = memo(function ModelRow(props: ModelRowProps) {
 
           <button
             type="button"
-          onMouseDown={stopFavoriteMouseDown}
+            onMouseDown={stopFavoriteMouseDown}
             onClick={handleFavoriteClick}
             disabled={!canToggleFavorite}
             aria-label={

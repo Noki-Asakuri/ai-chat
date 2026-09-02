@@ -58,7 +58,7 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
     className: cn(
       "typeset typeset-docs w-full min-w-0",
       props.role === "assistant" &&
-        "[&_[data-streamdown=link]]:cursor-pointer [&_[data-streamdown=link]]:underline [&_[data-streamdown=link]]:underline-offset-2 [&_[data-streamdown=link]:hover]:decoration-current",
+        "[&_[data-streamdown=link]]:cursor-pointer [&_[data-streamdown=link]]:no-underline [&_[data-streamdown=link]]:underline-offset-2 [&_[data-streamdown=link]:hover]:underline",
       className,
     ),
     remarkPlugins: [...Object.values(defaultRemarkPlugins), remarkBreaks],

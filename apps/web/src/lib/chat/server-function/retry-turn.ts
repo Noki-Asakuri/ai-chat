@@ -54,6 +54,10 @@ function getResponseStreamId(response: Response): string {
   return streamId;
 }
 
+function failRetryPreparation(message: string): never {
+  throw new Error(message);
+}
+
 export function useRetryTurn() {
   const convexClient = useConvex();
 
@@ -152,168 +156,174 @@ export function useRetryTurn() {
       return { status: "ignored" };
     }
 
-    try {
-      const initialRetryResult = await convexClient.mutation(api.functions.messages.prepareRetryTurn, {
-        threadId,
-        userMessageId,
-        assistantMessageId: assistantMessage?._id,
-        mode,
+    return (async (): Promise<RetryTurnResult> => {
+      try {
+        const initialRetryResult = await convexClient.mutation(api.functions.messages.prepareRetryTurn, {
+          threadId,
+          userMessageId,
+          assistantMessageId: assistantMessage?._id,
+          mode,
 
-        model: requestModel,
-        modelParams: mutationModelParams,
-        userMessage: options.userMessage,
-      });
-
-      retryAttemptId = initialRetryResult.retryAttemptId;
-      let retryResult;
-      if (initialRetryResult.status === "prepared") {
-        retryResult = initialRetryResult;
-      } else {
-        let preparationStatus = await convexClient.query(api.functions.messages.getRetryAttempt, {
-          retryAttemptId: initialRetryResult.retryAttemptId,
+          model: requestModel,
+          modelParams: mutationModelParams,
+          userMessage: options.userMessage,
         });
 
-        while (preparationStatus.status === "preparing") {
-          await waitForRetryPreparationPoll();
-          preparationStatus = await convexClient.query(api.functions.messages.getRetryAttempt, {
+        retryAttemptId = initialRetryResult.retryAttemptId;
+        let retryResult;
+        if (initialRetryResult.status === "prepared") {
+          retryResult = initialRetryResult;
+        } else {
+          let preparationStatus = await convexClient.query(api.functions.messages.getRetryAttempt, {
             retryAttemptId: initialRetryResult.retryAttemptId,
           });
+
+          while (preparationStatus.status === "preparing") {
+            await waitForRetryPreparationPoll();
+            preparationStatus = await convexClient.query(api.functions.messages.getRetryAttempt, {
+              retryAttemptId: initialRetryResult.retryAttemptId,
+            });
+          }
+
+          if (preparationStatus.status === "failed") {
+            failRetryPreparation(preparationStatus.error);
+          }
+          if (preparationStatus.status === "cancelled") {
+            failRetryPreparation("Retry was cancelled");
+          }
+          retryResult = preparationStatus;
         }
 
-        if (preparationStatus.status === "failed") throw new Error(preparationStatus.error);
-        if (preparationStatus.status === "cancelled") throw new Error("Retry was cancelled");
-        retryResult = preparationStatus;
-      }
+        const nextAssistantMessageId = retryResult.assistantMessageId;
+        preparedAssistantMessageId = nextAssistantMessageId;
+        messageStoreActions.prepareAssistantMessageForRetry(threadId, {
+          assistantMessageId: nextAssistantMessageId,
+          userMessageId: retryResult.userMessageId,
+          creationTime: retryResult.creationTime,
+          messageId: retryResult.messageId,
+          userId: retryResult.userId,
+          createdAt: retryResult.createdAt,
+          variantIndex: retryResult.variantIndex,
+          metadata: retryMetadata,
+        });
+        prepared = true;
+        onPrepared?.();
 
-      const nextAssistantMessageId = retryResult.assistantMessageId;
-      preparedAssistantMessageId = nextAssistantMessageId;
-      messageStoreActions.prepareAssistantMessageForRetry(threadId, {
-        assistantMessageId: nextAssistantMessageId,
-        userMessageId: retryResult.userMessageId,
-        creationTime: retryResult.creationTime,
-        messageId: retryResult.messageId,
-        userId: retryResult.userId,
-        createdAt: retryResult.createdAt,
-        variantIndex: retryResult.variantIndex,
-        metadata: retryMetadata,
-      });
-      prepared = true;
-      onPrepared?.();
+        abortController = new AbortController();
 
-      abortController = new AbortController();
+        messageStoreActions.setController(threadId, {
+          controller: abortController,
+          assistantMessageId: nextAssistantMessageId,
+        });
 
-      messageStoreActions.setController(threadId, {
-        controller: abortController,
-        assistantMessageId: nextAssistantMessageId,
-      });
+        // Retrying is explicit intent to follow the latest response.
+        if ("window" in globalThis) {
+          setStickyToBottom(true);
+          window.dispatchEvent(new Event("chat:force-scroll-bottom"));
+        }
 
-      // Retrying is explicit intent to follow the latest response.
-      if ("window" in globalThis) {
-        setStickyToBottom(true);
-        window.dispatchEvent(new Event("chat:force-scroll-bottom"));
-      }
+        const body: ChatRequestBody = {
+          model: requestModel,
+          threadId,
+          messages: allMessages,
+          assistantMessageId: nextAssistantMessageId,
+          retryAttemptId: retryResult.retryAttemptId,
+          modelParams: mutationModelParams,
+        };
 
-      const body: ChatRequestBody = {
-        model: requestModel,
-        threadId,
-        messages: allMessages,
-        assistantMessageId: nextAssistantMessageId,
-        retryAttemptId: retryResult.retryAttemptId,
-        modelParams: mutationModelParams,
-      };
+        const response = await fetch(new URL("/api/ai/chat", import.meta.env.VITE_API_ENDPOINT), {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: abortController.signal,
+        });
 
-      const response = await fetch(new URL("/api/ai/chat", import.meta.env.VITE_API_ENDPOINT), {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: abortController.signal,
-      });
+        await throwIfChatResponseError(response);
 
-      await throwIfChatResponseError(response);
+        const responseStreamId = getResponseStreamId(response);
 
-      const responseStreamId = getResponseStreamId(response);
+        streamStarted = true;
+        messageStoreActions.setController(threadId, {
+          controller: abortController,
+          assistantMessageId: nextAssistantMessageId,
+          streamId: responseStreamId,
+        });
 
-      streamStarted = true;
-      messageStoreActions.setController(threadId, {
-        controller: abortController,
-        assistantMessageId: nextAssistantMessageId,
-        streamId: responseStreamId,
-      });
+        await processStreamResponse(response, nextAssistantMessageId, threadId, abortController);
+        emitStreamFeedback({
+          status: "success",
+          threadId,
+          soundEnabled: notificationSound,
+          desktopEnabled: desktopNotification,
+        });
+        return { status: "started" };
+      } catch (error) {
+        if (isAbortError(error)) {
+          if (retryAttemptId && !streamStarted) {
+            await tryCatch(
+              convexClient.mutation(api.functions.messages.cancelRetryAttempt, {
+                retryAttemptId,
+                reason: "Retry cancelled before generation started",
+              }),
+            );
+          }
+          return { status: "failed", phase: prepared ? "stream" : "preparation" };
+        }
 
-      await processStreamResponse(response, nextAssistantMessageId, threadId, abortController);
-      emitStreamFeedback({
-        status: "success",
-        threadId,
-        soundEnabled: notificationSound,
-        desktopEnabled: desktopNotification,
-      });
-      return { status: "started" };
-    } catch (error) {
-      if (isAbortError(error)) {
-        if (retryAttemptId && !streamStarted) {
-          await tryCatch(
-            convexClient.mutation(api.functions.messages.cancelRetryAttempt, {
-              retryAttemptId,
-              reason: "Retry cancelled before generation started",
+        const errorMessage = getClientErrorMessage(error);
+        const deprecatedModelError = getDeprecatedModelError(error);
+
+        emitStreamFeedback({
+          status: "error",
+          threadId,
+          soundEnabled: notificationSound,
+          desktopEnabled: desktopNotification,
+          errorMessage,
+        });
+
+        if (preparedAssistantMessageId) {
+          const [, updateError] = await tryCatch(
+            convexClient.mutation(api.functions.messages.updateErrorMessage, {
+              messageId: preparedAssistantMessageId,
+              error: errorMessage,
+              retryAttemptId: retryAttemptId ?? undefined,
+              metadata: {
+                model: { request: requestModel, response: null },
+                modelParams: mutationModelParams,
+              },
             }),
           );
+
+          if (updateError) {
+            console.error("[Chat] Failed to persist retry error", updateError);
+          }
         }
+
+        if (deprecatedModelError) {
+          toast.error("Selected model is deprecated", {
+            description: deprecatedModelError.message,
+            actionProps: {
+              children: `Switch to ${deprecatedModelError.replacementModelName}`,
+              onClick: () => {
+                chatStoreActions.retainCompatibleAttachments(deprecatedModelError.replacementModelId);
+                configStore.setConfig({
+                  model: deprecatedModelError.replacementModelId,
+                  defaultModel: deprecatedModelError.replacementModelId,
+                });
+              },
+            },
+          });
+          return {
+            status: "failed",
+            phase: prepared ? "stream" : "preparation",
+          };
+        }
+
+        toast.error("Failed to retry message", { description: errorMessage });
         return { status: "failed", phase: prepared ? "stream" : "preparation" };
       }
-
-      const errorMessage = getClientErrorMessage(error);
-      const deprecatedModelError = getDeprecatedModelError(error);
-
-      emitStreamFeedback({
-        status: "error",
-        threadId,
-        soundEnabled: notificationSound,
-        desktopEnabled: desktopNotification,
-        errorMessage,
-      });
-
-      if (preparedAssistantMessageId) {
-        const [, updateError] = await tryCatch(
-          convexClient.mutation(api.functions.messages.updateErrorMessage, {
-            messageId: preparedAssistantMessageId,
-            error: errorMessage,
-            retryAttemptId: retryAttemptId ?? undefined,
-            metadata: {
-              model: { request: requestModel, response: null },
-              modelParams: mutationModelParams,
-            },
-          }),
-        );
-
-        if (updateError) {
-          console.error("[Chat] Failed to persist retry error", updateError);
-        }
-      }
-
-      if (deprecatedModelError) {
-        toast.error("Selected model is deprecated", {
-          description: deprecatedModelError.message,
-          actionProps: {
-            children: `Switch to ${deprecatedModelError.replacementModelName}`,
-            onClick: () => {
-              chatStoreActions.retainCompatibleAttachments(deprecatedModelError.replacementModelId);
-              configStore.setConfig({
-                model: deprecatedModelError.replacementModelId,
-                defaultModel: deprecatedModelError.replacementModelId,
-              });
-            },
-          },
-        });
-        return {
-          status: "failed",
-          phase: prepared ? "stream" : "preparation",
-        };
-      }
-
-      toast.error("Failed to retry message", { description: errorMessage });
-      return { status: "failed", phase: prepared ? "stream" : "preparation" };
-    } finally {
+    })().finally(async () => {
       if (retryAttemptId && !preparedAssistantMessageId) {
         await tryCatch(
           convexClient.mutation(api.functions.messages.cancelRetryAttempt, {
@@ -324,7 +334,7 @@ export function useRetryTurn() {
       }
       if (abortController) messageStoreActions.removeController(threadId, abortController);
       messageStoreActions.finishRetryOperation(threadId, operationId);
-    }
+    });
   }
 
   return { retryTurn };
