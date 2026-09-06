@@ -1,435 +1,336 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
-import type { Provider } from "@/lib/chat/models";
-
-import { ResponsiveCalendar, type CalendarTooltipProps } from "@nivo/calendar";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { z } from "zod/v4";
-import {
-  Pie,
-  PieChart,
-  Sector,
-  type DefaultTooltipContentProps,
-  type PieSectorShapeProps as PieSectorProps, // eslint-disable-line anti-slop/no-shape-in-symbol-names -- Recharts owner type.
-  type TooltipProps,
-} from "recharts";
 
-import { SettingsSection } from "@/components/settings/settings-section";
+import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
-import { Card, CardContent } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
+import { tryGetModelData, type Provider } from "@/lib/chat/models";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-import { LoadingStatisticsSkeleton } from "./-pending";
-
-import { tryGetModelData } from "@/lib/chat/models";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { format } from "@/lib/utils";
+import { LoadingStatisticsSkeleton } from "./-pending";
+import { ActivityChart } from "./-activity-chart";
 
 export const Route = createFileRoute("/settings/statistics")({
+  validateSearch: (search) =>
+    z
+      .object({
+        year: z
+          .union([z.literal("all"), z.number().int().min(1970).max(new Date().getUTCFullYear())])
+          .optional()
+          .catch(undefined),
+      })
+      .parse(search),
   component: StatisticsPage,
   pendingComponent: LoadingStatisticsSkeleton,
   head: () => ({ meta: [{ title: "Statistics - AI Chat" }] }),
 });
 
-type RankItem = {
-  name: string;
-  value: number;
-  provider?: Provider;
-};
-
-type PieChartItem = RankItem & {
-  color: string;
-  percentage: number;
-};
-
-const percentageFormat = new Intl.NumberFormat("en-US", {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-});
-
-function getColorForName(name: string): string {
-  let hash = 0;
-  for (const char of name) {
-    hash = (hash * 31 + char.charCodeAt(0)) % 360;
-  }
-
-  const hue = hash;
-  const saturation = 68 + (hash % 10);
-  const lightness = 54 + (hash % 8);
-  return `hsl(${hue} ${saturation}% ${lightness}%)`;
+const percentNumber = new Intl.NumberFormat("en", { style: "percent", maximumFractionDigits: 1 });
+function StatisticsPage() {
+  return (
+    <Suspense fallback={<LoadingStatisticsSkeleton />}>
+      <StatisticsContent />
+    </Suspense>
+  );
 }
 
-function StatisticsPage() {
-  const currentYear = new Date().getUTCFullYear();
-  const [selectedYearValue, setSelectedYearValue] = useState(String(currentYear));
-  const selectedYear = Number.isFinite(Number(selectedYearValue)) ? Number(selectedYearValue) : currentYear;
-
-  const statistics = useSuspenseQuery(
-    convexSessionQuery(api.functions.statistics.getStatistics, { year: selectedYear }),
+function StatisticsContent() {
+  const { year = new Date().getUTCFullYear() } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const { data } = useSuspenseQuery(
+    convexSessionQuery(api.functions.statistics.getStatistics, {
+      year: year === "all" ? undefined : year,
+    }),
+  );
+  const totals = data.totals;
+  const tokens = totals.inputTokens + totals.outputTokens;
+  const hasActivity =
+    totals.userMessagesCount + totals.assistantMessagesCount + totals.threadsCount > 0 ||
+    data.dailyActivity.length > 0;
+  const hasReportedTokens =
+    tokens > 0 ||
+    totals.assistantMessagesCount > totals.unreportedInputCount ||
+    totals.assistantMessagesCount > totals.unreportedOutputCount;
+  const incompleteTokens = totals.unreportedInputCount > 0 || totals.unreportedOutputCount > 0;
+  const tokenLabel =
+    !hasReportedTokens && totals.assistantMessagesCount > 0 ? "Unreported" : format.number(tokens);
+  const years = Array.from(new Set([...data.years, ...(year === "all" ? [] : [year])])).toSorted(
+    (a, b) => b - a,
   );
 
-  const {
-    threadsCount,
-    userMessagesCount,
-    assistantMessagesCount,
-    inputTokens,
-    outputTokens,
-    reasoningTokens,
-    modelRank,
-    activity,
-    aiProfileRank,
-  } = statistics.data;
-  const totalMessages = userMessagesCount + assistantMessagesCount;
-
-  const tokensTotal = inputTokens + outputTokens + reasoningTokens;
-  const userTokens = inputTokens;
-  const assistantTokens = outputTokens + reasoningTokens;
-
-  const availableYears = getAvailableYears(activity);
-  const selectedYearActivity = activity.filter((point) => getYearFromDay(point.day) === selectedYear);
-
-  let activityTotal = 0;
-  let activityPeak = 0;
-  for (const point of selectedYearActivity) {
-    activityTotal += point.value;
-    if (point.value > activityPeak) activityPeak = point.value;
-  }
-
-  const modelChartData: Array<RankItem> = [];
-  for (const item of modelRank.slice(0, 5)) {
-    const model = tryGetModelData(item.name);
-    modelChartData.push({
-      name: model?.display.name ?? item.name,
-      value: item.value,
-      provider: model?.provider,
-    });
-  }
-
-  const profileChartData: Array<RankItem> = [];
-  for (const item of aiProfileRank.slice(0, 5)) {
-    profileChartData.push({ name: item.name, value: item.value });
-  }
-
-  const assistantTokenChartData = createBreakdownChartData([
-    { name: "Output tokens", value: outputTokens },
-    { name: "Reasoning tokens", value: reasoningTokens },
-  ]);
-
-  const messageRoleChartData = createBreakdownChartData([
-    { name: "User messages", value: userMessagesCount },
-    { name: "AI messages", value: assistantMessagesCount },
-  ]);
-
-  const startOfYear = `${selectedYear}-01-01`;
-  const endOfYear = `${selectedYear}-12-31`;
-
-  function handleYearChange(value: string | null) {
-    if (!value) return;
-    setSelectedYearValue(value);
-  }
-
   return (
-    <div className="flex flex-col gap-8">
-      <SettingsSection
-        id="overview"
-        title="Overview"
-        description="A quick summary of your conversation and token activity."
-      >
-        <div className="grid border-y md:grid-cols-3 md:divide-x">
-          <div className="py-5 md:pr-6">
-            <p className="text-sm text-muted-foreground">Threads</p>
-            <div className="text-3xl font-bold">{format.number(threadsCount)}</div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Total messages: {format.number(totalMessages)}
-            </div>
-          </div>
-
-          <div className="border-t py-5 md:border-t-0 md:px-6">
-            <p className="text-sm text-muted-foreground">Assistant</p>
-            <div className="text-3xl font-bold">{format.number(assistantMessagesCount)}</div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Output + reasoning: {format.number(assistantTokens)} tokens
-            </div>
-          </div>
-
-          <div className="border-t py-5 md:border-t-0 md:pl-6">
-            <p className="text-sm text-muted-foreground">User</p>
-            <div className="text-3xl font-bold">{format.number(userMessagesCount)}</div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Input: {format.number(userTokens)} tokens
-            </div>
-          </div>
-        </div>
-      </SettingsSection>
-
-      <Separator />
-      <SettingsSection
-        id="activity"
-        title={`Activity in ${selectedYear}`}
-        description="Daily user message activity and total token usage for the selected year."
-        actions={
-          <Select value={String(selectedYear)} onValueChange={(value) => handleYearChange(value)}>
-            <SelectTrigger className="w-full sm:w-[160px]">
-              <SelectValue>{selectedYear}</SelectValue>
-            </SelectTrigger>
-
-            <SelectContent className="bg-card">
-              {availableYears.map((year) => (
-                <SelectItem key={year} value={String(year)}>
-                  {year}
+    <div className="flex min-w-0 flex-col gap-4 pb-2">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">
+          {year === "all" ? "Your usage across all years" : `Your usage in ${year}`}
+        </p>
+        <Select
+          value={String(year)}
+          onValueChange={(value) => {
+            if (value === null) return;
+            void navigate({
+              search: (previous) => ({ ...previous, year: value === "all" ? "all" : Number(value) }),
+              resetScroll: false,
+            });
+          }}
+        >
+          <SelectTrigger aria-label="Statistics period" className="w-36">
+            <SelectValue>{year === "all" ? "All time" : year}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="all">All time</SelectItem>
+              {years.map((item) => (
+                <SelectItem key={item} value={String(item)}>
+                  {item}
                 </SelectItem>
               ))}
-            </SelectContent>
-          </Select>
-        }
-      >
-        <div className="flex flex-col gap-3">
-          <div className="h-60 px-4 sm:px-10">
-            <ResponsiveCalendar
-              data={selectedYearActivity}
-              from={startOfYear}
-              to={endOfYear}
-              colors={["#0e4429", "#006d32", "#26a641", "#39d353"]}
-              emptyColor="var(--border)"
-              monthBorderWidth={0}
-              daySpacing={2}
-              dayBorderColor="transparent"
-              theme={{
-                background: "var(--card)",
-                text: { fill: "var(--foreground)" },
-              }}
-              tooltip={CalendarTooltip}
-            />
-          </div>
-
-          <div className="flex flex-col justify-between gap-2 md:flex-row md:items-center">
-            <p className="text-sm text-muted-foreground">
-              {activityTotal === 0 ? (
-                <>No user messages tracked yet for {selectedYear}.</>
-              ) : (
-                <>
-                  A total of {format.number(activityTotal)} user messages were sent in {selectedYear}, with a
-                  peak of {format.number(activityPeak)} messages on a single day.
-                </>
-              )}
-            </p>
-
-            <div className="flex items-center gap-2 text-xs text-foreground/70">
-              <p>Inactive</p>
-              <div className="size-4 rounded-xs" style={{ backgroundColor: "var(--border)" }} />
-              <div className="size-4 rounded-xs" style={{ backgroundColor: "#0e4429" }} />
-              <div className="size-4 rounded-xs" style={{ backgroundColor: "#006d32" }} />
-              <div className="size-4 rounded-xs" style={{ backgroundColor: "#26a641" }} />
-              <div className="size-4 rounded-xs" style={{ backgroundColor: "#39d353" }} />
-              <p>Active</p>
-            </div>
-          </div>
-
-          <div className="text-xs text-muted-foreground">Total tokens: {format.number(tokensTotal)}</div>
-        </div>
-      </SettingsSection>
-
-      <Separator />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <RankPieChart
-          title="Assistant token breakdown"
-          valueLabel="Tokens"
-          data={assistantTokenChartData}
-          emptyText="No assistant token usage yet."
-        />
-
-        <RankPieChart
-          title="Message role breakdown"
-          valueLabel="Messages"
-          data={messageRoleChartData}
-          emptyText="No messages tracked yet."
-        />
-
-        <RankPieChart
-          title="Model request usage"
-          valueLabel="Requests"
-          data={modelChartData}
-          emptyText="No model usage yet."
-        />
-
-        <RankPieChart
-          title="AI profile request usage"
-          valueLabel="Requests"
-          data={profileChartData}
-          emptyText="No AI profile usage yet."
-        />
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </div>
+
+      {!data.historyReady && (
+        <output className="text-sm text-muted-foreground">Preparing historical usage…</output>
+      )}
+
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-y py-3 lg:grid-cols-4">
+        <Summary label="Messages sent" value={format.number(totals.userMessagesCount)} />
+        <Summary label="AI responses" value={format.number(totals.assistantMessagesCount)} />
+        <Summary label="Conversations started" value={format.number(totals.threadsCount)} />
+        <Summary
+          label="Tokens processed"
+          value={tokenLabel}
+          detail={incompleteTokens || totals.legacyResponsesCount > 0 ? "Partial / approximate" : undefined}
+        />
+      </dl>
+
+      {!hasActivity ? (
+        <Empty className="min-h-64">
+          <EmptyHeader>
+            <EmptyTitle>No activity {year === "all" ? "yet" : `in ${year}`}</EmptyTitle>
+            <EmptyDescription>
+              {year === "all"
+                ? "Start a conversation to see your usage here."
+                : "Choose another year or All time to explore your usage."}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <>
+          <ActivityChart data={data} year={year} />
+          {totals.assistantMessagesCount > 0 && (
+            <>
+              <Separator />
+              <section aria-labelledby="tokens-heading" className="flex flex-col gap-2">
+                <h2 id="tokens-heading" className="text-sm font-semibold">
+                  Token usage
+                </h2>
+                <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <TokenDetail
+                    label="Input"
+                    value={totals.inputTokens}
+                    unreported={totals.unreportedInputCount}
+                    responses={totals.assistantMessagesCount}
+                  />
+                  <TokenDetail
+                    label="Output"
+                    value={totals.outputTokens}
+                    unreported={totals.unreportedOutputCount}
+                    responses={totals.assistantMessagesCount}
+                  />
+                  {totals.reasoningTokens > 0 && (
+                    <div>
+                      <dt className="text-sm text-muted-foreground">Reasoning</dt>
+                      <dd className="mt-1 font-medium tabular-nums">
+                        {format.number(totals.reasoningTokens)}{" "}
+                        <span className="text-xs font-normal text-muted-foreground">included in output</span>
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </section>
+              <Separator />
+              <div className="grid min-w-0 gap-5 md:grid-cols-2 md:gap-8">
+                <UsageRanking
+                  title="Models"
+                  items={data.modelRank.map((item) => ({
+                    ...item,
+                    provider: tryGetModelData(item.id)?.provider,
+                  }))}
+                  total={totals.assistantMessagesCount}
+                  tokenTotal={tokens}
+                />
+                <UsageRanking
+                  title="AI profiles"
+                  items={data.aiProfileRank}
+                  total={totals.assistantMessagesCount}
+                />
+              </div>
+            </>
+          )}
+        </>
+      )}
+      <details className="text-xs leading-relaxed text-muted-foreground">
+        <summary className="w-fit cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">
+          About these statistics
+        </summary>
+        <p className="mt-2 max-w-3xl">
+          Responses include completed retries; conversations include branches. Tokens are provider-reported:
+          input includes reprocessed history, and output includes reasoning. Stopped and failed responses
+          aren’t included.
+        </p>
+        {data.historyReady && (
+          <p className="mt-2 max-w-3xl">
+            Historical totals were reconstructed from retained conversations; earlier deletions and replaced
+            responses may be missing.
+            {totals.legacyResponsesCount > 0
+              ? " Older token reports are approximate and may have incomplete breakdowns."
+              : ""}{" "}
+            New usage remains counted when you delete a conversation.
+          </p>
+        )}
+      </details>
     </div>
   );
 }
 
-function getYearFromDay(day: string): number {
-  const year = Number(day.slice(0, 4));
-  return Number.isFinite(year) ? year : new Date().getUTCFullYear();
-}
-
-function getAvailableYears(activity: Array<{ day: string; value: number }>): number[] {
-  const years = new Set<number>();
-  for (const point of activity) {
-    years.add(getYearFromDay(point.day));
-  }
-
-  years.add(new Date().getUTCFullYear());
-  return Array.from(years).toSorted((a, b) => b - a);
-}
-
-function CalendarTooltip({ day, value, color }: CalendarTooltipProps) {
+function Summary({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
-    <Card className="rounded-md p-1 px-0 text-sm">
-      <CardContent className="flex items-center justify-center gap-2">
-        <div className="size-4 shrink-0" style={{ backgroundColor: color }} />
-        <span className="w-max">
-          {day}: {value} {Number(value) === 1 ? "Message" : "Messages"}
-        </span>
-      </CardContent>
-    </Card>
+    <div className="min-w-0">
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="mt-1 text-xl font-semibold tracking-tight break-words tabular-nums sm:text-2xl">
+        {value}
+      </dd>
+      {detail && <dd className="mt-1 text-xs text-muted-foreground">{detail}</dd>}
+    </div>
   );
 }
 
-function RankPieChart(props: {
-  title: string;
-  valueLabel: string;
-  data: Array<RankItem>;
-  emptyText: string;
+function TokenDetail({
+  label,
+  value,
+  unreported,
+  responses,
+}: {
+  label: string;
+  value: number;
+  unreported: number;
+  responses: number;
 }) {
-  const chartData = createPieChartData(props.data);
-  const chartConfig = createPieChartConfig(chartData, props.valueLabel);
-
   return (
-    <SettingsSection
-      id={props.title.toLowerCase().replaceAll(" ", "-")}
-      title={props.title}
-      className="border-b pb-6 xl:[&:nth-last-child(-n+2)]:border-b-0"
-    >
-      <div className="flex flex-col gap-3">
-        {chartData.length === 0 ? (
-          <div className="text-sm text-muted-foreground">{props.emptyText}</div>
-        ) : (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center">
-            <ChartContainer config={chartConfig} className="aspect-auto h-72 w-full">
-              <PieChart>
-                <ChartTooltip content={<PieTooltipContent valueLabel={props.valueLabel} />} />
-                <Pie
-                  data={chartData}
-                  dataKey="value"
-                  nameKey="name"
-                  outerRadius={122}
-                  shape={PieChartSector} // eslint-disable-line anti-slop/no-shape-in-symbol-names -- Recharts API prop.
-                />
-              </PieChart>
-            </ChartContainer>
+    <div>
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="mt-1 font-medium tabular-nums">
+        {unreported === responses && value === 0 ? "Unreported" : format.number(value)}
+      </dd>
+      {unreported > 0 && (
+        <dd className="mt-1 text-xs text-muted-foreground">
+          Incomplete for {format.number(unreported)} {unreported === 1 ? "response" : "responses"}
+        </dd>
+      )}
+    </div>
+  );
+}
 
-            <div className="space-y-3">
-              {chartData.map((item) => (
-                <div key={item.name} className="flex items-center gap-2 text-sm">
-                  <div className="size-3 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
-                  {item.provider && <Icons.provider provider={item.provider} className="size-3.5 shrink-0" />}
-
-                  <span className="min-w-0 text-muted-foreground">
-                    {item.name} ({format.number(item.value)} {props.valueLabel.toLowerCase()} -{" "}
-                    {percentageFormat.format(item.percentage)}%)
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+function UsageRanking({
+  title,
+  items,
+  total,
+  tokenTotal,
+}: {
+  title: string;
+  items: Array<{ id: string; name: string; value: number; provider?: Provider; tokens?: number }>;
+  total: number;
+  tokenTotal?: number;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const [metric, setMetric] = useState("responses");
+  const rankedItems =
+    metric === "tokens"
+      ? items
+          .map((item) => ({ ...item, value: item.tokens ?? 0 }))
+          .filter((item) => item.value > 0)
+          .toSorted((a, b) => b.value - a.value)
+      : items;
+  const rankedTotal = metric === "tokens" ? rankedItems.reduce((sum, item) => sum + item.value, 0) : total;
+  const headingId = title === "Models" ? "models-heading" : "profiles-heading";
+  return (
+    <section aria-labelledby={headingId} className="flex min-w-0 flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id={headingId} className="text-sm font-semibold">
+          {title}
+        </h2>
+        {tokenTotal !== undefined && (
+          <ToggleGroup
+            value={[metric]}
+            onValueChange={(values) => {
+              if (values[0]) setMetric(values[0]);
+            }}
+            variant="outline"
+            size="sm"
+            aria-label="Model ranking metric"
+          >
+            <ToggleGroupItem value="responses">Responses</ToggleGroupItem>
+            <ToggleGroupItem value="tokens">Tokens</ToggleGroupItem>
+          </ToggleGroup>
         )}
       </div>
-    </SettingsSection>
+      {metric === "tokens" && (
+        <p className="text-xs text-muted-foreground">
+          {rankedTotal === 0
+            ? "No reported model tokens."
+            : tokenTotal !== undefined && rankedTotal < tokenTotal
+              ? "Reported tokens · some historical usage is unattributed"
+              : "Reported tokens · input + output"}
+        </p>
+      )}
+      <ul className="flex flex-col gap-3">
+        {(showAll ? rankedItems : rankedItems.slice(0, 5)).map((item) => (
+          <li key={item.id} className="flex min-w-0 flex-col gap-2">
+            <div className="flex items-baseline justify-between gap-4">
+              <span className="flex min-w-0 items-center gap-2 text-sm">
+                {item.provider && <Icons.provider provider={item.provider} className="size-4 shrink-0" />}
+                <span className="truncate" title={item.name}>
+                  {item.name}
+                </span>
+              </span>
+              <span className="flex shrink-0 gap-3 text-sm tabular-nums">
+                <span>{format.number(item.value)}</span>
+                <span className="w-14 text-right text-muted-foreground">
+                  {percentNumber.format(item.value / rankedTotal)}
+                </span>
+              </span>
+            </div>
+            {rankedItems.length > 1 && (
+              <div aria-hidden="true" className="h-1 rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${(item.value / rankedTotal) * 100}%` }}
+                />
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+      {rankedItems.length > 5 && (
+        <Button variant="ghost" size="sm" className="self-start" onClick={() => setShowAll(!showAll)}>
+          {showAll ? "Show fewer" : `Show all ${rankedItems.length}`}
+        </Button>
+      )}
+    </section>
   );
-}
-
-function createPieChartData(data: Array<RankItem>): Array<PieChartItem> {
-  let total = 0;
-  for (const item of data) {
-    total += item.value;
-  }
-
-  const chartData: Array<PieChartItem> = [];
-  for (const item of data) {
-    chartData.push({
-      ...item,
-      color: getColorForName(item.name),
-      percentage: total === 0 ? 0 : (item.value / total) * 100,
-    });
-  }
-
-  return chartData;
-}
-
-function PieTooltipContent(
-  props: TooltipProps<number, string> &
-    DefaultTooltipContentProps<number, string> & {
-      valueLabel: string;
-    },
-) {
-  if (!props.active || !props.payload?.length) return null;
-  const payload = props.payload[0]?.payload;
-  if (!isPieChartItem(payload)) return null;
-
-  return (
-    <Card className="rounded-md border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
-      <CardContent className="flex min-w-[12rem] items-center justify-between gap-3 p-0">
-        <span className="flex items-center gap-2 text-muted-foreground">
-          <div className="size-3 shrink-0 rounded-full" style={{ backgroundColor: payload.color }} />
-          {payload.provider && <Icons.provider provider={payload.provider} className="size-3.5 shrink-0" />}
-          <span>{payload.name}</span>
-        </span>
-
-        <span className="font-mono font-medium text-foreground tabular-nums">
-          {format.number(payload.value)} {props.valueLabel.toLowerCase()} -{" "}
-          {percentageFormat.format(payload.percentage)}%
-        </span>
-      </CardContent>
-    </Card>
-  );
-}
-
-const pieChartItemSchema = z.object({
-  name: z.string(),
-  value: z.number(),
-  color: z.string(),
-  percentage: z.number(),
-  provider: z.string().optional(),
-});
-
-function isPieChartItem(cause: unknown): cause is PieChartItem {
-  return pieChartItemSchema.safeParse(cause).success;
-}
-
-function PieChartSector(props: PieSectorProps) {
-  const fill = isPieChartItem(props.payload) ? props.payload.color : props.fill;
-
-  return <Sector {...props} fill={fill} stroke="var(--card)" strokeWidth={2} />;
-}
-
-function createBreakdownChartData(data: Array<RankItem>): Array<RankItem> {
-  const chartData: Array<RankItem> = [];
-
-  for (const item of data) {
-    if (item.value <= 0) continue;
-    chartData.push(item);
-  }
-
-  return chartData;
-}
-
-function createPieChartConfig(data: Array<PieChartItem>, valueLabel: string): ChartConfig {
-  const config: ChartConfig = {
-    value: { label: valueLabel, color: getColorForName(valueLabel) },
-  };
-
-  for (const item of data) {
-    config[item.name] = { label: item.name, color: item.color };
-  }
-
-  return config;
 }

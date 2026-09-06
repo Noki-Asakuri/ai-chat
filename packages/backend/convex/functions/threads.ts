@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { internalMutation, query } from "../_generated/server";
+import { recordStatisticsThread } from "./statistics";
 
 import { authenticatedMutation, authenticatedQuery, authenticatedUserIdQuery } from "../components";
 import {
@@ -160,7 +161,8 @@ export const createThread = authenticatedMutation({
       userId: user.userId,
     });
 
-    return await ctx.db.insert("threads", {
+
+    const threadId = await ctx.db.insert("threads", {
       title: args.title ?? "New Chat",
       pinned: false,
       settled: false,
@@ -174,6 +176,9 @@ export const createThread = authenticatedMutation({
       latestModel: args.latestModel,
       latestModelParams: args.latestModelParams,
     });
+    const thread = await ctx.db.get("threads", threadId);
+    if (thread) await recordStatisticsThread(ctx, thread);
+    return threadId;
   },
 });
 
@@ -245,6 +250,8 @@ export const branchThread = authenticatedMutation({
     });
 
     const copiedMessageIds = new Map<Id<"messages">, Id<"messages">>();
+    const newThread = await ctx.db.get("threads", newThreadId);
+    if (newThread) await recordStatisticsThread(ctx, newThread);
     const sourceMessagesById = new Map(messages.map((message) => [message._id, message]));
     const copiedAssistantsByUserId = new Map<Id<"messages">, Doc<"messages">[]>();
     const variantIndexesByUserId = new Map<Id<"messages">, number[]>();
@@ -315,6 +322,8 @@ export const branchThread = authenticatedMutation({
         userId: user.userId,
         threadId: newThreadId,
         messageId: crypto.randomUUID(),
+        statisticsRecorded: true,
+        modelTokensRecorded: true,
 
         parentUserMessageId: undefined,
         activeAssistantMessageId: undefined,

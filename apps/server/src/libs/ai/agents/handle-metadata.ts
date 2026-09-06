@@ -7,12 +7,12 @@ type CreateMessageMetadataOptions = {
   startTime: number;
 };
 
-export function createMessageMetadataHandler({
-  metadata,
-  startTime,
-}: CreateMessageMetadataOptions) {
+export function createMessageMetadataHandler({ metadata, startTime }: CreateMessageMetadataOptions) {
   let textStartTime = 0;
   let reasoningStartTime = 0;
+  let stepsSeen = 0;
+  let inputComplete = true;
+  let outputComplete = true;
 
   return function messageMetadata({ part }: { part: TextStreamPart<ToolSet> }) {
     switch (part.type) {
@@ -40,27 +40,48 @@ export function createMessageMetadataHandler({
         metadata.durations.text = Date.now() - textStartTime;
         break;
 
-      case "finish-step":
+      case "finish-step": {
+        stepsSeen++;
+        // Adapters can normalize missing counts to zero; only raw usage proves reporting.
+        const raw = part.usage.raw;
+        inputComplete &&= (raw?.prompt_tokens ?? raw?.input_tokens ?? raw?.promptTokenCount) != null;
+        outputComplete &&=
+          (raw?.completion_tokens ?? raw?.output_tokens) != null ||
+          (raw?.candidatesTokenCount != null &&
+            (raw.thoughtsTokenCount != null ||
+              // Without a reasoning count, Google's total must account for all tokens.
+              (raw.promptTokenCount != null &&
+                raw.totalTokenCount != null &&
+                raw.totalTokenCount === part.usage.totalTokens)));
+
         metadata.model.response = part.response.modelId;
         metadata.finishReason = part.finishReason;
         metadata.durations.request = Date.now() - startTime;
 
-        metadata.usages.inputTokens = part.usage.inputTokens ?? metadata.usages.inputTokens;
-        metadata.usages.outputTokens =
-          part.usage.outputTokens ??
-          part.usage.outputTokenDetails?.textTokens ??
-          metadata.usages.outputTokens;
-
-        metadata.usages.reasoningTokens =
-          part.usage.outputTokenDetails.reasoningTokens ?? metadata.usages.reasoningTokens;
         break;
+      }
 
-      case "finish":
-        metadata.usages.inputTokens = part.totalUsage.inputTokens ?? 0;
-        metadata.usages.outputTokens = part.totalUsage.outputTokenDetails.textTokens ?? 0;
-        metadata.usages.reasoningTokens = part.totalUsage.outputTokenDetails.reasoningTokens ?? 0;
+      case "finish": {
+        const usage = part.totalUsage;
+        const reasoningTokens = usage.outputTokenDetails.reasoningTokens;
+        const textTokens = usage.outputTokenDetails.textTokens;
+        const outputTokens =
+          usage.outputTokens ??
+          (textTokens !== undefined && reasoningTokens !== undefined
+            ? textTokens + reasoningTokens
+            : undefined);
+
+        metadata.usages.inputTokens = usage.inputTokens ?? 0;
+        metadata.usages.outputTokens =
+          textTokens ??
+          (outputTokens !== undefined && reasoningTokens !== undefined ? outputTokens - reasoningTokens : 0);
+        metadata.usages.reasoningTokens = reasoningTokens ?? 0;
+        metadata.usages.totalOutputTokens = outputTokens;
+        metadata.usages.inputReported = stepsSeen > 0 && inputComplete && usage.inputTokens !== undefined;
+        metadata.usages.outputReported = stepsSeen > 0 && outputComplete && outputTokens !== undefined;
 
         return metadata;
+      }
     }
 
     return undefined;

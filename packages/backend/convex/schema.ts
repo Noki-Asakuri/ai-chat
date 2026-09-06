@@ -296,6 +296,10 @@ export const AISDKMetadata = v.object({
     inputTokens: v.number(),
     outputTokens: v.number(),
     reasoningTokens: v.number(),
+    // Output total includes reasoning; legacy outputTokens remains text-only.
+    totalOutputTokens: v.optional(v.number()),
+    inputReported: v.optional(v.boolean()),
+    outputReported: v.optional(v.boolean()),
   }),
 
   timeToFirstTokenMs: v.number(),
@@ -369,6 +373,7 @@ export default defineSchema(
       pinned: v.boolean(),
       settled: v.optional(v.boolean()),
       branchedFrom: v.optional(v.id("threads")),
+      statisticsRecorded: v.optional(v.boolean()),
       messageGraphVersion: v.optional(v.number()),
 
       latestModel: v.string(),
@@ -425,6 +430,7 @@ export default defineSchema(
       createdAt: v.number(),
       updatedAt: v.number(),
     })
+      .index("by_preparedAssistantMessageId", ["preparedAssistantMessageId"])
       .index("by_threadId", ["threadId"])
       .index("by_userId", ["userId"]),
 
@@ -476,6 +482,8 @@ export default defineSchema(
       metadata: v.optional(AISDKMetadata),
       attachments: v.array(v.id("attachments")),
       statsTrackedAt: v.optional(v.number()),
+      statisticsRecorded: v.optional(v.boolean()),
+      modelTokensRecorded: v.optional(v.boolean()),
 
       // Assistant variants are grouped under the user turn they answer.
       // User turns can point to the currently selected assistant variant.
@@ -516,6 +524,7 @@ export default defineSchema(
 
     users: defineTable({
       userId: v.string(),
+      statisticsHistoryReady: v.optional(v.boolean()),
 
       username: v.nullable(v.string()),
       emailAddress: v.nullable(v.string()),
@@ -533,6 +542,23 @@ export default defineSchema(
       base: v.number(),
       resetType: v.optional(v.union(v.literal("monthly"), v.literal("daily"))),
     }).index("by_userId", ["userId"]),
+
+    monthlyStatistics: defineTable({
+      userId: v.string(),
+      month: v.string(),
+      threadsCount: v.number(),
+      userMessagesCount: v.number(),
+      assistantMessagesCount: v.number(),
+      inputTokens: v.number(),
+      outputTokens: v.number(),
+      reasoningTokens: v.number(),
+      unreportedInputCount: v.number(),
+      unreportedOutputCount: v.number(),
+      legacyResponsesCount: v.number(),
+      modelCounts: v.record(v.string(), v.number()),
+      modelTokenCounts: v.optional(v.record(v.string(), v.number())),
+      profileCounts: v.record(v.string(), v.number()),
+    }).index("by_userId_month", ["userId", "month"]),
 
     user_stats: defineTable({
       userId: v.string(),

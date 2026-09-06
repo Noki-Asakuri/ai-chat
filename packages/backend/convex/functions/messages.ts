@@ -13,6 +13,7 @@ import {
   type QueryCtx,
 } from "../_generated/server";
 import { authenticatedMutation, authenticatedQuery, authenticatedUserIdQuery, r2 } from "../components";
+import { recordStatisticsMessage } from "./statistics";
 import {
   AISDKMetadata,
   AISDKModelParams,
@@ -546,6 +547,8 @@ const messageWithAttachmentsValidator = v.object({
   metadata: v.optional(AISDKMetadata),
   attachments: v.array(attachmentValidator),
   statsTrackedAt: v.optional(v.number()),
+  statisticsRecorded: v.optional(v.boolean()),
+  modelTokensRecorded: v.optional(v.boolean()),
   parentUserMessageId: v.optional(v.id("messages")),
   activeAssistantMessageId: v.optional(v.id("messages")),
   variantIndex: v.optional(v.number()),
@@ -763,6 +766,9 @@ export const addMessagesToThread = authenticatedMutation({
       threadId: args.threadId,
       createdAt: now,
     });
+
+    const recordedUserMessage = await ctx.db.get("messages", userMessageId);
+    if (recordedUserMessage) await recordStatisticsMessage(ctx, recordedUserMessage);
 
     return assistantMessageId;
   },
@@ -988,6 +994,9 @@ export const updateFinishedMessageById = authenticatedMutation({
       statsTrackedAt: undefined,
     });
 
+    const completedMessage = await ctx.db.get("messages", args.messageId);
+    if (completedMessage) await recordStatisticsMessage(ctx, completedMessage);
+
     await ctx.db.patch("threads", message.threadId, {
       status: "complete",
       updatedAt: Date.now(),
@@ -1177,6 +1186,8 @@ async function finishRetryPreparation(
       error: undefined,
       statsTrackedAt: undefined,
       updatedAt: now,
+      statisticsRecorded: false,
+      modelTokensRecorded: false,
       metadata: nextMetadata,
     });
   } else {

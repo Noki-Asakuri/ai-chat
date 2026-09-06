@@ -5,6 +5,7 @@ import { components, internal } from "./_generated/api";
 import type { DataModel, Doc } from "./_generated/dataModel";
 
 import { DEFAULT_THREAD_MODEL, mergeUserPreferences } from "./functions/users";
+import { backfillModelTokens, isHistoricalBranchCopy, recordStatisticsMessage, recordStatisticsThread } from "./functions/statistics";
 import {
   CURRENT_MESSAGE_GRAPH_VERSION,
   MAX_ASSISTANT_VARIANTS_PER_TURN,
@@ -21,6 +22,46 @@ export const migrations = new Migrations<DataModel>(components.migrations);
  *   bunx convex run migrations:run '{fn:"migrations:backfillMessages"}'
  */
 export const run = migrations.runner();
+
+export const backfillStatisticsModelTokens = migrations.define({
+  table: "messages",
+  batchSize: 50,
+  migrateOne: backfillModelTokens,
+});
+
+export const runBackfillStatisticsModelTokens = migrations.runner([
+  internal.migrations.backfillStatisticsModelTokens,
+]);
+
+export const backfillMonthlyStatisticsThreads = migrations.define({
+  table: "threads",
+  batchSize: 50,
+  migrateOne: recordStatisticsThread,
+});
+
+export const backfillMonthlyStatisticsMessages = migrations.define({
+  table: "messages",
+  batchSize: 50,
+  migrateOne: async (ctx, message) => {
+    if (message.statisticsRecorded) return;
+    if (await isHistoricalBranchCopy(ctx, message)) {
+      await ctx.db.patch(message._id, { statisticsRecorded: true });
+      return;
+    }
+    await recordStatisticsMessage(ctx, message);
+  },
+});
+
+export const markStatisticsHistoryReady = migrations.define({
+  table: "users",
+  migrateOne: async () => ({ statisticsHistoryReady: true }),
+});
+
+export const runBackfillMonthlyStatistics = migrations.runner([
+  internal.migrations.backfillMonthlyStatisticsThreads,
+  internal.migrations.backfillMonthlyStatisticsMessages,
+  internal.migrations.markStatisticsHistoryReady,
+]);
 
 function getThreadModelConfigFromMessages(messages: Doc<"messages">[]): {
   latestModel: string;

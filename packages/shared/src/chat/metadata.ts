@@ -18,6 +18,9 @@ export const metadataSchema = z
       inputTokens: z.number(),
       outputTokens: z.number(),
       reasoningTokens: z.number(),
+      totalOutputTokens: z.number().optional(),
+      inputReported: z.boolean().optional(),
+      outputReported: z.boolean().optional(),
     }),
     modelParams: z.object({
       webSearch: z.boolean(),

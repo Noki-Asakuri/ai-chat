@@ -1,4 +1,5 @@
 import { useLocation } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
 
 import { getSettingsNavigationItem } from "./settings-navigation";
 
@@ -9,11 +10,18 @@ export function SettingsRouteHeader() {
   if (!currentPage) return null;
 
   return (
-    <div className="flex w-full flex-col gap-1 py-6">
+    <div
+      className={cn(
+        "flex w-full flex-col gap-1 pt-6",
+        currentPage.path === "/settings/statistics" ? "pb-1" : "pb-6",
+      )}
+    >
       <h1 className="text-2xl font-bold text-balance">{currentPage.label}</h1>
-      <p className="max-w-3xl text-sm text-pretty text-muted-foreground sm:text-base">
-        {currentPage.description}
-      </p>
+      {currentPage.path !== "/settings/statistics" && (
+        <p className="max-w-3xl text-sm text-pretty text-muted-foreground sm:text-base">
+          {currentPage.description}
+        </p>
+      )}
     </div>
   );
 }

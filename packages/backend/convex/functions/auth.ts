@@ -17,6 +17,7 @@ export const { authKitEvent } = authKit.events({
 
     await ctx.db.insert("users", {
       userId: event.data.id,
+      statisticsHistoryReady: true,
 
       createdAt: Date.now(),
       updatedAt: Date.now(),
