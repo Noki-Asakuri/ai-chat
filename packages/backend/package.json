@@ -20,7 +20,7 @@
     "oxlint": "catalog:tooling",
     "oxlint-tsgolint": "catalog:tooling",
     "typescript": "catalog:tooling",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   },
   "scripts": {
     "dev": "convex dev --typecheck disable",

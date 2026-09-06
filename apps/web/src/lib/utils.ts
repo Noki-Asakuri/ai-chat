@@ -1,6 +1,6 @@
 import { tryCatch, tryCatchSync } from "@ai-chat/shared/utils/async";
 
-export { cn } from "cnfast";
+export { cn } from "cn";
 
 type CSSVariables = React.CSSProperties & Partial<Record<`--${string}`, string | number>>;
 

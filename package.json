@@ -14,28 +14,28 @@
       "convex-helpers": "^0.1.123"
     },
     "shared": {
-      "@ai-sdk/deepseek": "^3.0.31",
-      "@ai-sdk/google": "^4.0.50",
-      "@ai-sdk/moonshotai": "^3.0.37",
-      "@ai-sdk/openai": "^4.0.46",
-      "@ai-sdk/openai-compatible": "^3.0.35",
+      "@ai-sdk/deepseek": "^3.0.39",
+      "@ai-sdk/google": "^4.0.64",
+      "@ai-sdk/moonshotai": "^3.0.45",
+      "@ai-sdk/openai": "^4.0.58",
+      "@ai-sdk/openai-compatible": "^3.0.44",
       "@axiomhq/js": "^2.0.0",
       "@axiomhq/logging": "^0.4.0",
       "better-result": "^3.0.1",
       "@t3-oss/env-core": "^0.13.11",
       "@workos/authkit-session": "^0.7.1",
-      "@workos-inc/node": "^10.10.0",
-      "ai": "^7.0.77",
+      "@workos-inc/node": "^10.13.0",
+      "ai": "^7.0.93",
       "dedent": "^1.7.2",
-      "jose": "^6.2.10",
-      "zod": "^4.4.3"
+      "jose": "^6.2.12",
+      "zod": "^4.5.4"
     },
     "tooling": {
-      "@oxlint/plugins": "1.80.0",
-      "@types/bun": "1.4.0",
-      "@types/node": "26.2.0",
+      "@oxlint/plugins": "1.81.0",
+      "@types/bun": "1.4.1",
+      "@types/node": "26.4.1",
       "@typescript/native-preview": "7.0.0-dev.20260707.2",
-      "oxlint": "^1.80.0",
+      "oxlint": "^1.81.0",
       "oxlint-tsgolint": "^7.0.2001",
       "typescript": "^7.0.2"
     }
@@ -60,7 +60,8 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@vercel/config": "^0.6.1"
+    "@vercel/config": "^0.7.0",
+    "cn": "^0.2.5"
   },
   "overrides": {
     "srvx": "0.11.22"
@@ -74,7 +75,7 @@
     "patch-package": "^8.0.1",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
-    "turbo": "^2.10.11",
+    "turbo": "^2.10.12",
     "typescript": "catalog:tooling"
   },
   "trustedDependencies": []
