@@ -38,6 +38,8 @@ export type ModelDeprecation = {
 };
 
 export type ModelData = {
+  /** Date added to this app (YYYY-MM-DD). Leave unknown historical dates unset. */
+  addedAt?: string;
   display: { unique?: string; name: string };
   id: ModelIdKey;
   altModelIds?: string[];

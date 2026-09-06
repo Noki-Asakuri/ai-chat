@@ -21,7 +21,21 @@ function RouteComponent() {
   const { data: preferences, isPending: isDisabled } = useSuspenseQuery(
     convexSessionQuery(api.functions.users.getCurrentUserPreferences),
   );
-  const updateUserPreferences = useMutation(api.functions.users.updateUserPreferences);
+  const updateUserPreferences = useMutation(
+    api.functions.users.updateUserModelPreferences,
+  ).withOptimisticUpdate((store, { data }) => {
+    const current = store.getQuery(api.functions.users.getCurrentUserPreferences, {});
+    if (current) {
+      store.setQuery(
+        api.functions.users.getCurrentUserPreferences,
+        {},
+        {
+          ...current,
+          models: { ...current.models, ...data },
+        },
+      );
+    }
+  });
 
   return (
     <ModelsEditor
@@ -29,11 +43,7 @@ function RouteComponent() {
       initialHiddenModels={preferences?.models?.hidden ?? []}
       initialFavoriteModels={preferences?.models?.favorite ?? []}
       onSaveCustomization={async function onSaveCustomization(customization) {
-        if (!preferences) return;
-
-        await updateUserPreferences({
-          data: { models: { ...preferences.models, ...customization } },
-        });
+        await updateUserPreferences({ data: customization });
       }}
     />
   );

@@ -1,11 +1,12 @@
 import { v } from "convex/values";
+import { AllModelIds } from "@ai-chat/shared/chat/models";
 
 import type { Doc } from "../_generated/dataModel";
 
 import { authenticatedMutation, authenticatedQuery } from "../components";
 import { AISDKModelParams } from "../schema";
 
-const MODEL_PROVIDER_PREFIXES = ["google/", "openai/", "deepseek/"] as const;
+const MODEL_IDS: ReadonlySet<string> = new Set(AllModelIds);
 
 export type UserPreferences = Doc<"users">["preferences"];
 export type UserPreferencesPatch = Partial<
@@ -145,23 +146,12 @@ export function mergeUserPreferences(
   };
 }
 
-function isValidModelId(modelId: string) {
-  for (const prefix of MODEL_PROVIDER_PREFIXES) {
-    if (modelId.startsWith(prefix)) {
-      const remainder = modelId.slice(prefix.length);
-      return remainder.length > 0;
-    }
-  }
-
-  return false;
-}
-
 function sanitizeModelIds(modelIds: string[]) {
   const next: string[] = [];
   const seen = new Set<string>();
 
   for (const modelId of modelIds) {
-    if (!isValidModelId(modelId)) continue;
+    if (!MODEL_IDS.has(modelId)) continue;
     if (seen.has(modelId)) continue;
 
     seen.add(modelId);

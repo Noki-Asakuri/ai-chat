@@ -19,6 +19,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import {
+  AllModelIds,
   SelectableModelIds,
   getDefaultReasoning,
   getReasoningOptions,
@@ -187,6 +188,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
     storeDefaultModel;
 
   const selectableModelIdSet = useMemo(() => new Set<string>(SelectableModelIds), []);
+  const knownModelIdSet = useMemo(() => new Set<string>(AllModelIds), []);
 
   const selectableModels = useMemo(() => {
     const next: Array<VisibleModelEntry> = [];
@@ -229,8 +231,8 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
   }, [allViewModels]);
 
   const sanitizedFavoriteModels = useMemo(
-    () => sanitizeFavoriteModels(favoriteModels, selectableModelIdSet),
-    [favoriteModels, selectableModelIdSet],
+    () => sanitizeFavoriteModels(favoriteModels, knownModelIdSet),
+    [favoriteModels, knownModelIdSet],
   );
 
   const favoriteModelsSet = useMemo(

@@ -60,11 +60,7 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@vercel/config": "^0.7.0",
-    "cn": "^0.2.5"
-  },
-  "overrides": {
-    "srvx": "0.11.22"
+    "@vercel/config": "^0.7.0"
   },
   "devDependencies": {
     "@oxlint/plugins": "catalog:tooling",

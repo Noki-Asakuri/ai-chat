@@ -1,231 +1,125 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-
+import { useState, useTransition } from "react";
 import {
-  ChevronDownIcon,
   BrainIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   FileTextIcon,
   ImageIcon,
-  WrenchIcon,
   ImagePlusIcon,
-  LoaderCircleIcon,
+  SearchIcon,
   StarIcon,
+  WrenchIcon,
+  XIcon,
 } from "lucide-react";
-import { toast } from "@/components/ui/toast";
-import { useVirtualizer } from "@tanstack/react-virtual";
 
+import { compareModelLabelsNewestFirst } from "@/components/chat-textarea/model-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SettingsSection } from "@/components/settings/settings-section";
-import { Card, CardContent } from "@/components/ui/card";
-import { Icons } from "@/components/ui/icons";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
-
-import type { AllModelIds as ModelId, ModelDeprecation, ModelIdKey, Provider } from "@/lib/chat/models";
+import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Icons } from "@/components/ui/icons";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import {
-  AllModelIds,
-  getModelData,
-  prettifyProviderName,
-  SelectableModelIds,
-  type ModelData,
-} from "@/lib/chat/models";
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Toggle } from "@/components/ui/toggle";
+import { toast } from "@/components/ui/toast";
+import { AllModelIds, getModelData, prettifyProviderName, type ModelData } from "@/lib/chat/models";
 import { cn, tryCatch } from "@/lib/utils";
+import { AutosaveStatus } from "../../-components/autosave-status";
 
-type ModelEntry = {
-  modelId: ModelId;
-  provider: Provider;
-  providerName: string;
-  displayName: string;
-  deprecation: ModelDeprecation | null;
-  capabilitySet: ReadonlySet<ModelCapabilityKey>;
-  searchText: string;
-};
-
-type ModelsCustomization = {
-  hidden: string[];
-  favorite: string[];
-};
-
-type PersistableModelSet = "hidden" | "favorite";
-
-type ModelCapabilityKey =
-  "reasoning" | "toolCalling" | "imageInput" | "pdfInput" | "imageOutput" | "imageGeneration";
-
-const PROVIDER_ORDER_INDEX = {
-  google: 0,
-  openai: 1,
-  deepseek: 2,
-  kimi: 3,
-  zai: 4,
-} satisfies Record<Provider, number>;
-
-const STATUS_BADGE_STYLES = {
-  visible: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-  hidden: "border-sky-500/30 bg-sky-500/10 text-sky-300",
-  favorite: "border-amber-500/30 bg-amber-500/10 text-amber-300",
-  deprecated: "border-rose-500/30 bg-rose-500/10 text-rose-300",
-} satisfies Record<"visible" | "hidden" | "favorite" | "deprecated", string>;
-
-const SAVE_DEBOUNCE_MS = 1000;
-const MODELS_GRID_OVERSCAN = 3;
-const MODELS_GRID_ESTIMATED_ROW_HEIGHT_PX = 220;
-const MODELS_GRID_VIRTUALIZATION_MIN_ROWS = 80;
-
-function stopFavoriteMouseDown(event: React.MouseEvent<HTMLButtonElement>): void {
-  event.preventDefault();
-  event.stopPropagation();
-}
-
-const CAPABILITY_FILTER_OPTIONS: Array<{
-  value: ModelCapabilityKey;
-  label: string;
-  Icon: typeof BrainIcon;
-}> = [
-  { value: "reasoning", label: "Reasoning", Icon: BrainIcon },
-  { value: "toolCalling", label: "Tools", Icon: WrenchIcon },
-  { value: "imageInput", label: "Image input", Icon: ImageIcon },
-  { value: "pdfInput", label: "PDF input", Icon: FileTextIcon },
-  { value: "imageOutput", label: "Image output", Icon: ImagePlusIcon },
-  { value: "imageGeneration", label: "Image generation tool", Icon: ImagePlusIcon },
+const CAPABILITIES = [
+  {
+    value: "reasoning",
+    label: "Reasoning",
+    Icon: BrainIcon,
+    color: "text-violet-700 dark:text-violet-300",
+    supports: (model: ModelData) => !!model.capabilities.reasoning,
+  },
+  {
+    value: "tools",
+    label: "Tools",
+    Icon: WrenchIcon,
+    color: "text-cyan-700 dark:text-cyan-300",
+    supports: (model: ModelData) => !!model.capabilities.toolCalling,
+  },
+  {
+    value: "imageInput",
+    label: "Image input",
+    Icon: ImageIcon,
+    color: "text-teal-700 dark:text-teal-300",
+    supports: (model: ModelData) => model.modalities.input.includes("image"),
+  },
+  {
+    value: "pdfInput",
+    label: "PDF input",
+    Icon: FileTextIcon,
+    color: "text-sky-700 dark:text-sky-300",
+    supports: (model: ModelData) => model.modalities.input.includes("pdf"),
+  },
+  {
+    value: "imageOutput",
+    label: "Image output",
+    Icon: ImagePlusIcon,
+    color: "text-orange-700 dark:text-orange-300",
+    supports: (model: ModelData) => model.modalities.output.includes("image"),
+  },
+  {
+    value: "imageGeneration",
+    label: "Image generation tool",
+    Icon: ImagePlusIcon,
+    color: "text-orange-700 dark:text-orange-300",
+    supports: (model: ModelData) => !!model.capabilities.imageGeneration,
+  },
 ];
 
-const SELECTABLE_MODEL_ID_SET: ReadonlySet<string> = new Set<string>(SelectableModelIds);
+const MODELS = AllModelIds.map((modelId) => {
+  const model = getModelData(modelId);
+  const name = model.display.unique ?? model.display.name;
+  return {
+    modelId,
+    model,
+    name,
+    capabilities: CAPABILITIES.filter((capability) => capability.supports(model)),
+    searchText: `${modelId} ${name} ${prettifyProviderName(model.provider)}`.toLowerCase(),
+    addedAt: model.addedAt ? Date.parse(model.addedAt) : 0,
+  };
+});
+const PROVIDERS = [
+  { value: "all", label: "All providers", icon: null },
+  ...Array.from(new Set(MODELS.map(({ model }) => model.provider))).map((provider) => ({
+    value: provider,
+    label: prettifyProviderName(provider),
+    icon: <Icons.provider provider={provider} className="size-4 shrink-0" />,
+  })),
+];
+const PICKER_OPTIONS = [
+  { value: "all", label: "Picker: all" },
+  { value: "included", label: "Picker: included" },
+  { value: "excluded", label: "Picker: excluded" },
+];
+const SORT_OPTIONS = [
+  { value: "newest", label: "Newest by provider" },
+  { value: "name", label: "Name A–Z" },
+  { value: "provider", label: "Provider" },
+];
+const NEW_MODEL_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
-const MODEL_ENTRIES: Array<ModelEntry> = AllModelIds.slice()
-  .toSorted((a, b) => a.localeCompare(b))
-  .map((modelId) => {
-    const data = getModelData(modelId);
-
-    const displayName = data.display.unique ?? data.display.name;
-    const providerName = prettifyProviderName(data.provider);
-    const deprecation = data.deprecation ?? null;
-    const capabilitySet = getCapabilitySet(data);
-
-    const searchText =
-      `${displayName} ${data.provider} ${providerName} ${deprecation?.message ?? ""}`.toLowerCase();
-
-    return {
-      modelId,
-      provider: data.provider,
-      providerName,
-      displayName,
-      deprecation,
-      capabilitySet,
-      searchText,
-    };
-  });
-
-function getCapabilitySet(data: ModelData): ReadonlySet<ModelCapabilityKey> {
-  const capabilitySet = new Set<ModelCapabilityKey>();
-
-  if (data.capabilities.reasoning) {
-    capabilitySet.add("reasoning");
-  }
-
-  if (data.capabilities.toolCalling) {
-    capabilitySet.add("toolCalling");
-  }
-
-  if (data.modalities.input.includes("image")) {
-    capabilitySet.add("imageInput");
-  }
-
-  if (data.modalities.input.includes("pdf")) {
-    capabilitySet.add("pdfInput");
-  }
-
-  if (data.modalities.output.includes("image")) {
-    capabilitySet.add("imageOutput");
-  }
-
-  if (data.capabilities.imageGeneration) {
-    capabilitySet.add("imageGeneration");
-  }
-
-  return capabilitySet;
-}
-
-function isModelIdKey(value: string): value is ModelIdKey {
-  const slashIndex = value.indexOf("/");
-  if (slashIndex <= 0) return false;
-
-  const provider = value.slice(0, slashIndex);
-  return provider === "google" || provider === "openai" || provider === "deepseek";
-}
-
-function sanitizeModelIds(modelIds: string[], selectableModelIdSet: ReadonlySet<string>): Set<string> {
-  const sanitized = new Set<string>();
-
-  for (const modelId of modelIds) {
-    if (!isModelIdKey(modelId)) continue;
-    if (!selectableModelIdSet.has(modelId)) continue;
-    sanitized.add(modelId);
-  }
-
-  return sanitized;
-}
-
-function toModelIdsPayload(
-  modelSet: ReadonlySet<string>,
-  selectableModelIdSet: ReadonlySet<string>,
-): string[] {
-  const next: string[] = [];
-
-  for (const modelId of modelSet) {
-    if (!isModelIdKey(modelId)) continue;
-    if (!selectableModelIdSet.has(modelId)) continue;
-    next.push(modelId);
-  }
-
-  return next;
-}
-
-function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
-  if (a.size !== b.size) return false;
-
-  for (const value of a) {
-    if (!b.has(value)) return false;
-  }
-
-  return true;
-}
-
-function toErrorMessage(cause: unknown): string {
-  if (cause instanceof Error) return cause.message;
-  return "Unknown error";
-}
-
-function compareByName(a: ModelEntry, b: ModelEntry): number {
-  return a.displayName.localeCompare(b.displayName);
-}
-
-function compareByProviderThenName(a: ModelEntry, b: ModelEntry): number {
-  const providerDiff = PROVIDER_ORDER_INDEX[a.provider] - PROVIDER_ORDER_INDEX[b.provider];
-  if (providerDiff !== 0) return providerDiff;
-
-  return compareByName(a, b);
-}
-
-function getModelsScrollElement(listElement: HTMLDivElement | null): HTMLElement | null {
-  if (!listElement) return null;
-
-  const scrollElement = listElement.closest("[data-models-scroll-container]");
-  if (scrollElement instanceof HTMLElement) return scrollElement;
-
-  return null;
-}
-
+type ModelsCustomization = { hidden: string[]; favorite: string[] };
 export type ModelsEditorProps = {
   disabled: boolean;
   initialHiddenModels: string[];
@@ -234,943 +128,396 @@ export type ModelsEditorProps = {
 };
 
 export function ModelsEditor(props: ModelsEditorProps) {
-  const { disabled, initialHiddenModels, initialFavoriteModels, onSaveCustomization } = props;
-
   const [query, setQuery] = useState("");
-  const [visibleOnly, setVisibleOnly] = useState(false);
+  const [provider, setProvider] = useState("all");
+  const [picker, setPicker] = useState("all");
+  const [sort, setSort] = useState("newest");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [capabilityFilter, setCapabilityFilter] = useState<Set<ModelCapabilityKey>>(
-    () => new Set<ModelCapabilityKey>(),
-  );
-
-  const [hiddenSet, setHiddenSet] = useState<Set<string>>(() =>
-    sanitizeModelIds(initialHiddenModels, SELECTABLE_MODEL_ID_SET),
-  );
-  const [favoriteSet, setFavoriteSet] = useState<Set<string>>(() =>
-    sanitizeModelIds(initialFavoriteModels, SELECTABLE_MODEL_ID_SET),
-  );
-
-  const [savingHidden, setSavingHidden] = useState(false);
-  const [savingFavorite, setSavingFavorite] = useState(false);
-  const [hiddenSaveError, setHiddenSaveError] = useState(false);
-  const [favoriteSaveError, setFavoriteSaveError] = useState(false);
-
-  const lastSyncedHiddenRef = useRef<Set<string>>(
-    sanitizeModelIds(initialHiddenModels, SELECTABLE_MODEL_ID_SET),
-  );
-  const lastSyncedFavoriteRef = useRef<Set<string>>(
-    sanitizeModelIds(initialFavoriteModels, SELECTABLE_MODEL_ID_SET),
-  );
-
-  const queuedHiddenSetRef = useRef<Set<string> | null>(null);
-  const queuedFavoriteSetRef = useRef<Set<string> | null>(null);
-  const hiddenDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const favoriteDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mountedRef = useRef(true);
-  const inFlightRef = useRef<{ hidden: boolean; favorite: boolean }>({
-    hidden: false,
-    favorite: false,
-  });
-
-  useEffect(() => {
-    return function cleanupMountedRef() {
-      if (hiddenDebounceTimerRef.current) {
-        clearTimeout(hiddenDebounceTimerRef.current);
-        hiddenDebounceTimerRef.current = null;
-      }
-
-      if (favoriteDebounceTimerRef.current) {
-        clearTimeout(favoriteDebounceTimerRef.current);
-        favoriteDebounceTimerRef.current = null;
-      }
-
-      mountedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    const nextHidden = sanitizeModelIds(initialHiddenModels, SELECTABLE_MODEL_ID_SET);
-    const nextFavorite = sanitizeModelIds(initialFavoriteModels, SELECTABLE_MODEL_ID_SET);
-
-    lastSyncedHiddenRef.current = nextHidden;
-    lastSyncedFavoriteRef.current = nextFavorite;
-
-    if (!inFlightRef.current.hidden) {
-      setHiddenSet(nextHidden);
-    }
-
-    if (!inFlightRef.current.favorite) {
-      setFavoriteSet(nextFavorite);
-    }
-  }, [initialFavoriteModels, initialHiddenModels]);
-
-  const persistModelSet = useCallback(
-    async function persistModelSet(kind: PersistableModelSet, nextSet: Set<string>) {
-      const payload = toModelIdsPayload(nextSet, SELECTABLE_MODEL_ID_SET);
-      if (kind === "hidden") {
-        const [, error] = await tryCatch(onSaveCustomization({ hidden: payload }));
-        if (error) throw error;
-        return;
-      }
-
-      const [, error] = await tryCatch(onSaveCustomization({ favorite: payload }));
-      if (error) throw error;
-    },
-    [onSaveCustomization],
-  );
-
-  const flushQueue = useCallback(
-    async function flushQueue(kind: PersistableModelSet) {
-      if (!mountedRef.current) return;
-
-      if (kind === "hidden") {
-        if (inFlightRef.current.hidden) return;
-
-        const queuedSet = queuedHiddenSetRef.current;
-        if (!queuedSet) return;
-
-        if (setsEqual(queuedSet, lastSyncedHiddenRef.current)) {
-          queuedHiddenSetRef.current = null;
-          setSavingHidden(false);
-          setHiddenSaveError(false);
-          return;
-        }
-
-        inFlightRef.current.hidden = true;
-
-        const nextSet = new Set<string>(queuedSet);
-        queuedHiddenSetRef.current = null;
-
-        const [, error] = await tryCatch(persistModelSet("hidden", nextSet));
-
-        inFlightRef.current.hidden = false;
-        if (!mountedRef.current) return;
-
-        if (error) {
-          queuedHiddenSetRef.current = queuedHiddenSetRef.current ?? nextSet;
-          setSavingHidden(false);
-          setHiddenSaveError(true);
-          toast.error("Failed to save hidden models", {
-            description: `${toErrorMessage(error)} Changes are kept locally.`,
-          });
-          return;
-        }
-
-        lastSyncedHiddenRef.current = new Set(nextSet);
-        toast.success("Model visibility saved", { id: "models-save-success" });
-
-        if (queuedHiddenSetRef.current) {
-          await flushQueue("hidden");
-          return;
-        }
-
-        setHiddenSaveError(false);
-        setSavingHidden(false);
-        return;
-      }
-
-      if (inFlightRef.current.favorite) return;
-
-      const queuedSet = queuedFavoriteSetRef.current;
-      if (!queuedSet) return;
-
-      if (setsEqual(queuedSet, lastSyncedFavoriteRef.current)) {
-        queuedFavoriteSetRef.current = null;
-        setSavingFavorite(false);
-        setFavoriteSaveError(false);
-        return;
-      }
-
-      inFlightRef.current.favorite = true;
-
-      const nextSet = new Set<string>(queuedSet);
-      queuedFavoriteSetRef.current = null;
-
-      const [, error] = await tryCatch(persistModelSet("favorite", nextSet));
-
-      inFlightRef.current.favorite = false;
-      if (!mountedRef.current) return;
-
-      if (error) {
-        queuedFavoriteSetRef.current = queuedFavoriteSetRef.current ?? nextSet;
-        setSavingFavorite(false);
-        setFavoriteSaveError(true);
-        toast.error("Failed to save favorite models", {
-          description: `${toErrorMessage(error)} Changes are kept locally.`,
-        });
-        return;
-      }
-
-      lastSyncedFavoriteRef.current = new Set(nextSet);
-      toast.success("Favorite models saved", { id: "models-save-success" });
-
-      if (queuedFavoriteSetRef.current) {
-        await flushQueue("favorite");
-        return;
-      }
-
-      setFavoriteSaveError(false);
-      setSavingFavorite(false);
-    },
-    [persistModelSet],
-  );
-
-  const scheduleFlush = useCallback(
-    function scheduleFlush(kind: PersistableModelSet) {
-      if (kind === "hidden") {
-        if (hiddenDebounceTimerRef.current) {
-          clearTimeout(hiddenDebounceTimerRef.current);
-        }
-
-        hiddenDebounceTimerRef.current = setTimeout(() => {
-          hiddenDebounceTimerRef.current = null;
-          void flushQueue("hidden");
-        }, SAVE_DEBOUNCE_MS);
-
-        return;
-      }
-
-      if (favoriteDebounceTimerRef.current) {
-        clearTimeout(favoriteDebounceTimerRef.current);
-      }
-
-      favoriteDebounceTimerRef.current = setTimeout(() => {
-        favoriteDebounceTimerRef.current = null;
-        void flushQueue("favorite");
-      }, SAVE_DEBOUNCE_MS);
-    },
-    [flushQueue],
-  );
-
-  const queuePersist = useCallback(
-    function queuePersist(kind: PersistableModelSet, nextSet: Set<string>) {
-      if (kind === "hidden") {
-        queuedHiddenSetRef.current = new Set(nextSet);
-        setHiddenSaveError(false);
-        setSavingHidden(true);
-      } else {
-        queuedFavoriteSetRef.current = new Set(nextSet);
-        setFavoriteSaveError(false);
-        setSavingFavorite(true);
-      }
-
-      scheduleFlush(kind);
-    },
-    [scheduleFlush],
-  );
-
-  const onSetVisible = useCallback(
-    function onSetVisible(modelId: string, visible: boolean) {
-      if (disabled) return;
-      if (!isModelIdKey(modelId)) return;
-      if (!SELECTABLE_MODEL_ID_SET.has(modelId)) return;
-
-      setHiddenSet((prev) => {
-        const next = new Set(prev);
-        if (visible) {
-          next.delete(modelId);
-        } else {
-          next.add(modelId);
-        }
-
-        queuePersist("hidden", next);
-        return next;
-      });
-    },
-    [disabled, queuePersist],
-  );
-
-  const onRetrySave = useCallback(
-    function onRetrySave() {
-      if (queuedHiddenSetRef.current) {
-        setSavingHidden(true);
-        void flushQueue("hidden");
-      }
-
-      if (queuedFavoriteSetRef.current) {
-        setSavingFavorite(true);
-        void flushQueue("favorite");
-      }
-    },
-    [flushQueue],
-  );
-
-  const onToggleFavorite = useCallback(
-    function onToggleFavorite(modelId: string) {
-      if (disabled) return;
-      if (!isModelIdKey(modelId)) return;
-      if (!SELECTABLE_MODEL_ID_SET.has(modelId)) return;
-
-      setFavoriteSet((prev) => {
-        const next = new Set(prev);
-        if (next.has(modelId)) {
-          next.delete(modelId);
-        } else {
-          next.add(modelId);
-        }
-
-        queuePersist("favorite", next);
-        return next;
-      });
-    },
-    [disabled, queuePersist],
-  );
-
-  const onShowAll = useCallback(
-    function onShowAll() {
-      if (disabled) return;
-      const next = new Set<string>();
-      setHiddenSet(next);
-      queuePersist("hidden", next);
-    },
-    [disabled, queuePersist],
-  );
-
-  const onSetCapabilityFilter = useCallback(function onSetCapabilityFilter(
-    capability: ModelCapabilityKey,
-    checked: boolean,
-  ) {
-    setCapabilityFilter((previous) => {
-      const next = new Set(previous);
-      if (checked) {
-        next.add(capability);
-      } else {
-        next.delete(capability);
-      }
-
-      return next;
-    });
-  }, []);
-
-  const normalizedQuery = query.trim().toLowerCase();
-
-  const filteredModels = useMemo(() => {
-    const result: Array<ModelEntry> = [];
-
-    for (const entry of MODEL_ENTRIES) {
-      if (normalizedQuery.length > 0 && !entry.searchText.includes(normalizedQuery)) continue;
-
-      if (visibleOnly && (entry.deprecation || hiddenSet.has(entry.modelId))) continue;
-
-      if (favoritesOnly && !favoriteSet.has(entry.modelId)) continue;
-
-      if (capabilityFilter.size > 0) {
-        let hasAllCapabilities = true;
-
-        for (const option of CAPABILITY_FILTER_OPTIONS) {
-          const capability = option.value;
-          if (!capabilityFilter.has(capability)) continue;
-
-          if (!entry.capabilitySet.has(capability)) {
-            hasAllCapabilities = false;
-            break;
-          }
-        }
-
-        if (!hasAllCapabilities) continue;
-      }
-
-      result.push(entry);
-    }
-
-    result.sort(compareByProviderThenName);
-    return result;
-  }, [capabilityFilter, favoriteSet, favoritesOnly, hiddenSet, normalizedQuery, visibleOnly]);
-
-  const counts = useMemo(() => {
-    let deprecated = 0;
-    let hidden = 0;
-    let favorite = 0;
-
-    for (const entry of MODEL_ENTRIES) {
-      if (entry.deprecation) {
-        deprecated += 1;
-        continue;
-      }
-
-      if (hiddenSet.has(entry.modelId)) hidden += 1;
-      if (favoriteSet.has(entry.modelId)) favorite += 1;
-    }
-
-    const selectableCount = SelectableModelIds.length;
-    const visible = selectableCount - hidden;
-
-    return {
-      selectableCount,
-      visible,
-      hidden,
-      favorite,
-      deprecated,
-    };
-  }, [favoriteSet, hiddenSet]);
-
-  const emptyMessage = useMemo(() => {
-    if (favoritesOnly) {
-      return "No favorite models match your current filters.";
-    }
-
-    return "No models match your filters.";
-  }, [favoritesOnly]);
-
-  const saving = savingHidden || savingFavorite;
-  const hasSaveError = hiddenSaveError || favoriteSaveError;
-
-  return (
-    <SettingsSection
-      id="model-library"
-      title="Model library"
-      description="Filter the catalog, choose what appears in the picker, and keep frequently used models close."
-    >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2 border-y py-3 text-xs text-muted-foreground">
-          <Badge
-            variant="outline"
-            className={cn("gap-1 rounded-sm px-2 py-0.5 text-xs font-medium", STATUS_BADGE_STYLES.visible)}
-          >
-            <span className="font-semibold tabular-nums">{counts.visible}</span>
-            visible
-          </Badge>
-
-          <Badge
-            variant="outline"
-            className={cn("gap-1 rounded-sm px-2 py-0.5 text-xs font-medium", STATUS_BADGE_STYLES.hidden)}
-          >
-            <span className="font-semibold tabular-nums">{counts.hidden}</span>
-            hidden
-          </Badge>
-
-          <Badge
-            variant="outline"
-            className={cn("gap-1 rounded-sm px-2 py-0.5 text-xs font-medium", STATUS_BADGE_STYLES.favorite)}
-          >
-            <span className="font-semibold tabular-nums">{counts.favorite}</span>
-            favorites
-          </Badge>
-
-          <Badge
-            variant="outline"
-            className={cn("gap-1 rounded-sm px-2 py-0.5 text-xs font-medium", STATUS_BADGE_STYLES.deprecated)}
-          >
-            <span className="font-semibold tabular-nums">{counts.deprecated}</span>
-            deprecated
-          </Badge>
-
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            {saving && (
-              <Badge variant="outline" className="gap-1 rounded-sm px-2 py-0.5 text-xs">
-                <LoaderCircleIcon className="size-3 animate-spin" />
-                Saving...
-              </Badge>
-            )}
-
-            {hasSaveError && (
-              <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={onRetrySave}>
-                Retry save
-              </Button>
-            )}
-
-            <Button
-              type="button"
-              variant="outline"
-              disabled={disabled || hiddenSet.size === 0}
-              onClick={onShowAll}
-            >
-              Show all models
-            </Button>
-          </div>
-        </div>
-
-        <ModelsFilter
-          query={query}
-          onQueryChange={setQuery}
-          capabilityFilter={capabilityFilter}
-          onSetCapabilityFilter={onSetCapabilityFilter}
-          visibleOnly={visibleOnly}
-          onVisibleOnlyChange={setVisibleOnly}
-          favoritesOnly={favoritesOnly}
-          onFavoritesOnlyChange={setFavoritesOnly}
-          disabled={disabled}
-        />
-
-        <Separator />
-
-        <ModelsGrid
-          models={filteredModels}
-          hiddenSet={hiddenSet}
-          favoriteSet={favoriteSet}
-          onSetVisible={onSetVisible}
-          onToggleFavorite={onToggleFavorite}
-          disabled={disabled}
-          emptyMessage={emptyMessage}
-        />
-      </div>
-    </SettingsSection>
-  );
-}
-
-type ModelsFilterProps = {
-  query: string;
-  onQueryChange: (value: string) => void;
-  capabilityFilter: ReadonlySet<ModelCapabilityKey>;
-  onSetCapabilityFilter: (capability: ModelCapabilityKey, checked: boolean) => void;
-  visibleOnly: boolean;
-  onVisibleOnlyChange: (value: boolean) => void;
-  favoritesOnly: boolean;
-  onFavoritesOnlyChange: (value: boolean) => void;
-  disabled: boolean;
-};
-
-function ModelsFilter(props: ModelsFilterProps) {
-  const selectedCapabilityCount = props.capabilityFilter.size;
-  const capabilityLabel =
-    selectedCapabilityCount > 0
-      ? `${selectedCapabilityCount} ${selectedCapabilityCount > 1 ? "capabilities" : "capability"} selected`
-      : "All capabilities";
-
-  function handleClearCapabilityFilters() {
-    for (const capability of props.capabilityFilter) {
-      props.onSetCapabilityFilter(capability, false);
-    }
-  }
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)_minmax(13rem,16rem)_minmax(13rem,16rem)] lg:items-start">
-      <div className="space-y-2 lg:min-w-0">
-        <Label htmlFor="model-search">Search models</Label>
-        <Input
-          id="model-search"
-          value={props.query}
-          onChange={(event) => props.onQueryChange(event.target.value)}
-          placeholder="Search by model name or provider..."
-          className="bg-input/30 outline-none"
-          disabled={props.disabled}
-        />
-      </div>
-
-      <div className="space-y-2 lg:min-w-64">
-        <Label htmlFor="model-capability">Capability</Label>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            id="model-capability"
-            render={
-              <Button
-                variant="outline"
-                className="h-8 w-full justify-between bg-input/30 text-xs font-normal"
-                disabled={props.disabled}
-                aria-label="Filter by model capability"
-              >
-                <span className="inline-flex min-w-0 items-center gap-2">
-                  <BrainIcon className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate">{capabilityLabel}</span>
-                </span>
-                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
-              </Button>
-            }
-          />
-
-          <DropdownMenuContent className="bg-card" sideOffset={6}>
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>Filter capabilities</DropdownMenuLabel>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-
-            <DropdownMenuGroup>
-              {CAPABILITY_FILTER_OPTIONS.map((option) => (
-                <DropdownMenuCheckboxItem
-                  key={option.value}
-                  checked={props.capabilityFilter.has(option.value)}
-                  onCheckedChange={(checked) => {
-                    props.onSetCapabilityFilter(option.value, checked);
-                  }}
-                  onSelect={(event) => {
-                    event.preventDefault();
-                  }}
-                >
-                  <option.Icon className="size-3.5 text-muted-foreground" />
-                  {option.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuGroup>
-
-            {selectedCapabilityCount > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuCheckboxItem
-                    checked={false}
-                    onCheckedChange={() => {
-                      handleClearCapabilityFilters();
-                    }}
-                    onSelect={(event) => {
-                      event.preventDefault();
-                      handleClearCapabilityFilters();
-                    }}
-                  >
-                    Clear capability filters
-                  </DropdownMenuCheckboxItem>
-                </DropdownMenuGroup>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className="space-y-2 lg:min-w-0">
-        <div className="min-w-0 space-y-1">
-          <Label htmlFor="visible-only" className="text-sm leading-none font-medium">
-            Visible only
-          </Label>
-          <p className="text-xs text-muted-foreground">Hide hidden and deprecated models.</p>
-        </div>
-
-        <div className="flex h-8 items-center">
-          <Switch
-            id="visible-only"
-            checked={props.visibleOnly}
-            onCheckedChange={props.onVisibleOnlyChange}
-            disabled={props.disabled}
-            aria-label="Show visible models only"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2 lg:min-w-0">
-        <div className="min-w-0 space-y-1">
-          <Label htmlFor="favorites-only" className="text-sm leading-none font-medium">
-            Favorites only
-          </Label>
-          <p className="text-xs text-muted-foreground">Show only starred models.</p>
-        </div>
-
-        <div className="flex h-8 items-center">
-          <Switch
-            id="favorites-only"
-            checked={props.favoritesOnly}
-            onCheckedChange={props.onFavoritesOnlyChange}
-            disabled={props.disabled}
-            aria-label="Show favorite models only"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type ModelsGridProps = {
-  models: Array<ModelEntry>;
-  hiddenSet: ReadonlySet<string>;
-  favoriteSet: ReadonlySet<string>;
-  onSetVisible: (modelId: string, visible: boolean) => void;
-  onToggleFavorite: (modelId: string) => void;
-  disabled: boolean;
-  emptyMessage: string;
-};
-
-function ModelsGrid(props: ModelsGridProps) {
-  if (props.models.length === 0) {
+  const [newOnly, setNewOnly] = useState(false);
+  const [includeDeprecated, setIncludeDeprecated] = useState(false);
+  const [capabilities, setCapabilities] = useState<string[]>([]);
+  const [now] = useState(() => Date.now());
+  const [saving, startSaving] = useTransition();
+  const hidden = new Set(props.initialHiddenModels);
+  const favorites = new Set(props.initialFavoriteModels);
+  const searchTerms = query.trim().toLowerCase().split(/\s+/);
+  const hasFilters =
+    !!query ||
+    provider !== "all" ||
+    picker !== "all" ||
+    favoritesOnly ||
+    newOnly ||
+    includeDeprecated ||
+    capabilities.length > 0;
+
+  function isNew(entry: (typeof MODELS)[number]) {
     return (
-      <div className="flex items-center justify-center rounded-md border bg-muted/30 px-4 py-10 text-sm text-muted-foreground">
-        {props.emptyMessage}
-      </div>
+      !entry.model.deprecation &&
+      entry.addedAt > 0 &&
+      entry.addedAt <= now &&
+      now - entry.addedAt < NEW_MODEL_WINDOW_MS
     );
   }
 
-  if (props.models.length < MODELS_GRID_VIRTUALIZATION_MIN_ROWS) {
-    return <StaticModelsGrid {...props} />;
-  }
-
-  return <VirtualizedModelsGrid {...props} />;
-}
-
-function StaticModelsGrid(props: ModelsGridProps) {
-  return (
-    <div className="grid grid-cols-1 gap-2">
-      {props.models.map(function renderModelRow(entry) {
-        return (
-          <ModelRow
-            key={entry.modelId}
-            entry={entry}
-            visible={!entry.deprecation && !props.hiddenSet.has(entry.modelId)}
-            favorite={props.favoriteSet.has(entry.modelId)}
-            onSetVisible={props.onSetVisible}
-            onToggleFavorite={props.onToggleFavorite}
-            disabled={props.disabled}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-type VirtualizedRow = {
-  key: string;
-  entry: ModelEntry;
-};
-
-function VirtualizedModelsGrid(props: ModelsGridProps) {
-  const listElementRef = useRef<HTMLDivElement>(null);
-  const scrollElementRef = useRef<HTMLElement | null>(null);
-
-  const rows = useMemo(() => {
-    const nextRows: Array<VirtualizedRow> = [];
-
-    for (const entry of props.models) {
-      nextRows.push({
-        key: entry.modelId,
-        entry,
-      });
+  const models = MODELS.filter((entry) => {
+    const deprecated = !!entry.model.deprecation;
+    const included = !deprecated && !hidden.has(entry.modelId);
+    return (
+      (!deprecated || includeDeprecated || favorites.has(entry.modelId)) &&
+      searchTerms.every((term) => entry.searchText.includes(term)) &&
+      (provider === "all" || entry.model.provider === provider) &&
+      (picker === "all" || (picker === "included" ? included : !included)) &&
+      (!favoritesOnly || favorites.has(entry.modelId)) &&
+      (!newOnly || isNew(entry)) &&
+      capabilities.every((value) => entry.capabilities.some((capability) => capability.value === value))
+    );
+  }).toSorted((a, b) => {
+    if (sort !== "name" && a.model.provider !== b.model.provider) {
+      return prettifyProviderName(a.model.provider).localeCompare(prettifyProviderName(b.model.provider));
     }
-
-    return nextRows;
-  }, [props.models]);
-
-  const getScrollElement = useCallback(function getScrollElement() {
-    const cached = scrollElementRef.current;
-    if (cached && cached.isConnected) return cached;
-
-    const next = getModelsScrollElement(listElementRef.current);
-    scrollElementRef.current = next;
-    return next;
-  }, []);
-
-  // TanStack Virtual intentionally returns non-memoizable functions; React Compiler skips this component.
-  // oxlint-disable-next-line react/incompatible-library
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement,
-    estimateSize: () => MODELS_GRID_ESTIMATED_ROW_HEIGHT_PX,
-    overscan: MODELS_GRID_OVERSCAN,
+    if (sort !== "name") {
+      if (a.addedAt !== b.addedAt) return b.addedAt - a.addedAt;
+      // ponytail: undated catalog entries use the picker's version heuristic; add dates for release ordering.
+      return compareModelLabelsNewestFirst({ label: a.name }, { label: b.name });
+    }
+    return a.name.localeCompare(b.name, undefined, { numeric: true });
   });
 
-  const virtualItems = virtualizer.getVirtualItems();
-  const offsetY = virtualItems[0]?.start ?? 0;
-  const totalHeight = virtualizer.getTotalSize();
+  function clearFilters() {
+    setQuery("");
+    setProvider("all");
+    setPicker("all");
+    setFavoritesOnly(false);
+    setNewOnly(false);
+    setIncludeDeprecated(false);
+    setCapabilities([]);
+  }
+
+  function save(kind: keyof ModelsCustomization, modelId: string, selected: boolean) {
+    if (props.disabled) return;
+    const values = new Set(kind === "hidden" ? props.initialHiddenModels : props.initialFavoriteModels);
+    if (selected) values.add(modelId);
+    else values.delete(modelId);
+    startSaving(async () => {
+      const [, error] = await tryCatch(props.onSaveCustomization({ [kind]: [...values] }));
+      if (error)
+        toast.error("Couldn't save model preferences", {
+          description: "The change was reverted. Try again.",
+        });
+    });
+  }
 
   return (
-    <div ref={listElementRef} className="relative w-full" style={{ height: totalHeight }}>
-      <div className="absolute top-0 left-0 w-full" style={{ transform: `translateY(${offsetY}px)` }}>
-        {virtualItems.map(function renderVirtualRow(item) {
-          const row = rows[item.index];
-          if (!row) return null;
-
-          return (
-            <div key={row.key} data-index={item.index} ref={virtualizer.measureElement}>
-              <div className="grid grid-cols-1 gap-2 pb-2">
-                <ModelRow
-                  key={row.entry.modelId}
-                  entry={row.entry}
-                  visible={!row.entry.deprecation && !props.hiddenSet.has(row.entry.modelId)}
-                  favorite={props.favoriteSet.has(row.entry.modelId)}
-                  onSetVisible={props.onSetVisible}
-                  onToggleFavorite={props.onToggleFavorite}
-                  disabled={props.disabled}
-                />
-              </div>
-            </div>
-          );
-        })}
+    <section aria-label="Model catalog" className="flex min-w-0 flex-col">
+      <div className="sticky top-0 z-10 flex flex-col gap-3 border-b bg-background pt-1 pb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <InputGroup className="h-10 min-w-48 flex-1">
+            <InputGroupInput
+              aria-label="Search models"
+              placeholder="Search models…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <InputGroupAddon>
+              <SearchIcon />
+            </InputGroupAddon>
+            {query && (
+              <InputGroupAddon align="inline-end">
+                <Button variant="ghost" size="icon-sm" aria-label="Clear search" onClick={() => setQuery("")}>
+                  <XIcon />
+                </Button>
+              </InputGroupAddon>
+            )}
+          </InputGroup>
+          <Select items={SORT_OPTIONS} value={sort} onValueChange={(value) => value && setSort(value)}>
+            <SelectTrigger aria-label="Sort models" className="h-10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select items={PROVIDERS} value={provider} onValueChange={(value) => value && setProvider(value)}>
+            <SelectTrigger aria-label="Filter by provider">
+              <SelectValue>
+                {PROVIDERS.find((option) => option.value === provider)?.icon}
+                {PROVIDERS.find((option) => option.value === provider)?.label}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {PROVIDERS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.icon}
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="outline">
+                  Capabilities{capabilities.length > 0 ? ` (${capabilities.length})` : ""}
+                  <ChevronDownIcon data-icon="inline-end" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent className="min-w-52">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Match all selected</DropdownMenuLabel>
+                {CAPABILITIES.map(({ value, label, Icon, color }) => (
+                  <DropdownMenuCheckboxItem
+                    key={value}
+                    checked={capabilities.includes(value)}
+                    closeOnClick={false}
+                    onCheckedChange={(checked) =>
+                      setCapabilities((previous) =>
+                        checked ? [...previous, value] : previous.filter((item) => item !== value),
+                      )
+                    }
+                  >
+                    <Icon className={color} />
+                    {label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Select items={PICKER_OPTIONS} value={picker} onValueChange={(value) => value && setPicker(value)}>
+            <SelectTrigger aria-label="Filter by picker inclusion">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {PICKER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Toggle
+            className="aria-pressed:border-amber-500/40 aria-pressed:bg-amber-500/10 aria-pressed:text-amber-700 dark:aria-pressed:text-amber-300"
+            variant="outline"
+            pressed={favoritesOnly}
+            onPressedChange={setFavoritesOnly}
+          >
+            <StarIcon className="text-amber-600 dark:text-amber-400" />
+            Favorites
+          </Toggle>
+          <Toggle
+            className="aria-pressed:border-emerald-500/40 aria-pressed:bg-emerald-500/10 aria-pressed:text-emerald-700 dark:aria-pressed:text-emerald-300"
+            variant="outline"
+            pressed={newOnly}
+            onPressedChange={setNewOnly}
+          >
+            New
+          </Toggle>
+          <Toggle
+            className="aria-pressed:border-rose-500/40 aria-pressed:bg-rose-500/10 aria-pressed:text-rose-700 dark:aria-pressed:text-rose-300"
+            variant="outline"
+            pressed={includeDeprecated}
+            onPressedChange={setIncludeDeprecated}
+          >
+            Include deprecated
+          </Toggle>
+        </div>
+        {capabilities.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {CAPABILITIES.filter(({ value }) => capabilities.includes(value)).map(
+              ({ value, label, Icon, color }) => (
+                <Button
+                  key={value}
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setCapabilities((previous) => previous.filter((item) => item !== value))}
+                  aria-label={`Remove ${label} filter`}
+                >
+                  <Icon className={color} data-icon="inline-start" />
+                  {label}
+                  <XIcon data-icon="inline-end" />
+                </Button>
+              ),
+            )}
+          </div>
+        )}
+        <div className="flex min-h-7 items-center gap-3 text-xs text-muted-foreground">
+          <output className="tabular-nums">
+            {models.length} {models.length === 1 ? "model" : "models"}
+          </output>
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              Clear filters
+            </Button>
+          )}
+          <div className="ml-auto">
+            <AutosaveStatus isSaving={saving} />
+          </div>
+        </div>
       </div>
-    </div>
+      <div
+        className="flex items-center gap-3 border-b px-2 py-2 text-xs text-muted-foreground"
+        aria-hidden="true"
+      >
+        <span className="flex-1">Model</span>
+        <span className="hidden sm:block">Capabilities</span>
+        <span className="w-11 text-center">Star</span>
+        <span className="w-16 text-center">In picker</span>
+      </div>
+      {models.length === 0 ? (
+        <Empty className="py-16">
+          <EmptyHeader>
+            <EmptyTitle>No models match your filters</EmptyTitle>
+          </EmptyHeader>
+          <Button variant="outline" onClick={clearFilters}>
+            Clear filters
+          </Button>
+        </Empty>
+      ) : (
+        <ul className="divide-y">
+          {models.map((entry) => (
+            <ModelRow
+              key={entry.modelId}
+              entry={entry}
+              isNew={isNew(entry)}
+              favorite={favorites.has(entry.modelId)}
+              included={!entry.model.deprecation && !hidden.has(entry.modelId)}
+              disabled={props.disabled}
+              onSave={save}
+            />
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
-type ModelRowProps = {
-  entry: ModelEntry;
-  visible: boolean;
+function ModelRow({
+  entry,
+  isNew,
+  favorite,
+  included,
+  disabled,
+  onSave,
+}: {
+  entry: (typeof MODELS)[number];
+  isNew: boolean;
   favorite: boolean;
-  onSetVisible: (modelId: string, visible: boolean) => void;
-  onToggleFavorite: (modelId: string) => void;
+  included: boolean;
   disabled: boolean;
-};
-
-type ModelVisibilityToggleProps = {
-  checked: boolean;
-  disabled: boolean;
-  ariaLabel: string;
-  onToggle: () => void;
-};
-
-const ModelVisibilityToggle = memo(function ModelVisibilityToggle(props: ModelVisibilityToggleProps) {
+  onSave: (kind: keyof ModelsCustomization, modelId: string, selected: boolean) => void;
+}) {
+  const deprecation = entry.model.deprecation;
+  const replacement = deprecation ? getModelData(deprecation.replacementModelId) : null;
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={props.checked}
-      aria-label={props.ariaLabel}
-      disabled={props.disabled}
-      onClick={props.onToggle}
-      className={cn(
-        "relative inline-flex h-[18.4px] w-[32px] shrink-0 items-center rounded-full border border-transparent transition-all outline-none",
-        "focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        props.checked ? "bg-primary" : "bg-input",
-      )}
-    >
-      <span
-        className={cn(
-          "pointer-events-none block size-4 rounded-full bg-background transition-transform",
-          props.checked ? "translate-x-[calc(100%-2px)]" : "translate-x-0",
-        )}
-      />
-    </button>
-  );
-});
-
-const capabilityMetadata = {
-  reasoning: {
-    label: "Reasoning",
-    Icon: BrainIcon,
-    className: "border-indigo-500/30 bg-indigo-500/10 text-indigo-300",
-  },
-  toolCalling: {
-    label: "Tools",
-    Icon: WrenchIcon,
-    className: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300",
-  },
-  imageInput: {
-    label: "Image input",
-    Icon: ImageIcon,
-    className: "border-teal-500/30 bg-teal-500/10 text-teal-300",
-  },
-  pdfInput: {
-    label: "PDF input",
-    Icon: FileTextIcon,
-    className: "border-sky-500/30 bg-sky-500/10 text-sky-300",
-  },
-  imageOutput: {
-    label: "Image output",
-    Icon: ImagePlusIcon,
-    className: "border-orange-500/30 bg-orange-500/10 text-orange-300",
-  },
-  imageGeneration: {
-    label: "Image generation tool",
-    Icon: ImagePlusIcon,
-    className: "border-amber-500/30 bg-amber-500/10 text-amber-300",
-  },
-} satisfies Record<ModelCapabilityKey, { label: string; Icon: typeof BrainIcon; className: string }>;
-
-const capabilityOrder: Array<ModelCapabilityKey> = [
-  "reasoning",
-  "toolCalling",
-  "imageInput",
-  "pdfInput",
-  "imageOutput",
-  "imageGeneration",
-];
-
-const ModelRow = memo(function ModelRow(props: ModelRowProps) {
-  const isDeprecated = props.entry.deprecation !== null;
-  const canToggleVisibility = !isDeprecated && !props.disabled;
-  const canToggleFavorite = !isDeprecated && !props.disabled;
-
-  const statusLabel = isDeprecated ? "Unavailable" : props.visible ? "Visible" : "Hidden";
-  const visibilityToggleLabel = isDeprecated
-    ? `${props.entry.displayName} is deprecated and unavailable`
-    : `Toggle visibility for ${props.entry.displayName}`;
-
-  function handleFavoriteClick(event: React.MouseEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!canToggleFavorite) return;
-    props.onToggleFavorite(props.entry.modelId);
-  }
-
-  function handleVisibilityToggle() {
-    if (!canToggleVisibility) return;
-    props.onSetVisible(props.entry.modelId, !props.visible);
-  }
-
-  return (
-    <Card className="rounded-md [contain:layout_paint_style] [contain-intrinsic-size:220px] [content-visibility:auto]">
-      <CardContent className="space-y-3 py-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-3">
-            <Icons.provider provider={props.entry.provider} className="size-8 shrink-0" />
-
-            <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="truncate text-sm font-medium">{props.entry.displayName}</div>
-
-                {isDeprecated && (
-                  <Badge variant="secondary" className="text-3xs rounded-sm px-1.5 py-0">
-                    Deprecated
-                  </Badge>
-                )}
-              </div>
-
-              <div className="truncate text-xs text-muted-foreground">{props.entry.providerName}</div>
-
-              {isDeprecated && (
-                <div className="mt-1 text-xs text-muted-foreground">{props.entry.deprecation?.message}</div>
-              )}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onMouseDown={stopFavoriteMouseDown}
-            onClick={handleFavoriteClick}
-            disabled={!canToggleFavorite}
-            aria-label={
-              props.favorite
-                ? `Remove ${props.entry.displayName} from favorites`
-                : `Favorite ${props.entry.displayName}`
-            }
-            className={cn(
-              "flex size-7 cursor-pointer items-center justify-center rounded-md border text-muted-foreground transition-colors",
-              "hover:bg-primary/12 hover:text-foreground",
-              "disabled:cursor-not-allowed disabled:opacity-50",
-              props.favorite && "border-amber-300/40 text-amber-400",
-            )}
+    <li>
+      <Collapsible>
+        <div className="flex min-h-14 items-center gap-3 px-2 hover:bg-muted/40">
+          <CollapsibleTrigger
+            className="group flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Details for ${entry.name}`}
           >
-            <StarIcon className={cn("size-4", props.favorite && "fill-amber-400")} />
-          </button>
+            <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground group-data-panel-open:rotate-90" />
+            <Icons.provider provider={entry.model.provider} className="size-4 shrink-0" />
+            <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 py-2">
+              <span className="text-sm font-medium wrap-anywhere">{entry.name}</span>
+              {isNew && (
+                <Badge
+                  variant="outline"
+                  className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                >
+                  New
+                </Badge>
+              )}
+              {deprecation && (
+                <Badge
+                  variant="outline"
+                  className="border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                >
+                  Deprecated
+                </Badge>
+              )}
+            </span>
+          </CollapsibleTrigger>
+          <div className="hidden items-center gap-2 text-muted-foreground sm:flex">
+            {entry.capabilities.map(({ value, label, Icon, color }) => (
+              <span key={value} title={label} className={color}>
+                <Icon className="size-3.5" aria-hidden="true" />
+                <span className="sr-only">{label}</span>
+              </span>
+            ))}
+          </div>
+          <Toggle
+            className="size-11 shrink-0"
+            pressed={favorite}
+            disabled={disabled || (!!deprecation && !favorite)}
+            onPressedChange={(pressed) => onSave("favorite", entry.modelId, pressed)}
+            aria-label={`${favorite ? "Remove" : "Add"} ${entry.name} ${favorite ? "from" : "to"} favorites`}
+          >
+            <StarIcon className={cn(favorite && "fill-current text-amber-600 dark:text-amber-400")} />
+          </Toggle>
+          <div className="flex h-11 w-16 shrink-0 items-center justify-center">
+            {!deprecation && (
+              <Switch
+                checked={included}
+                disabled={disabled}
+                onCheckedChange={(checked) => onSave("hidden", entry.modelId, !checked)}
+                aria-label={`Include ${entry.name} in picker`}
+              />
+            )}
+          </div>
         </div>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          {capabilityOrder.map((capability) => {
-            if (!props.entry.capabilitySet.has(capability)) return null;
-
-            const metadata = capabilityMetadata[capability];
-            if (!metadata) return null;
-
-            const Icon = metadata.Icon;
-
-            return (
-              <Badge
-                key={capability}
-                variant="outline"
-                className={cn("text-3xs rounded-sm px-1.5", metadata.className)}
-              >
-                <Icon className="size-3" />
-                {metadata.label}
-              </Badge>
-            );
-          })}
-
-          {props.favorite && (
-            <Badge
-              variant="outline"
-              className={cn("text-3xs rounded-sm px-1.5", STATUS_BADGE_STYLES.favorite)}
-            >
-              <StarIcon className="size-3 fill-amber-400" />
-              Favorite
-            </Badge>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">{statusLabel}</span>
-
-          <ModelVisibilityToggle
-            checked={!isDeprecated && props.visible}
-            disabled={!canToggleVisibility}
-            ariaLabel={visibilityToggleLabel}
-            onToggle={handleVisibilityToggle}
-          />
-        </div>
-      </CardContent>
-    </Card>
+        <CollapsibleContent>
+          <div className="flex flex-col gap-3 bg-muted/20 px-8 py-4 text-xs">
+            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2">
+              <dt className="text-muted-foreground">Provider</dt>
+              <dd>{prettifyProviderName(entry.model.provider)}</dd>
+              <dt className="text-muted-foreground">Model ID</dt>
+              <dd className="font-mono break-all">{entry.modelId}</dd>
+              {entry.model.addedAt && (
+                <>
+                  <dt className="text-muted-foreground">Added</dt>
+                  <dd>
+                    <time dateTime={entry.model.addedAt}>{entry.model.addedAt}</time>
+                  </dd>
+                </>
+              )}
+              <dt className="text-muted-foreground">Input</dt>
+              <dd>{entry.model.modalities.input.join(", ")}</dd>
+              <dt className="text-muted-foreground">Output</dt>
+              <dd>{entry.model.modalities.output.join(", ")}</dd>
+            </dl>
+            {entry.capabilities.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {entry.capabilities.map(({ value, label, Icon, color }) => (
+                  <Badge key={value} variant="outline" className={color}>
+                    <Icon />
+                    {label}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {deprecation && <p className="text-muted-foreground">{deprecation.message}</p>}
+            {replacement && (
+              <p>
+                Replacement:{" "}
+                <span className="font-medium">{replacement.display.unique ?? replacement.display.name}</span>
+              </p>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </li>
   );
-});
+}
