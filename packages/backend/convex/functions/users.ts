@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { AllModelIds } from "@ai-chat/shared/chat/models";
 
+import { internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
 
 import { authenticatedMutation, authenticatedQuery } from "../components";
@@ -163,6 +164,7 @@ function sanitizeModelIds(modelIds: string[]) {
 
 export const updateUserPreferences = authenticatedMutation({
   args: { data: userPreferencesPatch },
+  returns: v.null(),
   handler: async (ctx, { data }) => {
     const user = ctx.user;
     const updates = structuredClone(data);
@@ -186,6 +188,19 @@ export const updateUserPreferences = authenticatedMutation({
     await ctx.db.patch(user._id, {
       preferences: mergeUserPreferences(user.preferences, updates),
     });
+
+    if (
+      autoSettleDays !== undefined &&
+      autoSettleDays > 0 &&
+      autoSettleDays !== user.preferences.threads?.autoSettleDays
+    ) {
+      await ctx.scheduler.runAfter(0, internal.functions.threads.autoSettleInactiveThreadsForUser, {
+        userId: user.userId,
+        cursor: null,
+      });
+    }
+
+    return null;
   },
 });
 

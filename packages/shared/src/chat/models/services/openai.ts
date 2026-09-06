@@ -377,4 +377,21 @@ export const openai = {
       },
     },
   },
+
+  "openai/gpt-6-astra": {
+    addedAt: "2026-09-06",
+    display: { name: "GPT 6 Astra" },
+    id: "openai/gpt-6-astra",
+    provider: "openai",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      imageGeneration: true,
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["low", "medium", "high", "xhigh", "max"],
+      },
+    },
+  },
 } satisfies Record<ModelIdKey, ModelData>;

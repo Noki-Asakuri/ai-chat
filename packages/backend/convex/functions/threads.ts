@@ -836,6 +836,7 @@ export const autoSettleInactiveThreadsForUser = internalMutation({
   args: {
     userId: v.string(),
     cursor: v.union(v.string(), v.null()),
+    before: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -846,7 +847,9 @@ export const autoSettleInactiveThreadsForUser = internalMutation({
     const autoSettleDays = user?.preferences.threads?.autoSettleDays ?? 0;
     if (!Number.isInteger(autoSettleDays) || autoSettleDays < 1 || autoSettleDays > 90) return null;
 
-    const before = Date.now() - autoSettleDays * DAY_MS;
+    const inactiveBefore = Date.now() - autoSettleDays * DAY_MS;
+    // Continuation cursors require the same query bounds on every page.
+    const before = args.before ?? inactiveBefore;
     const threads = await ctx.db
       .query("threads")
       .withIndex("by_userId_updatedAt", (q) => q.eq("userId", args.userId).lte("updatedAt", before))
@@ -856,7 +859,11 @@ export const autoSettleInactiveThreadsForUser = internalMutation({
       });
 
     for (const thread of threads.page) {
-      if (thread.settled !== true && (thread.status === "complete" || thread.status === "error")) {
+      if (
+        thread.updatedAt <= inactiveBefore &&
+        thread.settled !== true &&
+        (thread.status === "complete" || thread.status === "error")
+      ) {
         await ctx.db.patch(thread._id, { settled: true });
       }
     }
@@ -865,6 +872,7 @@ export const autoSettleInactiveThreadsForUser = internalMutation({
       await ctx.scheduler.runAfter(0, internal.functions.threads.autoSettleInactiveThreadsForUser, {
         userId: args.userId,
         cursor: threads.continueCursor,
+        before,
       });
     }
 
