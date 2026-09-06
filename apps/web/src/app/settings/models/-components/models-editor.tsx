@@ -12,7 +12,7 @@ import {
   XIcon,
 } from "lucide-react";
 
-import { compareModelLabelsNewestFirst } from "@/components/chat-textarea/model-selector";
+import { compareModelLabelsNewestFirst } from "@/components/chat-textarea/model-selector-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";

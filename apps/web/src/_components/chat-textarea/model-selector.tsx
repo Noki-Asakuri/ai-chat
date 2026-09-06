@@ -31,6 +31,12 @@ import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread
 import { chatStoreActions } from "@/lib/store/chat-store";
 import { cn, tryCatch } from "@/lib/utils";
 
+import {
+  PROVIDER_ORDER,
+  compareModelLabelsNewestFirst,
+  createEmptyProviderModels,
+} from "./model-selector-utils";
+
 type ModelSelectorProps = {
   value: string;
   onChange?: (id: string) => void;
@@ -53,18 +59,6 @@ type ModelGroup = {
   title: string;
   models: Array<VisibleModelEntry>;
 };
-
-export const PROVIDER_ORDER: Array<Provider> = ["google", "openai", "deepseek", "kimi", "zai"];
-
-export function createEmptyProviderModels<T>() {
-  return {
-    google: Array<T>(),
-    openai: Array<T>(),
-    deepseek: Array<T>(),
-    kimi: Array<T>(),
-    zai: Array<T>(),
-  };
-}
 
 function stopFavoriteMouseDown(event: React.MouseEvent<HTMLButtonElement>): void {
   event.preventDefault();
@@ -89,17 +83,7 @@ function renderTriggerValue(nextValue: string) {
   );
 }
 
-export function compareModelLabelsNewestFirst(a: { label: string }, b: { label: string }): number {
-  const aVersion = Number.parseFloat(a.label.match(/\d+(?:\.\d+)?/)?.[0] ?? "0");
-  const bVersion = Number.parseFloat(b.label.match(/\d+(?:\.\d+)?/)?.[0] ?? "0");
-  const versionDifference = bVersion - aVersion;
-
-  if (versionDifference !== 0) return versionDifference;
-
-  return b.label.localeCompare(a.label, undefined, { numeric: true, sensitivity: "base" });
-}
-
-export function groupProviderModels(models: Array<VisibleModelEntry>): ProviderModels {
+function groupProviderModels(models: Array<VisibleModelEntry>): ProviderModels {
   const grouped = createEmptyProviderModels<VisibleModelEntry>();
 
   for (const model of models) {
@@ -113,7 +97,7 @@ export function groupProviderModels(models: Array<VisibleModelEntry>): ProviderM
   return grouped;
 }
 
-export function appendProviderGroups(
+function appendProviderGroups(
   groups: Array<ModelGroup>,
   providerModels: ProviderModels,
   options?: {

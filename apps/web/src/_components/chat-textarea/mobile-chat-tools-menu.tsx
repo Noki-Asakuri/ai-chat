@@ -17,8 +17,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { useChatAttachmentInput } from "./attachments-display";
-import { REASONING_OPTIONS } from "./reasoning-picker";
+import { useChatAttachmentInput } from "./use-chat-attachment-input";
+import { REASONING_OPTIONS } from "./reasoning-options";
 
 import { getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
 import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";

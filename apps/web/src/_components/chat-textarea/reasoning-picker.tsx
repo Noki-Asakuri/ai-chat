@@ -12,6 +12,8 @@ import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread
 import type { ReasoningEffort } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+import { REASONING_OPTIONS } from "./reasoning-options";
+
 const EFFORT_SYNC_DEBOUNCE_MS = 1_000;
 
 type ReasoningPickerProps = {
@@ -31,16 +33,6 @@ export function ChatReasoningPicker() {
 export function ReasoningPicker(props: ReasoningPickerProps) {
   return <ReasoningPickerBase {...props} />;
 }
-
-export const REASONING_OPTIONS = {
-  none: { label: "None" },
-  minimal: { label: "Minimal" },
-  low: { label: "Low" },
-  medium: { label: "Medium" },
-  high: { label: "High" },
-  xhigh: { label: "Extra High" },
-  max: { label: "Max" },
-} satisfies Record<ReasoningEffort, { label: string }>;
 
 type ReasoningPickerBaseInnerProps = ReasoningPickerProps & {
   modelData: NonNullable<ReturnType<typeof tryGetModelData>>;

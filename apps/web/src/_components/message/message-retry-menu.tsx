@@ -8,12 +8,12 @@ import { buttonVariants, ButtonWithTip, type Button } from "@/components/ui/butt
 import { Icons } from "@/components/ui/icons";
 import { Menu, MenuArrow } from "@/components/ui/menu";
 
-import { REASONING_OPTIONS } from "../chat-textarea/reasoning-picker";
+import { REASONING_OPTIONS } from "../chat-textarea/reasoning-options";
 import {
   PROVIDER_ORDER,
   compareModelLabelsNewestFirst,
   createEmptyProviderModels,
-} from "../chat-textarea/model-selector";
+} from "../chat-textarea/model-selector-utils";
 import { CancelledRetryDialog } from "./cancelled-retry-dialog";
 import { useMessageRetry } from "./use-message-retry";
 

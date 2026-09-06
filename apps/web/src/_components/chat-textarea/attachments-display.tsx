@@ -1,52 +1,20 @@
 import { PaperclipIcon, TrashIcon } from "lucide-react";
-import { useEffect, useId, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import { useEffect, useState } from "react";
 
 import { ImageLightboxProvider, ImageLightboxTrigger } from "@/components/image-lightbox";
 import { useConfigStore } from "@/components/provider/config-provider";
 import { ButtonWithTip } from "@/components/ui/button";
 
-import { tryGetModelData } from "@/lib/chat/models";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import type { UserAttachment } from "@/lib/types";
 import { format } from "@/lib/utils";
+
+import { useChatAttachmentInput } from "./use-chat-attachment-input";
 
 type BaseChatAttachmentsButtonProps = React.ComponentPropsWithoutRef<typeof ButtonWithTip> & {
   model: string;
   handleAddAttachments: (files: UserAttachment[]) => void;
 };
-
-export function useChatAttachmentInput({
-  model,
-  handleAddAttachments,
-}: Pick<BaseChatAttachmentsButtonProps, "model" | "handleAddAttachments">) {
-  const inputId = useId();
-  const acceptedAttachmentTypes = tryGetModelData(model)?.modalities.input.filter(
-    (modality) => modality === "image" || modality === "pdf",
-  );
-
-  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    let type: "image" | "pdf" = "image";
-    if (file.type.includes("pdf")) type = "pdf";
-
-    handleAddAttachments([{ id: uuidv4(), type, file }]);
-
-    // allow re-uploading the same file
-    event.target.value = "";
-  }
-
-  return {
-    accept: acceptedAttachmentTypes
-      ?.map((modality) => (modality === "image" ? "image/*" : "application/pdf"))
-      .join(","),
-    handleChange,
-    inputId,
-    supportsAttachments: !!acceptedAttachmentTypes?.length,
-  };
-}
 
 export function BaseChatAttachmentsButton({
   model,
