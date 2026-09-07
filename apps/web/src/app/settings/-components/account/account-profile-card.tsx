@@ -19,7 +19,9 @@ import {
   startAccountEmailChange,
   updateAccountProfile,
 } from "@/lib/authkit/account-server-functions";
-import { getUserAvatarUrl, getUserInitials } from "@/lib/authkit/user";
+import { getUserInitials } from "@/lib/authkit/user";
+import { cacheUserAvatar } from "@/lib/authkit/avatar-cache";
+import { useUserAvatar } from "@/lib/authkit/use-user-avatar";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { censorEmail } from "@/lib/email";
 import { useStorage } from "@/lib/hooks/use-storage";
@@ -55,7 +57,8 @@ export function AccountProfileCard() {
 
   const existingAvatarKey = currentUser?.imageUrl ? getImageAssetPathFromUrl(currentUser.imageUrl) : null;
 
-  const avatarUrl = avatarPreviewUrl ?? currentUser?.imageUrl ?? getUserAvatarUrl(user);
+  const savedAvatarUrl = useUserAvatar(user, currentUser);
+  const avatarUrl = avatarPreviewUrl ?? savedAvatarUrl;
   const initials = getUserInitials(user);
 
   useEffect(() => {
@@ -91,6 +94,7 @@ export function AccountProfileCard() {
 
         if (avatarKey) {
           await updateCurrentUserImage({ imageUrl: buildImageAssetUrl(avatarKey) });
+          cacheUserAvatar(user.id, buildImageAssetUrl(avatarKey));
         }
 
         if (avatarKey && existingAvatarKey && existingAvatarKey !== avatarKey) {
@@ -166,8 +170,13 @@ export function AccountProfileCard() {
                   onClick={() => avatarFileInputRef.current?.click()}
                 >
                   <Avatar className="aspect-square size-full overflow-hidden rounded-md">
-                    <AvatarImage src={avatarUrl} alt="Profile image" className="object-cover" />
                     <AvatarFallback className="rounded-md">{initials}</AvatarFallback>
+                    <AvatarImage
+                      keepMounted
+                      src={avatarUrl}
+                      alt="Profile image"
+                      className="absolute inset-0 object-cover data-loading:invisible data-error:invisible"
+                    />
                   </Avatar>
                 </button>
 

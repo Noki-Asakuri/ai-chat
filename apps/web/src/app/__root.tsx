@@ -45,6 +45,8 @@ import {
   CHAT_NAVIGATE_TO_THREAD_EVENT,
 } from "@/lib/chat/notification-navigation";
 import { sessionUseCookie } from "@/lib/hooks/use-cookie";
+import { getCachedAvatarUrl } from "@/lib/authkit/avatar-cache";
+import { AvatarCacheSync } from "@/lib/authkit/use-user-avatar";
 import { useWindowEvent } from "@/lib/hooks/use-window-event";
 import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
 import { fromUUID, toUUID } from "@/lib/utils";
@@ -58,7 +60,8 @@ type RootContext = {
 export const Route = createRootRouteWithContext<RootContext>()({
   loader: async function () {
     const auth = await getAuthAction();
-    return { auth };
+    const cachedAvatarUrl = auth.user ? getCachedAvatarUrl(auth.user.id) : undefined;
+    return { auth, cachedAvatarUrl };
   },
   head: () => {
     const scripts: AnyRouteMatch["headScripts"] = [];
@@ -235,6 +238,7 @@ function RootElement({
     <ConvexProviderWithAuth client={convexClient} useAuth={() => convexAuth}>
       <SessionProvider useStorage={sessionUseCookie}>
         <TypographySync />
+        <AvatarCacheSync />
         {children}
       </SessionProvider>
     </ConvexProviderWithAuth>

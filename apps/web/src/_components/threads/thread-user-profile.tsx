@@ -25,12 +25,12 @@ import { Skeleton } from "../ui/skeleton";
 
 import { logout } from "@/lib/authkit/logout";
 import {
-  getUserAvatarUrl,
   getUserDisplayName,
   getUserInitials,
   type WorkOSUserLike,
 } from "@/lib/authkit/user";
 import { convexSessionQuery } from "@/lib/convex/helpers";
+import { useUserAvatar } from "@/lib/authkit/use-user-avatar";
 import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
 import { cn } from "@/lib/utils";
 
@@ -45,16 +45,21 @@ export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfilePro
 
   const initials = getUserInitials(user);
   const username = getUserDisplayName(user);
-  const avatarUrl = chatShell?.viewer.imageUrl ?? getUserAvatarUrl(user);
+  const avatarUrl = useUserAvatar(user, chatShell?.viewer);
 
   return (
     <Menu.Root>
       <Menu.Trigger className="group flex w-full items-center gap-3 rounded-lg bg-sidebar-accent/60 p-2.5 text-left shadow-sm ring-1 ring-sidebar-border transition-[background-color,box-shadow,transform] outline-none hover:bg-sidebar-accent hover:ring-foreground/10 focus-visible:ring-2 focus-visible:ring-sidebar-ring/60 active:scale-[0.99] data-popup-open:bg-sidebar-accent data-popup-open:ring-primary/30">
         <Avatar className="size-10 shrink-0 rounded-lg ring-1 ring-foreground/10">
-          <AvatarImage src={avatarUrl} alt={`${username} avatar`} />
           <AvatarFallback className="rounded-lg bg-primary text-sm text-primary-foreground">
             {initials}
           </AvatarFallback>
+          <AvatarImage
+            keepMounted
+            src={avatarUrl}
+            alt={`${username} avatar`}
+            className="absolute inset-0 data-loading:invisible data-error:invisible"
+          />
         </Avatar>
 
         <div className="min-w-0 flex-1">
@@ -71,10 +76,15 @@ export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfilePro
             <div className="m-1 rounded-lg bg-muted/70 p-3">
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar className="size-11 rounded-lg ring-1 ring-foreground/10">
-                  <AvatarImage src={avatarUrl} alt={`${username} avatar`} />
                   <AvatarFallback className="rounded-lg bg-primary text-sm text-primary-foreground">
                     {initials}
                   </AvatarFallback>
+                  <AvatarImage
+                    keepMounted
+                    src={avatarUrl}
+                    alt={`${username} avatar`}
+                    className="absolute inset-0 data-loading:invisible data-error:invisible"
+                  />
                 </Avatar>
 
                 <div className="min-w-0">

@@ -8,7 +8,7 @@ import type { ComponentProps, HTMLAttributes } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "../avatar";
 
-import { getUserAvatarUrl } from "@/lib/authkit/user";
+import { useUserAvatar } from "@/lib/authkit/use-user-avatar";
 import { convexSessionQuery } from "@/lib/convex/helpers";
 import { cn } from "@/lib/utils";
 
@@ -59,12 +59,17 @@ export const MessageAvatar = ({ className, ...props }: ComponentProps<typeof Ava
   const { user } = useLoaderData({ from: "/_chat" });
   const { data: chatShell } = useQuery(convexSessionQuery(api.functions.users.getChatShell));
 
-  const avatarUrl = chatShell?.viewer.imageUrl ?? getUserAvatarUrl(user);
+  const avatarUrl = useUserAvatar(user, chatShell?.viewer);
 
   return (
     <Avatar className={cn("size-11 rounded-md ring-1 ring-border", className)} {...props}>
-      <AvatarImage alt="" className="mt-0 mb-0" src={avatarUrl} />
       <AvatarFallback>{user?.firstName?.slice(0, 2) || "You"}</AvatarFallback>
+      <AvatarImage
+        keepMounted
+        alt=""
+        className="absolute inset-0 mt-0 mb-0 data-loading:invisible data-error:invisible"
+        src={avatarUrl}
+      />
     </Avatar>
   );
 };

@@ -1,6 +1,7 @@
 import { buildImageAssetUrl } from "@/lib/assets/urls";
 
 export type WorkOSUserLike = {
+  id: string;
   firstName: string | null;
   lastName: string | null;
   email: string;
