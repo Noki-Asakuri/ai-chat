@@ -22,7 +22,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
 import { convexQuery, type ConvexQueryClient } from "@convex-dev/react-query";
-import { getAuthAction } from "@workos/authkit-tanstack-react-start";
+import { getAuth, getAuthAction } from "@workos/authkit-tanstack-react-start";
 import { AuthKitProvider, useAccessToken, useAuth } from "@workos/authkit-tanstack-react-start/client";
 import { SessionProvider } from "convex-helpers/react/sessions";
 import { ConvexProviderWithAuth, type ConvexReactClient } from "convex/react";
@@ -58,6 +58,15 @@ type RootContext = {
 };
 
 export const Route = createRootRouteWithContext<RootContext>()({
+  beforeLoad: async function ({ context }) {
+    if (!import.meta.env.SSR) return;
+
+    // Authenticate SSR queries inside the request context, before child loaders run.
+    const auth = await getAuth();
+    if (auth.user) {
+      context.convexClient.serverHttpClient?.setAuth(auth.accessToken);
+    }
+  },
   loader: async function () {
     const auth = await getAuthAction();
     const cachedAvatarUrl = auth.user ? getCachedAvatarUrl(auth.user.id) : undefined;

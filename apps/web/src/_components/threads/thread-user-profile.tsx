@@ -1,6 +1,6 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Menu } from "../ui/menu";
 import { Progress } from "../ui/progress";
 import { Skeleton } from "../ui/skeleton";
+import { toast } from "../ui/toast";
 
 import { logout } from "@/lib/authkit/logout";
 import {
@@ -42,6 +43,17 @@ type ThreadUserProfileProps = {
 export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfileProps) {
   const { data: chatShell } = useQuery(convexSessionQuery(api.functions.users.getChatShell));
   const logoutUser = useServerFn(logout);
+  const logoutMutation = useMutation({
+    mutationFn: () =>
+      toast.promise(logoutUser(), {
+        loading: { title: "Signing out…" },
+        success: { title: "Redirecting…", timeout: 0 },
+        error: { title: "Couldn't sign out", description: "Please try again." },
+      }),
+    retry: false,
+    onSuccess: ({ url }) => window.location.assign(url),
+  });
+  const isSigningOut = logoutMutation.isPending || logoutMutation.isSuccess;
 
   const initials = getUserInitials(user);
   const username = getUserDisplayName(user);
@@ -63,7 +75,9 @@ export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfilePro
         </Avatar>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium capitalize">{username}</p>
+          <p className="truncate text-sm font-medium capitalize">
+            {isSigningOut ? "Signing out…" : username}
+          </p>
           <UserQuota variant="trigger" />
         </div>
 
@@ -154,10 +168,11 @@ export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfilePro
 
             <Menu.Item
               className="flex w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-2.5 py-2 text-sm text-destructive transition-colors outline-none data-highlighted:bg-destructive/10"
-              onClick={() => logoutUser()}
+              disabled={isSigningOut}
+              onClick={() => logoutMutation.mutate()}
             >
               <LogOutIcon className="size-4" />
-              Sign out
+              {isSigningOut ? "Signing out…" : "Sign out"}
             </Menu.Item>
           </Menu.Popup>
         </Menu.Positioner>

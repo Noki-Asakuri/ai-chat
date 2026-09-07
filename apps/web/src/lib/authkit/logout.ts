@@ -1,7 +1,6 @@
-import { isRedirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { deleteCookie, getResponseHeaders } from "@tanstack/react-start/server";
-import { signOut } from "@workos/authkit-tanstack-react-start";
+import { deleteCookie } from "@tanstack/react-start/server";
+import { getAuth, getAuthkit } from "@workos/authkit-tanstack-react-start";
 import { DEFAULT_STORAGE_KEY } from "convex-helpers/react/sessions";
 import { AVATAR_COOKIE_NAME } from "@/lib/authkit/avatar-cache";
 
@@ -9,15 +8,11 @@ export const logout = createServerFn({ method: "POST" }).handler(async () => {
   deleteCookie(DEFAULT_STORAGE_KEY);
   deleteCookie(AVATAR_COOKIE_NAME, { path: "/" });
 
-  try {
-    await signOut();
-  } catch (error) {
-    if (isRedirect(error)) {
-      for (const cookie of getResponseHeaders().getSetCookie()) {
-        error.headers.append("set-cookie", cookie);
-      }
-    }
+  const auth = await getAuth();
+  if (!auth.user || !auth.sessionId) return { url: "/" };
 
-    throw error;
-  }
+  const authKit = await getAuthkit();
+  const { logoutUrl } = await authKit.signOut(auth.sessionId);
+  // Return data so cookie middleware cannot turn the RPC into an HTTP redirect.
+  return { url: logoutUrl };
 });

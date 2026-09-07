@@ -3,8 +3,6 @@ import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 
 import { ConvexQueryClient } from "@convex-dev/react-query";
-import { getAuth } from "@workos/authkit-tanstack-react-start";
-import { type ConvexReactClient } from "convex/react";
 
 import { StrictMode } from "react";
 
@@ -15,10 +13,9 @@ import { getConvexReactClient } from "./lib/convex/client";
 
 import { routeTree } from "./routeTree.gen";
 
-export async function getRouter() {
+export function getRouter() {
   const convexClient = getConvexReactClient();
   const convexQueryClient = new ConvexQueryClient(convexClient);
-  await ensureAuthSSRConvexClient(convexClient, convexQueryClient);
 
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -45,25 +42,5 @@ export async function getRouter() {
 declare module "@tanstack/react-router" {
   interface Register {
     router: Awaited<ReturnType<typeof getRouter>>;
-  }
-}
-
-async function ensureAuthSSRConvexClient(
-  convexClient: ConvexReactClient,
-  convexQueryClient: ConvexQueryClient,
-) {
-  const isServer = import.meta.env.SSR;
-  if (!isServer) return;
-
-  const auth = await getAuth();
-
-  convexClient.setAuth(async function () {
-    const refreshedAuth = await getAuth();
-    if (!refreshedAuth.user) return null;
-    return refreshedAuth.accessToken;
-  });
-
-  if (auth.user) {
-    convexQueryClient.serverHttpClient?.setAuth(auth.accessToken);
   }
 }
