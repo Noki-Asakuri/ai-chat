@@ -16,7 +16,7 @@
     "@edge-runtime/vm": "^5.0.0",
     "@types/node": "catalog:tooling",
     "@typescript/native-preview": "catalog:tooling",
-    "convex-test": "^0.0.56",
+    "convex-test": "^0.0.57",
     "oxlint": "catalog:tooling",
     "oxlint-tsgolint": "catalog:tooling",
     "typescript": "catalog:tooling",

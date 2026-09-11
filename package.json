@@ -11,31 +11,31 @@
   "catalogs": {
     "backend": {
       "convex": "^1.45.0",
-      "convex-helpers": "^0.1.123"
+      "convex-helpers": "^0.1.124"
     },
     "shared": {
-      "@ai-sdk/deepseek": "^3.0.39",
-      "@ai-sdk/google": "^4.0.64",
-      "@ai-sdk/moonshotai": "^3.0.45",
-      "@ai-sdk/openai": "^4.0.58",
-      "@ai-sdk/openai-compatible": "^3.0.44",
+      "@ai-sdk/deepseek": "^3.0.42",
+      "@ai-sdk/google": "^4.0.67",
+      "@ai-sdk/moonshotai": "^3.0.48",
+      "@ai-sdk/openai": "^4.0.65",
+      "@ai-sdk/openai-compatible": "^3.0.47",
       "@axiomhq/js": "^2.0.0",
-      "@axiomhq/logging": "^0.4.0",
+      "@axiomhq/logging": "^0.4.1",
       "better-result": "^3.0.1",
       "@t3-oss/env-core": "^0.13.11",
       "@workos/authkit-session": "^0.7.1",
       "@workos-inc/node": "^10.13.0",
-      "ai": "^7.0.93",
+      "ai": "^7.0.97",
       "dedent": "^1.7.2",
       "jose": "^6.2.12",
-      "zod": "^4.5.4"
+      "zod": "^4.6.1"
     },
     "tooling": {
-      "@oxlint/plugins": "1.81.0",
-      "@types/bun": "1.4.1",
+      "@oxlint/plugins": "1.82.0",
+      "@types/bun": "1.4.2",
       "@types/node": "26.4.1",
       "@typescript/native-preview": "7.0.0-dev.20260707.2",
-      "oxlint": "^1.81.0",
+      "oxlint": "^1.82.0",
       "oxlint-tsgolint": "^7.0.2001",
       "typescript": "^7.0.2"
     }
