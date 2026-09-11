@@ -11,7 +11,10 @@ import type { ChatProviderOptions } from "./types";
 export function buildProviderOptions(modelInfo: ModelData, reasoning: ReasoningEffort): ChatProviderOptions {
   const reasoningProviderOptions: ChatProviderOptions = {
     openai: buildOpenAIProviderOptions(modelInfo, reasoning),
-    deepseek: {},
+    deepseek:
+      modelInfo.id === "deepseek/deepseek-v4.1-flash" && reasoning === "max"
+        ? { reasoningEffort: "max" }
+        : {},
     google: { safetySettings },
     moonshotai:
       modelInfo.id === "kimi/kimi-k3"
@@ -26,7 +29,11 @@ export function buildProviderOptions(modelInfo: ModelData, reasoning: ReasoningE
     reasoningProviderOptions.zai.thinking = {
       type: reasoning === "none" ? "disabled" : "enabled",
     };
-    if (modelInfo.id === "zai/glm-5.2") {
+    if (
+      modelInfo.id === "zai/glm-5.2" ||
+      modelInfo.id === "zai/glm-5.3" ||
+      modelInfo.id === "zai/glm-5.3-flash"
+    ) {
       reasoningProviderOptions.zai.reasoningEffort = reasoning;
     }
   }

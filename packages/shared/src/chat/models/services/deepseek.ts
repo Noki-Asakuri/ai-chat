@@ -1,6 +1,20 @@
 import type { ModelData, ModelIdKey } from "..";
 
 export const deepseek = {
+  "deepseek/deepseek-v4.1-flash": {
+    addedAt: "2026-09-11",
+    display: { name: "DeepSeek V4.1 Flash" },
+    id: "deepseek/deepseek-v4.1-flash",
+    altModelIds: ["deepseek/deepseek-flash"],
+    provider: "deepseek",
+    // This supported alias serves V4.1 and preserves the SDK's V4 reasoning history handling.
+    runtime: { modelId: "deepseek-v4-flash" },
+    modalities: { input: ["image", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "high", levels: ["none", "low", "high", "max"] },
+    },
+  },
   "deepseek/deepseek-v4-flash": {
     display: { name: "DeepSeek V4 Flash" },
     id: "deepseek/deepseek-v4-flash",

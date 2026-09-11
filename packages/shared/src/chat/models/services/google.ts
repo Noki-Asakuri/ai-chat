@@ -219,4 +219,26 @@ export const google = {
       },
     },
   },
+  "google/gemini-3.7-flash": {
+    addedAt: "2026-09-11",
+    display: { name: "Gemini 3.7 Flash" },
+    id: "google/gemini-3.7-flash",
+    provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
+    },
+  },
+  "google/gemini-3.8-flash": {
+    addedAt: "2026-09-11",
+    display: { name: "Gemini 3.8 Flash" },
+    id: "google/gemini-3.8-flash",
+    provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
+    },
+  },
 } satisfies Record<ModelIdKey, ModelData>;

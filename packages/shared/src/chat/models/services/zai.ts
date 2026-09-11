@@ -1,6 +1,28 @@
 import type { ModelData, ModelIdKey } from "..";
 
 export const zai = {
+  "zai/glm-5.3": {
+    addedAt: "2026-09-11",
+    display: { name: "ZAI GLM 5.3" },
+    id: "zai/glm-5.3",
+    provider: "zai",
+    modalities: { input: ["text"], output: ["text"] },
+    capabilities: {
+      reasoning: { type: "selectable", defaultLevel: "max", levels: ["low", "high", "max"] },
+      toolCalling: true,
+    },
+  },
+  "zai/glm-5.3-flash": {
+    addedAt: "2026-09-11",
+    display: { name: "ZAI GLM 5.3 Flash" },
+    id: "zai/glm-5.3-flash",
+    provider: "zai",
+    modalities: { input: ["image", "text"], output: ["text"] },
+    capabilities: {
+      reasoning: { type: "selectable", defaultLevel: "max", levels: ["low", "high", "max"] },
+      toolCalling: true,
+    },
+  },
   "zai/glm-5.2": {
     display: { name: "ZAI GLM 5.2" },
     id: "zai/glm-5.2",
