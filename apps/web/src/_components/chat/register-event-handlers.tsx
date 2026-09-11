@@ -7,6 +7,7 @@ import { convexQuery } from "@convex-dev/react-query";
 import { toast } from "@/components/ui/toast";
 
 import { useConfigStore } from "../provider/config-provider";
+import { ThreadCommandDialog } from "../threads/thread-command";
 
 import { MessageSelectionAction } from "./message-selection-action";
 
@@ -22,7 +23,7 @@ import { useAbortChatStream } from "@/lib/chat/server-function/abort-chat-stream
 import { useWindowEvent } from "@/lib/hooks/use-window-event";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
-import { threadStoreActions } from "@/lib/store/thread-store";
+import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 
 const NEW_THREAD_KEYBOARD_SHORTCUT = "o";
 const THREAD_COMMAND_KEYBOARD_SHORTCUT = "k";
@@ -48,6 +49,7 @@ export function RegisterEventHandlers() {
   const queryClient = useQueryClient();
   const { abortChatStream } = useAbortChatStream();
   const model = useConfigStore((state) => state.model);
+  const threadCommandOpen = useThreadStore((state) => state.threadCommandOpen);
   // Handle global paste events
   useWindowEvent("paste", function handlePaste(event) {
     // Handle pasted files
@@ -108,10 +110,20 @@ export function RegisterEventHandlers() {
 
   // Handle global keyboard shortcuts
   useWindowEvent("keydown", async function handleKeyboardShortcut(event) {
+    if (event.defaultPrevented || event.isComposing) return;
+
     const target = event.target;
 
     const eventKey = event.key.toLowerCase();
     const metaKey = event.metaKey || event.ctrlKey;
+
+    if (eventKey === THREAD_COMMAND_KEYBOARD_SHORTCUT && metaKey && !event.altKey && !event.shiftKey) {
+      event.preventDefault();
+      if (!event.repeat) threadStoreActions.setThreadCommandOpen((open) => !open);
+      return;
+    }
+
+    if (threadCommandOpen) return;
 
     const isEditMessage = getIsEditMessage();
     const { status, threadId } = getStatusAndThreadId();
@@ -188,13 +200,6 @@ export function RegisterEventHandlers() {
       return;
     }
 
-    if (eventKey === THREAD_COMMAND_KEYBOARD_SHORTCUT && metaKey) {
-      event.preventDefault();
-      threadStoreActions.setThreadCommandOpen((open) => !open);
-
-      return;
-    }
-
     if (eventKey === MODEL_SELECTOR_KEYBOARD_SHORTCUT && metaKey) {
       event.preventDefault();
       const targetId = isEditMessage
@@ -223,5 +228,10 @@ export function RegisterEventHandlers() {
     }
   });
 
-  return <MessageSelectionAction />;
+  return (
+    <>
+      <MessageSelectionAction />
+      {threadCommandOpen && <ThreadCommandDialog />}
+    </>
+  );
 }
