@@ -5,7 +5,7 @@ import { useEffect } from "react";
 
 import { cacheUserAvatar } from "@/lib/authkit/avatar-cache";
 import { getUserAvatarUrl, type WorkOSUserLike } from "@/lib/authkit/user";
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 
 export function useUserAvatar(
   user: WorkOSUserLike,
@@ -21,7 +21,7 @@ export function AvatarCacheSync() {
   const { auth } = useLoaderData({ from: "__root__" });
   const userId = auth.user?.id;
   const { data: chatShell } = useQuery({
-    ...convexSessionQuery(api.functions.users.getChatShell),
+    ...convexQuery(api.functions.users.getChatShell),
     enabled: !!userId,
   });
   const viewer = chatShell?.viewer;

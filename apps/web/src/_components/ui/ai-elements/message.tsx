@@ -9,7 +9,7 @@ import type { ComponentProps, HTMLAttributes } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../avatar";
 
 import { useUserAvatar } from "@/lib/authkit/use-user-avatar";
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { cn } from "@/lib/utils";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
@@ -57,7 +57,7 @@ export const MessageContent = ({ children, className, variant, ...props }: Messa
 
 export const MessageAvatar = ({ className, ...props }: ComponentProps<typeof Avatar>) => {
   const { user } = useLoaderData({ from: "/_chat" });
-  const { data: chatShell } = useQuery(convexSessionQuery(api.functions.users.getChatShell));
+  const { data: chatShell } = useQuery(convexQuery(api.functions.users.getChatShell));
 
   const avatarUrl = useUserAvatar(user, chatShell?.viewer);
 

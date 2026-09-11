@@ -23,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 
 import { ProfileCard, type ProfileListItem } from "./profiles/-components/profile-card";
 import {
@@ -161,7 +161,7 @@ function AiProfilesPage() {
   const sort = searchParams.sort ?? ("recently-updated" satisfies SortOption);
 
   const { data, isPending, refetch } = useQuery({
-    ...convexSessionQuery(api.functions.profiles.listProfilesWithQuery, {
+    ...convexQuery(api.functions.profiles.listProfilesWithQuery, {
       search: debouncedSearch,
       sort,
     }),

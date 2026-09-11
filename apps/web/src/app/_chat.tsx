@@ -21,7 +21,6 @@ import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger, useSidebar } from
 
 import { buildImageAssetUrl } from "@/lib/assets/urls";
 import { resolveReasoning, tryGetModelData } from "@/lib/chat/models";
-import { convexSessionQuery } from "@/lib/convex/helpers";
 import { cn, fromUUID } from "@/lib/utils";
 
 const getDefaultOpenSidebar = createIsomorphicFn()
@@ -48,7 +47,10 @@ export const Route = createFileRoute("/_chat")({
       throw redirect({ to: "/auth/login", search: { rt: path }, reloadDocument: true });
     }
 
-    await context.queryClient.ensureQueryData(convexQuery(api.functions.users.getChatShell));
+    await context.queryClient.query({
+      ...convexQuery(api.functions.users.getChatShell),
+      staleTime: "static",
+    });
     return { user: auth.user, defaultOpenSidebar };
   },
 
@@ -59,7 +61,7 @@ export const Route = createFileRoute("/_chat")({
 
 function RouteComponent() {
   const { defaultOpenSidebar } = Route.useLoaderData();
-  const { data: chatShell } = useSuspenseQuery(convexSessionQuery(api.functions.users.getChatShell));
+  const { data: chatShell } = useSuspenseQuery(convexQuery(api.functions.users.getChatShell));
 
   const backgroundStyle = {
     backgroundImage: chatShell.preferences.backgroundImage
@@ -88,9 +90,9 @@ function ChatLayoutConfig() {
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const threadId = fromUUID<Id<"threads">>(params?.threadId);
 
-  const { data: chatShell } = useSuspenseQuery(convexSessionQuery(api.functions.users.getChatShell));
+  const { data: chatShell } = useSuspenseQuery(convexQuery(api.functions.users.getChatShell));
   const { data: threadMeta } = useQuery(
-    convexSessionQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
+    convexQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
   );
 
   const selectedModel = threadMeta?.latestModel ?? chatShell.preferences.models.defaultModel;

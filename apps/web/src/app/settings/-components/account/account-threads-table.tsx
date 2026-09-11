@@ -51,7 +51,7 @@ import { Menu } from "@/components/ui/menu";
 import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { cn, format, toUUID, tryCatch } from "@/lib/utils";
 
 type AccountThread = {
@@ -398,7 +398,7 @@ function AccountThreadsTableBody({
   const sort = getAccountThreadSort(sorting);
 
   const { data } = useSuspenseQuery(
-    convexSessionQuery(api.functions.threads.listAccountThreads, {
+    convexQuery(api.functions.threads.listAccountThreads, {
       query: searchText,
       sortField: sort.sortField,
       sortDirection: sort.sortDirection,

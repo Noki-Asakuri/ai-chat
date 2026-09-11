@@ -5,20 +5,26 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { SettingsSection } from "@/components/settings/settings-section";
 import { Separator } from "@/components/ui/separator";
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 
 import { AccountThreadsTable } from "./-components/account/account-threads-table";
 import { AutoSettleThreadsCard } from "./-components/account/auto-settle-threads-card";
 import { SettleInactiveThreadsCard } from "./-components/account/settle-inactive-threads-card";
 
 export const Route = createFileRoute("/settings/threads")({
+  loader: async ({ context }) => {
+    await context.queryClient.query({
+      ...convexQuery(api.functions.users.getCurrentUserPreferences),
+      staleTime: "static",
+    });
+  },
   component: RouteComponent,
   head: () => ({ meta: [{ title: "Threads - AI Chat" }] }),
 });
 
 function RouteComponent() {
   const { data: preferences, isPending } = useSuspenseQuery(
-    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
+    convexQuery(api.functions.users.getCurrentUserPreferences),
   );
 
   return (

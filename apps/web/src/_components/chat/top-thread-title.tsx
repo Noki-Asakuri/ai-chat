@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ThreadShareDialog } from "../threads/thread-share-dialog";
 
 import { getConvexReactClient } from "@/lib/convex/client";
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import { fromUUID } from "@/lib/utils";
 
@@ -30,7 +30,7 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
 
   const { data, isFetching } = useQuery({
     enabled: Boolean(params?.threadId) && !isSkeleton,
-    ...convexSessionQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
+    ...convexQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
   });
 
   const threadData = params?.threadId && data ? data : null;

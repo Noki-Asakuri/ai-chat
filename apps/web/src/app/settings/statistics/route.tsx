@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { format } from "@/lib/utils";
 import { LoadingStatisticsSkeleton } from "./-pending";
 import { ActivityChart } from "./-activity-chart";
@@ -51,7 +51,7 @@ function StatisticsContent() {
   const { year = new Date().getUTCFullYear() } = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data } = useSuspenseQuery(
-    convexSessionQuery(api.functions.statistics.getStatistics, {
+    convexQuery(api.functions.statistics.getStatistics, {
       year: year === "all" ? undefined : year,
     }),
   );

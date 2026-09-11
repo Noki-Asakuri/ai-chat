@@ -5,12 +5,18 @@ import { useMutation } from "convex/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 
 import { ModelsEditor } from "./-components/models-editor";
 import { LoadingSkeleton } from "./-pending";
 
 export const Route = createFileRoute("/settings/models")({
+  loader: async ({ context }) => {
+    await context.queryClient.query({
+      ...convexQuery(api.functions.users.getCurrentUserPreferences),
+      staleTime: "static",
+    });
+  },
   component: RouteComponent,
   pendingComponent: LoadingSkeleton,
 
@@ -19,7 +25,7 @@ export const Route = createFileRoute("/settings/models")({
 
 function RouteComponent() {
   const { data: preferences, isPending: isDisabled } = useSuspenseQuery(
-    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
+    convexQuery(api.functions.users.getCurrentUserPreferences),
   );
   const updateUserPreferences = useMutation(
     api.functions.users.updateUserModelPreferences,

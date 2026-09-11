@@ -1,14 +1,22 @@
+import { api } from "@ai-chat/backend/convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "@/components/ui/toast";
 
 import { Button } from "@/components/ui/button";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { Separator } from "@/components/ui/separator";
+import { convexQuery } from "@convex-dev/react-query";
 
 import { AccountProfileCard } from "./-components/account/account-profile-card";
 import { AccountSessionsCard } from "./-components/account/account-sessions-card";
 
 export const Route = createFileRoute("/settings/account")({
+  loader: async ({ context }) => {
+    await context.queryClient.query({
+      ...convexQuery(api.functions.users.currentUser),
+      staleTime: "static",
+    });
+  },
   component: RouteComponent,
   head: () => ({ meta: [{ title: "Account - AI Chat" }] }),
 });

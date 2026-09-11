@@ -10,7 +10,6 @@ import { MessageHistory } from "@/components/message/message-history";
 
 import { useAutoResumeStream } from "@/lib/chat/server-function/auto-resume-stream";
 import { getConvexReactClient } from "@/lib/convex/client";
-import { convexSessionQuery } from "@/lib/convex/helpers";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
 import { fromUUID } from "@/lib/utils";
@@ -59,7 +58,7 @@ function ChatHistory() {
   const { autoResumeStream } = useAutoResumeStream();
 
   const { data, dataUpdatedAt } = useSuspenseQuery({
-    ...convexSessionQuery(api.functions.messages.getMessagePage, { threadId }),
+    ...convexQuery(api.functions.messages.getMessagePage, { threadId }),
     retry(failureCount, error) {
       const ignoreErrors = ["Thread not found", "Not authorized", "Not authenticated"];
       return ignoreErrors.some((e) => error.message.includes(e)) ? false : failureCount < 3;

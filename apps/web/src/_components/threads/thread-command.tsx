@@ -33,7 +33,7 @@ import {
 } from "../ui/command";
 
 import { getConvexReactClient } from "@/lib/convex/client";
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import type { Thread } from "@/lib/types";
 import { fromUUID, toUUID } from "@/lib/utils";
@@ -111,7 +111,7 @@ export function ThreadCommandDialog() {
 
   const { data, isFetching } = useQuery({
     enabled: threadCommandOpen && !selectingGroup,
-    ...convexSessionQuery(api.functions.threads.getAllThreads, {
+    ...convexQuery(api.functions.threads.getAllThreads, {
       query: debouncedQuery,
       limit: debouncedQuery.trim() ? 200 : 5,
     }),

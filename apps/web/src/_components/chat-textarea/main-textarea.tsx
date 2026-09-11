@@ -21,7 +21,7 @@ import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message
 import { useConfigStore } from "../provider/config-provider";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { getConvexReactClient } from "@/lib/convex/client";
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { cn, fromUUID, tryCatch } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
@@ -77,7 +77,7 @@ function SettledThreadNotice() {
 
   const { data } = useQuery({
     enabled: threadId !== undefined,
-    ...convexSessionQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
+    ...convexQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
   });
 
   if (!threadId || data?.settled !== true) return null;

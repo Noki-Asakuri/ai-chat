@@ -22,7 +22,7 @@ import {
 import { getUserInitials } from "@/lib/authkit/user";
 import { cacheUserAvatar } from "@/lib/authkit/avatar-cache";
 import { useUserAvatar } from "@/lib/authkit/use-user-avatar";
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { censorEmail } from "@/lib/email";
 import { useStorage } from "@/lib/hooks/use-storage";
 
@@ -38,7 +38,7 @@ function getFormFile(key: string, formData: FormData): File | null {
 export function AccountProfileCard() {
   const router = useRouter();
   const { user } = useLoaderData({ from: "/settings" });
-  const { data: currentUser } = useQuery(convexSessionQuery(api.functions.users.currentUser));
+  const { data: currentUser } = useQuery(convexQuery(api.functions.users.currentUser));
 
   const { uploadAvatarFile, deleteFile } = useStorage();
   const updateCurrentUserImage = useMutation(api.functions.users.updateCurrentUserImage);

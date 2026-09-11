@@ -30,7 +30,7 @@ import {
   getUserInitials,
   type WorkOSUserLike,
 } from "@/lib/authkit/user";
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { useUserAvatar } from "@/lib/authkit/use-user-avatar";
 import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@ type ThreadUserProfileProps = {
 };
 
 export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfileProps) {
-  const { data: chatShell } = useQuery(convexSessionQuery(api.functions.users.getChatShell));
+  const { data: chatShell } = useQuery(convexQuery(api.functions.users.getChatShell));
   const logoutUser = useServerFn(logout);
   const logoutMutation = useMutation({
     mutationFn: () =>
@@ -218,7 +218,7 @@ function UserMenuSettingItem({
 }
 
 function UserQuota({ variant }: { variant: "panel" | "trigger" }) {
-  const { data, isPending } = useQuery(convexSessionQuery(api.functions.usages.getUserUsages));
+  const { data, isPending } = useQuery(convexQuery(api.functions.usages.getUserUsages));
   if (isPending) {
     if (variant === "panel") {
       return (

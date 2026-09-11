@@ -70,7 +70,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { LoadingAttachmentsSkeleton } from "./-pending";
 
 import { buildImageAssetUrl, buildImageThumbnailUrl, buildRawFileUrl } from "@/lib/assets/urls";
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { format, toUUID, tryCatch } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings/attachments")({
@@ -225,7 +225,7 @@ function AttachmentsPage() {
   const deferredSearchText = useDeferredValue(searchText);
 
   const attachmentsQuery = useQuery({
-    ...convexSessionQuery(api.functions.attachments.listAttachmentsPage, {
+    ...convexQuery(api.functions.attachments.listAttachmentsPage, {
       page,
       pageSize: PAGE_SIZE,
       search: deferredSearchText.trim().length === 0 ? undefined : deferredSearchText,

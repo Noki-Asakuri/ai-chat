@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
 
 import type { SendPreference } from "@/lib/chat/send-preference";
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { useStorage } from "@/lib/hooks/use-storage";
 import { tryCatch } from "@/lib/utils";
 import {
@@ -35,6 +35,12 @@ import { AutosaveStatus } from "../-components/autosave-status";
 import { LoadingAppearanceSkeleton } from "./-pending";
 
 export const Route = createFileRoute("/settings/appearance")({
+  loader: async ({ context }) => {
+    await context.queryClient.query({
+      ...convexQuery(api.functions.users.getCurrentUserPreferences),
+      staleTime: "static",
+    });
+  },
   component: RouteComponent,
   pendingComponent: LoadingAppearanceSkeleton,
   head: () => ({ meta: [{ title: "Appearance - AI Chat" }] }),
@@ -48,7 +54,7 @@ function getFormFile(key: string, formData: FormData): File | null {
 function RouteComponent() {
   const { user } = useAuth({ ensureSignedIn: true });
   const { data, isPending } = useSuspenseQuery(
-    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
+    convexQuery(api.functions.users.getCurrentUserPreferences),
   );
   const updateUserPreferences = useMutation(api.functions.users.updateUserPreferences);
   const { uploadFile, deleteFile } = useStorage();

@@ -7,7 +7,7 @@ import { BoltIcon, BrainIcon, ClockIcon, HourglassIcon, InfoIcon, QuoteIcon, Zap
 import { Icons } from "@/components/ui/icons";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import type { ChatMessage } from "@/lib/types";
 import { format } from "@/lib/utils";
 import type { ReactNode } from "react";
@@ -109,7 +109,7 @@ function PopoverInfo({ metadata }: PopoverInfoProps) {
 }
 
 function useResolvedProfile(profileId: Doc<"profiles">["_id"] | null): Doc<"profiles"> | null {
-  const query = useQuery(convexSessionQuery(api.functions.profiles.listProfiles));
+  const query = useQuery(convexQuery(api.functions.profiles.listProfiles));
 
   if (!profileId) return null;
 

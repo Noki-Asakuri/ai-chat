@@ -32,7 +32,7 @@ import { ThreadShareDialog } from "./thread-share-dialog";
 import { UngroupedThreadGroup } from "./thread-ungrouped";
 
 import { getConvexReactClient } from "@/lib/convex/client";
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { threadDialogStoreActions, useThreadDialogStore } from "@/lib/store/thread-dialog-store";
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import { cn, fromUUID } from "@/lib/utils";
@@ -226,11 +226,11 @@ function ActiveGroupThreadList({ activeGroupId }: { activeGroupId: Id<"groups"> 
   const markThreadViewed = useMutation(api.functions.threads.markThreadViewed);
 
   const { data } = useQuery({
-    ...convexSessionQuery(api.functions.groups.listGroups, { activeGroupId }),
+    ...convexQuery(api.functions.groups.listGroups, { activeGroupId }),
     initialData: localCache.activeGroupId === activeGroupId ? localCache : undefined,
   });
   const { data: routeThreadTitle } = useQuery(
-    convexSessionQuery(
+    convexQuery(
       api.functions.threads.getThreadPageMeta,
       routeThreadId ? { threadId: routeThreadId } : "skip",
     ),

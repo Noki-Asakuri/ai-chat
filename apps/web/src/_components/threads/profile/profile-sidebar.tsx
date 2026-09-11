@@ -4,10 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 
 import { ProfileDisplay } from "./profile-display";
 
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 
 export function ThreadProfileSidebar() {
-  const { data, isPending } = useQuery(convexSessionQuery(api.functions.profiles.listProfiles));
+  const { data, isPending } = useQuery(convexQuery(api.functions.profiles.listProfiles));
   if (isPending || !data || data.length === 0) return null;
 
   return (

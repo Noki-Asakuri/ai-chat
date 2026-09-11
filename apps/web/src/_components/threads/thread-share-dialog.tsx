@@ -23,7 +23,7 @@ import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Textarea } from "../ui/textarea";
 
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { cn } from "@/lib/utils";
 
 type ThreadShareDialogProps = {
@@ -52,7 +52,7 @@ export function ThreadShareDialog({ threadId, threadTitle, open, onOpenChange }:
   const [copied, setCopied] = useState(false);
 
   const { data, isFetching, isPending } = useQuery({
-    ...convexSessionQuery(api.functions.threadShares.getThreadShareSettings, open ? { threadId } : "skip"),
+    ...convexQuery(api.functions.threadShares.getThreadShareSettings, open ? { threadId } : "skip"),
   });
 
   const visibility = draft?.visibility ?? data?.visibility ?? "public";

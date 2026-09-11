@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 
-import { convexSessionQuery } from "@/lib/convex/helpers";
+import { convexQuery } from "@convex-dev/react-query";
 import { tryCatch } from "@/lib/utils";
 
 import { AutosaveStatus } from "../-components/autosave-status";
@@ -23,6 +23,12 @@ import { AutosaveStatus } from "../-components/autosave-status";
 import { LoadingCustomizationSkeleton } from "./-pending";
 
 export const Route = createFileRoute("/settings/customization")({
+  loader: async ({ context }) => {
+    await context.queryClient.query({
+      ...convexQuery(api.functions.users.getCurrentUserPreferences),
+      staleTime: "static",
+    });
+  },
   component: RouteComponent,
   pendingComponent: LoadingCustomizationSkeleton,
   head: () => ({ meta: [{ title: "Customization - AI Chat" }] }),
@@ -35,7 +41,7 @@ function getFormString(key: string, formData: FormData): string {
 
 function RouteComponent() {
   const { data, isPending } = useSuspenseQuery(
-    convexSessionQuery(api.functions.users.getCurrentUserPreferences),
+    convexQuery(api.functions.users.getCurrentUserPreferences),
   );
   const updateUserPreferences = useMutation(api.functions.users.updateUserPreferences);
 
