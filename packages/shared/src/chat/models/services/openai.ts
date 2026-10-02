@@ -394,4 +394,54 @@ export const openai = {
       },
     },
   },
+
+  "openai/gpt-6-sol": {
+    addedAt: "2026-09-22",
+    display: { name: "GPT 6 Sol" },
+    id: "openai/gpt-6-sol",
+    provider: "openai",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      imageGeneration: true,
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["none", "low", "medium", "high", "xhigh", "max"],
+      },
+    },
+  },
+  "openai/gpt-6-luna": {
+    addedAt: "2026-09-22",
+    display: { name: "GPT 6 Luna" },
+    id: "openai/gpt-6-luna",
+    provider: "openai",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      imageGeneration: true,
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["none", "low", "medium", "high", "xhigh", "max"],
+      },
+    },
+  },
+
+  "openai/gpt-6.1-sol": {
+    addedAt: "2026-09-29",
+    display: { name: "GPT 6.1 Sol" },
+    id: "openai/gpt-6.1-sol",
+    provider: "openai",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      imageGeneration: true,
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["low", "medium", "high", "xhigh", "max"],
+      },
+    },
+  },
 } satisfies Record<ModelIdKey, ModelData>;
