@@ -119,7 +119,7 @@
       "source": "get-convex/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/convex-improve-convex-plugin/SKILL.md",
-      "computedHash": "35904eaf82eb083e859cfaf6ded5b713a0f1e7104d8b5a560d807994a50416ad"
+      "computedHash": "5933b9b20f3ea687418a5761f2905fccf669402f41d676c104a8804d696231b3"
     },
     "convex-insights": {
       "source": "get-convex/agent-skills",
@@ -209,7 +209,7 @@
       "source": "dmmulroy/anti-slop",
       "sourceType": "github",
       "skillPath": "skills/install-anti-slop/SKILL.md",
-      "computedHash": "91e871213a7fcd86f68c288480cc80c9d5ec440aa9a77d0185321667c8f42ab7"
+      "computedHash": "4031728fbe75bdcad6ee3208fd52b5d66e167b056fefee1fa9758e9a6cb9c0c8"
     },
     "shadcn": {
       "source": "shadcn/ui",
@@ -221,13 +221,13 @@
       "source": "vercel/turborepo",
       "sourceType": "github",
       "skillPath": "skills/turborepo/SKILL.md",
-      "computedHash": "4289866858fc5314e10ca21584d00c48ddb7e6bc353e262283958f8e4b9bec87"
+      "computedHash": "9681d8dfeb5e6cdff767f1bcaba5d7ac55732a9d6c02ee120f44229f8ec25e7e"
     },
     "workos": {
       "source": "workos/skills",
       "sourceType": "github",
       "skillPath": "plugins/workos/skills/workos/SKILL.md",
-      "computedHash": "749575415099db2949a4a0d1d66c276c3eec290407f741cb5ebfbfb8cbb215a4"
+      "computedHash": "38717cb09eff2924866cd4d0ed73bc1889775b85ff22c78e92870245be19392f"
     }
   }
 }
