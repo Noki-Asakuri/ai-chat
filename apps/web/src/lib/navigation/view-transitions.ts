@@ -1,5 +1,3 @@
-type SettingsDirection = "forward" | "backward";
-
 type NavigationViewTransition = false | { types: string[] };
 
 export const SETTINGS_ROUTE_ORDER = [
@@ -41,19 +39,11 @@ export function getSettingsRouteIndex(pathname: string): number | null {
   return null;
 }
 
-export function getSettingsDirection(
-  fromPath: string,
-  toPath: string,
-): SettingsDirection | null {
+export function isSettingsTransition(fromPath: string, toPath: string): boolean {
   const fromIndex = getSettingsRouteIndex(fromPath);
   const toIndex = getSettingsRouteIndex(toPath);
 
-  if (fromIndex === null || toIndex === null || fromIndex === toIndex) return null;
-  return fromIndex < toIndex ? "forward" : "backward";
-}
-
-export function isSettingsTransition(fromPath: string, toPath: string): boolean {
-  return getSettingsDirection(fromPath, toPath) !== null;
+  return fromIndex !== null && toIndex !== null && fromIndex !== toIndex;
 }
 
 export function isChatEntryTransition(fromPath: string, toPath: string): boolean {
@@ -82,9 +72,8 @@ export function getNavigationViewTransition(
 ): NavigationViewTransition {
   if (!shouldUseViewTransitions()) return false;
 
-  const settingsDirection = getSettingsDirection(fromPath, toPath);
-  if (settingsDirection) {
-    return { types: ["settings", `settings-${settingsDirection}`] };
+  if (isSettingsTransition(fromPath, toPath)) {
+    return { types: ["settings"] };
   }
 
   if (isChatEntryTransition(fromPath, toPath)) {

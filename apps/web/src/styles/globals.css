@@ -495,72 +495,68 @@
   backdrop-filter: none;
 }
 
+/* transitions.dev panel reveal, tuned for quick settings navigation. */
+:root {
+  --panel-open-dur: 180ms;
+  --panel-close-dur: 120ms;
+  --panel-translate-y: 8px;
+  --panel-blur: 2px;
+  --panel-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Keep the settings shell live; only capture the page heading and content. */
+html:active-view-transition-type(settings) {
+  view-transition-name: none;
+}
+
+html:active-view-transition-type(settings) [data-route-transition-scope="settings-content"] {
+  view-transition-name: settings-content;
+}
+
+html:active-view-transition-type(settings)::view-transition {
+  pointer-events: none;
+}
+
 ::view-transition-group(settings-content) {
-  animation-duration: 260ms;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation: none;
 }
 
-html:active-view-transition-type(settings-forward)::view-transition-old(settings-content) {
-  animation: settings-slide-out-left 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+::view-transition-old(settings-content) {
+  animation: settings-fade-out var(--panel-close-dur) var(--panel-ease) both;
 }
 
-html:active-view-transition-type(settings-forward)::view-transition-new(settings-content) {
-  animation: settings-slide-in-right 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+::view-transition-new(settings-content) {
+  animation: settings-fade-in var(--panel-open-dur) var(--panel-ease) both;
 }
 
-html:active-view-transition-type(settings-backward)::view-transition-old(settings-content) {
-  animation: settings-slide-out-right 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+::view-transition-old(settings-content),
+::view-transition-new(settings-content) {
+  will-change: transform, opacity, filter;
 }
 
-html:active-view-transition-type(settings-backward)::view-transition-new(settings-content) {
-  animation: settings-slide-in-left 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes settings-slide-in-right {
-  from {
-    opacity: 0;
-    transform: translateX(44px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes settings-slide-out-left {
+@keyframes settings-fade-out {
   from {
     opacity: 1;
-    transform: translateX(0);
+    filter: blur(0);
   }
 
   to {
     opacity: 0;
-    transform: translateX(-44px);
+    filter: blur(var(--panel-blur));
   }
 }
 
-@keyframes settings-slide-in-left {
+@keyframes settings-fade-in {
   from {
     opacity: 0;
-    transform: translateX(-44px);
+    transform: translateY(var(--panel-translate-y));
+    filter: blur(var(--panel-blur));
   }
 
   to {
     opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes settings-slide-out-right {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateX(44px);
+    transform: translateY(0);
+    filter: blur(0);
   }
 }
 

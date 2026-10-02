@@ -11,6 +11,7 @@ import {
 import { useSidebar } from "@/components/ui/sidebar";
 
 import { cn } from "@/lib/utils";
+import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
 
 import { getSettingsNavigationItem } from "./settings-navigation";
 
@@ -31,7 +32,17 @@ export function SettingsTopBar() {
       <Breadcrumb>
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
-            <BreadcrumbLink render={<Link to="/settings/account" search={search} />}>Settings</BreadcrumbLink>
+            <BreadcrumbLink
+              render={
+                <Link
+                  to="/settings/account"
+                  search={search}
+                  viewTransition={getNavigationViewTransition(pathname, "/settings/account")}
+                />
+              }
+            >
+              Settings
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
