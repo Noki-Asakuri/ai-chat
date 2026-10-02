@@ -35,9 +35,9 @@ export function SettingsTopBar() {
             <BreadcrumbLink
               render={
                 <Link
-                  to="/settings/account"
+                  to="/settings/general"
                   search={search}
-                  viewTransition={getNavigationViewTransition(pathname, "/settings/account")}
+                  viewTransition={getNavigationViewTransition(pathname, "/settings/general")}
                 />
               }
             >

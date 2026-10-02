@@ -1,7 +1,10 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
+import { convexQuery } from "@convex-dev/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
 
+import { toast } from "@/components/ui/toast";
 import {
   CircleCheckIcon,
   DeleteIcon,
@@ -16,9 +19,9 @@ import {
   Share2Icon,
   Undo2Icon,
 } from "lucide-react";
-import { useRef, useTransition } from "react";
-import { toast } from "@/components/ui/toast";
+import { useRef, useState, useTransition } from "react";
 
+import { Button } from "../ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -30,12 +33,12 @@ import {
   ContextMenuTrigger,
 } from "../ui/context-menu";
 import { Icons } from "../ui/icons";
-import { Button } from "../ui/button";
 
 import { tryGetModelData } from "@/lib/chat/models";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { threadDialogStoreActions } from "@/lib/store/thread-dialog-store";
 import { useThreadStore } from "@/lib/store/thread-store";
+import { useThreadPin } from "@/lib/threads/use-thread-pin";
 import { regenerateThreadTitle } from "@/lib/trpc/client";
 import type { Thread } from "@/lib/types";
 import { cn, toUUID, tryCatch } from "@/lib/utils";
@@ -67,6 +70,8 @@ function formatRelativeTime(timestamp: number, now: number): string {
 }
 
 export function ThreadItem({ thread, now }: ThreadItemProps) {
+  const { data: preferences } = useSuspenseQuery(convexQuery(api.functions.users.getCurrentUserPreferences));
+  const [settleArmed, setSettleArmed] = useState(false);
   const [isUpdatingSettled, startUpdatingSettled] = useTransition();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const isActive = params?.threadId === toUUID(thread._id);
@@ -93,7 +98,15 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
     </time>
   );
 
-  function toggleThreadSettled(): void {
+  function toggleThreadSettled(inline = false): void {
+    if (!isSettled && preferences.confirmations?.settle) {
+      if (inline && !settleArmed) {
+        setSettleArmed(true);
+        return;
+      }
+      if (!inline && !window.confirm(`Settle "${thread.title}"?`)) return;
+    }
+    setSettleArmed(false);
     startUpdatingSettled(async () => {
       const [, error] = await tryCatch(
         convexClient.mutation(
@@ -177,6 +190,9 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
 
   return (
     <div
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setSettleArmed(false);
+      }}
       data-thread-id={thread._id}
       data-thread-active={isActive}
       data-thread-status={thread.status}
@@ -205,7 +221,7 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
           aria-label={`Unsettle ${thread.title}`}
           title="Unsettle thread"
           disabled={isUpdatingSettled}
-          onClick={toggleThreadSettled}
+          onClick={() => toggleThreadSettled(true)}
         >
           <Undo2Icon />
         </Button>
@@ -214,12 +230,12 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
           variant="none"
           size="none"
           className="absolute top-2 right-2 h-4 gap-1 text-xs font-medium text-sidebar-foreground opacity-0 transition-none group-focus-within/thread:opacity-100 group-hover/thread:opacity-100 [&_svg]:size-3.5"
-          aria-label={`Settle ${thread.title}`}
+          aria-label={`${settleArmed ? "Confirm settling" : "Settle"} ${thread.title}`}
           disabled={isUpdatingSettled}
-          onClick={toggleThreadSettled}
+          onClick={() => toggleThreadSettled(true)}
         >
           <CircleCheckIcon data-icon="inline-start" />
-          {isUpdatingSettled ? "Settling" : "Settle"}
+          {isUpdatingSettled ? "Settling" : settleArmed ? "Confirm" : "Settle"}
         </Button>
       ) : null}
     </div>
@@ -241,6 +257,7 @@ function ThreadActions({
   onToggleSettled,
   children,
 }: ThreadActionsProps) {
+  const pinThread = useThreadPin();
   const menuTriggerRef = useRef<HTMLDivElement>(null);
   const groups = useThreadStore((state) => state.groupedThreads.groups);
   const destinationGroups = groups.filter((group) => group._id !== thread.groupId);
@@ -250,7 +267,7 @@ function ThreadActions({
 
   function toggleThreadPin() {
     console.debug("[Thread] Pin thread", thread);
-    void convexClient.mutation(api.functions.threads.pinThread, {
+    void pinThread({
       threadId: thread._id,
       pinned: !thread.pinned,
     });

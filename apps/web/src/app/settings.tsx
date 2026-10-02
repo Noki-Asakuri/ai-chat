@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
+
 import { getAuth } from "@workos/authkit-tanstack-react-start";
 import { Suspense } from "react";
 import { z } from "zod/v4";
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/settings")({
 
   beforeLoad: async ({ location }) => {
     if (location.pathname === "/settings" || location.pathname === "/settings/") {
-      throw redirect({ to: "/settings/account" });
+      throw redirect({ to: "/settings/general" });
     }
 
     const auth = await getAuth();

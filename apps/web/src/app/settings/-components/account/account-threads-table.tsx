@@ -4,6 +4,7 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useMutation } from "convex/react";
+import { convexQuery } from "@convex-dev/react-query";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -29,7 +30,17 @@ import {
   Share2Icon,
   TrashIcon,
 } from "lucide-react";
-import { Suspense, useCallback, useEffect, useMemo, useState, useTransition, type ReactElement } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useEffectEvent,
+  useState,
+  useTransition,
+  type ReactElement,
+} from "react";
 import { toast } from "@/components/ui/toast";
 
 import {
@@ -51,7 +62,7 @@ import { Menu } from "@/components/ui/menu";
 import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { convexQuery } from "@convex-dev/react-query";
+import { useThreadPin } from "@/lib/threads/use-thread-pin";
 import { cn, format, toUUID, tryCatch } from "@/lib/utils";
 
 type AccountThread = {
@@ -139,6 +150,8 @@ type BulkDeleteDialogProps = {
 };
 
 function BulkDeleteDialog({ open, onOpenChange, threadIds, threadCount }: BulkDeleteDialogProps) {
+  const { data: preferences } = useSuspenseQuery(convexQuery(api.functions.users.getCurrentUserPreferences));
+  const autoDeleted = useRef(false);
   const deleteThread = useMutation(api.functions.threads.deleteThread);
   const [checked, setChecked] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -146,12 +159,13 @@ function BulkDeleteDialog({ open, onOpenChange, threadIds, threadCount }: BulkDe
   function onDelete() {
     startTransition(async () => {
       const results = await Promise.all(
-        threadIds.map((threadId) => tryCatch(deleteThread({ threadId, deleteAttachments: checked }))),
+        threadIds.map((threadId) => tryCatch(deleteThread({ threadId, deleteAttachments: preferences.confirmations?.delete !== false && checked }))),
       );
 
       const firstError = results.find(([, error]) => error)?.[1];
       if (firstError) {
         toast.error("Failed to delete threads", { description: firstError.message });
+        if (preferences.confirmations?.delete === false) onOpenChange(false);
         return;
       }
 
@@ -159,6 +173,17 @@ function BulkDeleteDialog({ open, onOpenChange, threadIds, threadCount }: BulkDe
       onOpenChange(false);
     });
   }
+
+  const deleteWithoutConfirmation = useEffectEvent(onDelete);
+  useEffect(() => {
+    if (!open) autoDeleted.current = false;
+    if (open && preferences.confirmations?.delete === false && !autoDeleted.current) {
+      autoDeleted.current = true;
+      deleteWithoutConfirmation();
+    }
+  }, [open, preferences.confirmations?.delete]);
+
+  if (preferences.confirmations?.delete === false) return null;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -479,7 +504,8 @@ export function AccountThreadsTable() {
 
   const cursor = pageCursors[pageIndex] ?? null;
 
-  const pinThread = useMutation(api.functions.threads.pinThread);
+  const pinThread = useThreadPin();
+  const { data: preferences } = useSuspenseQuery(convexQuery(api.functions.users.getCurrentUserPreferences));
   const [, startTransition] = useTransition();
 
   const selectedCount = selected.size;
@@ -899,8 +925,9 @@ export function AccountThreadsTable() {
   );
 
   async function bulkPin(nextPinned: boolean) {
+    if (!nextPinned && preferences.confirmations?.unpin && !window.confirm("Unpin selected threads?")) return;
     const results = await Promise.all(
-      selectedIds.map((threadId) => tryCatch(pinThread({ threadId, pinned: nextPinned }))),
+      selectedIds.map((threadId) => tryCatch(pinThread({ threadId, pinned: nextPinned }, true))),
     );
 
     const firstError = results.find(([, error]) => error)?.[1];

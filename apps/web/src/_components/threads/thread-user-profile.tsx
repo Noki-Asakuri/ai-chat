@@ -8,6 +8,7 @@ import {
   BrainIcon,
   ChartNoAxesColumnIcon,
   ChevronRightIcon,
+  SlidersHorizontalIcon,
   CircleUserRoundIcon,
   Columns3CogIcon,
   LogOutIcon,
@@ -116,6 +117,11 @@ export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfilePro
               <Menu.GroupLabel className="text-3xs px-2.5 py-1.5 font-medium tracking-widest text-muted-foreground uppercase">
                 Account
               </Menu.GroupLabel>
+
+              <UserMenuSettingItem href="/settings/general" returnThreadId={returnThreadId}>
+                <SlidersHorizontalIcon />
+                General
+              </UserMenuSettingItem>
 
               <UserMenuSettingItem href="/settings/account" returnThreadId={returnThreadId}>
                 <CircleUserRoundIcon />

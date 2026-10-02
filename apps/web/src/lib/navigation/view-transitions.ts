@@ -1,6 +1,7 @@
 type NavigationViewTransition = false | { types: string[] };
 
 export const SETTINGS_ROUTE_ORDER = [
+  "/settings/general",
   "/settings/account",
   "/settings/threads",
   "/settings/customization",

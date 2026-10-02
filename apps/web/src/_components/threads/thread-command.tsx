@@ -4,6 +4,7 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 
+import { convexQuery } from "@convex-dev/react-query";
 import { useDebounce } from "@uidotdev/usehooks";
 import { CommandLoading } from "cmdk";
 import {
@@ -18,9 +19,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "../ui/button";
 import { SETTINGS_NAVIGATION } from "../settings/settings-navigation";
-import { Kbd, KbdGroup } from "../ui/kbd";
+import { Button } from "../ui/button";
 import {
   Command,
   CommandDialog,
@@ -31,14 +31,12 @@ import {
   CommandList,
   CommandShortcut,
 } from "../ui/command";
+import { Kbd, KbdGroup } from "../ui/kbd";
 
-import { getConvexReactClient } from "@/lib/convex/client";
-import { convexQuery } from "@convex-dev/react-query";
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
+import { useThreadPin } from "@/lib/threads/use-thread-pin";
 import type { Thread } from "@/lib/types";
 import { fromUUID, toUUID } from "@/lib/utils";
-
-const convexClient = getConvexReactClient();
 
 export function ThreadCommand({ isSkeleton }: { isSkeleton?: boolean }) {
   const threadCommandOpen = useThreadStore((state) => state.threadCommandOpen);
@@ -68,6 +66,7 @@ export function ThreadCommand({ isSkeleton }: { isSkeleton?: boolean }) {
 }
 
 function PinThread() {
+  const pinThread = useThreadPin();
   const defaultThreads = useThreadStore((state) => state.groupedThreads.threads);
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
@@ -78,7 +77,7 @@ function PinThread() {
     if (!thread) return;
 
     console.debug("[Thread] Pin thread", thread);
-    void convexClient.mutation(api.functions.threads.pinThread, {
+    void pinThread({
       threadId: thread._id,
       pinned: !thread.pinned,
     });

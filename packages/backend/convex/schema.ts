@@ -336,6 +336,16 @@ export const userPreferences = v.object({
     showFullCode: v.boolean(),
   }),
 
+  confirmations: v.optional(v.object({
+    unpin: v.boolean(),
+    settle: v.boolean(),
+    delete: v.boolean(),
+  })),
+  textGeneration: v.optional(v.object({
+    model: v.string(),
+    effort,
+  })),
+
   threads: v.optional(
     v.object({
       autoSettleDays: v.number(),

@@ -21,6 +21,8 @@ type ReasoningPickerProps = {
   model: string;
   onChange?: (effort: ReasoningEffort) => void;
   className?: string;
+  disabled?: boolean;
+  ariaLabel?: string;
 };
 
 export function ChatReasoningPicker() {
@@ -83,13 +85,15 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
   return (
     <Popover>
       <PopoverTrigger
+        disabled={props.disabled}
+        aria-label={props.ariaLabel ?? "Reasoning effort"}
         className={cn(
           buttonVariants({ variant: "ghost" }),
           "surface-edge flex h-9 cursor-pointer items-center justify-between gap-2 border border-border px-2 py-1.5 capitalize hover:bg-primary/15!",
           props.className,
         )}
       >
-        {value}
+        {REASONING_OPTIONS[value].label}
         <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
       </PopoverTrigger>
 

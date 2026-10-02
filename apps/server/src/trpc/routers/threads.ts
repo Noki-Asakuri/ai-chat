@@ -38,11 +38,6 @@ export const threadRouter = router({
         return { ok: true };
       }
 
-      await convexClient.mutation(api.functions.users.updateUserDefaultModelConfig, {
-        defaultModel: input.model,
-        modelParams: input.modelParams,
-      });
-
       return { ok: true };
     }),
 

@@ -20,6 +20,7 @@ import { Route as SettingsAccountRouteImport } from './app/settings/account'
 import { Route as SettingsAppearanceRouteRouteImport } from './app/settings/appearance/route'
 import { Route as SettingsAttachmentsRouteRouteImport } from './app/settings/attachments/route'
 import { Route as SettingsCustomizationRouteRouteImport } from './app/settings/customization/route'
+import { Route as SettingsGeneralRouteRouteImport } from './app/settings/general/route'
 import { Route as SettingsModelsRouteRouteImport } from './app/settings/models/route'
 import { Route as SettingsProfilesRouteRouteImport } from './app/settings/profiles.route'
 import { Route as SettingsStatisticsRouteRouteImport } from './app/settings/statistics/route'
@@ -84,6 +85,11 @@ const SettingsCustomizationRouteRoute =
     path: '/customization',
     getParentRoute: () => SettingsRoute,
   } as any)
+const SettingsGeneralRouteRoute = SettingsGeneralRouteRouteImport.update({
+  id: '/general',
+  path: '/general',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsModelsRouteRoute = SettingsModelsRouteRouteImport.update({
   id: '/models',
   path: '/models',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/settings/appearance': typeof SettingsAppearanceRouteRoute
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
   '/settings/customization': typeof SettingsCustomizationRouteRoute
+  '/settings/general': typeof SettingsGeneralRouteRoute
   '/settings/models': typeof SettingsModelsRouteRoute
   '/settings/profiles': typeof SettingsProfilesRouteRoute
   '/settings/statistics': typeof SettingsStatisticsRouteRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/settings/appearance': typeof SettingsAppearanceRouteRoute
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
   '/settings/customization': typeof SettingsCustomizationRouteRoute
+  '/settings/general': typeof SettingsGeneralRouteRoute
   '/settings/models': typeof SettingsModelsRouteRoute
   '/settings/profiles': typeof SettingsProfilesRouteRoute
   '/settings/statistics': typeof SettingsStatisticsRouteRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/settings/appearance': typeof SettingsAppearanceRouteRoute
   '/settings/attachments': typeof SettingsAttachmentsRouteRoute
   '/settings/customization': typeof SettingsCustomizationRouteRoute
+  '/settings/general': typeof SettingsGeneralRouteRoute
   '/settings/models': typeof SettingsModelsRouteRoute
   '/settings/profiles': typeof SettingsProfilesRouteRoute
   '/settings/statistics': typeof SettingsStatisticsRouteRoute
@@ -188,6 +197,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/attachments'
     | '/settings/customization'
+    | '/settings/general'
     | '/settings/models'
     | '/settings/profiles'
     | '/settings/statistics'
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/attachments'
     | '/settings/customization'
+    | '/settings/general'
     | '/settings/models'
     | '/settings/profiles'
     | '/settings/statistics'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/attachments'
     | '/settings/customization'
+    | '/settings/general'
     | '/settings/models'
     | '/settings/profiles'
     | '/settings/statistics'
@@ -329,6 +341,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsCustomizationRouteRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/general': {
+      id: '/settings/general'
+      path: '/general'
+      fullPath: '/settings/general'
+      preLoaderRoute: typeof SettingsGeneralRouteRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/models': {
       id: '/settings/models'
       path: '/models'
@@ -408,6 +427,7 @@ interface SettingsRouteChildren {
   SettingsAppearanceRouteRoute: typeof SettingsAppearanceRouteRoute
   SettingsAttachmentsRouteRoute: typeof SettingsAttachmentsRouteRoute
   SettingsCustomizationRouteRoute: typeof SettingsCustomizationRouteRoute
+  SettingsGeneralRouteRoute: typeof SettingsGeneralRouteRoute
   SettingsModelsRouteRoute: typeof SettingsModelsRouteRoute
   SettingsProfilesRouteRoute: typeof SettingsProfilesRouteRoute
   SettingsStatisticsRouteRoute: typeof SettingsStatisticsRouteRoute
@@ -419,6 +439,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAppearanceRouteRoute: SettingsAppearanceRouteRoute,
   SettingsAttachmentsRouteRoute: SettingsAttachmentsRouteRoute,
   SettingsCustomizationRouteRoute: SettingsCustomizationRouteRoute,
+  SettingsGeneralRouteRoute: SettingsGeneralRouteRoute,
   SettingsModelsRouteRoute: SettingsModelsRouteRoute,
   SettingsProfilesRouteRoute: SettingsProfilesRouteRoute,
   SettingsStatisticsRouteRoute: SettingsStatisticsRouteRoute,

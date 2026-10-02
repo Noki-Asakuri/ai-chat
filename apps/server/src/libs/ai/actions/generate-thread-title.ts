@@ -1,3 +1,5 @@
+import { DEFAULT_GENERAL_SETTINGS } from "@ai-chat/shared/chat/preferences";
+import { resolveModel, resolveReasoning } from "@ai-chat/shared/chat/models";
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
@@ -7,6 +9,7 @@ import dedent from "dedent";
 
 import { logger } from "../../axiom";
 import { getLanguageModel } from "../registry";
+import { buildProviderOptions } from "../validation/provider-options";
 
 export async function generateNewThreadTitleAndSave(
   convexClient: ConvexHttpClient,
@@ -17,9 +20,21 @@ export async function generateNewThreadTitleAndSave(
   logger.debug("[Server] Updating thread title", { threadId: options.threadId });
   const content = extractUserMessage(options.modelMessages[0]);
 
+  const preferences = await convexClient.query(api.functions.users.getCurrentUserPreferences, {});
+  let config = preferences.textGeneration ?? DEFAULT_GENERAL_SETTINGS.textGeneration;
+  let resolvedModel = resolveModel(config.model);
+  // Previously saved image-output models must not generate images for titles.
+  if (resolvedModel.data.modalities.output.length !== 1 || resolvedModel.data.modalities.output[0] !== "text") {
+    config = DEFAULT_GENERAL_SETTINGS.textGeneration;
+    resolvedModel = resolveModel(config.model);
+  }
+  const { requestedId, data: model } = resolvedModel;
+  const effort = resolveReasoning(model, config.effort);
+
   const { text } = await generateText({
-    reasoning: "medium",
-    model: getLanguageModel("openai/gpt-5.6-luna"),
+    reasoning: model.provider === "kimi" || model.provider === "zai" || effort === "max" || model.capabilities.reasoning?.type !== "selectable" ? undefined : effort,
+    providerOptions: buildProviderOptions(model, effort),
+    model: getLanguageModel(requestedId),
 
     instructions:
       "You are a conversational assistant and you need to summarize the user's text into a title of 10 words or less. Do not add anything else.",

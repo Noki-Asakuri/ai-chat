@@ -1,18 +1,21 @@
+import { DEFAULT_GENERAL_SETTINGS } from "@ai-chat/shared/chat/preferences";
 import { v } from "convex/values";
-import { AllModelIds } from "@ai-chat/shared/chat/models";
+import { AllModelIds, resolveReasoning, tryGetModelData } from "@ai-chat/shared/chat/models";
 
 import { internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
 
 import { authenticatedMutation, authenticatedQuery } from "../components";
-import { AISDKModelParams } from "../schema";
+import { AISDKModelParams, effort } from "../schema";
 
 const MODEL_IDS: ReadonlySet<string> = new Set(AllModelIds);
 
 export type UserPreferences = Doc<"users">["preferences"];
 export type UserPreferencesPatch = Partial<
-  Omit<UserPreferences, "models" | "notifications" | "code" | "fonts" | "threads">
+  Omit<UserPreferences, "models" | "notifications" | "code" | "fonts" | "threads" | "confirmations" | "textGeneration">
 > & {
+  confirmations?: Partial<NonNullable<UserPreferences["confirmations"]>>;
+  textGeneration?: Partial<NonNullable<UserPreferences["textGeneration"]>>;
   notifications?: Partial<UserPreferences["notifications"]>;
   code?: Partial<UserPreferences["code"]>;
   fonts?: Partial<UserPreferences["fonts"]>;
@@ -50,6 +53,15 @@ const userPreferencesPatch = v.object({
       showFullCode: v.optional(v.boolean()),
     }),
   ),
+  confirmations: v.optional(v.object({
+    unpin: v.optional(v.boolean()),
+    settle: v.optional(v.boolean()),
+    delete: v.optional(v.boolean()),
+  })),
+  textGeneration: v.optional(v.object({
+    model: v.optional(v.string()),
+    effort: v.optional(effort),
+  })),
   threads: v.optional(
     v.object({
       autoSettleDays: v.optional(v.number()),
@@ -65,8 +77,8 @@ const userPreferencesPatch = v.object({
   ),
 });
 
-export const DEFAULT_THREAD_MODEL = "google/gemini-3-flash";
-export const DEFAULT_USER_PREFERENCES: UserPreferences = {
+export const DEFAULT_THREAD_MODEL = DEFAULT_GENERAL_SETTINGS.models.defaultModel;
+export const DEFAULT_USER_PREFERENCES = {
   name: "user",
   globalSystemInstruction: "You are a helpful assistant.",
   backgroundImage: null,
@@ -88,21 +100,20 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
     autoWrap: false,
     showFullCode: false,
   },
-  threads: {
-    autoSettleDays: 0,
-  },
+  confirmations: DEFAULT_GENERAL_SETTINGS.confirmations,
+  textGeneration: DEFAULT_GENERAL_SETTINGS.textGeneration,
+  threads: DEFAULT_GENERAL_SETTINGS.threads,
   models: {
     hidden: [],
     favorite: [],
 
     defaultModel: DEFAULT_THREAD_MODEL,
     modelParams: {
-      effort: "medium",
-      webSearch: false,
+      ...DEFAULT_GENERAL_SETTINGS.models.modelParams,
       profile: null,
     },
   },
-};
+} satisfies UserPreferences;
 
 export function mergeUserPreferences(
   current: UserPreferencesPatch | undefined,
@@ -121,6 +132,16 @@ export function mergeUserPreferences(
       ...DEFAULT_USER_PREFERENCES.code,
       ...current?.code,
       ...updates?.code,
+    },
+    confirmations: {
+      ...DEFAULT_USER_PREFERENCES.confirmations,
+      ...current?.confirmations,
+      ...updates?.confirmations,
+    },
+    textGeneration: {
+      ...DEFAULT_USER_PREFERENCES.textGeneration,
+      ...current?.textGeneration,
+      ...updates?.textGeneration,
     },
     threads: {
       autoSettleDays:
@@ -177,6 +198,24 @@ export const updateUserPreferences = authenticatedMutation({
       updates.models.favorite = sanitizeModelIds(updates.models.favorite);
     }
 
+    const nextPreferences = mergeUserPreferences(user.preferences, updates);
+    if (updates.models?.defaultModel !== undefined || updates.models?.modelParams?.effort !== undefined) {
+      const model = tryGetModelData(nextPreferences.models.defaultModel);
+      if (!model || model.deprecation) throw new Error("Choose an available default model");
+      if (resolveReasoning(model, nextPreferences.models.modelParams.effort) !== nextPreferences.models.modelParams.effort) {
+        throw new Error("Unsupported reasoning effort for the default model");
+      }
+    }
+    if (updates.textGeneration !== undefined) {
+      const model = tryGetModelData(nextPreferences.textGeneration?.model);
+      if (!model || model.deprecation || model.modalities.output.length !== 1 || model.modalities.output[0] !== "text") {
+        throw new Error("Choose an available model that only outputs text");
+      }
+      if (resolveReasoning(model, nextPreferences.textGeneration?.effort ?? "medium") !== (nextPreferences.textGeneration?.effort ?? "medium")) {
+        throw new Error("Unsupported reasoning effort for the text generation model");
+      }
+    }
+
     const autoSettleDays = updates.threads?.autoSettleDays;
     if (
       autoSettleDays !== undefined &&
@@ -186,7 +225,7 @@ export const updateUserPreferences = authenticatedMutation({
     }
 
     await ctx.db.patch(user._id, {
-      preferences: mergeUserPreferences(user.preferences, updates),
+      preferences: nextPreferences,
     });
 
     if (
@@ -233,37 +272,6 @@ export const updateUserModelPreferences = authenticatedMutation({
 
     await ctx.db.patch(user._id, {
       preferences: mergeUserPreferences(user.preferences, { models: modelUpdates }),
-    });
-  },
-});
-
-export const updateUserDefaultModelConfig = authenticatedMutation({
-  args: {
-    defaultModel: v.string(),
-    modelParams: AISDKModelParams,
-  },
-  handler: async (ctx, args) => {
-    const user = ctx.user;
-
-    const preferences = mergeUserPreferences(user.preferences);
-    const models = preferences.models;
-
-    if (
-      models.defaultModel === args.defaultModel &&
-      models.modelParams.effort === args.modelParams.effort &&
-      models.modelParams.webSearch === args.modelParams.webSearch &&
-      models.modelParams.profile === args.modelParams.profile
-    ) {
-      return;
-    }
-
-    await ctx.db.patch(user._id, {
-      preferences: mergeUserPreferences(preferences, {
-        models: {
-          defaultModel: args.defaultModel,
-          modelParams: args.modelParams,
-        },
-      }),
     });
   },
 });

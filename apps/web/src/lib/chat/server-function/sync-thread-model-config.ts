@@ -31,6 +31,7 @@ export function useSyncThreadModelConfig() {
 
   async function syncThreadModelConfigWrapper(options: SyncThreadModelConfigOptions = {}) {
     const resolvedThreadId = options.threadId ?? fromUUID<Id<"threads">>(params?.threadId);
+    if (!resolvedThreadId) return;
     const nextModel = options.model ?? model;
 
     const nextModelParams = {

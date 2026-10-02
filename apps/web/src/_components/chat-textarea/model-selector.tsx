@@ -2,7 +2,6 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events -- Base UI provides keyboard handling for composed options. */
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
-import { useParams } from "@tanstack/react-router";
 import { useMutation } from "convex/react";
 
 import { ChevronDownIcon, LayersIcon, SearchIcon, StarIcon } from "lucide-react";
@@ -42,6 +41,8 @@ type ModelSelectorProps = {
   onChange?: (id: string) => void;
   triggerId?: string;
   className?: string;
+  disabled?: boolean;
+  textOnly?: boolean;
 };
 
 type PickerSectionKey = "all" | "favorites" | Provider;
@@ -145,7 +146,14 @@ function toggleFavoriteModels(favoriteModels: string[], modelId: string): string
   return [modelId, ...favoriteModels];
 }
 
-function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelectorProps) {
+function ModelSelectorBase({
+  value,
+  onChange,
+  triggerId,
+  className,
+  disabled,
+  textOnly,
+}: ModelSelectorProps) {
   const [selectedSection, setSelectedSection] = useState<PickerSectionKey>("all");
   const [isSavingFavorites, setIsSavingFavorites] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -179,7 +187,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
 
     for (const modelId of SelectableModelIds) {
       const data = tryGetModelData(modelId);
-      if (!data) continue;
+      if (!data || (textOnly && (data.modalities.output.length !== 1 || data.modalities.output[0] !== "text"))) continue;
 
       next.push({
         id: modelId,
@@ -190,7 +198,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
 
     next.sort(compareModelLabelsNewestFirst);
     return next;
-  }, []);
+  }, [textOnly]);
 
   const allViewModels = useMemo(() => {
     const hiddenSet = new Set<string>(hiddenModels);
@@ -396,6 +404,7 @@ function ModelSelectorBase({ value, onChange, triggerId, className }: ModelSelec
     >
       <PopoverTrigger
         id={triggerId}
+        disabled={disabled}
         aria-label="Select model"
         className={cn(
           buttonVariants({ variant: "ghost" }),
@@ -549,8 +558,6 @@ function PickerSectionButton({
 }
 
 export function ChatModelSelector() {
-  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
-  const isWelcomeRoute = !params?.threadId;
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
 
   const { effort, storeModel, setConfig, setModelParams } = useConfigStore(
@@ -568,11 +575,7 @@ export function ChatModelSelector() {
     const nextEffort =
       modelData && !getReasoningOptions(modelData).includes(effort) ? getDefaultReasoning(modelData) : effort;
 
-    if (isWelcomeRoute) {
-      setConfig({ model, defaultModel: model });
-    } else {
-      setConfig({ model });
-    }
+    setConfig({ model });
 
     if (nextEffort !== effort) setModelParams({ effort: nextEffort });
     void syncThreadModelConfig({ model, modelParams: { effort: nextEffort } });

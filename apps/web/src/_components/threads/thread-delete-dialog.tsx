@@ -1,9 +1,12 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+
+import { convexQuery } from "@convex-dev/react-query";
 import { useMutation } from "convex/react";
 import { Loader2Icon, Trash2Icon, TriangleAlertIcon } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useTransition } from "react";
 
 import {
   AlertDialog,
@@ -18,6 +21,7 @@ import {
 } from "../ui/alert-dialog";
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
+import { toast } from "../ui/toast";
 
 import type { Thread } from "@/lib/types";
 
@@ -36,6 +40,8 @@ export function ThreadDeleteDialog({
   onOpenChange,
   redirectTo = "/",
 }: ThreadDeleteDialogProps) {
+  const { data: preferences } = useSuspenseQuery(convexQuery(api.functions.users.getCurrentUserPreferences));
+  const autoDeleted = useRef(false);
   const navigate = useNavigate();
   const [pending, startTransition] = useTransition();
 
@@ -47,7 +53,15 @@ export function ThreadDeleteDialog({
     console.debug("[Thread] Delete thread", threadId);
 
     startTransition(async () => {
-      await deleteThread({ threadId, deleteAttachments: checked });
+      try {
+        await deleteThread({ threadId, deleteAttachments: preferences.confirmations?.delete !== false && checked });
+      } catch (error) {
+        toast.error("Failed to delete thread", {
+          description: error instanceof Error ? error.message : undefined,
+        });
+        if (preferences.confirmations?.delete === false) onOpenChange(false);
+        return;
+      }
       onOpenChange(false);
 
       if (redirectTo.length > 0) {
@@ -55,6 +69,17 @@ export function ThreadDeleteDialog({
       }
     });
   }
+
+  const deleteWithoutConfirmation = useEffectEvent(deleteThreadHandler);
+  useEffect(() => {
+    if (!open) autoDeleted.current = false;
+    if (open && preferences.confirmations?.delete === false && !autoDeleted.current) {
+      autoDeleted.current = true;
+      deleteWithoutConfirmation();
+    }
+  }, [open, preferences.confirmations?.delete]);
+
+  if (preferences.confirmations?.delete === false) return null;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -65,8 +90,8 @@ export function ThreadDeleteDialog({
           </AlertDialogMedia>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete "{title}" and every messages
-            in it from our servers.
+            This action cannot be undone. This will permanently delete "{title}" and every messages in it from
+            our servers.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

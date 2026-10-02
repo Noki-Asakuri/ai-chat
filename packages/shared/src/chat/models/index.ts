@@ -232,6 +232,7 @@ export function getReasoningOptions(model: ModelData): ReadonlyArray<ReasoningEf
 
 export function getDefaultReasoning(model: ModelData): ReasoningEffort {
   const policy = model.capabilities.reasoning;
+
   if (policy?.type === "selectable") return policy.defaultLevel;
   if (policy?.type === "fixed") return policy.level;
 
@@ -240,6 +241,7 @@ export function getDefaultReasoning(model: ModelData): ReasoningEffort {
 
 export function resolveReasoning(model: ModelData, requestedLevel: ReasoningEffort): ReasoningEffort {
   const policy = model.capabilities.reasoning;
+
   if (!policy) return "none";
   if (policy.type === "fixed") return policy.level;
   if (policy.levels.includes(requestedLevel)) return requestedLevel;

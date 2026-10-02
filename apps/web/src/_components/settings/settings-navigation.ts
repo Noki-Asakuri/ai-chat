@@ -5,8 +5,9 @@ import {
   CircleUserRoundIcon,
   Columns3CogIcon,
   MessagesSquareIcon,
-  PaperclipIcon,
   PaletteIcon,
+  PaperclipIcon,
+  SlidersHorizontalIcon,
   UserRoundPenIcon,
 } from "lucide-react";
 
@@ -22,6 +23,12 @@ type SettingsNavigationItem = {
 };
 
 export const SETTINGS_NAVIGATION = [
+  {
+    path: "/settings/general",
+    label: "General",
+    description: "Set defaults for new chats, text generation, and confirmations.",
+    icon: SlidersHorizontalIcon,
+  },
   {
     path: "/settings/account",
     label: "Account",
