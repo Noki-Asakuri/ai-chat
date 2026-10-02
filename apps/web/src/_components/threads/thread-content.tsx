@@ -23,7 +23,13 @@ import {
 import { Input } from "../ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group";
 import { Kbd } from "../ui/kbd";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger } from "../ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { Separator } from "../ui/separator";
 import { Skeleton } from "../ui/skeleton";
 
@@ -38,7 +44,6 @@ import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import { cn, fromUUID } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
-const UNGROUPED_SELECT_VALUE = "ungrouped";
 
 export function ThreadContents() {
   return (
@@ -57,7 +62,7 @@ function ThreadListFallback() {
 
       <div aria-hidden="true" className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center gap-1.5 px-2 pb-1.5">
-          <InputGroup className="h-10 rounded-md border-transparent bg-input/30 shadow-none">
+          <InputGroup className="min-w-0 flex-1 rounded-md border-transparent bg-input/30 shadow-none">
             <InputGroupAddon>
               <SearchIcon />
             </InputGroupAddon>
@@ -70,19 +75,14 @@ function ThreadListFallback() {
             />
           </InputGroup>
 
-          <Button size="icon" variant="outline" className="size-10" disabled>
-            <SquarePenIcon />
+          <Button size="icon" variant="ghost" aria-label="Select group" disabled>
+            <FolderIcon />
           </Button>
-        </div>
-
-        <div className="flex items-center gap-1.5 px-2 pb-2">
-          <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md bg-input/30 px-2.5 font-mono text-sm">
-            <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
-            <span className="truncate">Ungrouped</span>
-          </div>
-
-          <Button size="icon" variant="outline" className="size-10" disabled>
+          <Button size="icon" variant="ghost" aria-label="Create group" disabled>
             <FolderPlusIcon />
+          </Button>
+          <Button size="icon" variant="ghost" aria-label="New chat" disabled>
+            <SquarePenIcon />
           </Button>
         </div>
 
@@ -161,8 +161,7 @@ function CreateGroupButton() {
     <>
       <Button
         size="icon"
-        variant="outline"
-        className="size-10"
+        variant="ghost"
         aria-label="Create group"
         title="Create group"
         onClick={() => setOpen(true)}
@@ -292,6 +291,7 @@ type ThreadListProps = {
 function ThreadList({ data, groups }: ThreadListProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [groupSearchQuery, setGroupSearchQuery] = useState("");
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [editedTitle, setEditedTitle] = useState<string | null>(null);
   const [isSavingTitle, startSavingTitle] = useTransition();
@@ -305,6 +305,9 @@ function ThreadList({ data, groups }: ThreadListProps) {
   const filteredThreads = normalizedSearchQuery
     ? activeThreads.filter((thread) => thread.title.toLocaleLowerCase().includes(normalizedSearchQuery))
     : activeThreads;
+  const filteredGroups = groups.filter((group) =>
+    group.title.toLocaleLowerCase().includes(groupSearchQuery.trim().toLocaleLowerCase()),
+  );
 
   const isEditDialogOpen = activeDialog === "edit" && dialogThread !== null;
   const isDeleteDialogOpen = activeDialog === "delete" && dialogThread !== null;
@@ -331,16 +334,6 @@ function ThreadList({ data, groups }: ThreadListProps) {
       setEditedTitle(null);
       threadDialogStoreActions.closeThreadDialog();
     });
-  }
-
-  function selectGroup(value: string | null): void {
-    if (value === UNGROUPED_SELECT_VALUE || value === null) {
-      threadStoreActions.setActiveGroupId(null);
-      return;
-    }
-
-    const group = groups.find((item) => item._id === value);
-    if (group) threadStoreActions.setActiveGroupId(group._id);
   }
 
   async function createNewChat(groupId: Id<"groups"> | null): Promise<void> {
@@ -371,7 +364,7 @@ function ThreadList({ data, groups }: ThreadListProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center gap-1.5 px-2 pb-1.5">
-        <InputGroup className="h-10 rounded-md border-transparent bg-input/30 shadow-none">
+        <InputGroup className="min-w-0 flex-1 rounded-md border-transparent bg-input/30 shadow-none">
           <InputGroupAddon>
             <SearchIcon />
           </InputGroupAddon>
@@ -385,10 +378,56 @@ function ThreadList({ data, groups }: ThreadListProps) {
           />
         </InputGroup>
 
+        <DropdownMenu
+          onOpenChange={(open) => {
+            if (!open) setGroupSearchQuery("");
+          }}
+        >
+          <DropdownMenuTrigger
+            render={
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label={`Select group, current group: ${activeGroup?.title ?? "Ungrouped"}`}
+                title={activeGroup?.title ?? "Ungrouped"}
+              >
+                <FolderIcon />
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="end" className="w-72 p-1">
+            <Input
+              type="search"
+              value={groupSearchQuery}
+              onChange={(event) => setGroupSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Escape" && event.key !== "ArrowDown") event.stopPropagation();
+              }}
+              placeholder="Search groups..."
+              aria-label="Search groups"
+              className="mb-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
+            />
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => threadStoreActions.setActiveGroupId(null)}>
+                <FolderIcon />
+                Ungrouped
+              </DropdownMenuItem>
+              {filteredGroups.map((group) => (
+                <DropdownMenuItem
+                  key={group._id}
+                  onClick={() => threadStoreActions.setActiveGroupId(group._id)}
+                >
+                  <FolderIcon />
+                  <span className="truncate">{group.title}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <CreateGroupButton />
         <Button
           size="icon"
-          variant="outline"
-          className="size-10"
+          variant="ghost"
           aria-label="New chat"
           title="New chat"
           onClick={() => setNewChatOpen(true)}
@@ -397,39 +436,9 @@ function ThreadList({ data, groups }: ThreadListProps) {
         </Button>
       </div>
 
-      <div className="flex items-center gap-1.5 px-2 pb-2">
-        <Select value={activeGroupId ?? UNGROUPED_SELECT_VALUE} onValueChange={selectGroup}>
-          <SelectTrigger className="min-w-0 flex-1 rounded-md border-transparent bg-input/30 px-2.5 font-mono text-sm hover:bg-input/50 data-[size=default]:h-10">
-            <span className="flex min-w-0 flex-1 items-center gap-2">
-              <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
-              <span className="truncate">{activeGroup?.title ?? "Ungrouped"}</span>
-            </span>
-          </SelectTrigger>
-
-          <SelectContent align="start" className="rounded-md bg-card">
-            <SelectGroup>
-              <SelectItem value={UNGROUPED_SELECT_VALUE}>
-                <FolderIcon className="size-4" />
-                Ungrouped
-              </SelectItem>
-
-              {groups.map((group) => (
-                <SelectItem key={group._id} value={group._id}>
-                  <FolderIcon className="size-4" />
-                  {group.title}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-
-        <CreateGroupButton />
-      </div>
-
       <div
         data-slot="thread-list-container"
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-2.5 pl-2"
-        style={{ scrollbarGutter: "stable both-edges" }}
+        className="flex min-h-0 flex-1 flex-col pr-2.5 pl-2"
       >
         {data ? (
           <UngroupedThreadGroup

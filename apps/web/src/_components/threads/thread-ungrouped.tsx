@@ -43,19 +43,21 @@ export function UngroupedThreadGroup({
   }, []);
 
   return (
-    <div className="flex flex-col gap-1" data-slot="thread-ungrouped-list">
-      {pinnedThreads.map((thread) => (
-        <ThreadItem key={thread._id} thread={thread} now={now} />
-      ))}
+    <div className="flex min-h-0 flex-1 flex-col" data-slot="thread-ungrouped-list">
+      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+        {pinnedThreads.map((thread) => (
+          <ThreadItem key={thread._id} thread={thread} now={now} />
+        ))}
 
-      {pinnedThreads.length > 0 && recentThreads.length > 0 && <Separator className="my-1" />}
+        {pinnedThreads.length > 0 && recentThreads.length > 0 && <Separator className="my-1" />}
 
-      {recentThreads.map((thread) => (
-        <ThreadItem key={thread._id} thread={thread} now={now} />
-      ))}
+        {recentThreads.map((thread) => (
+          <ThreadItem key={thread._id} thread={thread} now={now} />
+        ))}
+      </div>
 
       {settledThreads.length > 0 && (
-        <Collapsible defaultOpen className="mt-1 flex flex-col gap-1">
+        <Collapsible className="mt-1 flex min-h-0 shrink-0 flex-col gap-1 data-open:max-h-1/2">
           <CollapsibleTrigger
             render={
               <Button
@@ -70,7 +72,7 @@ export function UngroupedThreadGroup({
             <ChevronRightIcon className="transition-transform group-data-panel-open:rotate-90" />
           </CollapsibleTrigger>
 
-          <CollapsibleContent className="flex h-[var(--collapsible-panel-height)] flex-col overflow-hidden transition-[height] duration-150 ease-out data-ending-style:h-0 data-starting-style:h-0 [&[hidden]:not([hidden='until-found'])]:hidden">
+          <CollapsibleContent className="flex min-h-0 flex-col overflow-y-auto [&[hidden]:not([hidden='until-found'])]:hidden">
             {settledThreads.map((thread) => (
               <ThreadItem key={thread._id} thread={thread} now={now} />
             ))}
