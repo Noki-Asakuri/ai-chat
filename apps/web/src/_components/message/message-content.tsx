@@ -157,7 +157,13 @@ function AssistantBlocks({ blocks, message }: { blocks: AssistantFlowBlock[]; me
     }
 
     if (block.kind === "tools") {
-      return <MessageToolParts key={block.key} parts={block.parts} />;
+      return (
+        <MessageToolParts
+          key={block.key}
+          parts={block.parts}
+          isStreaming={message.status === "streaming" || message.status === "pending"}
+        />
+      );
     }
 
     return <AssistantTextBlock key={block.key} block={block} message={message} />;
@@ -171,20 +177,24 @@ function AssistantTextBlock({
   block: Extract<AssistantFlowBlock, { kind: "text" }>;
   message: ChatMessage;
 }) {
+  if (!block.parts.some((part) => part.text.trim().length > 0)) return null;
+
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      {block.parts.map((part, index) => (
-        <MessageBubble
-          key={`${message._id}-${block.key}-${index}`}
-          className="surface-edge bg-background/75 backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
-          onMouseDown={clearMessageSelection}
-          onMouseUp={(event) => selectMessageText(event.currentTarget, event.target, event.detail)}
-        >
-          <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>
-            {part.text}
-          </StreamDownWrapper>
-        </MessageBubble>
-      ))}
+      {block.parts.map((part, index) =>
+        part.text.trim().length > 0 ? (
+          <MessageBubble
+            key={`${message._id}-${block.key}-${index}`}
+            className="surface-edge bg-background/75 backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
+            onMouseDown={clearMessageSelection}
+            onMouseUp={(event) => selectMessageText(event.currentTarget, event.target, event.detail)}
+          >
+            <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>
+              {part.text}
+            </StreamDownWrapper>
+          </MessageBubble>
+        ) : null,
+      )}
     </div>
   );
 }

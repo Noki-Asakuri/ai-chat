@@ -1,6 +1,11 @@
 import type { ChatMessage } from "@/lib/types";
 
-import { isToolPart, type ToolPart } from "./message-tool-parts/shared";
+import {
+  getToolName,
+  isImageGenerationToolName,
+  isToolPart,
+  type ToolPart,
+} from "./message-tool-parts/shared";
 
 type MessagePart = ChatMessage["parts"][number];
 export type ChatTextPart = MessagePart & {
@@ -148,10 +153,33 @@ export function splitAssistantFlow(
     hasWork &&
     finalBlock?.kind === "text"
   ) {
-    const workBlocks = blocks.slice(0, -1);
+    const workBlocks: AssistantFlowBlock[] = [];
+    const responseBlocks: AssistantFlowBlock[] = [];
+    for (const block of blocks.slice(0, -1)) {
+      if (block.kind === "step-divider") {
+        if (workBlocks.length > 0 && workBlocks.at(-1)?.kind !== "step-divider") {
+          workBlocks.push(block);
+        }
+        continue;
+      }
+
+      if (block.kind !== "tools") {
+        workBlocks.push(block);
+        continue;
+      }
+
+      const imageParts = block.parts.filter((part) => isImageGenerationToolName(getToolName(part)));
+      const otherParts = block.parts.filter((part) => !isImageGenerationToolName(getToolName(part)));
+      if (imageParts.length > 0) responseBlocks.push({ ...block, parts: imageParts });
+      if (otherParts.length > 0) workBlocks.push({ ...block, parts: otherParts });
+    }
     if (workBlocks.at(-1)?.kind === "step-divider") workBlocks.pop();
 
-    return { workBlocks, responseBlocks: [finalBlock], hasFinalResponse: true };
+    return {
+      workBlocks,
+      responseBlocks: [...responseBlocks, finalBlock],
+      hasFinalResponse: workBlocks.length > 0,
+    };
   }
 
   return { workBlocks: [], responseBlocks: blocks, hasFinalResponse: false };

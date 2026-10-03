@@ -15,6 +15,10 @@ export function getToolName(part: ToolPart): string {
   return part.type.replace(/^(tool-|tools-)/, "");
 }
 
+export function isImageGenerationToolName(toolName: string): boolean {
+  return toolName === "image_generation" || toolName === "imageGeneration";
+}
+
 export function getToolLabel(toolName: string): string {
   if (toolName === "web_search" || toolName === "webSearch") {
     return "Web search";

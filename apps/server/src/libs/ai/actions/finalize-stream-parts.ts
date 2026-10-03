@@ -4,6 +4,23 @@ export function finalizeStreamParts(message: UIChatMessage): UIChatMessage["part
   const out: UIChatMessage["parts"] = [];
 
   for (const part of message.parts) {
+    if (
+      (part.type === "tool-image_generation" ||
+        part.type === "tool-imageGeneration" ||
+        (part.type === "dynamic-tool" &&
+          (part.toolName === "image_generation" || part.toolName === "imageGeneration"))) &&
+      part.state === "output-available" &&
+      part.preliminary === true
+    ) {
+      out.push({
+        ...part,
+        state: "output-error",
+        output: undefined,
+        errorText: "Image generation stopped before the image was finished. Please try again.",
+      });
+      continue;
+    }
+
     switch (part.type) {
       case "text":
       case "reasoning": {

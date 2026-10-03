@@ -103,6 +103,10 @@ function buildImageTools(modelInfo: ModelData): ToolSet {
   }
 
   return {
-    image_generation: openai.tools.imageGeneration({ outputFormat: "webp", quality: "high" }),
+    image_generation: openai.tools.imageGeneration({
+      outputFormat: "webp",
+      quality: "high",
+      partialImages: 3,
+    }),
   };
 }

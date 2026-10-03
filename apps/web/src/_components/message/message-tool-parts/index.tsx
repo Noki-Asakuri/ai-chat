@@ -5,9 +5,11 @@ import * as React from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
 import { Separator } from "../../ui/separator";
 
+import { ImageGenerationToolPart } from "./image-generation-tool-part";
 import {
   getToolLabel,
   getToolName,
+  isImageGenerationToolName,
   normalizeSummaryText,
   stringifyForDetails,
   summarizeValue,
@@ -26,6 +28,7 @@ import { cn } from "@/lib/utils";
 type MessageToolPartsProps = {
   parts?: ToolPart[] | null;
   className?: string;
+  isStreaming?: boolean;
 };
 
 type ToolDetail = {
@@ -144,13 +147,42 @@ function MessageToolPart({ part }: { part: ToolPart }) {
   );
 }
 
-export function MessageToolParts({ parts, className }: MessageToolPartsProps) {
+export function MessageToolParts({ parts, className, isStreaming = true }: MessageToolPartsProps) {
   const toolParts = (parts ?? []).filter((part) => {
     if (!isWebSearchToolName(getToolName(part))) return true;
     return part.state !== "approval-responded" || part.approval.approved;
   });
 
   if (toolParts.length === 0) return null;
+
+  if (toolParts.some((part) => isImageGenerationToolName(getToolName(part)))) {
+    const groups: ToolPart[][] = [];
+    for (const part of toolParts) {
+      const previousGroup = groups.at(-1);
+      if (
+        !isImageGenerationToolName(getToolName(part)) &&
+        previousGroup &&
+        !isImageGenerationToolName(getToolName(previousGroup[0]!))
+      ) {
+        previousGroup.push(part);
+      } else {
+        groups.push([part]);
+      }
+    }
+
+    return (
+      <div className={cn("flex w-full min-w-0 flex-col gap-1.5", className)}>
+        {groups.map((group) => {
+          const part = group[0]!;
+          return isImageGenerationToolName(getToolName(part)) ? (
+            <ImageGenerationToolPart key={part.toolCallId} part={part} isStreaming={isStreaming} />
+          ) : (
+            <MessageToolParts key={part.toolCallId} parts={group} isStreaming={isStreaming} />
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <Collapsible className={cn("w-full", className)}>
