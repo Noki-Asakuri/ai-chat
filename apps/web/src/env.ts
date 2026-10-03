@@ -29,6 +29,7 @@ export const env = createEnv({
    */
   client: {
     VITE_CONVEX_URL: z.string(),
+    VITE_ENABLE_VERCEL_ANALYTICS: z.enum(["true", "false"]).default("false"),
 
     VITE_AXIOM_TOKEN: z.string(),
     VITE_AXIOM_DATASET: z.string(),

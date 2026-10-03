@@ -35,6 +35,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { DefaultCatchBoundary } from "@/components/default-catch-boundary";
 import { DefaultNotFoundBoundary } from "@/components/default-not-found-boundary";
 import { Toaster } from "@/components/ui/toast";
+import { env } from "@/env";
 
 import {
   applyTypography,
@@ -207,7 +208,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
         <Toaster />
 
-        {import.meta.env.PROD && (
+        {import.meta.env.PROD && env.VITE_ENABLE_VERCEL_ANALYTICS === "true" && (
           <>
             <Analytics basePath="/api/vercel" />
             <SpeedInsights basePath="/api/vercel" />

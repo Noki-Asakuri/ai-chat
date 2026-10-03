@@ -42,7 +42,7 @@ An advanced AI chat application with streaming responses, thread organization, a
 - **Statistics dashboard**: activity calendar, model usage ranking, thread ranking, profile usage ranking.
 - **Observability**:
   - Axiom logging
-  - Vercel Analytics + Speed Insights (enabled in production)
+  - Vercel Analytics + Speed Insights (opt-in for production)
 
 ## Architecture (high level)
 
@@ -132,6 +132,12 @@ Client-side (must be prefixed with `VITE_`):
 - `VITE_API_ENDPOINT` (base URL for the Hono server; see below)
 - `VITE_PUBLIC_ASSET_BASE_URL`
 - `VITE_RAW_FILE_BASE_URL`
+- `VITE_ENABLE_VERCEL_ANALYTICS` (optional, `true` or `false`; defaults to `false`)
+
+To enable Vercel Analytics and Speed Insights on Vercel, set
+`VITE_ENABLE_VERCEL_ANALYTICS=true` before building the web app and enable both
+services in your Vercel project. Both integrations only run in production. Leave
+the flag unset or set it to `false` to disable them, including when self-hosting.
 
 #### Dedicated API server env (`apps/server/src/env.ts`)
 
