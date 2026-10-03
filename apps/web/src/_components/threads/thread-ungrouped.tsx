@@ -44,7 +44,7 @@ export function UngroupedThreadGroup({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-slot="thread-ungrouped-list">
-      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+      <div className="flex min-h-0 flex-1 flex-col gap-1 scrollbar-gutter-stable overflow-y-auto">
         {pinnedThreads.map((thread) => (
           <ThreadItem key={thread._id} thread={thread} now={now} />
         ))}
@@ -72,7 +72,7 @@ export function UngroupedThreadGroup({
             <ChevronRightIcon className="transition-transform group-data-panel-open:rotate-90" />
           </CollapsibleTrigger>
 
-          <CollapsibleContent className="flex min-h-0 flex-col overflow-y-auto [&[hidden]:not([hidden='until-found'])]:hidden">
+          <CollapsibleContent className="flex min-h-0 flex-col scrollbar-gutter-stable overflow-y-auto [&[hidden]:not([hidden='until-found'])]:hidden">
             {settledThreads.map((thread) => (
               <ThreadItem key={thread._id} thread={thread} now={now} />
             ))}

@@ -421,7 +421,7 @@
 
 @layer base {
   * {
-    @apply scrollbar-thin scrollbar-thumb-ring scrollbar-track-transparent scrollbar-gutter-both border-border outline-ring/50;
+    @apply scrollbar-thin scrollbar-thumb-ring scrollbar-track-transparent border-border outline-ring/50;
   }
 
   *::-webkit-scrollbar {

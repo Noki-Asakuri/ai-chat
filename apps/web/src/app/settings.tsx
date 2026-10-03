@@ -59,7 +59,7 @@ function AuthLayout() {
       <main className="relative h-svh min-w-0 flex-1 overflow-hidden border-x bg-background">
         <SettingsTopBar />
 
-        <div data-models-scroll-container className="h-full overflow-y-auto pt-12">
+        <div data-models-scroll-container className="h-full scrollbar-gutter-both overflow-y-auto pt-12">
           <div
             data-route-transition-scope="settings-content"
             className="mx-auto flex min-h-full w-full max-w-7xl flex-col px-4 pb-8 sm:px-6 lg:px-8"
