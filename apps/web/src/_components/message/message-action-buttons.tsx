@@ -216,62 +216,70 @@ function MobileMessageActionsMenu({
 
   return (
     <div className="lg:hidden">
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-10 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150"
-              aria-label="Message actions"
-              title="Message actions"
+      <DeleteButton menu message={message}>
+        {(deleteButton, dialogOpen) => (
+          <DropdownMenu
+            onOpenChange={(nextOpen, eventDetails) => {
+              if (!nextOpen && dialogOpen) eventDetails.cancel();
+            }}
+          >
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-10 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150"
+                  aria-label="Message actions"
+                  title="Message actions"
+                >
+                  <EllipsisIcon />
+                </Button>
+              }
+            />
+
+            <DropdownMenuContent
+              align={message.role === "user" ? "end" : "start"}
+              className="w-48 bg-card p-1"
+              side="top"
+              sideOffset={8}
             >
-              <EllipsisIcon />
-            </Button>
-          }
-        />
+              <MenuArrow className="fill-card" />
 
-        <DropdownMenuContent
-          align={message.role === "user" ? "end" : "start"}
-          className="w-48 bg-card p-1"
-          side="top"
-          sideOffset={8}
-        >
-          <MenuArrow className="fill-card" />
+              <DropdownMenuGroup>
+                {isFinished && (
+                  <DropdownMenuItem disabled={copyPending} onClick={handleCopyMessage}>
+                    <CopyIcon />
+                    Copy message
+                  </DropdownMenuItem>
+                )}
 
-          <DropdownMenuGroup>
-            {isFinished && (
-              <DropdownMenuItem disabled={copyPending} onClick={handleCopyMessage}>
-                <CopyIcon />
-                Copy message
-              </DropdownMenuItem>
-            )}
+                {isFinished && message.role === "assistant" && (
+                  <DropdownMenuItem
+                    disabled={message.status === "pending" || message.status === "streaming"}
+                    onClick={() => {
+                      void branchThread(message._id);
+                    }}
+                  >
+                    <SplitIcon />
+                    Branch off at this message
+                  </DropdownMenuItem>
+                )}
 
-            {isFinished && message.role === "assistant" && (
-              <DropdownMenuItem
-                disabled={message.status === "pending" || message.status === "streaming"}
-                onClick={() => {
-                  void branchThread(message._id);
-                }}
-              >
-                <SplitIcon />
-                Branch off at this message
-              </DropdownMenuItem>
-            )}
+                {isFinished && canRetry && retryUserMessageId && (
+                  <DropdownMenuItem disabled={retry.isPending} onClick={handleRetryMessage}>
+                    <RefreshCcwIcon />
+                    Retry message
+                  </DropdownMenuItem>
+                )}
 
-            {isFinished && canRetry && retryUserMessageId && (
-              <DropdownMenuItem disabled={retry.isPending} onClick={handleRetryMessage}>
-                <RefreshCcwIcon />
-                Retry message
-              </DropdownMenuItem>
-            )}
-
-            {isFinished && <DeleteButton menu message={message} />}
-            <EditButton menu message={message} />
-            <DebugButton menu messageId={message._id} />
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+                {isFinished && deleteButton}
+                <EditButton menu message={message} />
+                <DebugButton menu messageId={message._id} />
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </DeleteButton>
 
       <CancelledRetryDialog
         open={retry.confirmationOpen}
@@ -389,8 +397,17 @@ function EditButton({ menu = false, message }: { menu?: boolean; message: ChatMe
   );
 }
 
-function DeleteButton({ menu = false, message }: { menu?: boolean; message: ChatMessage }) {
+function DeleteButton({
+  menu = false,
+  message,
+  children,
+}: {
+  menu?: boolean;
+  message: ChatMessage;
+  children?: (deleteButton: React.ReactNode, dialogOpen: boolean) => React.ReactNode;
+}) {
   const [pending, startTransition] = React.useTransition();
+  const menuItemRef = React.useRef<HTMLDivElement>(null);
 
   const [open, setOpen] = React.useState(false);
   const [deleteAttachments, setDeleteAttachments] = React.useState(false);
@@ -559,7 +576,7 @@ function DeleteButton({ menu = false, message }: { menu?: boolean; message: Chat
   const deleteButtonSrLabel =
     effectiveDeleteScope === "assistantVariantOnly" ? "Delete response variant" : "Delete message and below";
 
-  if (isStreaming) return null;
+  if (isStreaming) return children?.(null, false) ?? null;
 
   function handleOpenChange(nextOpen: boolean): void {
     setOpen(nextOpen);
@@ -617,29 +634,37 @@ function DeleteButton({ menu = false, message }: { menu?: boolean; message: Chat
     });
   }
 
+  const deleteButton = menu ? (
+    <DropdownMenuItem
+      ref={menuItemRef}
+      closeOnClick={false}
+      disabled={disabled}
+      onClick={() => handleOpenChange(true)}
+      variant="destructive"
+    >
+      <Trash2Icon />
+      {deleteButtonTitle}
+    </DropdownMenuItem>
+  ) : (
+    <ButtonWithTip
+      variant="ghost"
+      side="bottom"
+      className="size-8"
+      onClick={() => handleOpenChange(true)}
+      disabled={disabled}
+      title={deleteButtonTitle}
+    >
+      <Trash2Icon className="size-4" />
+      <span className="sr-only">{deleteButtonSrLabel}</span>
+    </ButtonWithTip>
+  );
+
   return (
     <>
-      {menu ? (
-        <DropdownMenuItem disabled={disabled} onClick={() => handleOpenChange(true)} variant="destructive">
-          <Trash2Icon />
-          {deleteButtonTitle}
-        </DropdownMenuItem>
-      ) : (
-        <ButtonWithTip
-          variant="ghost"
-          side="bottom"
-          className="size-8"
-          onClick={() => handleOpenChange(true)}
-          disabled={disabled}
-          title={deleteButtonTitle}
-        >
-          <Trash2Icon className="size-4" />
-          <span className="sr-only">{deleteButtonSrLabel}</span>
-        </ButtonWithTip>
-      )}
+      {children ? children(deleteButton, open) : deleteButton}
 
       <AlertDialog open={open} onOpenChange={handleOpenChange}>
-        <AlertDialogContent className="gap-3 p-4">
+        <AlertDialogContent className="gap-3 p-4" finalFocus={() => menuItemRef.current}>
           <AlertDialogHeader className="gap-1">
             <AlertDialogMedia className="bg-amber-500/15 text-amber-400">
               <TriangleAlertIcon className="size-5" />
