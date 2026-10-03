@@ -215,7 +215,9 @@ chatRouter.post("/chat", async function (ctx) {
       messages: validatedBody.modelMessages,
     });
 
-    void generateNewThreadTitleAndSave(convexClient, validatedBody);
+    if (!validatedBody.retryAttemptId) {
+      void generateNewThreadTitleAndSave(convexClient, validatedBody);
+    }
 
     const uiMessageStream = toUIMessageStream({
       stream: stream.stream,
