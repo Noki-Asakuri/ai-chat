@@ -47,9 +47,6 @@ export type ChatStore = {
   textareaHeight: number;
   setTextareaHeight: (height: number) => void;
 
-  lastUserMessageHeight?: number | null;
-  setMessageHeight: (height?: number | null) => void;
-
   isDragOver: boolean;
   setIsDragOver: (isDragOver: boolean) => void;
 };
@@ -154,9 +151,6 @@ export const useChatStore = create<ChatStore>()(
       // Default: 147px + 8px (positon bottom) + 16px (padding above)
       textareaHeight: 147 + 8 + 16,
       setTextareaHeight: (height) => set({ textareaHeight: Math.max(height, 147) + 8 + 16 }),
-
-      lastUserMessageHeight: null,
-      setMessageHeight: (height) => set({ lastUserMessageHeight: height }),
 
       isDragOver: false,
       setIsDragOver: (isDragOver) => set({ isDragOver }),

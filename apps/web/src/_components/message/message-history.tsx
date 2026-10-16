@@ -1,5 +1,7 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { ChevronDownIcon, Loader2Icon } from "lucide-react";
+import { domAnimation, LazyMotion, m, useReducedMotion } from "motion/react";
+import { useState } from "react";
 
 import {
   MessageScroller,
@@ -21,6 +23,8 @@ import {
 import { useWindowEvent } from "@/lib/hooks/use-window-event";
 import { useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
+
+const AnimatedMessageScrollerItem = m.create(MessageScrollerItem);
 
 type MessageHistoryProps = {
   readOnly?: boolean;
@@ -71,11 +75,7 @@ export function MessageHistory({
                 {isLoadingOlder ? "Loading earlier messages..." : "Load earlier messages"}
               </Button>
             )}
-            <Messages
-              readOnly={readOnly}
-              showUserAvatar={showUserAvatar}
-              topPaddingPx={topPaddingPx}
-            />
+            <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />
           </MessageScrollerContent>
         </MessageScrollerViewport>
 
@@ -114,25 +114,38 @@ function MessageScrollerEvents() {
 function Messages({
   readOnly = false,
   showUserAvatar = true,
-  topPaddingPx,
 }: {
   readOnly?: boolean;
   showUserAvatar?: boolean;
-  topPaddingPx: number;
 }) {
   const messages = useMessageStore((state) => state.messageIds);
+  const [entrance, setEntrance] = useState({ messages, firstNewIndex: messages.length });
 
-  return messages.map((messageId, index) => (
-    <MessageHistoryItem
-      key={messageId}
-      messageId={messageId}
-      index={index}
-      total={messages.length}
-      readOnly={readOnly}
-      showUserAvatar={showUserAvatar}
-      topPaddingPx={topPaddingPx}
-    />
-  ));
+  if (messages !== entrance.messages) {
+    const previousLastId = entrance.messages.at(-1);
+    const previousLastIndex = previousLastId ? messages.indexOf(previousLastId) : -1;
+    setEntrance({
+      messages,
+      firstNewIndex:
+        entrance.messages.length === 0 ? 0 : previousLastIndex < 0 ? messages.length : previousLastIndex + 1,
+    });
+  }
+
+  return (
+    <LazyMotion features={domAnimation}>
+      {messages.map((messageId, index) => (
+        <MessageHistoryItem
+          key={messageId}
+          messageId={messageId}
+          index={index}
+          total={messages.length}
+          readOnly={readOnly}
+          showUserAvatar={showUserAvatar}
+          animateEntrance={index >= entrance.firstNewIndex}
+        />
+      ))}
+    </LazyMotion>
+  );
 }
 
 type MessageHistoryItemProps = {
@@ -141,15 +154,30 @@ type MessageHistoryItemProps = {
   total: number;
   readOnly: boolean;
   showUserAvatar: boolean;
-  topPaddingPx: number;
+  animateEntrance: boolean;
 };
 
-function MessageHistoryItem(props: MessageHistoryItemProps) {
-  const role = useMessageStore((state) => state.messagesById[props.messageId]?.role);
+function MessageHistoryItem({ animateEntrance, ...props }: MessageHistoryItemProps) {
+  const prefersReducedMotion = useReducedMotion();
 
   return (
-    <MessageScrollerItem messageId={props.messageId} scrollAnchor={role === "user"}>
+    <AnimatedMessageScrollerItem
+      messageId={props.messageId}
+      initial={
+        prefersReducedMotion || !animateEntrance
+          ? false
+          : { height: 0, marginTop: "-1rem", opacity: 0, y: 8, overflow: "hidden" }
+      }
+      animate={{
+        height: "auto",
+        marginTop: 0,
+        opacity: 1,
+        y: 0,
+        transitionEnd: { overflow: "visible" },
+      }}
+      transition={{ duration: prefersReducedMotion ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] }}
+    >
       <Message {...props} />
-    </MessageScrollerItem>
+    </AnimatedMessageScrollerItem>
   );
 }

@@ -54,6 +54,11 @@ function ChatHistory() {
   const olderCursorRef = useRef<number | null | undefined>(undefined);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState<boolean>();
+  const isHistoryReady = useMessageStore(
+    (state) =>
+      state.currentThreadId === threadId &&
+      (state.threadsById[threadId]?.latestAppliedSyncToken ?? 0) > 0,
+  );
 
   const { autoResumeStream } = useAutoResumeStream();
 
@@ -137,6 +142,9 @@ function ChatHistory() {
       }
     }
   }, [data, dataUpdatedAt]);
+
+  // Mount entrance animations after saved history has reached the message store.
+  if (!isHistoryReady) return null;
 
   return (
     <MessageHistory

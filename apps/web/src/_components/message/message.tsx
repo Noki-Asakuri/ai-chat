@@ -1,8 +1,6 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { BanIcon } from "lucide-react";
-import { useEffect, useRef } from "react";
-import type { CSSProperties } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { MessageContent } from "./message-content";
@@ -10,7 +8,7 @@ import { MessageFooter } from "./message-footer";
 
 import { ChatEditTextarea } from "../chat-textarea/chat-edit-textarea";
 
-import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
+import { useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
 
@@ -20,7 +18,6 @@ type MessageProps = {
   total: number;
   readOnly?: boolean;
   showUserAvatar?: boolean;
-  topPaddingPx: number;
 };
 
 export function Message({
@@ -29,63 +26,12 @@ export function Message({
   total,
   readOnly = false,
   showUserAvatar = true,
-  topPaddingPx,
 }: MessageProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const message = useMessageStore(useShallow((state) => state.messagesById[messageId]!));
   const isLast = isLastMessage(message.role, index, total);
 
-  const { lastUserMessageHeight, textareaHeight } = useChatStore(
-    useShallow((state) => ({
-      lastUserMessageHeight: state.lastUserMessageHeight ?? 114,
-      textareaHeight: state.textareaHeight,
-    })),
-  );
-
-  const userMessageHeight =
-    lastUserMessageHeight > window.innerHeight ? 114 : lastUserMessageHeight;
-
-  const minHeight =
-    isLast && message.role === "assistant"
-      ? `${window.innerHeight - topPaddingPx - textareaHeight - userMessageHeight - 16}px`
-      : "auto";
-
-  const containerStyle: CSSProperties = { minHeight };
-
-  // Keep assistant message min-height in sync with live changes to the most recent user message
-  useEffect(() => {
-    // Only the last user message should drive `lastUserMessageHeight`.
-    if (message.role !== "user" || !isLast || !containerRef.current) return undefined;
-
-    const element = containerRef.current;
-    let lastReportedHeight = -1;
-
-    function reportHeight(nextHeight: number): void {
-      if (nextHeight === lastReportedHeight) return;
-
-      lastReportedHeight = nextHeight;
-      chatStoreActions.setMessageHeight(nextHeight);
-    }
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        reportHeight(Math.round(entry.contentRect.height));
-      }
-    });
-
-    // init and observe
-    reportHeight(Math.round(element.getBoundingClientRect().height));
-    resizeObserver.observe(element);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [message.role, isLast]);
-
   return (
     <div
-      ref={containerRef}
-      style={containerStyle}
       data-slot="message"
       className="group flex flex-col gap-2"
       key={message._id}
@@ -94,7 +40,6 @@ export function Message({
       data-role={message.role}
       data-model={message.metadata?.model.request}
       data-id={message._id}
-      data-height={lastUserMessageHeight}
       data-effort={message.metadata?.modelParams.effort}
       data-web-search={message.metadata?.modelParams.webSearch ?? false}
     >
