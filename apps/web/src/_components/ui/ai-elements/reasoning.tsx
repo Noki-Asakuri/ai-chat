@@ -2,10 +2,9 @@
 /* oxlint-disable react/jsx-no-constructed-context-values -- React Compiler stabilizes provider values. */
 
 import type { Collapsible } from "@base-ui/react/collapsible";
-import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import { BrainIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import { createContext, memo, use, useEffect, useRef, useState } from "react";
+import { createContext, memo, use, useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { StreamDownWrapper } from "@/components/message/message-markdown";
 import {
@@ -56,11 +55,18 @@ export const Reasoning = memo(
     children,
     ...props
   }: ReasoningProps) => {
-    const [isOpen, setIsOpen] = useControllableState({
-      prop: open,
-      defaultProp: isStreaming || defaultOpen,
-      onChange: onOpenChange,
-    });
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(isStreaming || defaultOpen);
+    const isOpen = open ?? uncontrolledOpen;
+
+    const setIsOpen = (newOpen: boolean) => {
+      if (open === undefined) {
+        setUncontrolledOpen(newOpen);
+      }
+      if (newOpen !== isOpen) {
+        onOpenChange?.(newOpen);
+      }
+    };
+    const setAutomaticOpen = useEffectEvent(setIsOpen);
 
     const hasUserToggled = useRef(false);
     const startTime = useRef<number | null>(null);
@@ -72,16 +78,16 @@ export const Reasoning = memo(
           startTime.current = Date.now();
         }
         if (!hasUserToggled.current) {
-          setIsOpen(true);
+          setAutomaticOpen(true);
         }
       } else if (startTime.current !== null) {
         setMeasuredDuration(Math.round((Date.now() - startTime.current) / 1000));
         startTime.current = null;
         if (!hasUserToggled.current) {
-          setIsOpen(false);
+          setAutomaticOpen(false);
         }
       }
-    }, [isStreaming, setIsOpen]);
+    }, [isStreaming]);
 
     const handleOpenChange = (newOpen: boolean) => {
       hasUserToggled.current = true;
