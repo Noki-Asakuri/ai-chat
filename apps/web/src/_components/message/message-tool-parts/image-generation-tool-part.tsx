@@ -92,7 +92,7 @@ export function ImageGenerationToolPart({ part, isStreaming }: { part: ToolPart;
   const downloadName = `generated-image-${part.toolCallId}.webp`;
 
   return (
-    <div className="message-tool-part overflow-hidden rounded-md border bg-background/80">
+    <div className="message-tool-part overflow-hidden rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150">
       <div className="flex items-center gap-3 px-3 py-3">
         <ImageIcon aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
         <div className="min-w-0 grow">
