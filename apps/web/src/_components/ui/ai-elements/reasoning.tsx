@@ -1,13 +1,22 @@
 "use client";
 /* oxlint-disable react/jsx-no-constructed-context-values -- React Compiler stabilizes provider values. */
 
-import { Collapsible } from "@base-ui/react/collapsible";
+import type { Collapsible } from "@base-ui/react/collapsible";
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
-import { BrainIcon, ChevronDownIcon } from "lucide-react";
+import { BrainIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import { createContext, memo, use, useEffect, useState } from "react";
+import { createContext, memo, use, useEffect, useRef, useState } from "react";
 
 import { StreamDownWrapper } from "@/components/message/message-markdown";
+import {
+  Trace,
+  TraceCollapsible,
+  TraceCollapsibleContent,
+  TraceCollapsibleTrigger,
+  TraceIcon,
+  TraceLine,
+  TraceTitle,
+} from "@/components/ui/trace";
 
 import { cn } from "@/lib/utils";
 
@@ -15,6 +24,7 @@ type ReasoningContextValue = {
   isStreaming: boolean;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+  duration?: number;
 };
 
 const ReasoningContext = createContext<ReasoningContextValue | null>(null);
@@ -32,9 +42,8 @@ export type ReasoningProps = ComponentProps<typeof Collapsible.Root> & {
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  duration?: number;
 };
-
-const AUTO_CLOSE_DELAY = 1000;
 
 export const Reasoning = memo(
   ({
@@ -43,45 +52,56 @@ export const Reasoning = memo(
     open,
     defaultOpen = true,
     onOpenChange,
+    duration,
     children,
     ...props
   }: ReasoningProps) => {
     const [isOpen, setIsOpen] = useControllableState({
       prop: open,
-      defaultProp: defaultOpen,
+      defaultProp: isStreaming || defaultOpen,
       onChange: onOpenChange,
     });
 
-    const [hasAutoClosed, setHasAutoClosed] = useState(false);
+    const hasUserToggled = useRef(false);
+    const startTime = useRef<number | null>(null);
+    const [measuredDuration, setMeasuredDuration] = useState<number>();
 
-    // Auto-open when streaming starts, auto-close when streaming ends (once only)
     useEffect(() => {
-      if (defaultOpen && !isStreaming && isOpen && !hasAutoClosed) {
-        // Add a small delay before closing to allow user to see the content
-        const timer = setTimeout(() => {
+      if (isStreaming) {
+        if (startTime.current === null) {
+          startTime.current = Date.now();
+        }
+        if (!hasUserToggled.current) {
+          setIsOpen(true);
+        }
+      } else if (startTime.current !== null) {
+        setMeasuredDuration(Math.round((Date.now() - startTime.current) / 1000));
+        startTime.current = null;
+        if (!hasUserToggled.current) {
           setIsOpen(false);
-          setHasAutoClosed(true);
-        }, AUTO_CLOSE_DELAY);
-
-        return () => clearTimeout(timer);
+        }
       }
-      return undefined;
-    }, [isStreaming, isOpen, defaultOpen, setIsOpen, hasAutoClosed]);
+    }, [isStreaming, setIsOpen]);
 
     const handleOpenChange = (newOpen: boolean) => {
+      hasUserToggled.current = true;
       setIsOpen(newOpen);
     };
 
     return (
-      <ReasoningContext.Provider value={{ isStreaming, isOpen, setIsOpen }}>
-        <Collapsible.Root
-          className={cn("not-prose group", className)}
-          onOpenChange={handleOpenChange}
-          open={isOpen}
-          {...props}
-        >
-          {children}
-        </Collapsible.Root>
+      <ReasoningContext.Provider
+        value={{ isStreaming, isOpen, setIsOpen: handleOpenChange, duration: duration ?? measuredDuration }}
+      >
+        <Trace className="not-prose">
+          <TraceCollapsible
+            className={cn("group", className)}
+            onOpenChange={handleOpenChange}
+            open={isOpen}
+            {...props}
+          >
+            {children}
+          </TraceCollapsible>
+        </Trace>
       </ReasoningContext.Provider>
     );
   },
@@ -92,45 +112,32 @@ export type ReasoningTriggerProps = ComponentProps<typeof Collapsible.Trigger> &
   showArrow?: boolean;
 };
 
-const defaultGetThinkingMessage = (isStreaming: boolean) => {
-  if (isStreaming) {
-    return <span className="shimmer shimmer-duration-1000">Thinking...</span>;
-  }
-
-  return <p>Thought process</p>;
-};
-
 export const ReasoningTrigger = memo(
-  ({
-    className,
-    children,
-    getThinkingMessage = defaultGetThinkingMessage,
-    showArrow,
-    ...props
-  }: ReasoningTriggerProps) => {
-    const { isStreaming, isOpen } = useReasoning();
+  ({ className, children, getThinkingMessage, showArrow, ...props }: ReasoningTriggerProps) => {
+    const { isStreaming, duration } = useReasoning();
 
     return (
-      <Collapsible.Trigger
-        className={cn(
-          "flex w-full items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground",
-          className,
-        )}
+      <TraceCollapsibleTrigger
+        className={cn(!showArrow && "[&>[data-slot=trace-icon]]:hidden", className)}
         {...props}
       >
         {children ?? (
-          <>
-            <BrainIcon className="size-4" />
-            {getThinkingMessage(isStreaming)}
-
-            {showArrow && (
-              <ChevronDownIcon
-                className={cn("size-4 transition-transform", isOpen ? "rotate-180" : "rotate-0")}
-              />
-            )}
-          </>
+          <TraceLine status={isStreaming ? "running" : undefined}>
+            <TraceIcon>
+              <BrainIcon />
+            </TraceIcon>
+            <TraceTitle>
+              {getThinkingMessage
+                ? getThinkingMessage(isStreaming)
+                : isStreaming
+                  ? "Thinking"
+                  : duration === undefined
+                    ? "Thought"
+                    : `Thought for ${duration}s`}
+            </TraceTitle>
+          </TraceLine>
         )}
-      </Collapsible.Trigger>
+      </TraceCollapsibleTrigger>
     );
   },
 );
@@ -141,19 +148,12 @@ export type ReasoningContentProps = ComponentProps<typeof Collapsible.Panel> & {
 
 export const ReasoningContent = memo(({ className, children, ...props }: ReasoningContentProps) => {
   return (
-    <Collapsible.Panel
-      className={cn(
-        "mt-2 text-sm",
-        "text-muted-foreground outline-none group-data-open:animate-in group-data-open:slide-in-from-top-2 group-data-closed:animate-out group-data-closed:fade-out-0 group-data-closed:slide-out-to-top-2",
-        className,
-      )}
-      {...props}
-    >
+    <TraceCollapsibleContent className={cn("text-sm", className)} {...props}>
       {/* eslint-disable-next-line jsx-a11y/aria-role -- Streamdown uses role as a message-domain prop. */}
       <StreamDownWrapper className="w-full max-w-none" role="assistant">
         {children}
       </StreamDownWrapper>
-    </Collapsible.Panel>
+    </TraceCollapsibleContent>
   );
 });
 
