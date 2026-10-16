@@ -5,9 +5,9 @@
   "dependencies": {
     "@ai-chat/shared": "workspace:*",
     "@convex-dev/action-retrier": "^0.3.1",
-    "@convex-dev/crons": "^0.2.2",
-    "@convex-dev/migrations": "^0.3.6",
-    "@convex-dev/r2": "^0.10.2",
+    "@convex-dev/crons": "^0.2.3",
+    "@convex-dev/migrations": "^0.3.7",
+    "@convex-dev/r2": "^0.10.4",
     "@convex-dev/workos-authkit": "^0.2.10",
     "convex": "catalog:backend",
     "convex-helpers": "catalog:backend"
@@ -16,11 +16,11 @@
     "@edge-runtime/vm": "^5.0.0",
     "@types/node": "catalog:tooling",
     "@typescript/native-preview": "catalog:tooling",
-    "convex-test": "^0.0.60",
+    "convex-test": "^0.0.62",
     "oxlint": "catalog:tooling",
     "oxlint-tsgolint": "catalog:tooling",
     "typescript": "catalog:tooling",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.4"
   },
   "scripts": {
     "dev": "convex dev --typecheck disable",
