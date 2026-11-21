@@ -16,6 +16,7 @@ import { ThreadDialogs } from "./thread-dialogs";
 import { ThreadListToolbar } from "./thread-list-toolbar";
 import { SettledThreads } from "./settled-threads";
 import { ActiveThreads } from "./active-threads";
+import { ROW_SCALE, TOOLBAR_BUTTON, TOOLBAR_SCALE } from "./sidebar-scale";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
@@ -38,8 +39,8 @@ function ThreadListFallback() {
       <span className="sr-only">Loading conversations</span>
 
       <div aria-hidden="true" className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center gap-1.5 px-2 pb-1.5">
-          <InputGroup className="min-w-0 flex-1 rounded-md border-transparent bg-input/30 shadow-none">
+        <div className={cn(TOOLBAR_SCALE, "flex items-center gap-1 px-2 pb-2")}>
+          <InputGroup className="h-(--tb-size) min-w-0 flex-1 rounded-lg border-transparent bg-input/30 shadow-none [&_svg]:size-(--tb-icon)!">
             <InputGroupAddon>
               <SearchIcon />
             </InputGroupAddon>
@@ -48,20 +49,20 @@ function ThreadListFallback() {
               type="search"
               placeholder="Search"
               aria-label="Search threads in active group"
-              className="font-mono text-sm placeholder:text-muted-foreground"
+              className="h-full text-sm placeholder:text-muted-foreground"
               disabled
             />
           </InputGroup>
 
-          <Button size="icon" variant="ghost" aria-label="Select group" disabled>
+          <Button size="icon" variant="ghost" className={TOOLBAR_BUTTON} aria-label="Select group" disabled>
             <FolderIcon />
           </Button>
 
-          <Button size="icon" variant="ghost" aria-label="Create group" disabled>
+          <Button size="icon" variant="ghost" className={TOOLBAR_BUTTON} aria-label="Create group" disabled>
             <FolderPlusIcon />
           </Button>
 
-          <Button size="icon" variant="ghost" aria-label="New chat" disabled>
+          <Button size="icon" variant="ghost" className={TOOLBAR_BUTTON} aria-label="New chat" disabled>
             <SquarePenIcon />
           </Button>
         </div>
@@ -107,17 +108,16 @@ function ThreadSkeleton({
     | "w-[88%]";
 }) {
   return (
-    <div className="flex flex-col gap-2 px-2 py-2">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <Skeleton className="size-3.5 shrink-0 rounded-full" />
-          <Skeleton className="h-3 w-20" />
-        </div>
-
-        <Skeleton className="h-3 w-10 shrink-0" />
+    <div className={cn(ROW_SCALE, "flex shrink-0 flex-col px-(--row-px) py-(--row-py)")}>
+      <div className="flex h-(--row-line) items-center justify-between gap-3">
+        <Skeleton className={cn("h-[0.875em] text-sm", titleWidth)} />
+        <Skeleton className="h-[0.75em] w-8 shrink-0 text-xs" />
       </div>
 
-      <Skeleton className={cn("h-3.5", titleWidth)} />
+      <div className="mt-(--row-stack) flex h-(--row-line) items-center gap-(--row-gap) text-xs">
+        <Skeleton className="size-(--row-icon) shrink-0 rounded-full" />
+        <Skeleton className="h-[0.75em] w-20" />
+      </div>
     </div>
   );
 }

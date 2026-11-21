@@ -17,8 +17,10 @@ import {
 } from "../ui/dropdown-menu";
 
 import { NewChatButton } from "./new-chat-button";
+import { TOOLBAR_BUTTON, TOOLBAR_SCALE } from "./sidebar-scale";
 
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
+import { cn } from "@/lib/utils";
 
 type ThreadListToolbarProps = {
   groups: (typeof api.functions.groups.listGroups)["_returnType"]["groups"];
@@ -35,8 +37,8 @@ export function ThreadListToolbar({ groups, searchQuery, onSearchChange }: Threa
   );
 
   return (
-    <div className="flex items-center gap-1.5 px-2 pb-1.5">
-      <InputGroup className="min-w-0 flex-1 rounded-md border-transparent bg-input/30 shadow-none">
+    <div className={cn(TOOLBAR_SCALE, "flex items-center gap-1 px-2 pb-2")}>
+      <InputGroup className="h-(--tb-size) min-w-0 flex-1 rounded-lg border-transparent bg-input/30 shadow-none [&_svg]:size-(--tb-icon)!">
         <InputGroupAddon>
           <SearchIcon />
         </InputGroupAddon>
@@ -47,7 +49,7 @@ export function ThreadListToolbar({ groups, searchQuery, onSearchChange }: Threa
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search"
           aria-label="Search threads in active group"
-          className="font-mono text-sm placeholder:text-muted-foreground"
+          className="h-full text-sm placeholder:text-muted-foreground"
         />
       </InputGroup>
 
@@ -61,6 +63,7 @@ export function ThreadListToolbar({ groups, searchQuery, onSearchChange }: Threa
             <Button
               size="icon"
               variant="ghost"
+              className={TOOLBAR_BUTTON}
               aria-label={`Select group, current group: ${activeGroup?.title ?? "Ungrouped"}`}
               title={activeGroup?.title ?? "Ungrouped"}
             >
@@ -127,6 +130,7 @@ function CreateGroupButton() {
       <Button
         size="icon"
         variant="ghost"
+        className={TOOLBAR_BUTTON}
         aria-label="Create group"
         title="Create group"
         onClick={() => setOpen(true)}

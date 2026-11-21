@@ -19,6 +19,8 @@ import {
 import { Kbd } from "../ui/kbd";
 import { Separator } from "../ui/separator";
 
+import { TOOLBAR_BUTTON } from "./sidebar-scale";
+
 import { threadStoreActions } from "@/lib/store/thread-store";
 import type { api } from "@ai-chat/backend/convex/_generated/api";
 
@@ -42,6 +44,7 @@ export function NewChatButton({ groups }: NewChatButtonProps) {
       <Button
         size="icon"
         variant="ghost"
+        className={TOOLBAR_BUTTON}
         aria-label="New chat"
         title="New chat"
         onClick={() => setNewChatOpen(true)}

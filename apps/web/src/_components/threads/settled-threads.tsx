@@ -8,6 +8,7 @@ import { Button } from "../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { Separator } from "../ui/separator";
 
+import { ROW_SCALE } from "./sidebar-scale";
 import { ThreadItem } from "./thread-item";
 
 import { cn } from "@/lib/utils";
@@ -42,7 +43,11 @@ export function SettledThreads({
   return (
     settledThreads.length > 0 && (
       <Collapsible
-        className={cn("mt-auto flex min-h-0 flex-col gap-1 pt-1", !expandedSettled && "max-h-1/2 shrink-0")}
+        className={cn(
+          ROW_SCALE,
+          "mt-auto flex min-h-0 flex-col gap-0.5 pt-3",
+          !expandedSettled && "max-h-1/2 shrink-0",
+        )}
         onOpenChange={() => onExpandedChange(false)}
       >
         <CollapsibleTrigger
@@ -50,16 +55,16 @@ export function SettledThreads({
             <Button
               variant="ghost"
               size="sm"
-              className="group w-full justify-start gap-2 px-2 text-muted-foreground"
+              className="group h-auto w-full justify-start gap-2 px-(--row-px) py-1 text-xs font-medium text-muted-foreground hover:text-sidebar-foreground"
             />
           }
         >
           <span>Settled</span>
           <Separator className="min-w-4 flex-1" />
-          <ChevronRightIcon className="transition-transform group-data-panel-open:rotate-90 motion-reduce:transition-none" />
+          <ChevronRightIcon className="size-(--row-icon) transition-transform group-data-panel-open:rotate-90 motion-reduce:transition-none" />
         </CollapsibleTrigger>
 
-        <CollapsibleContent className="h-(--collapsible-panel-height) min-h-0 scrollbar-gutter-stable overflow-y-auto transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none [&[hidden]:not([hidden='until-found'])]:hidden">
+        <CollapsibleContent className="flex h-(--collapsible-panel-height) min-h-0 scrollbar-gutter-stable flex-col gap-0.5 overflow-y-auto transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none [&[hidden]:not([hidden='until-found'])]:hidden">
           {settledThreads.map((thread) => (
             <ThreadItem key={thread._id} thread={thread} now={now} />
           ))}
@@ -68,14 +73,14 @@ export function SettledThreads({
             <Button
               variant="ghost"
               size="sm"
-              className="w-full justify-start px-2 text-muted-foreground"
+              className="h-auto w-full shrink-0 justify-start px-(--row-px) py-1.5 text-xs text-muted-foreground hover:text-sidebar-foreground"
               disabled={status === "LoadingMore"}
               onClick={() => {
                 onExpandedChange(true);
                 loadMore(SETTLED_THREADS_PAGE_SIZE);
               }}
             >
-              <PlusIcon data-icon="inline-start" />
+              <PlusIcon data-icon="inline-start" className="size-(--row-icon)" />
               {status === "LoadingMore" ? "Loading..." : "Show more"}
             </Button>
           )}

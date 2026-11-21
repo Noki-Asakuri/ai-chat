@@ -43,6 +43,8 @@ import { regenerateThreadTitle } from "@/lib/trpc/client";
 import type { Thread } from "@/lib/types";
 import { cn, toUUID, tryCatch } from "@/lib/utils";
 
+import { ROW_ICON, ROW_SCALE } from "./sidebar-scale";
+
 const convexClient = getConvexReactClient();
 
 type ThreadItemProps = {
@@ -85,18 +87,34 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
     (thread.lastViewedAt === undefined || thread.updatedAt > thread.lastViewedAt);
   const modelData = tryGetModelData(thread.latestModel);
   const modelName = modelData?.display.unique ?? modelData?.display.name ?? thread.latestModel;
+  const providerIcon = modelData ? (
+    <Icons.provider provider={modelData.provider} aria-hidden="true" className={ROW_ICON} />
+  ) : (
+    <Icons.unknown aria-hidden="true" className={ROW_ICON} />
+  );
   const threadUpdatedTime = (
     <time
-      className={cn(
-        isSettled &&
-          "shrink-0 text-xs text-muted-foreground group-focus-within/thread:opacity-0 group-hover/thread:opacity-0",
-      )}
+      className="tabular-nums"
       dateTime={new Date(thread.updatedAt).toISOString()}
       title={new Date(thread.updatedAt).toLocaleString()}
     >
       {formatRelativeTime(thread.updatedAt, now)}
     </time>
   );
+  const hasHoverAction = isSettled || canSettle;
+  // Sized explicitly: the Button's own default icon size would otherwise win over the row's scale.
+  const hoverActionIcon = isSettled ? (
+    <Undo2Icon aria-hidden="true" className={ROW_ICON} />
+  ) : (
+    <CircleCheckIcon aria-hidden="true" className={ROW_ICON} />
+  );
+  const hoverActionLabel = isSettled
+    ? "Unsettle"
+    : isUpdatingSettled
+      ? "Settling"
+      : settleArmed
+        ? "Confirm"
+        : "Settle";
 
   function toggleThreadSettled(inline = false): void {
     if (!isSettled && preferences.confirmations?.settle) {
@@ -131,59 +149,61 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
       title={thread.title}
       to="/threads/$threadId"
       params={{ threadId: toUUID(thread._id) }}
-      className={cn("flex w-full min-w-0 px-2 py-2", isSettled ? "items-center gap-2" : "flex-col gap-1.5")}
+      className={cn(
+        "flex w-full min-w-0 flex-col rounded-[inherit] px-(--row-px) py-(--row-py) outline-none",
+        "focus-visible:ring-2 focus-visible:ring-sidebar-ring/60 focus-visible:ring-inset",
+      )}
     >
-      {isSettled ? (
-        <>
-          {modelData ? (
-            <Icons.provider provider={modelData.provider} className="size-3.5 shrink-0" />
-          ) : (
-            <Icons.unknown className="size-3.5 shrink-0" />
+      <span className="flex h-(--row-line) min-w-0 items-center gap-(--row-gap) text-sm">
+        {thread.branchedFrom && (
+          <GitBranchIcon
+            aria-label="Branched thread"
+            className={cn(ROW_ICON, "rotate-180 text-muted-foreground")}
+          />
+        )}
+        {isSettled && providerIcon}
+        <span className="min-w-0 flex-1 truncate font-medium">{thread.title}</span>
+
+        {/* While the row is hovered or focused, an invisible copy of the action takes the meta's place,
+            so the title truncates to make room instead of running under the action. */}
+        {hasHoverAction && (
+          <span
+            aria-hidden="true"
+            className="invisible hidden shrink-0 items-center gap-(--row-gap) border border-transparent px-(--row-gap) text-xs font-medium group-focus-within/thread:flex group-hover/thread:flex"
+          >
+            {hoverActionIcon}
+            {hoverActionLabel}
+          </span>
+        )}
+        <span
+          className={cn(
+            "flex shrink-0 items-center gap-(--row-gap) text-xs text-muted-foreground",
+            // Visually hidden rather than display:none, so screen readers still hear "Done" or the time.
+            hasHoverAction && "group-focus-within/thread:sr-only group-hover/thread:sr-only",
           )}
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">{thread.title}</span>
-          {threadUpdatedTime}
-        </>
-      ) : (
-        <>
-          <span className="flex w-full min-w-0 items-center justify-between gap-2">
-            <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-              {modelData ? (
-                <Icons.provider provider={modelData.provider} className="size-3.5 shrink-0" />
-              ) : (
-                <Icons.unknown className="size-3.5 shrink-0" />
-              )}
-              <span className="truncate">{modelName}</span>
+        >
+          {thread.pinned && <PinIcon aria-label="Pinned" className={ROW_ICON} />}
+          {isStreaming ? (
+            <span className="flex items-center gap-(--row-gap) font-medium text-primary">
+              <Loader2Icon aria-hidden="true" className={cn(ROW_ICON, "animate-spin")} />
+              Working
             </span>
-
-            <span
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground",
-                canSettle && "group-focus-within/thread:opacity-0 group-hover/thread:opacity-0",
-              )}
-            >
-              {thread.pinned && <PinIcon className="size-3.5" aria-hidden="true" />}
-
-              {isStreaming ? (
-                <span className="flex items-center gap-1 font-medium text-primary">
-                  <Loader2Icon className="size-3.5 animate-spin" />
-                  Working
-                </span>
-              ) : hasUnreadCompletion ? (
-                <span className="flex items-center gap-1 font-medium text-success">
-                  <CircleCheckIcon className="size-3.5" />
-                  Done
-                </span>
-              ) : (
-                threadUpdatedTime
-              )}
+          ) : hasUnreadCompletion ? (
+            <span className="flex items-center gap-(--row-gap) font-medium text-success">
+              <CircleCheckIcon aria-hidden="true" className={ROW_ICON} />
+              Done
             </span>
-          </span>
+          ) : (
+            threadUpdatedTime
+          )}
+        </span>
+      </span>
 
-          <span className="flex min-w-0 items-center gap-1.5">
-            {thread.branchedFrom && <GitBranchIcon className="size-3.5 shrink-0 rotate-180" />}
-            <span className="truncate text-sm font-medium">{thread.title}</span>
-          </span>
-        </>
+      {!isSettled && (
+        <span className="mt-(--row-stack) flex min-w-0 items-center gap-(--row-gap) text-xs text-muted-foreground">
+          {providerIcon}
+          <span className="truncate">{modelName}</span>
+        </span>
       )}
     </Link>
   );
@@ -196,12 +216,14 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
       data-thread-id={thread._id}
       data-thread-active={isActive}
       data-thread-status={thread.status}
+      data-thread-settled={isSettled}
       data-slot="thread-item"
       className={cn(
-        "group/thread relative flex min-w-0 overflow-hidden rounded-md",
-        "text-sidebar-foreground transition-colors hover:bg-primary/30",
-        "data-[thread-active=true]:bg-primary/30",
-        isSettled && "opacity-50 hover:opacity-70",
+        ROW_SCALE,
+        "group/thread relative flex min-w-0 shrink-0 rounded-lg text-sidebar-foreground transition-colors duration-150",
+        "hover:bg-sidebar-accent/70",
+        "data-[thread-active=true]:bg-primary/15 data-[thread-active=true]:ring-1 data-[thread-active=true]:ring-primary/30 data-[thread-active=true]:ring-inset",
+        "data-[thread-settled=true]:text-muted-foreground data-[thread-settled=true]:hover:text-sidebar-foreground",
       )}
     >
       <ThreadActions
@@ -213,31 +235,34 @@ export function ThreadItem({ thread, now }: ThreadItemProps) {
         {threadLink}
       </ThreadActions>
 
-      {isSettled ? (
-        <Button
-          variant="none"
-          size="icon"
-          className="absolute top-1/2 right-1 size-7 -translate-y-1/2 opacity-0 transition-none group-focus-within/thread:opacity-100 group-hover/thread:opacity-100"
-          aria-label={`Unsettle ${thread.title}`}
-          title="Unsettle thread"
-          disabled={isUpdatingSettled}
-          onClick={() => toggleThreadSettled(true)}
-        >
-          <Undo2Icon />
-        </Button>
-      ) : canSettle ? (
-        <Button
-          variant="none"
-          size="none"
-          className="absolute top-2 right-2 h-4 gap-1 text-xs font-medium text-sidebar-foreground opacity-0 transition-none group-focus-within/thread:opacity-100 group-hover/thread:opacity-100 [&_svg]:size-3.5"
-          aria-label={`${settleArmed ? "Confirm settling" : "Settle"} ${thread.title}`}
-          disabled={isUpdatingSettled}
-          onClick={() => toggleThreadSettled(true)}
-        >
-          <CircleCheckIcon data-icon="inline-start" />
-          {isUpdatingSettled ? "Settling" : settleArmed ? "Confirm" : "Settle"}
-        </Button>
-      ) : null}
+      {hasHoverAction && (
+        // Mirrors the link's padding and first line, so the action sits exactly where the meta was.
+        <div className="pointer-events-none absolute top-0 right-0 flex px-(--row-px) py-(--row-py)">
+          <span className="flex h-(--row-line) items-center text-xs">
+            <Button
+              variant="none"
+              size="none"
+              className={cn(
+                // Hidden with opacity, not visibility, so screen readers can still find it; pointer events stay
+                // off until revealed, so a tap on a touch screen (no hover) can't hit it through the time.
+                "pointer-events-none h-full gap-(--row-gap) rounded-md px-(--row-gap) text-xs font-medium text-sidebar-foreground opacity-0",
+                "group-focus-within/thread:pointer-events-auto group-focus-within/thread:opacity-100 group-hover/thread:pointer-events-auto group-hover/thread:opacity-100",
+                "hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring/60",
+              )}
+              aria-label={
+                isSettled
+                  ? `Unsettle ${thread.title}`
+                  : `${settleArmed ? "Confirm settling" : "Settle"} ${thread.title}`
+              }
+              disabled={isUpdatingSettled}
+              onClick={() => toggleThreadSettled(true)}
+            >
+              {hoverActionIcon}
+              {hoverActionLabel}
+            </Button>
+          </span>
+        </div>
+      )}
     </div>
   );
 }
