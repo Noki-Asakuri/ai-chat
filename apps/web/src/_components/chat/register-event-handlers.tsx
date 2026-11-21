@@ -235,7 +235,7 @@ export function RegisterEventHandlers() {
   return (
     <>
       <MessageSelectionAction />
-      {threadCommandOpen && <ThreadCommandDialog />}
+      <ThreadCommandDialog />
     </>
   );
 }

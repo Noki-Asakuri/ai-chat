@@ -1,21 +1,23 @@
-import { ChevronDownIcon, LockKeyholeIcon, RefreshCwIcon } from "lucide-react";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxItemIndicator,
+  ComboboxList,
+  ComboboxTrigger,
+  createComboboxController,
+} from "@ui-sdk/react/combobox";
+import { CheckIcon, ChevronDownIcon, LockKeyholeIcon, RefreshCwIcon, SearchIcon } from "lucide-react";
 import type { TokensResult as HighlightResult } from "@pierre/highlights";
 import type { ReactNode } from "react";
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
 
 import { Button } from "@/components/ui/button";
 import { ConfigStoreProvider } from "@/components/provider/config-provider";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -393,9 +395,15 @@ type FontComboboxProps = {
   onValueChange: (font: string) => void;
 };
 
+// Closing by tabbing or clicking elsewhere already put focus where the person wanted it.
+const RESTORE_FOCUS_REASONS = new Set(["item-press", "escape-key", "trigger-press"]);
+
 function FontCombobox(props: FontComboboxProps) {
-  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
+  const [content, setContent] = useState<HTMLDivElement | null>(null);
+  const [combobox] = useState(() => createComboboxController());
+  const closeReason = useRef<string | null>(null);
 
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const matchingFonts = normalizedQuery
@@ -403,16 +411,37 @@ function FontCombobox(props: FontComboboxProps) {
     : props.fonts;
   const visibleFonts = matchingFonts.slice(0, MAX_VISIBLE_FONTS);
 
-  function handleOpenChange(nextOpen: boolean) {
-    setOpen(nextOpen);
-    if (!nextOpen) setQuery("");
-  }
-
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger
+    <Combobox
+      controller={combobox}
+      value={props.value}
+      onValueChange={(font) => {
+        if (!font) return;
+        // Applying a font re-lays out the whole page; let the popup close first.
+        window.requestAnimationFrame(() => startTransition(() => props.onValueChange(font)));
+      }}
+      query={query}
+      onQueryChange={setQuery}
+      onOpenChange={(open, details) => {
+        if (open) setQuery("");
+        else closeReason.current = details.reason;
+      }}
+      onOpenChangeComplete={(open) => {
+        // A touch screen reader opening the list moves focus to the selected option; keep it there.
+        if (open) {
+          if (!content?.contains(document.activeElement)) combobox.focus();
+          return;
+        }
+        if (closeReason.current && RESTORE_FOCUS_REASONS.has(closeReason.current)) trigger?.focus();
+      }}
+      itemToLabel={(font) => font}
+      filter={false}
+      autoHighlight="always"
+      disabled={props.disabled}
+    >
+      <ComboboxTrigger
+        ref={setTrigger}
         id={props.id}
-        disabled={props.disabled}
         aria-label={`${props.label}: ${props.value}`}
         className={cn(
           "flex h-10 min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 text-sm transition-colors outline-none",
@@ -423,44 +452,53 @@ function FontCombobox(props: FontComboboxProps) {
         <span className="truncate" style={{ fontFamily: props.value }}>
           {props.value}
         </span>
-        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
-      </PopoverTrigger>
+        <ChevronDownIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+      </ComboboxTrigger>
 
-      <PopoverContent
+      <ComboboxContent
+        ref={setContent}
+        anchor={trigger}
         align="start"
         sideOffset={4}
-        includeArrow={false}
-        className="w-[var(--anchor-width)] min-w-64 gap-0 overflow-hidden p-0"
+        collisionPadding={8}
+        className={cn(
+          "z-50 m-0 flex w-(--anchor-width) min-w-64 flex-col overflow-hidden rounded-md bg-popover p-0 text-popover-foreground shadow-md ring-1 ring-foreground/10",
+          "origin-(--transform-origin) duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+        )}
       >
-        <Command shouldFilter={false}>
-          <CommandInput placeholder="Search fonts…" value={query} onValueChange={setQuery}  />
-          <CommandList className="max-h-72 p-1">
-            {visibleFonts.length === 0 ? (
-              <CommandEmpty>No fonts found.</CommandEmpty>
-            ) : (
-              <CommandGroup>
-                {visibleFonts.map((font) => (
-                  <CommandItem
-                    key={font}
-                    value={font}
-                    data-checked={font === props.value}
-                    style={{ fontFamily: font }}
-                    onSelect={() => {
-                      setOpen(false);
-                      setQuery("");
-                      window.requestAnimationFrame(() => {
-                        startTransition(() => props.onValueChange(font));
-                      });
-                    }}
-                  >
-                    <span className="truncate">{font}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+        <div className="flex h-10 items-center gap-2 border-b px-3">
+          <SearchIcon aria-hidden="true" className="size-4 shrink-0 opacity-50" />
+          <ComboboxInput
+            aria-label={`Search ${props.label.toLocaleLowerCase()}s`}
+            placeholder="Search fonts…"
+            autoComplete="off"
+            spellCheck={false}
+            className="h-full w-full min-w-0 bg-transparent text-xs outline-hidden placeholder:text-muted-foreground"
+          />
+        </div>
+        <ComboboxList aria-label="Fonts" tabIndex={-1} className="max-h-72 overflow-y-auto p-1 outline-none">
+          {visibleFonts.map((font) => (
+            <ComboboxItem
+              key={font}
+              value={font}
+              label={font}
+              style={{ fontFamily: font }}
+              className={cn(
+                "flex cursor-default items-center gap-2 rounded-md px-2 py-2 text-xs outline-hidden select-none",
+                "data-highlighted:bg-muted data-highlighted:text-foreground",
+              )}
+            >
+              <span className="truncate">{font}</span>
+              <ComboboxItemIndicator className="ml-auto">
+                <CheckIcon aria-hidden="true" className="size-4" />
+              </ComboboxItemIndicator>
+            </ComboboxItem>
+          ))}
+        </ComboboxList>
+        <ComboboxEmpty className="py-6 text-center text-xs text-muted-foreground not-data-empty:hidden">
+          No fonts found.
+        </ComboboxEmpty>
+      </ComboboxContent>
+    </Combobox>
   );
 }

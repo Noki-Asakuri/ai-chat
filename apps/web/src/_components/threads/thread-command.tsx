@@ -6,7 +6,6 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { useDebounce } from "@uidotdev/usehooks";
-import { CommandLoading } from "cmdk";
 import {
   ArrowLeftIcon,
   ChevronRightIcon,
@@ -29,14 +28,18 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandPage,
   CommandShortcut,
+  CommandStatus,
+  createCommandController,
+  fuzzyItemScore,
+  rankItems,
 } from "../ui/command";
 import { Kbd, KbdGroup } from "../ui/kbd";
 
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import { useThreadGroups } from "@/lib/threads/use-thread-groups";
 import { useThreadPin } from "@/lib/threads/use-thread-pin";
-import type { Thread } from "@/lib/types";
 import { fromUUID, toUUID } from "@/lib/utils";
 
 export function ThreadCommand({ isSkeleton }: { isSkeleton?: boolean }) {
@@ -97,6 +100,14 @@ function PinThread() {
   );
 }
 
+function closeThreadCommand() {
+  threadStoreActions.setThreadCommandOpen(false);
+}
+
+const THREAD_VALUE_PREFIX = "thread:";
+const GROUP_VALUE_PREFIX = "group:";
+const GROUPS_PAGE = "groups";
+
 export function ThreadCommandDialog() {
   const navigate = useNavigate();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
@@ -106,8 +117,10 @@ export function ThreadCommandDialog() {
   const threadCommandOpen = useThreadStore((state) => state.threadCommandOpen);
   const activeGroupTitle = groups.find((group) => group._id === activeGroupId)?.title ?? "Ungrouped";
 
+  const [command] = useState(() => createCommandController());
   const [query, setQuery] = useState("");
-  const [selectingGroup, setSelectingGroup] = useState(false);
+  const [pages, setPages] = useState<string[]>([]);
+  const selectingGroup = pages.at(-1) === GROUPS_PAGE;
   const debouncedQuery = useDebounce(query, 250);
 
   const { data, isFetching } = useQuery({
@@ -120,154 +133,159 @@ export function ThreadCommandDialog() {
 
   const isLoading = !selectingGroup && (isFetching || debouncedQuery !== query);
   const visibleThreads = isLoading ? [] : (data ?? []);
-  const recentThreads = visibleThreads.toSorted((a, b) => b.updatedAt - a.updatedAt).slice(0, 5);
+  const threads = query.trim()
+    ? visibleThreads
+    : visibleThreads.toSorted((a, b) => b.updatedAt - a.updatedAt).slice(0, 5);
 
   async function createNewThread(groupId: Id<"groups"> | null) {
     threadStoreActions.setActiveGroupId(groupId);
     await navigate({ to: "/" });
-    threadStoreActions.setThreadCommandOpen(false);
+    closeThreadCommand();
   }
 
   return (
     <CommandDialog
       open={threadCommandOpen}
       onOpenChange={threadStoreActions.setThreadCommandOpen}
+      // Ctrl+K and the search button open it through the store, so reset once it has closed instead.
+      onOpenChangeComplete={(open) => {
+        if (open) return;
+        setQuery("");
+        setPages([]);
+      }}
+      title="Command palette"
       description="Create a thread, open settings, or search your threads."
-      className="top-[12vh] translate-y-0 rounded-2xl sm:max-w-2xl"
+      className="top-[12vh] mt-0 rounded-2xl sm:max-w-2xl"
     >
       <Command
+        controller={command}
+        query={query}
+        onQueryChange={setQuery}
+        pages={pages}
+        onPagesChange={setPages}
+        // Thread results are already filtered by the server; everything else matches fuzzily.
+        filter={(item, search) => item.value.startsWith(THREAD_VALUE_PREFIX) || fuzzyItemScore(item, search)}
+        status={isLoading ? "loading" : "idle"}
         loop
-        vimBindings={false}
-        className="rounded-2xl [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-4 [&_[cmdk-item]]:min-h-10 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:text-sm [&_[data-slot=command-input-wrapper]]:border-0 [&_[data-slot=input-group]]:h-16 [&_[data-slot=input-group]]:rounded-none [&_[data-slot=input-group]]:bg-transparent [&_[data-slot=input-group]]:px-4"
-        onKeyDown={(event) => {
-          if (
-            (event.ctrlKey || event.metaKey) &&
-            event.shiftKey &&
-            !event.altKey &&
-            event.key.toLowerCase() === "o"
-          ) {
-            event.preventDefault();
-            event.stopPropagation();
-            if (!event.repeat) void createNewThread(activeGroupId);
-            return;
-          }
-
-          if (selectingGroup && (event.key === "Escape" || (event.key === "Backspace" && !query))) {
-            event.preventDefault();
-            event.stopPropagation();
-            setSelectingGroup(false);
-            setQuery("");
-          }
-        }}
+        className="rounded-2xl"
       >
         <CommandInput
           aria-label={selectingGroup ? "Search groups" : "Search commands and threads"}
           placeholder={selectingGroup ? "Search groups..." : "Search commands and threads..."}
-          value={query}
-          onValueChange={setQuery}
+          wrapperClassName="h-16 border-b px-4"
           className="text-sm"
         />
 
-        {selectingGroup && (
-          <Button
-            variant="ghost"
-            className="mx-3 mb-1 w-fit"
-            onClick={() => {
-              setSelectingGroup(false);
-              setQuery("");
-            }}
-          >
-            <ArrowLeftIcon data-icon="inline-start" />
-            Threads
-          </Button>
-        )}
-
-        <CommandList className="max-h-[min(55dvh,28rem)] px-2 pb-2">
-          {!isLoading && (selectingGroup || visibleThreads.length === 0) && (
-            <CommandEmpty>No results found.</CommandEmpty>
-          )}
-
-          {selectingGroup ? (
-            <CommandGroup heading="New thread in…">
-              <CommandItem value="Ungrouped" onSelect={() => createNewThread(null)}>
-                <FolderIcon />
-                Ungrouped
+        <CommandList className="max-h-[min(55dvh,28rem)] px-2 pb-2 [&_[data-slot=command-group-label]]:px-3 [&_[data-slot=command-group-label]]:pt-4 [&_[data-slot=command-item]]:min-h-10 [&_[data-slot=command-item]]:px-3 [&_[data-slot=command-item]]:text-sm">
+          <CommandPage>
+            <CommandGroup heading="Threads">
+              <CommandItem
+                value="new-thread"
+                label={`New thread in ${activeGroupTitle}`}
+                shortcut="mod+shift+o"
+                onSelect={() => createNewThread(activeGroupId)}
+              >
+                <SquarePenIcon aria-hidden="true" />
+                <span className="truncate">
+                  New thread in <strong>{activeGroupTitle}</strong>
+                </span>
+                <CommandShortcut />
               </CommandItem>
-              {groups.map((group) => (
+              <CommandItem value="new-thread-in" label="New thread in…" page={GROUPS_PAGE}>
+                <SquarePenIcon aria-hidden="true" />
+                New thread in…
+                <ChevronRightIcon aria-hidden="true" className="ml-auto text-muted-foreground" />
+              </CommandItem>
+            </CommandGroup>
+
+            <CommandGroup heading="Settings">
+              {rankItems(SETTINGS_NAVIGATION, query, (item) => ({
+                value: item.path,
+                label: item.label,
+                keywords: [item.description],
+              })).map((item) => (
                 <CommandItem
-                  key={group._id}
-                  value={group._id}
-                  keywords={[group.title]}
-                  onSelect={() => createNewThread(group._id)}
+                  key={item.path}
+                  value={item.path}
+                  label={item.label}
+                  keywords={[item.description]}
+                  onSelect={async () => {
+                    await navigate({ to: item.path, search: { rt: params?.threadId } });
+                    closeThreadCommand();
+                  }}
                 >
-                  <FolderIcon />
-                  <span className="truncate">{group.title}</span>
+                  <item.icon aria-hidden="true" />
+                  {item.label}
                 </CommandItem>
               ))}
             </CommandGroup>
-          ) : (
-            <>
-              <CommandGroup heading="Threads">
-                <CommandItem
-                  value={`New thread in ${activeGroupTitle}`}
-                  onSelect={() => createNewThread(activeGroupId)}
-                >
-                  <SquarePenIcon />
-                  <span className="truncate">
-                    New thread in <strong>{activeGroupTitle}</strong>
-                  </span>
-                  <CommandShortcut>Ctrl+Shift+O</CommandShortcut>
-                </CommandItem>
-                <CommandItem
-                  value="New thread in…"
-                  onSelect={() => {
-                    setSelectingGroup(true);
-                    setQuery("");
-                  }}
-                >
-                  <SquarePenIcon />
-                  New thread in…
-                  <CommandShortcut>
-                    <ChevronRightIcon />
-                  </CommandShortcut>
-                </CommandItem>
-              </CommandGroup>
 
-              <CommandGroup heading="Settings">
-                {SETTINGS_NAVIGATION.map((item) => (
+            {threads.length > 0 && (
+              <CommandGroup heading={query.trim() ? "Search results" : "Recent threads"}>
+                {threads.map((thread) => (
                   <CommandItem
-                    key={item.path}
-                    value={item.path}
-                    keywords={[item.label, item.description]}
+                    key={thread._id}
+                    value={`${THREAD_VALUE_PREFIX}${thread._id}`}
+                    label={thread.title}
                     onSelect={async () => {
-                      await navigate({ to: item.path, search: { rt: params?.threadId } });
-                      threadStoreActions.setThreadCommandOpen(false);
+                      await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(thread._id) } });
+                      closeThreadCommand();
                     }}
                   >
-                    <item.icon />
-                    {item.label}
+                    <span title={thread.title} className="w-full truncate">
+                      {thread.title}
+                    </span>
                   </CommandItem>
                 ))}
               </CommandGroup>
-            </>
-          )}
+            )}
+          </CommandPage>
 
-          {!selectingGroup && isLoading && (
-            <CommandLoading className="py-6 text-center text-sm">
-              <div className="flex w-full items-center justify-center gap-2">
-                <LoaderIcon className="size-4 animate-spin" />
-                <span>Fetching threads...</span>
-              </div>
-            </CommandLoading>
-          )}
-
-          {!selectingGroup && !isLoading && (
-            <ThreadCommandGroup
-              heading={query.trim() ? "Search results" : "Recent threads"}
-              threads={query.trim() ? visibleThreads : recentThreads}
-            />
-          )}
+          <CommandPage value={GROUPS_PAGE}>
+            <CommandGroup heading="New thread in…">
+              <CommandItem
+                value={`${GROUP_VALUE_PREFIX}ungrouped`}
+                label="Ungrouped"
+                onSelect={() => createNewThread(null)}
+              >
+                <FolderIcon aria-hidden="true" />
+                Ungrouped
+              </CommandItem>
+              {rankItems(groups, query, (group) => ({ value: group._id, label: group.title })).map(
+                (group) => (
+                  <CommandItem
+                    key={group._id}
+                    value={`${GROUP_VALUE_PREFIX}${group._id}`}
+                    label={group.title}
+                    onSelect={() => createNewThread(group._id)}
+                  >
+                    <FolderIcon aria-hidden="true" />
+                    <span className="truncate">{group.title}</span>
+                  </CommandItem>
+                ),
+              )}
+            </CommandGroup>
+            <CommandItem value="back" label="Back to threads" onSelect={() => command.pop()}>
+              <ArrowLeftIcon aria-hidden="true" />
+              Back to threads
+            </CommandItem>
+          </CommandPage>
         </CommandList>
+
+        <CommandStatus>
+          {(state) =>
+            state.loading ? (
+              <span className="flex w-full items-center justify-center gap-2">
+                <LoaderIcon aria-hidden="true" className="size-4 animate-spin" />
+                Fetching threads...
+              </span>
+            ) : (
+              `${state.count} ${state.count === 1 ? "result" : "results"}`
+            )
+          }
+        </CommandStatus>
+        <CommandEmpty>No results found.</CommandEmpty>
+
         <div className="flex flex-wrap items-center gap-4 border-t bg-muted/30 px-5 py-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <KbdGroup>
@@ -285,36 +303,5 @@ export function ThreadCommandDialog() {
         </div>
       </Command>
     </CommandDialog>
-  );
-}
-
-type ThreadCommandGroupProps = {
-  threads: Thread[];
-  heading: string;
-};
-
-function ThreadCommandGroup({ threads, heading }: ThreadCommandGroupProps) {
-  const navigate = useNavigate();
-  if (threads.length === 0) return null;
-
-  return (
-    <CommandGroup heading={heading} forceMount>
-      {threads.map((thread) => (
-        <CommandItem
-          key={"thread-cmd-group-" + thread._id}
-          value={thread._id}
-          forceMount
-          className="p-0!"
-          onSelect={async () => {
-            await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(thread._id) } });
-            threadStoreActions.setThreadCommandOpen(false);
-          }}
-        >
-          <span title={thread.title} className="w-full truncate px-2 py-1.5">
-            {thread.title}
-          </span>
-        </CommandItem>
-      ))}
-    </CommandGroup>
   );
 }

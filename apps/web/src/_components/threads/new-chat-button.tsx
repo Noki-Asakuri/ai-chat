@@ -2,7 +2,7 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useNavigate } from "@tanstack/react-router";
 import { FolderIcon, SquarePenIcon } from "lucide-react";
-import { type KeyboardEvent, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "../ui/button";
 import {
@@ -14,6 +14,7 @@ import {
   CommandItem,
   CommandList,
   CommandShortcut,
+  rankItems,
 } from "../ui/command";
 import { Kbd } from "../ui/kbd";
 import { Separator } from "../ui/separator";
@@ -28,30 +29,12 @@ type NewChatButtonProps = {
 export function NewChatButton({ groups }: NewChatButtonProps) {
   const navigate = useNavigate();
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   async function createNewChat(groupId: Id<"groups"> | null): Promise<void> {
     threadStoreActions.setActiveGroupId(groupId);
     setNewChatOpen(false);
     await navigate({ to: "/" });
-  }
-
-  function handleNewChatShortcut(event: KeyboardEvent<HTMLDivElement>): void {
-    if ((!event.ctrlKey && !event.metaKey) || event.altKey || event.shiftKey) return;
-
-    const shortcutNumber = Number(event.key);
-    if (!Number.isInteger(shortcutNumber) || shortcutNumber < 1 || shortcutNumber > 9) return;
-
-    if (shortcutNumber === 1) {
-      event.preventDefault();
-      void createNewChat(null);
-      return;
-    }
-
-    const group = groups[shortcutNumber - 2];
-    if (!group) return;
-
-    event.preventDefault();
-    void createNewChat(group._id);
   }
 
   return (
@@ -69,53 +52,64 @@ export function NewChatButton({ groups }: NewChatButtonProps) {
       <CommandDialog
         open={newChatOpen}
         onOpenChange={setNewChatOpen}
+        // The button opens it by setting state directly, so reset once it has closed instead.
+        onOpenChangeComplete={(open) => {
+          if (!open) setQuery("");
+        }}
         title="Create new chat"
         description="Choose which group the new chat belongs to."
-        className="h-[min(36rem,calc(100dvh-4rem))] rounded-md sm:max-w-3xl"
+        className="h-[min(36rem,calc(100dvh-4rem))] sm:max-w-3xl"
       >
-        <Command
-          className="[&_[data-slot=command-input-wrapper]]:p-2 [&_[data-slot=command-input-wrapper]_svg]:size-5! [&_[data-slot=command-input]]:text-sm! [&_[data-slot=input-group]]:h-12!"
-          onKeyDown={handleNewChatShortcut}
-        >
-          <CommandInput placeholder="Choose a group..." />
+        <Command loop query={query} onQueryChange={setQuery}>
+          <CommandInput
+            aria-label="Search groups"
+            placeholder="Choose a group..."
+            wrapperClassName="h-14 px-4 [&_svg]:size-5!"
+            className="text-sm"
+          />
 
           <CommandList className="max-h-none flex-1">
-            <CommandEmpty>No groups found.</CommandEmpty>
             <CommandGroup heading="Groups" className="px-2 py-2">
               <CommandItem
-                value="Ungrouped"
-                className="min-h-16 gap-3 rounded-md! px-3 py-3 text-sm"
-                onSelect={() => {
-                  void createNewChat(null);
-                }}
+                value="ungrouped"
+                label="Ungrouped"
+                shortcut="mod+1"
+                className="min-h-16 gap-3 px-3 py-3 text-sm"
+                onSelect={() => createNewChat(null)}
               >
-                <FolderIcon />
+                <FolderIcon aria-hidden="true" />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="truncate font-medium">Ungrouped</span>
                   <span className="truncate text-xs text-muted-foreground">Create without a group</span>
                 </span>
-                <CommandShortcut>Ctrl+1</CommandShortcut>
+                <CommandShortcut />
               </CommandItem>
 
-              {groups.map((group, index) => (
-                <CommandItem
-                  key={group._id}
-                  value={group.title}
-                  className="min-h-16 gap-3 rounded-md! px-3 py-3 text-sm"
-                  onSelect={() => {
-                    void createNewChat(group._id);
-                  }}
-                >
-                  <FolderIcon />
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="truncate font-medium">{group.title}</span>
-                    <span className="truncate text-xs text-muted-foreground">Open group</span>
-                  </span>
-                  {index < 8 && <CommandShortcut>Ctrl+{index + 2}</CommandShortcut>}
-                </CommandItem>
-              ))}
+              {rankItems(groups, query, (group) => ({ value: group._id, label: group.title })).map(
+                (group) => {
+                  const index = groups.indexOf(group);
+                  return (
+                    <CommandItem
+                      key={group._id}
+                      value={group._id}
+                      label={group.title}
+                      shortcut={index < 8 ? `mod+${index + 2}` : undefined}
+                      className="min-h-16 gap-3 px-3 py-3 text-sm"
+                      onSelect={() => createNewChat(group._id)}
+                    >
+                      <FolderIcon aria-hidden="true" />
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="truncate font-medium">{group.title}</span>
+                        <span className="truncate text-xs text-muted-foreground">Open group</span>
+                      </span>
+                      <CommandShortcut />
+                    </CommandItem>
+                  );
+                },
+              )}
             </CommandGroup>
           </CommandList>
+          <CommandEmpty>No groups found.</CommandEmpty>
 
           <Separator />
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-xs text-muted-foreground">
