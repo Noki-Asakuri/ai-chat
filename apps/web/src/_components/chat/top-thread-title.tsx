@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ThreadShareDialog } from "../threads/thread-share-dialog";
 
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
+import { useThreadGroups } from "@/lib/threads/use-thread-groups";
 import { useThreadPin } from "@/lib/threads/use-thread-pin";
 import { fromUUID } from "@/lib/utils";
 
@@ -20,9 +21,8 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
   const pinThread = useThreadPin();
   const [shareOpen, setShareOpen] = useState(false);
   const activeGroupId = useThreadStore((state) => state.activeGroupId);
-  const activeGroup = useThreadStore((state) =>
-    state.groupedThreads.groups.find((group) => group._id === state.activeGroupId),
-  );
+  const { data: threadGroups } = useThreadGroups();
+  const activeGroup = threadGroups?.groups.find((group) => group._id === activeGroupId);
 
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const threadId = fromUUID<Id<"threads">>(params?.threadId);

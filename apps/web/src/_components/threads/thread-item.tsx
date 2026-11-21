@@ -37,7 +37,7 @@ import { Icons } from "../ui/icons";
 import { tryGetModelData } from "@/lib/chat/models";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { threadDialogStoreActions } from "@/lib/store/thread-dialog-store";
-import { useThreadStore } from "@/lib/store/thread-store";
+import { useThreadGroups } from "@/lib/threads/use-thread-groups";
 import { useThreadPin } from "@/lib/threads/use-thread-pin";
 import { regenerateThreadTitle } from "@/lib/trpc/client";
 import type { Thread } from "@/lib/types";
@@ -259,7 +259,8 @@ function ThreadActions({
 }: ThreadActionsProps) {
   const pinThread = useThreadPin();
   const menuTriggerRef = useRef<HTMLDivElement>(null);
-  const groups = useThreadStore((state) => state.groupedThreads.groups);
+  const { data: threadGroups } = useThreadGroups();
+  const groups = threadGroups?.groups ?? [];
   const destinationGroups = groups.filter((group) => group._id !== thread.groupId);
   const canMoveThread = thread.groupId !== null || destinationGroups.length > 0;
   const isSettled = thread.settled === true;

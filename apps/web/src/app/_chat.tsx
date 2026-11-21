@@ -38,20 +38,19 @@ const getDefaultOpenSidebar = createIsomorphicFn()
 export const Route = createFileRoute("/_chat")({
   component: RouteComponent,
 
-  loader: async function ({ context, location }) {
-    const [auth, { defaultOpenSidebar }] = await Promise.all([getAuth(), getDefaultOpenSidebar()]);
+  beforeLoad: async ({ location }) => {
+    const auth = await getAuth();
     if (!auth.user) {
-      const path = location.pathname;
-      console.debug("[Chat] No user found, redirect to login");
-
-      throw redirect({ to: "/auth/login", search: { rt: path }, reloadDocument: true });
+      throw redirect({ to: "/auth/login", search: { rt: location.href }, reloadDocument: true });
     }
-
-    await context.queryClient.query({
-      ...convexQuery(api.functions.users.getChatShell),
-      staleTime: "static",
-    });
-    return { user: auth.user, defaultOpenSidebar };
+    return { user: auth.user };
+  },
+  loader: async ({ context }) => {
+    const [{ defaultOpenSidebar }] = await Promise.all([
+      getDefaultOpenSidebar(),
+      context.queryClient.query(convexQuery(api.functions.users.getChatShell)),
+    ]);
+    return { user: context.user, defaultOpenSidebar };
   },
 
   head: () => ({

@@ -1,10 +1,7 @@
-import { api } from "@ai-chat/backend/convex/_generated/api";
 import { motion, useReducedMotion } from "motion/react";
 
 import { createFileRoute } from "@tanstack/react-router";
 
-import { convexQuery } from "@convex-dev/react-query";
-import { getAuth } from "@workos/authkit-tanstack-react-start";
 import { useEffect } from "react";
 import { useShallow } from "zustand/shallow";
 
@@ -13,14 +10,7 @@ import { messageStoreActions } from "@/lib/store/messages-store";
 
 export const Route = createFileRoute("/_chat/")({
   component: RouteComponent,
-  loader: async ({ context }) => {
-    const [auth] = await Promise.all([
-      getAuth(),
-      context.queryClient.prefetchQuery(convexQuery(api.functions.users.getChatShell)),
-    ]);
 
-    return { user: auth.user };
-  },
 });
 
 function RouteComponent() {
@@ -33,7 +23,7 @@ function RouteComponent() {
 }
 
 export function WelcomeScreen() {
-  const { user } = Route.useLoaderData();
+  const { user } = Route.useRouteContext();
   const prefersReducedMotion = useReducedMotion() ?? false;
 
   const { textareaHeight, input } = useChatStore(

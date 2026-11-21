@@ -19,6 +19,7 @@ import { ActiveThreads } from "./active-threads";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
+import { useThreadGroups } from "@/lib/threads/use-thread-groups";
 import { cn, fromUUID } from "@/lib/utils";
 
 export function ThreadContents() {
@@ -122,23 +123,13 @@ function ThreadSkeleton({
 }
 
 function ThreadListWrapper() {
-  const activeGroupId = useThreadStore((state) => state.activeGroupId);
-
-  return <ActiveGroupThreadList activeGroupId={activeGroupId} />;
-}
-
-function ActiveGroupThreadList({ activeGroupId }: { activeGroupId: Id<"groups"> | null }) {
-  const localCache = useThreadStore((state) => state.groupedThreads);
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
   const lastSyncedThreadIdRef = useRef<Id<"threads"> | null>(null);
   const routeThreadId = fromUUID<Id<"threads">>(params?.threadId);
   const markThreadViewed = useMutation(api.functions.threads.markThreadViewed);
 
-  const { data } = useQuery({
-    ...convexQuery(api.functions.groups.listGroups, { activeGroupId }),
-    initialData: localCache.activeGroupId === activeGroupId ? localCache : undefined,
-  });
+  const { data } = useThreadGroups();
   const { data: routeThreadTitle } = useQuery(
     convexQuery(
       api.functions.threads.getThreadPageMeta,
@@ -148,8 +139,6 @@ function ActiveGroupThreadList({ activeGroupId }: { activeGroupId: Id<"groups"> 
 
   useEffect(() => {
     if (!data) return;
-
-    threadStoreActions.setGroupedThreads(data);
 
     if (routeThreadId && lastSyncedThreadIdRef.current !== routeThreadId) {
       const routeThread = data.threads.find((thread) => thread._id === routeThreadId);
@@ -189,7 +178,7 @@ function ActiveGroupThreadList({ activeGroupId }: { activeGroupId: Id<"groups"> 
     });
   }, [data, markThreadViewed, routeThreadId, routeThreadTitle]);
 
-  return <ThreadList data={data} groups={data?.groups ?? localCache.groups} />;
+  return <ThreadList data={data} groups={data?.groups ?? []} />;
 }
 
 type ListGroupData = (typeof api.functions.groups.listGroups)["_returnType"];

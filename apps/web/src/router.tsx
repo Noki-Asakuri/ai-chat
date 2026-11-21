@@ -28,6 +28,7 @@ export function getRouter() {
     routeTree,
     context: { queryClient, convexClient: convexQueryClient, convexReactClient: convexClient },
     defaultPreload: "intent",
+    defaultPreloadStaleTime: 0,
     scrollRestoration: true,
     defaultErrorComponent: DefaultCatchBoundary,
     defaultNotFoundComponent: DefaultNotFoundBoundary,

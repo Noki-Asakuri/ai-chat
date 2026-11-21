@@ -34,6 +34,7 @@ import {
 import { Kbd, KbdGroup } from "../ui/kbd";
 
 import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
+import { useThreadGroups } from "@/lib/threads/use-thread-groups";
 import { useThreadPin } from "@/lib/threads/use-thread-pin";
 import type { Thread } from "@/lib/types";
 import { fromUUID, toUUID } from "@/lib/utils";
@@ -67,10 +68,10 @@ export function ThreadCommand({ isSkeleton }: { isSkeleton?: boolean }) {
 
 function PinThread() {
   const pinThread = useThreadPin();
-  const defaultThreads = useThreadStore((state) => state.groupedThreads.threads);
+  const { data: threadGroups } = useThreadGroups();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
-  const thread = defaultThreads.find((candidate) => candidate._id === fromUUID(params?.threadId));
+  const thread = threadGroups?.threads.find((candidate) => candidate._id === fromUUID(params?.threadId));
   if (!params?.threadId) return null;
 
   function toggleThreadPin() {
@@ -99,7 +100,8 @@ function PinThread() {
 export function ThreadCommandDialog() {
   const navigate = useNavigate();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
-  const groups = useThreadStore((state) => state.groupedThreads.groups);
+  const { data: threadGroups } = useThreadGroups();
+  const groups = threadGroups?.groups ?? [];
   const activeGroupId = useThreadStore((state) => state.activeGroupId);
   const threadCommandOpen = useThreadStore((state) => state.threadCommandOpen);
   const activeGroupTitle = groups.find((group) => group._id === activeGroupId)?.title ?? "Ungrouped";

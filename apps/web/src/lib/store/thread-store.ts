@@ -1,20 +1,11 @@
-import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import type { RemoveAllExceptFunctions } from "../types";
 
-export type GroupedThreads = {
-  activeGroupId: Id<"groups"> | null;
-  groups: Doc<"groups">[];
-  threads: Doc<"threads">[];
-};
-
 export type ThreadStore = {
-  groupedThreads: GroupedThreads;
-  setGroupedThreads: (groupedThreads: GroupedThreads) => void;
-
   activeGroupId: Id<"groups"> | null;
   setActiveGroupId: (groupId: Id<"groups"> | null) => void;
 
@@ -25,13 +16,6 @@ export type ThreadStore = {
 export const useThreadStore = create<ThreadStore>()(
   persist(
     (set) => ({
-      groupedThreads: {
-        activeGroupId: null,
-        groups: [],
-        threads: [],
-      },
-      setGroupedThreads: (groupedThreads) => set({ groupedThreads }),
-
       activeGroupId: null,
       setActiveGroupId: (activeGroupId) => set({ activeGroupId }),
 
@@ -44,11 +28,11 @@ export const useThreadStore = create<ThreadStore>()(
     }),
     {
       name: "local-threads-cache",
-      version: 2,
+      version: 3,
+      migrate: () => ({ activeGroupId: null }),
       storage: createJSONStorage(() => localStorage),
 
       partialize: (state) => ({
-        groupedThreads: state.groupedThreads,
         activeGroupId: state.activeGroupId,
       }),
     },

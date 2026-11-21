@@ -1,9 +1,12 @@
+import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import { tryCatchSync } from "@ai-chat/shared/utils/async";
 
 import { play } from "cuelume";
 
 import { showStreamFeedbackToast } from "@/components/toasts/stream-feedback-toast";
 import { dispatchNavigateToThreadEvent } from "@/lib/chat/notification-navigation";
+import { getConvexReactClient } from "@/lib/convex/client";
 import { useMessageStore } from "@/lib/store/messages-store";
 import { useThreadStore } from "@/lib/store/thread-store";
 import { toUUID } from "@/lib/utils";
@@ -38,8 +41,15 @@ function shouldShowDesktopNotification(desktopEnabled: boolean): boolean {
 }
 
 function getThreadTitle(threadId: Id<"threads">): string {
-  const groupedThreads = useThreadStore.getState().groupedThreads.threads;
-  const thread = groupedThreads.find((item) => item._id === threadId);
+  const client = getConvexReactClient();
+  const { activeGroupId } = useThreadStore.getState();
+  const [meta] = tryCatchSync(() =>
+    client.watchQuery(api.functions.threads.getThreadPageMeta, { threadId }).localQueryResult(),
+  );
+  const [groups] = tryCatchSync(() =>
+    client.watchQuery(api.functions.groups.listGroups, { activeGroupId }).localQueryResult(),
+  );
+  const thread = meta ?? groups?.threads.find((item) => item._id === threadId);
 
   if (thread && thread.title.trim().length > 0) {
     return `Thread ${thread.title}`;
