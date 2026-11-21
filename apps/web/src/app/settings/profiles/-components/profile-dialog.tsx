@@ -48,7 +48,9 @@ export function ProfileDialog({
   };
   const form = useForm({
     defaultValues,
-    validators: { onBlur: profileSchema, onSubmit: profileSchema },
+    // Errors from onBlur persist until the next blur, so a corrected field would block the first submit.
+    // Validate on change instead and only reveal errors after blur or a submit attempt.
+    validators: { onMount: profileSchema, onChange: profileSchema, onSubmit: profileSchema },
     onSubmit: async ({ value }) => {
       try {
         await onSubmit(value);
@@ -61,6 +63,7 @@ export function ProfileDialog({
   });
   const file = useStore(form.store, (state) => state.values.file);
   const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
+  const submitAttempted = useStore(form.store, (state) => state.submissionAttempts > 0);
   const [preview, setPreview] = useState<string | null>(null);
   const filePreviewUrl = preview;
 
@@ -142,7 +145,8 @@ export function ProfileDialog({
             <FieldGroup>
               <form.Field name="name">
                 {(field) => {
-                  const invalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const invalid =
+                    (field.state.meta.isBlurred || submitAttempted) && !field.state.meta.isValid;
                   return (
                     <Field data-invalid={invalid}>
                       <FieldLabel htmlFor="profile-name">Name (required)</FieldLabel>
@@ -165,7 +169,8 @@ export function ProfileDialog({
               </form.Field>
               <form.Field name="systemPrompt">
                 {(field) => {
-                  const invalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const invalid =
+                    (field.state.meta.isBlurred || submitAttempted) && !field.state.meta.isValid;
                   return (
                     <Field data-invalid={invalid}>
                       <FieldLabel htmlFor="profile-system-prompt">System prompt (required)</FieldLabel>
