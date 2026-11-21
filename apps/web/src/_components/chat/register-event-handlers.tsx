@@ -9,8 +9,6 @@ import { toast } from "@/components/ui/toast";
 import { useConfigStore } from "../provider/config-provider";
 import { ThreadCommandDialog } from "../threads/thread-command";
 
-import { MessageSelectionAction } from "./message-selection-action";
-
 import {
   computeIsAtBottom,
   getMessagesScrollAreaElement,
@@ -232,10 +230,5 @@ export function RegisterEventHandlers() {
     }
   });
 
-  return (
-    <>
-      <MessageSelectionAction />
-      <ThreadCommandDialog />
-    </>
-  );
+  return <ThreadCommandDialog />;
 }

@@ -22,7 +22,6 @@ import { MessageReasoning } from "./message-reasoning";
 import { MessageStepDivider, MessageToolParts } from "./message-tool-parts";
 
 import { getUserDisplayName } from "@/lib/authkit/user";
-import { clearMessageSelection, selectMessageText } from "@/lib/chat/message-selection";
 import { tryGetModelData } from "@/lib/chat/models";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -186,8 +185,6 @@ function AssistantTextBlock({
           <MessageBubble
             key={`${message._id}-${block.key}-${index}`}
             className="surface-edge bg-background/75 backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
-            onMouseDown={clearMessageSelection}
-            onMouseUp={(event) => selectMessageText(event.currentTarget, event.target, event.detail)}
           >
             <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>
               {part.text}
