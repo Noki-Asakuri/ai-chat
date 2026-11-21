@@ -7,7 +7,10 @@ import { z } from "zod";
 import type { RemoveAllExceptFunctions } from "../types";
 
 const PersistedThreadStoreSchema = z
-  .object({ activeGroupId: z.string().nullable().catch(null) })
+  .object({
+    // setActiveGroupId only ever persists Convex group ids, so any string here is one.
+    activeGroupId: z.string().pipe(z.custom<Id<"groups">>()).nullable().catch(null),
+  })
   .catch({ activeGroupId: null });
 
 export type ThreadStore = {
@@ -35,8 +38,7 @@ export const useThreadStore = create<ThreadStore>()(
       version: 3,
       migrate: (persisted) => {
         const { activeGroupId } = PersistedThreadStoreSchema.parse(persisted);
-        // SAFETY: activeGroupId was written by setActiveGroupId, which only accepts Id<"groups">.
-        return { activeGroupId: activeGroupId as Id<"groups"> | null };
+        return { activeGroupId };
       },
       storage: createJSONStorage(() => localStorage),
 

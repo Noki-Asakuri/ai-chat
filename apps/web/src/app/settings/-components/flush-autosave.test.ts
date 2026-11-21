@@ -25,6 +25,10 @@ describe("flushAutosave", () => {
       save: () => Promise.reject(new Error("offline")),
     });
 
-    await expect(failing).rejects.toThrow("offline");
+    const error = await failing.then(
+      () => null,
+      (reason: Error) => reason,
+    );
+    expect(error?.message).toBe("offline");
   });
 });
