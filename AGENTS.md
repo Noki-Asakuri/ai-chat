@@ -23,3 +23,7 @@ When working on Convex code, **always read `packages/backend/convex/_generated/a
 Convex agent skills for common tasks can be installed by running `bunx convex ai-files install`.
 
 <!-- convex-ai-end -->
+
+## UI SDK
+
+Before using ui-sdk (`@ui-sdk/react`, `@ui-sdk/core`), follow the ui-sdk skill if it's installed, and read `node_modules/@ui-sdk/react/docs/llms.txt`. To build a new component, also search `node_modules/@ui-sdk/react/docs/core.md` by heading, and read `rendering.md` next to it.

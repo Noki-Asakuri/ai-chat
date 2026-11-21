@@ -1,4 +1,4 @@
-@layer theme, base, components, utilities;
+@layer ui-sdk, theme, base, components, utilities;
 
 @source "../../node_modules/streamdown/dist/*.js";
 @source "../../node_modules/@streamdown/cjk/dist/*.js";
