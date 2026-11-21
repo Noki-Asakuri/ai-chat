@@ -29,6 +29,7 @@ import { BackgroundCard } from "../-components/customization/background-card";
 import { BehaviorOptionsCard } from "../-components/customization/behavior-options-card";
 import { FontsCard } from "../-components/customization/fonts-card";
 import { AutosaveStatus } from "../-components/autosave-status";
+import { flushAutosave } from "../-components/flush-autosave";
 
 import { LoadingAppearanceSkeleton } from "./-pending";
 
@@ -118,9 +119,13 @@ function RouteComponent() {
         toast.message("Wait for the background image to finish saving.");
         return true;
       }
+      if (background.isError) {
+        if (!window.confirm("Your chat background failed to save. Leave without saving it?")) return true;
+        background.reset();
+      }
       if (!save.isPending && JSON.stringify(form.state.values) === JSON.stringify(savedValues)) return false;
       try {
-        await save.mutateAsync(form.state.values);
+        await flushAutosave({ getValues: () => form.state.values, save: save.mutateAsync });
         return false;
       } catch {
         return true;
@@ -128,6 +133,7 @@ function RouteComponent() {
     },
     enableBeforeUnload: () =>
       background.isPending ||
+      background.isError ||
       save.isPending ||
       JSON.stringify(form.state.values) !== JSON.stringify(savedValues),
   });
@@ -147,6 +153,15 @@ function RouteComponent() {
             {save.isError ? (
               <Button type="submit" variant="outline" size="sm">
                 Retry saving
+              </Button>
+            ) : background.isError ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => background.mutate(background.variables ?? null)}
+              >
+                Retry background
               </Button>
             ) : (
               <form.Subscribe selector={(state) => state.values}>
@@ -243,7 +258,10 @@ function RouteComponent() {
             <BackgroundCard
               key={data.backgroundImage}
               disabled={background.isPending}
+              failed={background.isError}
               existingBackgroundId={data.backgroundImage ?? null}
+              onRetry={() => background.mutate(background.variables ?? null)}
+              onDiscard={() => background.reset()}
               onFileChange={(file) => background.mutate(file)}
               onRemoveExistingBackground={() => background.mutateAsync(null)}
             />

@@ -1,4 +1,4 @@
-import { ImageIcon, ImagePlusIcon, TrashIcon } from "lucide-react";
+import { ImageIcon, ImagePlusIcon, RotateCwIcon, TrashIcon } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "@/components/ui/toast";
 
@@ -9,9 +9,12 @@ import { buildImageAssetUrl } from "@/lib/assets/urls";
 
 export type BackgroundCardProps = {
   disabled: boolean;
+  failed: boolean;
   existingBackgroundId: string | null;
   onRemoveExistingBackground: () => Promise<void>;
   onFileChange: (file: File) => void;
+  onRetry: () => void;
+  onDiscard: () => void;
 };
 
 export function BackgroundCard(props: BackgroundCardProps) {
@@ -36,13 +39,23 @@ export function BackgroundCard(props: BackgroundCardProps) {
   const backgroundPreviewSrc = backgroundPreviewUrl ?? existingBackgroundUrl;
 
   const disabled = props.disabled || pendingRemove;
+  const failedUpload = props.failed && backgroundImage !== null;
+
+  function clearPreview() {
+    if (backgroundPreviewUrlRef.current) URL.revokeObjectURL(backgroundPreviewUrlRef.current);
+    backgroundPreviewUrlRef.current = null;
+    setBackgroundPreviewUrl(null);
+    setBackgroundImage(null);
+  }
+
+  function onDiscard() {
+    clearPreview();
+    props.onDiscard();
+  }
 
   function onRemove() {
     startRemoveTransition(async () => {
-      if (backgroundPreviewUrlRef.current) URL.revokeObjectURL(backgroundPreviewUrlRef.current);
-      backgroundPreviewUrlRef.current = null;
-      setBackgroundPreviewUrl(null);
-      setBackgroundImage(null);
+      clearPreview();
 
       void toast.promise(props.onRemoveExistingBackground(), {
         loading: "Removing background...",
@@ -67,9 +80,15 @@ export function BackgroundCard(props: BackgroundCardProps) {
               className="aspect-[16/10] w-full object-cover"
             />
             <div className="absolute inset-x-0 bottom-0 bg-background/80 px-3 py-2 backdrop-blur-sm">
-              <p className="truncate text-xs text-foreground">
-                {backgroundImage ? backgroundImage.name : "Current background"}
-              </p>
+              {failedUpload ? (
+                <p role="alert" className="truncate text-xs text-destructive">
+                  Couldn't save {backgroundImage.name}
+                </p>
+              ) : (
+                <p className="truncate text-xs text-foreground">
+                  {backgroundImage ? backgroundImage.name : "Current background"}
+                </p>
+              )}
             </div>
           </div>
         ) : (
@@ -103,12 +122,25 @@ export function BackgroundCard(props: BackgroundCardProps) {
             setBackgroundPreviewUrl(nextPreviewUrl);
             setBackgroundImage(selected);
             props.onFileChange(selected);
+            // Clear the input so choosing the same file again still fires a change event.
+            event.target.value = "";
           }}
         />
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
-        {props.existingBackgroundId && (
+        {failedUpload && (
+          <>
+            <Button disabled={disabled} type="button" variant="ghost" onClick={onDiscard}>
+              Discard
+            </Button>
+            <Button disabled={disabled} type="button" variant="outline" onClick={props.onRetry}>
+              <RotateCwIcon data-icon="inline-start" />
+              Retry upload
+            </Button>
+          </>
+        )}
+        {!failedUpload && props.existingBackgroundId && (
           <Button disabled={disabled} type="button" variant="ghost" onClick={onRemove}>
             <TrashIcon data-icon="inline-start" />
             Remove

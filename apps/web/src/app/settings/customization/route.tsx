@@ -17,6 +17,7 @@ import { convexQuery } from "@convex-dev/react-query";
 import { Button } from "@/components/ui/button";
 
 import { AutosaveStatus } from "../-components/autosave-status";
+import { flushAutosave } from "../-components/flush-autosave";
 
 import { LoadingCustomizationSkeleton } from "./-pending";
 
@@ -69,7 +70,7 @@ function RouteComponent() {
       )
         return false;
       try {
-        await save.mutateAsync(values);
+        await flushAutosave({ getValues: () => form.state.values, save: save.mutateAsync });
         return false;
       } catch {
         return true;
