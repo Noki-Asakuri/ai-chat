@@ -1,6 +1,6 @@
 import type { TokensResult as HighlightResult } from "@pierre/highlights";
-import { useEffect, useMemo, useState } from "react";
-import type { CustomRendererProps } from "streamdown";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { StreamdownContext, type CustomRendererProps } from "streamdown";
 
 import { extractOriginalFenceLanguage } from "@/components/message/utils/normalize-code-fence-languages";
 
@@ -10,6 +10,7 @@ import { CodeBlockBody } from "./body";
 import { CodeBlockContainer } from "./container";
 import { CodeBlockProvider } from "./context";
 import { CodeBlockHeader } from "./header";
+import { IncrementalTokenizer } from "./incremental-tokenizer";
 
 type LanguageData = {
   name: string;
@@ -60,11 +61,13 @@ type CodeBlockProps = CustomRendererProps & {
 
 export function CodeBlock({
   code: rawCode,
+  isIncomplete,
   language,
   meta,
   showButtonActions = true,
   highlightedResult,
 }: CodeBlockProps) {
+  const { isAnimating } = useContext(StreamdownContext);
   const code = rawCode.replace(TRAILING_NEWLINES_REGEX, "");
   const displayLanguage = extractOriginalFenceLanguage(meta) ?? language;
 
@@ -84,6 +87,7 @@ export function CodeBlock({
       language={displayLanguage}
       displayLanguage={displayLanguage}
       code={code}
+      streaming={isAnimating && isIncomplete}
       showButtonActions={showButtonActions}
     />
   );
@@ -93,6 +97,7 @@ type HighlightedCodeBlockProps = {
   language: string;
   displayLanguage: string;
   code: string;
+  streaming: boolean;
   showButtonActions: boolean;
 };
 
@@ -156,9 +161,13 @@ function HighlightedCodeBlock({
   language,
   displayLanguage,
   code,
+  streaming,
   showButtonActions,
 }: HighlightedCodeBlockProps) {
   const [highlighter, setHighlighter] = useState<Awaited<ReturnType<typeof loadHighlighter>> | null>(null);
+  const [incremental] = useState(() => new IncrementalTokenizer());
+
+  useEffect(() => () => incremental.dispose(), [incremental]);
 
   useEffect(() => {
     let cancelled = false;
@@ -183,15 +192,23 @@ function HighlightedCodeBlock({
     if (!highlighter) return splitCodeToHighlightTokens(code);
 
     const lang = language.trim().toLowerCase();
+    const options = {
+      lang: highlighter.isSupportedLanguage(lang) ? lang : "text",
+      themes: { light: highlighter.oneDarkPro },
+    };
 
-    return transformHighlightResult({
-      ...highlighter.codeToTokens(code, {
-        lang: highlighter.isSupportedLanguage(lang) ? lang : "text",
-        themes: { light: highlighter.oneDarkPro },
-      }),
-      bg: "transparent",
-    });
-  }, [code, language, highlighter]);
+    // Re-tokenizing the whole fence on every streamed chunk is quadratic, so stream only the delta.
+    if (streaming) {
+      return transformHighlightResult({
+        ...highlighter.codeToTokens("", options),
+        bg: "transparent",
+        tokens: incremental.tokenize(code, options.lang, () => new highlighter.StreamTokenizer(options)),
+      });
+    }
+
+    incremental.dispose();
+    return transformHighlightResult({ ...highlighter.codeToTokens(code, options), bg: "transparent" });
+  }, [code, language, highlighter, streaming, incremental]);
 
   return (
     <RenderedCodeBlock
