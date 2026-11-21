@@ -2,7 +2,7 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, stripSearchParams } from "@tanstack/react-router";
 
 import { useMutation } from "convex/react";
 import {
@@ -29,7 +29,8 @@ import {
   UserIcon,
   XIcon,
 } from "lucide-react";
-import { useDeferredValue, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import { z } from "zod";
 import { toast } from "@/components/ui/toast";
 
 import { ImageLightboxProvider, ImageLightboxTrigger } from "@/components/image-lightbox";
@@ -73,7 +74,18 @@ import { buildImageAssetUrl, buildImageThumbnailUrl, buildRawFileUrl } from "@/l
 import { convexQuery } from "@convex-dev/react-query";
 import { format, toUUID, tryCatch } from "@/lib/utils";
 
+const attachmentSearchSchema = z.object({
+  q: z.string().catch("").default(""),
+  source: z.enum(["all", "user", "assistant"]).catch("all").default("all"),
+  type: z.enum(["all", "image", "pdf"]).catch("all").default("all"),
+  sort: z.enum(["createdAt_desc", "createdAt_asc", "name_asc", "name_desc", "size_desc", "size_asc"])
+    .catch("createdAt_desc").default("createdAt_desc"),
+  page: z.number().int().positive().catch(1).default(1),
+});
+
 export const Route = createFileRoute("/settings/attachments")({
+  validateSearch: attachmentSearchSchema,
+  search: { middlewares: [stripSearchParams({ q: "", source: "all", type: "all", sort: "createdAt_desc", page: 1 })] },
   component: AttachmentsPage,
   pendingComponent: LoadingAttachmentsSkeleton,
   head: () => ({ meta: [{ title: "Attachments - AI Chat" }] }),
@@ -182,32 +194,13 @@ function isAttachmentSortValue(value: string | null): value is AttachmentSortVal
   return value in ATTACHMENT_SORT_OPTIONS;
 }
 
-function getAttachmentSortValue(
-  sortField: AttachmentSortField,
-  sortDirection: SortDirection,
-): AttachmentSortValue {
-  if (sortField === "createdAt") {
-    if (sortDirection === "desc") return "createdAt_desc";
-    return "createdAt_asc";
-  }
-
-  if (sortField === "name") {
-    if (sortDirection === "asc") return "name_asc";
-    return "name_desc";
-  }
-
-  if (sortDirection === "desc") return "size_desc";
-  return "size_asc";
-}
-
 function AttachmentsPage() {
   const deleteAttachments = useMutation(api.functions.attachments.deleteAttachments);
 
-  const [searchText, setSearchText] = useState<string>("");
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
-  const [typeFilter, setTypeFilter] = useState<AttachmentTypeFilter>("all");
-  const [sortField, setSortField] = useState<AttachmentSortField>("createdAt");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const { q: searchText, source: sourceFilter, type: typeFilter, sort: selectedSortValue, page } = search;
+  const { sortField, sortDirection } = ATTACHMENT_SORT_OPTIONS[selectedSortValue];
   const [selectionMode, setSelectionMode] = useState<boolean>(false);
   const [selected, setSelected] = useState<Set<Id<"attachments">>>(() => new Set());
   const [deleteDialogState, setDeleteDialogState] = useState<{
@@ -219,16 +212,21 @@ function AttachmentsPage() {
     attachmentId: null,
     name: "",
   });
-  const [page, setPage] = useState<number>(1);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkPending, startBulkTransition] = useTransition();
-  const deferredSearchText = useDeferredValue(searchText);
+  const searchKey = JSON.stringify([searchText, sourceFilter, typeFilter, selectedSortValue, page]);
+  const [previousSearchKey, setPreviousSearchKey] = useState(searchKey);
+  if (previousSearchKey !== searchKey) {
+    setPreviousSearchKey(searchKey);
+    setSelected(new Set());
+    setSelectionMode(false);
+  }
 
   const attachmentsQuery = useQuery({
     ...convexQuery(api.functions.attachments.listAttachmentsPage, {
       page,
       pageSize: PAGE_SIZE,
-      search: deferredSearchText.trim().length === 0 ? undefined : deferredSearchText,
+      search: searchText.trim().length === 0 ? undefined : searchText,
       source: sourceFilter,
       type: typeFilter,
       sortField,
@@ -283,7 +281,6 @@ function AttachmentsPage() {
 
   const selectedSourceOption = SOURCE_FILTER_OPTIONS[sourceFilter];
   const selectedTypeOption = TYPE_FILTER_OPTIONS[typeFilter];
-  const selectedSortValue = getAttachmentSortValue(sortField, sortDirection);
   const selectedSortOption = ATTACHMENT_SORT_OPTIONS[selectedSortValue];
   const hasActiveFilters = searchText.trim().length > 0 || sourceFilter !== "all" || typeFilter !== "all";
   const allVisibleSelected =
@@ -295,7 +292,7 @@ function AttachmentsPage() {
 
   function onPageChange(nextPage: number) {
     if (nextPage < 1 || nextPage > totalPages) return;
-    setPage(nextPage);
+    void navigate({ search: (previous) => ({ ...previous, page: nextPage }), resetScroll: false });
     setSelected(new Set());
   }
 
@@ -334,28 +331,21 @@ function AttachmentsPage() {
     setSelected(next);
   }
 
-  function resetPageAndSelection() {
-    setPage(1);
-    setSelected(new Set());
-    setSelectionMode(false);
+  function updateFilters(filters: Partial<z.infer<typeof attachmentSearchSchema>>) {
+    void navigate({
+      search: (previous) => ({ ...previous, ...filters, page: 1 }),
+      replace: true,
+      resetScroll: false,
+    });
   }
 
   function resetFilters() {
-    setSearchText("");
-    setSourceFilter("all");
-    setTypeFilter("all");
-    setSortField("createdAt");
-    setSortDirection("desc");
-    resetPageAndSelection();
+    updateFilters({ q: "", source: "all", type: "all", sort: "createdAt_desc" });
   }
 
   function handleSortChange(value: string | null) {
     if (!isAttachmentSortValue(value)) return;
-
-    const option = ATTACHMENT_SORT_OPTIONS[value];
-    setSortField(option.sortField);
-    setSortDirection(option.sortDirection);
-    resetPageAndSelection();
+    updateFilters({ sort: value });
   }
 
   function onBulkDelete() {
@@ -375,7 +365,7 @@ function AttachmentsPage() {
       setBulkDeleteDialogOpen(false);
 
       if (attachments.length === ids.length && page > 1) {
-        setPage((previous) => Math.max(1, previous - 1));
+        void navigate({ search: (previous) => ({ ...previous, page: Math.max(1, previous.page - 1) }), replace: true, resetScroll: false });
       }
 
       toast.success("Selected files deleted");
@@ -434,8 +424,7 @@ function AttachmentsPage() {
               placeholder="Search by file name"
               value={searchText}
               onChange={(event) => {
-                setSearchText(event.target.value);
-                resetPageAndSelection();
+                updateFilters({ q: event.target.value });
               }}
             />
             <InputGroupAddon align="inline-start">
@@ -447,8 +436,7 @@ function AttachmentsPage() {
                   size="icon-xs"
                   aria-label="Clear search"
                   onClick={() => {
-                    setSearchText("");
-                    resetPageAndSelection();
+                    updateFilters({ q: "" });
                   }}
                 >
                   <XIcon />
@@ -472,8 +460,7 @@ function AttachmentsPage() {
             value={sourceFilter}
             onValueChange={(value) => {
               if (!isSourceFilter(value)) return;
-              setSourceFilter(value);
-              resetPageAndSelection();
+              updateFilters({ source: value });
             }}
           >
             <SelectTrigger className="w-full">
@@ -506,8 +493,7 @@ function AttachmentsPage() {
             value={typeFilter}
             onValueChange={(value) => {
               if (!isAttachmentTypeFilter(value)) return;
-              setTypeFilter(value);
-              resetPageAndSelection();
+              updateFilters({ type: value });
             }}
           >
             <SelectTrigger className="w-full">

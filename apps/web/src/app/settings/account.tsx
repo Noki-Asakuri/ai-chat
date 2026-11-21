@@ -12,10 +12,7 @@ import { AccountSessionsCard } from "./-components/account/account-sessions-card
 
 export const Route = createFileRoute("/settings/account")({
   loader: async ({ context }) => {
-    await context.queryClient.query({
-      ...convexQuery(api.functions.users.currentUser),
-      staleTime: "static",
-    });
+    await context.queryClient.query(convexQuery(api.functions.users.currentUser));
   },
   component: RouteComponent,
   head: () => ({ meta: [{ title: "Account - AI Chat" }] }),

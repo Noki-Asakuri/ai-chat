@@ -25,10 +25,7 @@ import { AutosaveStatus } from "../-components/autosave-status";
 
 export const Route = createFileRoute("/settings/general")({
   loader: async ({ context }) => {
-    await context.queryClient.query({
-      ...convexQuery(api.functions.users.getCurrentUserPreferences),
-      staleTime: "static",
-    });
+    await context.queryClient.query(convexQuery(api.functions.users.getCurrentUserPreferences));
   },
   component: GeneralSettings,
   head: () => ({ meta: [{ title: "General - AI Chat" }] }),

@@ -11,6 +11,7 @@ export type BackgroundCardProps = {
   disabled: boolean;
   existingBackgroundId: string | null;
   onRemoveExistingBackground: () => Promise<void>;
+  onFileChange: (file: File) => void;
 };
 
 export function BackgroundCard(props: BackgroundCardProps) {
@@ -101,6 +102,7 @@ export function BackgroundCard(props: BackgroundCardProps) {
             backgroundPreviewUrlRef.current = nextPreviewUrl;
             setBackgroundPreviewUrl(nextPreviewUrl);
             setBackgroundImage(selected);
+            props.onFileChange(selected);
           }}
         />
       </div>

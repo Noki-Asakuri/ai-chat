@@ -13,10 +13,7 @@ import { SettleInactiveThreadsCard } from "./-components/account/settle-inactive
 
 export const Route = createFileRoute("/settings/threads")({
   loader: async ({ context }) => {
-    await context.queryClient.query({
-      ...convexQuery(api.functions.users.getCurrentUserPreferences),
-      staleTime: "static",
-    });
+    await context.queryClient.query(convexQuery(api.functions.users.getCurrentUserPreferences));
   },
   component: RouteComponent,
   head: () => ({ meta: [{ title: "Threads - AI Chat" }] }),

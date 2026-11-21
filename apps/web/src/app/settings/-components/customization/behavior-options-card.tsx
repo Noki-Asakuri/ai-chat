@@ -23,7 +23,6 @@ export type BehaviorOptionsCardProps = {
   onAutoWrapChange: (enabled: boolean) => void;
   onPerformanceEnabledChange: (enabled: boolean) => void;
   onShowFullCodeChange: (enabled: boolean) => void;
-  onBehaviorChange: () => void;
 };
 
 type ToggleRowProps = {
@@ -77,7 +76,6 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
             if (!value || !isSendPreference(value)) return;
 
             props.onSendPreferenceChange(value);
-            props.onBehaviorChange();
           }}
         >
           <SelectTrigger
@@ -119,7 +117,6 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
           checked={props.notificationSound}
           onCheckedChange={(checked) => {
             props.onNotificationSoundChange(checked);
-            props.onBehaviorChange();
           }}
           aria-label="Play chat completion sound"
         />
@@ -138,12 +135,7 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
           disabled={props.disabled}
           checked={props.desktopNotification}
           onCheckedChange={(checked) => {
-            void Promise.resolve(props.onDesktopNotificationChange(checked)).then((shouldSave) => {
-              if (shouldSave) {
-                props.onBehaviorChange();
-              }
-              return shouldSave;
-            });
+            void props.onDesktopNotificationChange(checked);
           }}
           aria-label="Desktop notifications"
         />
@@ -163,7 +155,6 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
           checked={props.autoWrap}
           onCheckedChange={(checked) => {
             props.onAutoWrapChange(checked);
-            props.onBehaviorChange();
           }}
           aria-label="Wrap long code lines"
         />
@@ -183,7 +174,6 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
           checked={props.performanceEnabled}
           onCheckedChange={(checked) => {
             props.onPerformanceEnabledChange(checked);
-            props.onBehaviorChange();
           }}
           aria-label="Performance mode"
         />
@@ -203,7 +193,6 @@ export function BehaviorOptionsCard(props: BehaviorOptionsCardProps) {
           checked={props.showFullCode}
           onCheckedChange={(checked) => {
             props.onShowFullCodeChange(checked);
-            props.onBehaviorChange();
           }}
           aria-label="Show full code by default"
         />

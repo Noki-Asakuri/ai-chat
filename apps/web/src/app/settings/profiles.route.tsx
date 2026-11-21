@@ -160,7 +160,7 @@ function AiProfilesPage() {
   const debouncedSearch = useDebounce(search, 300);
   const sort = searchParams.sort ?? ("recently-updated" satisfies SortOption);
 
-  const { data, isPending, refetch } = useQuery({
+  const { data, isPending } = useQuery({
     ...convexQuery(api.functions.profiles.listProfilesWithQuery, {
       search: debouncedSearch,
       sort,
@@ -207,7 +207,6 @@ function AiProfilesPage() {
   async function onDelete(id: Id<"profiles">) {
     try {
       await deleteProfile({ profileId: id });
-      void refetch();
     } catch (error) {
       toast.error("Failed to delete profile", {
         description: error instanceof Error ? error.message : undefined,
@@ -247,7 +246,6 @@ function AiProfilesPage() {
         ref={dialogRef}
         createProfile={createProfile}
         updateProfile={updateProfile}
-        onAfterSubmit={() => void refetch()}
       />
     </main>
   );

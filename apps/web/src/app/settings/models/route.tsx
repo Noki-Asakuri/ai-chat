@@ -12,10 +12,7 @@ import { LoadingSkeleton } from "./-pending";
 
 export const Route = createFileRoute("/settings/models")({
   loader: async ({ context }) => {
-    await context.queryClient.query({
-      ...convexQuery(api.functions.users.getCurrentUserPreferences),
-      staleTime: "static",
-    });
+    await context.queryClient.query(convexQuery(api.functions.users.getCurrentUserPreferences));
   },
   component: RouteComponent,
   pendingComponent: LoadingSkeleton,
