@@ -58,7 +58,7 @@ An advanced AI chat application with streaming responses, thread organization, a
 - **Convex + TanStack Query** own server data. Thread lists and groups share the `useThreadGroups` query; they are no longer copied into localStorage. Convex subscriptions update the Query cache after mutations, so profile writes do not need manual refetches.
 - **TanStack Router** owns attachment search, source/type filters, sorting, and page number in validated URL search parameters. Chat authentication runs in `beforeLoad`, before child loaders. Router preloading delegates freshness to Query.
 - **TanStack Form** owns profile editing, personal context, and appearance values. Settings use debounced form listeners and scoped Query mutations to save in order. Internal navigation flushes unsaved settings, failed saves expose a retry action, and leaving the document with pending changes prompts the browser's unload warning.
-- **Zustand** retains transient chat/stream state and the selected thread group. Its thread-storage version migration discards the old server-data snapshot and resets the group selection once; saved conversations are unchanged.
+- **Zustand** retains transient chat/stream state and the selected thread group. Its thread-storage version migration discards the old server-data snapshot and keeps the selected group; saved conversations are unchanged.
 - Background uploads run separately from preference autosaves, retaining upload rollback and previous-file cleanup.
 
 This migration keeps the existing Convex schema, authentication provider, streaming API, and visual design. TanStack DB is intentionally omitted because Convex already supplies reactive data synchronization.
