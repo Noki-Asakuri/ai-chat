@@ -1,6 +1,6 @@
-import { code as codePlugin, type HighlightOptions, type HighlightResult } from "@streamdown/code";
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
-import { useIsCodeFenceIncomplete, type CustomRendererProps } from "streamdown";
+import type { TokensResult as HighlightResult } from "@pierre/highlights";
+import { useEffect, useMemo, useState } from "react";
+import type { CustomRendererProps } from "streamdown";
 
 import { extractOriginalFenceLanguage } from "@/components/message/utils/normalize-code-fence-languages";
 
@@ -143,59 +143,61 @@ function transformHighlightResult(result: HighlightResult) {
   };
 }
 
+async function loadHighlighter() {
+  const [highlighter, { default: oneDarkPro }] = await Promise.all([
+    import("@pierre/highlights"),
+    import("@pierre/highlights/themes/one-dark-pro"),
+  ]);
+
+  return { ...highlighter, oneDarkPro };
+}
+
 function HighlightedCodeBlock({
   language,
   displayLanguage,
   code,
   showButtonActions,
 }: HighlightedCodeBlockProps) {
-  const prevCodeRef = useRef(code);
-
-  const isIncomplete = useIsCodeFenceIncomplete();
-
-  const raw: HighlightResult = useMemo(() => splitCodeToHighlightTokens(code), [code]);
-  const [result, setResult] = useState<HighlightResult>(raw);
+  const [highlighter, setHighlighter] = useState<Awaited<ReturnType<typeof loadHighlighter>> | null>(null);
 
   useEffect(() => {
-    if (isIncomplete) return;
+    let cancelled = false;
 
-    const isIncrementalUpdate =
-      code.startsWith(prevCodeRef.current) && code.length > prevCodeRef.current.length;
-    prevCodeRef.current = code;
+    loadHighlighter()
+      .then((loadedHighlighter) => {
+        if (cancelled) return undefined;
 
-    const cachedResult = codePlugin.highlight(
-      {
-        code,
-        // SAFETY: Streamdown supplies the fence language string accepted by the highlighter.
-        // eslint-disable-next-line typescript/no-unsafe-type-assertion
-        language: language as HighlightOptions["language"],
-        themes: ["one-dark-pro", "one-dark-pro"],
-      },
-      (highlightedResult) => {
-        prevCodeRef.current = code;
-        startTransition(() => {
-          setResult(transformHighlightResult(highlightedResult));
-        });
-      },
-    );
-
-    if (cachedResult) {
-      startTransition(() => {
-        setResult(transformHighlightResult(cachedResult));
+        return setHighlighter(loadedHighlighter);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Failed to highlight code:", error);
       });
-      return;
-    }
 
-    if (!isIncrementalUpdate) {
-      setResult(raw);
-    }
-  }, [code, language, raw, isIncomplete]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const result = useMemo(() => {
+    if (!highlighter) return splitCodeToHighlightTokens(code);
+
+    const lang = language.trim().toLowerCase();
+
+    return transformHighlightResult({
+      ...highlighter.codeToTokens(code, {
+        lang: highlighter.isSupportedLanguage(lang) ? lang : "text",
+        themes: { light: highlighter.oneDarkPro },
+      }),
+      bg: "transparent",
+    });
+  }, [code, language, highlighter]);
 
   return (
     <RenderedCodeBlock
       code={code}
       displayLanguage={displayLanguage}
-      result={isIncomplete ? raw : result}
+      result={result}
       showButtonActions={showButtonActions}
     />
   );

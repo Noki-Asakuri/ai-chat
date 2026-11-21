@@ -63,7 +63,7 @@ An advanced AI chat application with streaming responses, thread organization, a
 - **shadcn/ui** component system
 - **shadcn/ui Toast** with Base UI for toast notifications
 - **@dnd-kit** for drag & drop thread grouping
-- **streamdown + shiki** for streaming-friendly markdown + code rendering
+- **streamdown + @pierre/highlights** for streaming-friendly markdown + code rendering
 - **KaTeX** for math rendering
 - **@nivo/calendar** for statistics visualization
 

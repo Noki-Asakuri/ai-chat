@@ -15,6 +15,8 @@ export default defineConfig({
   },
   server: { port: 3000 },
   resolve: { tsconfigPaths: true },
+  // Load Highlights' self-contained Wasm module directly instead of prebundling it.
+  optimizeDeps: { exclude: ["@pierre/highlights"] },
   plugins: [
     devtools({ consolePiping: { levels: ["log"] } }),
     tanstackStart({ srcDirectory: "src", router: { routesDirectory: "app" } }),

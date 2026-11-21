@@ -205,6 +205,12 @@
       "skillPath": "skills/convex-verify/SKILL.md",
       "computedHash": "dbe65a37ca2e9a5afa55669b8928ce1dc3ac765151452008f9105bde049228f7"
     },
+    "highlights": {
+      "source": "pierrecomputer/pierre",
+      "sourceType": "github",
+      "skillPath": "skills/highlights/SKILL.md",
+      "computedHash": "fb5032db3ccd3212682cce4855810735b0de407bf9a5f24af202115c813a9e1d"
+    },
     "install-anti-slop": {
       "source": "dmmulroy/anti-slop",
       "sourceType": "github",

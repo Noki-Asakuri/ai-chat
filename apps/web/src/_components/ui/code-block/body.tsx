@@ -1,5 +1,5 @@
 /* oxlint-disable react/no-array-index-key -- Syntax tokens have no stable identity beyond position. */
-import type { HighlightResult } from "@streamdown/code";
+import type { TokensResult as HighlightResult } from "@pierre/highlights";
 import { EllipsisIcon } from "lucide-react";
 import { type ComponentProps, type CSSProperties, memo, useMemo } from "react";
 

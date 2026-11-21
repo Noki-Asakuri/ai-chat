@@ -48,7 +48,7 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
       mermaid,
       renderers: [{ component: CodeBlock, language: ["text", "plaintext"] }],
     },
-    mode: "static",
+    mode: props.isAnimating ? "streaming" : "static",
     mermaid: { config: { theme: "dark" } },
 
     linkSafety: {

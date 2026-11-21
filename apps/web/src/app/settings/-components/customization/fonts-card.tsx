@@ -1,5 +1,5 @@
 import { ChevronDownIcon, LockKeyholeIcon, RefreshCwIcon } from "lucide-react";
-import type { HighlightResult } from "@streamdown/code";
+import type { TokensResult as HighlightResult } from "@pierre/highlights";
 import type { ReactNode } from "react";
 import { startTransition, useEffect, useState } from "react";
 import { toast } from "@/components/ui/toast";
