@@ -48,7 +48,9 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
       mermaid,
       renderers: [{ component: CodeBlock, language: ["text", "plaintext"] }],
     },
-    mode: props.isAnimating ? "streaming" : "static",
+    // Streamdown renders different trees per mode; switching when a reply finishes would remount
+    // its code blocks (losing expanded/scroll state), so keep assistant messages in streaming mode.
+    mode: props.role === "assistant" ? "streaming" : "static",
     mermaid: { config: { theme: "dark" } },
 
     linkSafety: {
