@@ -444,4 +444,53 @@ export const openai = {
       },
     },
   },
+  "openai/gpt-6.1-terra": {
+    addedAt: "2026-10-26",
+    display: { name: "GPT 6.1 Terra" },
+    id: "openai/gpt-6.1-terra",
+    provider: "openai",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      imageGeneration: true,
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["none", "low", "medium", "high", "xhigh", "max"],
+      },
+    },
+  },
+
+  "openai/gpt-6.2-astra": {
+    addedAt: "2026-11-17",
+    display: { name: "GPT 6.2 Astra" },
+    id: "openai/gpt-6.2-astra",
+    provider: "openai",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      imageGeneration: true,
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["low", "medium", "high", "xhigh", "max"],
+      },
+    },
+  },
+  "openai/gpt-6.2-sol": {
+    addedAt: "2026-11-17",
+    display: { name: "GPT 6.2 Sol" },
+    id: "openai/gpt-6.2-sol",
+    provider: "openai",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      imageGeneration: true,
+      toolCalling: true,
+      reasoning: {
+        type: "selectable",
+        defaultLevel: "medium",
+        levels: ["low", "medium", "high", "xhigh", "max"],
+      },
+    },
+  },
 } satisfies Record<ModelIdKey, ModelData>;

@@ -46,6 +46,29 @@ export const kimi = {
     },
   },
 
+  "kimi/kimi-k3.1-pro": {
+    addedAt: "2026-10-23",
+    display: { name: "Kimi K3.1 Pro" },
+    id: "kimi/kimi-k3.1-pro",
+    provider: "kimi",
+    modalities: { input: ["image", "text"], output: ["text"] },
+    capabilities: {
+      reasoning: { type: "selectable", defaultLevel: "max", levels: ["low", "high", "max"] },
+      toolCalling: true,
+    },
+  },
+  "kimi/kimi-k3.1-pro-highspeed": {
+    addedAt: "2026-10-23",
+    display: { name: "Kimi K3.1 Pro Highspeed" },
+    id: "kimi/kimi-k3.1-pro-highspeed",
+    provider: "kimi",
+    modalities: { input: ["image", "text"], output: ["text"] },
+    capabilities: {
+      reasoning: { type: "selectable", defaultLevel: "max", levels: ["low", "high", "max"] },
+      toolCalling: true,
+    },
+  },
+
   "kimi/kimi-k2-thinking": {
     display: { name: "Kimi K2 Thinking" },
     id: "kimi/kimi-k2-thinking",

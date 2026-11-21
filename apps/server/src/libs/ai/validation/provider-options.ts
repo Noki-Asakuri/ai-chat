@@ -15,13 +15,20 @@ export function buildProviderOptions(modelInfo: ModelData, reasoning: ReasoningE
       modelInfo.id === "deepseek/deepseek-v4.1-flash" && reasoning === "max"
         ? { reasoningEffort: "max" }
         : {},
-    google: { safetySettings },
+    google:
+      // The installed Google SDK only maps xhigh for Hydrogen, so send Neon's level explicitly.
+      modelInfo.id === "google/gemini-4-neon" && reasoning === "xhigh"
+        ? { safetySettings, thinkingConfig: { thinkingLevel: "xhigh" } }
+        : { safetySettings },
     moonshotai:
       modelInfo.id === "kimi/kimi-k3"
         ? { reasoningEffort: "max" }
-        : modelInfo.provider === "kimi" && modelInfo.capabilities.reasoning?.type === "selectable"
-          ? { thinking: { type: reasoning === "none" ? "disabled" : "enabled" } }
-          : {},
+        : (modelInfo.id === "kimi/kimi-k3.1-pro" || modelInfo.id === "kimi/kimi-k3.1-pro-highspeed") &&
+            (reasoning === "low" || reasoning === "high" || reasoning === "max")
+          ? { reasoningEffort: reasoning }
+          : modelInfo.provider === "kimi" && modelInfo.capabilities.reasoning?.type === "selectable"
+            ? { thinking: { type: reasoning === "none" ? "disabled" : "enabled" } }
+            : {},
     zai: {},
   };
 

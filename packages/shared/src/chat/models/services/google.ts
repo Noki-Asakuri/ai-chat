@@ -32,6 +32,11 @@ export const google = {
     capabilities: {
       toolCalling: true,
     },
+    deprecation: {
+      message:
+        "Gemini 2.5 Flash is being shut down by Google on December 1, 2026. Please switch to Gemini 3.5 Flash Lite.",
+      replacementModelId: "google/gemini-3.5-flash-lite",
+    },
   },
   "google/gemini-2.5-flash-thinking": {
     display: { name: "Gemini 2.5 Flash", unique: "Gemini 2.5 Flash (Thinking)" },
@@ -44,6 +49,11 @@ export const google = {
       toolCalling: true,
       reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
     },
+    deprecation: {
+      message:
+        "Gemini 2.5 Flash is being shut down by Google on December 1, 2026. Please switch to Gemini 3.5 Flash Lite.",
+      replacementModelId: "google/gemini-3.5-flash-lite",
+    },
   },
   "google/gemini-2.5-flash-image": {
     display: { name: "Gemini 2.5 Flash (Image)", unique: "Gemini 2.5 Flash (Image)" },
@@ -51,8 +61,7 @@ export const google = {
     altModelIds: ["google/gemini-2.5-flash-image-preview"],
     provider: "google",
     modalities: { input: ["image", "pdf", "text"], output: ["image", "text"] },
-    capabilities: {
-    },
+    capabilities: {},
     deprecation: {
       message: "Gemini 2.5 Flash Image is deprecated by Google. Please switch to Gemini 3.1 Flash Image.",
       replacementModelId: "google/gemini-3.1-flash-image",
@@ -72,6 +81,11 @@ export const google = {
     capabilities: {
       toolCalling: true,
       reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
+    },
+    deprecation: {
+      message:
+        "Gemini 2.5 Pro is being shut down by Google on December 1, 2026. Please switch to Gemini 3.8 Flash.",
+      replacementModelId: "google/gemini-3.8-flash",
     },
   },
   "google/gemini-3-flash": {
@@ -190,6 +204,10 @@ export const google = {
         levels: ["minimal", "low", "medium", "high"],
       },
     },
+    deprecation: {
+      message: "Gemini 3.5 Flash is deprecated by Google. Please switch to Gemini 3.6 Flash.",
+      replacementModelId: "google/gemini-3.6-flash",
+    },
   },
   "google/gemini-3.5-flash-lite": {
     display: { name: "Gemini 3.5 Flash Lite" },
@@ -229,6 +247,10 @@ export const google = {
       toolCalling: true,
       reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
     },
+    deprecation: {
+      message: "Gemini 3.7 Flash is deprecated by Google. Please switch to Gemini 3.8 Flash.",
+      replacementModelId: "google/gemini-3.8-flash",
+    },
   },
   "google/gemini-3.8-flash": {
     addedAt: "2026-09-11",
@@ -239,6 +261,50 @@ export const google = {
     capabilities: {
       toolCalling: true,
       reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
+    },
+  },
+  "google/gemini-4-argon": {
+    addedAt: "2026-10-13",
+    display: { name: "Gemini 4 Argon" },
+    id: "google/gemini-4-argon",
+    provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
+    },
+  },
+  "google/gemini-4-carbon": {
+    addedAt: "2026-11-10",
+    display: { name: "Gemini 4 Carbon" },
+    id: "google/gemini-4-carbon",
+    provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "medium", levels: ["low", "medium", "high"] },
+    },
+  },
+  "google/gemini-4-hydrogen": {
+    addedAt: "2026-11-12",
+    display: { name: "Gemini 4 Hydrogen" },
+    id: "google/gemini-4-hydrogen",
+    provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "high", levels: ["low", "medium", "high", "xhigh"] },
+    },
+  },
+  "google/gemini-4-neon": {
+    addedAt: "2026-11-18",
+    display: { name: "Gemini 4 Neon" },
+    id: "google/gemini-4-neon",
+    provider: "google",
+    modalities: { input: ["image", "pdf", "text"], output: ["text"] },
+    capabilities: {
+      toolCalling: true,
+      reasoning: { type: "selectable", defaultLevel: "high", levels: ["low", "medium", "high", "xhigh"] },
     },
   },
 } satisfies Record<ModelIdKey, ModelData>;
