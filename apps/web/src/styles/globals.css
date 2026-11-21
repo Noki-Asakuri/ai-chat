@@ -120,6 +120,16 @@
   --font-serif: "Space Grotesk", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 
   --animate-caret-blink: caret-blink 1.25s ease-out infinite;
+  --animate-image-develop: image-develop 2.4s ease-in-out infinite;
+
+  @keyframes image-develop {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
 
   @keyframes caret-blink {
     0%,

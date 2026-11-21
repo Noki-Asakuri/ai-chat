@@ -29,29 +29,6 @@ import {
 type CreateMessage = (typeof api.functions.messages.addMessagesToThread)["_args"]["messages"][number];
 type MessageParts = CreateMessage["parts"];
 
-const SELECTED_BLOCKQUOTE_FOCUS_INSTRUCTION =
-  "Instruction: The quoted blockquote in the user message is selected context from an assistant response. Focus your answer on that blockquote and treat the remaining text as the user's follow-up.";
-
-function formatSelectedTextBlockquote(text: string): string {
-  return text
-    .split(/\r?\n/)
-    .map((line) => `> ${line}`)
-    .join("\n");
-}
-
-function buildInputWithBlockquoteInstruction({
-  input,
-  selectedBlockquoteContext,
-}: {
-  input: string;
-  selectedBlockquoteContext: { text: string } | null;
-}): string {
-  if (!selectedBlockquoteContext) return input;
-  if (!input.includes(formatSelectedTextBlockquote(selectedBlockquoteContext.text))) return input;
-
-  return `${SELECTED_BLOCKQUOTE_FOCUS_INSTRUCTION}\n\n${input}`;
-}
-
 export function useSendChatMessage() {
   const navigate = useNavigate();
   const configStore = useConfigStoreState();
@@ -70,7 +47,7 @@ export function useSendChatMessage() {
   async function sendChatRequest() {
     let threadId: Id<"threads"> | null = fromUUID<Id<"threads">>(params?.threadId) ?? null;
 
-    const { input, attachments, selectedBlockquoteContext } = useChatStore.getState();
+    const { input, attachments } = useChatStore.getState();
     const messageState = useMessageStore.getState();
 
     const messagesHistory = messageState.messageIds
@@ -80,7 +57,6 @@ export function useSendChatMessage() {
     const lastMessage = messagesHistory[messagesHistory.length - 1];
 
     if (!input || lastMessage?.status === "pending" || lastMessage?.status === "streaming") return;
-    const inputForRequest = buildInputWithBlockquoteInstruction({ input, selectedBlockquoteContext });
     chatStoreActions.resetInput();
 
     if (!threadId) {
@@ -138,7 +114,7 @@ export function useSendChatMessage() {
 
     const messages = convertToUIChatMessages(messagesHistory);
     const uploadedAttachments = await uploadUserAttachment(attachments, threadId);
-    const userMessageRequestParts: UIChatMessage["parts"] = [{ type: "text", text: inputForRequest }];
+    const userMessageRequestParts: UIChatMessage["parts"] = [{ type: "text", text: input }];
     const userMessageDisplayParts: MessageParts = [{ type: "text", text: input }];
 
     messages.push({
