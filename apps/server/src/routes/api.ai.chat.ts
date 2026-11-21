@@ -12,6 +12,7 @@ import { createReservedUsageRefunder } from "@/libs/ai/actions/refund-reserved-u
 import { buildChatAgent } from "@/libs/ai/agents";
 import { buildSystemPrompts } from "@/libs/ai/agents/build-system-prompt";
 import { createMessageMetadataHandler } from "@/libs/ai/agents/handle-metadata";
+import { batchMessageStream } from "@/libs/ai/batch-message-stream";
 import { getStreamResponseHeaders } from "@/libs/ai/headers";
 import { consumeUserPoints } from "@/libs/ai/limits";
 import type { ChatMetadata } from "@/libs/ai/types";
@@ -277,7 +278,7 @@ chatRouter.post("/chat", async function (ctx) {
     });
 
     return createUIMessageStreamResponse({
-      stream: uiMessageStream,
+      stream: uiMessageStream.pipeThrough(batchMessageStream()),
       status: 200,
       headers: getStreamResponseHeaders(requestId),
       consumeSseStream: async function ({ stream: sseStream }) {
