@@ -1,11 +1,23 @@
-/* eslint-disable jsx-a11y/prefer-tag-over-role -- Base UI requires ARIA combobox/listbox roles on its composed primitives. */
-/* eslint-disable jsx-a11y/click-events-have-key-events -- Base UI provides keyboard handling for composed options. */
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxGroupLabel,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+  createComboboxController,
+} from "@ui-sdk/react/combobox";
+import { SegmentedControl, SegmentedControlItem } from "@ui-sdk/react/segmented-control";
+import { Toggle } from "@ui-sdk/react/toggle";
 import { useMutation } from "convex/react";
 
 import { ChevronDownIcon, LayersIcon, SearchIcon, StarIcon } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
 import { useShallow } from "zustand/shallow";
 
@@ -14,8 +26,7 @@ import { useConfigStore } from "@/components/provider/config-provider";
 import { ModelCapability } from "@/components/capability-icon";
 import { buttonVariants } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Kbd } from "@/components/ui/kbd";
 
 import {
   AllModelIds,
@@ -61,7 +72,49 @@ type ModelGroup = {
   models: Array<VisibleModelEntry>;
 };
 
-function stopFavoriteMouseDown(event: React.MouseEvent<HTMLButtonElement>): void {
+// Closing by tabbing or clicking elsewhere already put focus where the person wanted it.
+const RESTORE_FOCUS_REASONS = new Set(["item-press", "escape-key", "trigger-press", "close-press"]);
+
+const PICKER_SECTIONS: Array<PickerSectionKey> = ["all", "favorites", ...PROVIDER_ORDER];
+
+function isPickerSection(value: string | null): value is PickerSectionKey {
+  return PICKER_SECTIONS.some((section) => section === value);
+}
+
+function getSectionLabel(section: PickerSectionKey): string {
+  if (section === "all") return "All models";
+  if (section === "favorites") return "Favorites";
+  return prettifyProviderName(section);
+}
+
+function getModelLabel(modelId: string): string {
+  const data = tryGetModelData(modelId);
+  return data ? (data.display.unique ?? data.display.name) : "Unknown model";
+}
+
+function isFavoriteShortcut(event: React.KeyboardEvent<HTMLInputElement>): boolean {
+  return (
+    event.key.toLowerCase() === "f" && event.shiftKey && (event.metaKey || event.ctrlKey) && !event.altKey
+  );
+}
+
+// The search box sits inside the popup, so a forward Tab from it lands on the section rail
+// in the same popup; the combobox still reports that as focus leaving and would close.
+function focusStaysInPopup(content: HTMLElement | null, event: Event | undefined): boolean {
+  if (!content || !event) return false;
+  if (event instanceof FocusEvent) {
+    return event.relatedTarget instanceof Node && content.contains(event.relatedTarget);
+  }
+  return (
+    event instanceof KeyboardEvent &&
+    event.key === "Tab" &&
+    !event.shiftKey &&
+    event.target instanceof Node &&
+    content.contains(event.target)
+  );
+}
+
+function swallow(event: Event) {
   event.preventDefault();
   event.stopPropagation();
 }
@@ -157,8 +210,11 @@ function ModelSelectorBase({
   const [selectedSection, setSelectedSection] = useState<PickerSectionKey>("all");
   const [isSavingFavorites, setIsSavingFavorites] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeModelId, setActiveModelId] = useState<string | null>(null);
-  const listId = useId();
+  const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
+  const [content, setContent] = useState<HTMLDivElement | null>(null);
+  const closeReason = useRef<string | null>(null);
+  const [highlightedModelId, setHighlightedModelId] = useState<string | null>(null);
+  const [combobox] = useState(() => createComboboxController());
 
   const updateUserModelPreferences = useMutation(api.functions.users.updateUserModelPreferences);
 
@@ -187,7 +243,11 @@ function ModelSelectorBase({
 
     for (const modelId of SelectableModelIds) {
       const data = tryGetModelData(modelId);
-      if (!data || (textOnly && (data.modalities.output.length !== 1 || data.modalities.output[0] !== "text"))) continue;
+      if (
+        !data ||
+        (textOnly && (data.modalities.output.length !== 1 || data.modalities.output[0] !== "text"))
+      )
+        continue;
 
       next.push({
         id: modelId,
@@ -314,31 +374,6 @@ function ModelSelectorBase({
     return "No models match your search.";
   }, [allViewModels.length, favoriteVisibleModels.length, selectedSection]);
 
-  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
-  const filteredGroups: Array<ModelGroup> = [];
-
-  for (const group of groups) {
-    if (!normalizedSearchQuery) {
-      filteredGroups.push(group);
-      continue;
-    }
-
-    const models = group.models.filter((model) => {
-      const providerName = prettifyProviderName(model.provider);
-      return `${model.id} ${model.label} ${model.provider} ${providerName}`
-        .toLocaleLowerCase()
-        .includes(normalizedSearchQuery);
-    });
-
-    if (models.length > 0) {
-      filteredGroups.push({ ...group, models });
-    }
-  }
-  const filteredModels = filteredGroups.flatMap((group) => group.models);
-  const highlightedModelId = filteredModels.some((model) => model.id === activeModelId)
-    ? activeModelId
-    : (filteredModels.find((model) => model.id === selectedModel)?.id ?? filteredModels[0]?.id ?? null);
-
   function handleChange(model: string) {
     if (onChange) {
       onChange(model);
@@ -347,31 +382,6 @@ function ModelSelectorBase({
 
     chatStoreActions.retainCompatibleAttachments(model);
     setConfig({ model });
-  }
-
-  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (filteredModels.length === 0) return;
-
-    const activeIndex = filteredModels.findIndex((model) => model.id === highlightedModelId);
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      const nextIndex = activeIndex < filteredModels.length - 1 ? activeIndex + 1 : 0;
-      setActiveModelId(filteredModels[nextIndex]?.id ?? null);
-      return;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      const nextIndex = activeIndex > 0 ? activeIndex - 1 : filteredModels.length - 1;
-      setActiveModelId(filteredModels[nextIndex]?.id ?? null);
-      return;
-    }
-
-    if (event.key === "Enter" && highlightedModelId) {
-      event.preventDefault();
-      handleChange(highlightedModelId);
-    }
   }
 
   async function handleToggleFavorite(modelId: string) {
@@ -394,17 +404,61 @@ function ModelSelectorBase({
     }
   }
 
+  function handleSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (!isFavoriteShortcut(event)) return;
+    event.preventDefault();
+
+    if (highlightedModelId) void handleToggleFavorite(highlightedModelId);
+  }
+
+  const highlightedIsFavorite = highlightedModelId ? favoriteModelsSet.has(highlightedModelId) : false;
+
   return (
-    <Popover
-      onOpenChange={(open) => {
-        if (open) return;
-        setSearchQuery("");
-        setActiveModelId(null);
+    <Combobox
+      controller={combobox}
+      value={selectedModel}
+      onValueChange={(nextValue) => {
+        if (nextValue) handleChange(nextValue);
       }}
+      query={searchQuery}
+      onQueryChange={setSearchQuery}
+      onOpenChange={(open, details) => {
+        if (!open && details.reason === "focus-out" && focusStaysInPopup(content, details.event)) {
+          details.cancel();
+          return;
+        }
+        if (open) setSearchQuery("");
+        else closeReason.current = details.reason;
+      }}
+      onOpenChangeComplete={(open) => {
+        if (open) {
+          // A touch screen reader opening the list moves focus to the selected option; keep it there.
+          if (!content?.contains(document.activeElement)) combobox.focus();
+          // The first scroll-into-view ran while the zoom-in animation shrank the popup, landing short.
+          content
+            ?.querySelector("[data-slot=combobox-item][data-highlighted]")
+            ?.scrollIntoView({ block: "nearest" });
+          return;
+        }
+        // Someone else may already have moved focus, like the Ctrl/⌘+M shortcut returning to the composer.
+        const focused = document.activeElement;
+        const focusIsLost = !focused || focused === document.body || content?.contains(focused);
+        if (focusIsLost && closeReason.current && RESTORE_FOCUS_REASONS.has(closeReason.current)) {
+          trigger?.focus();
+        }
+      }}
+      onHighlight={(modelId, details) => {
+        // The pointer leaving the list clears the highlight; keep it so the footer favorite button stays usable.
+        if (modelId === null && details.event instanceof MouseEvent) return;
+        setHighlightedModelId(modelId);
+      }}
+      itemToLabel={getModelLabel}
+      autoHighlight="always"
+      disabled={disabled}
     >
-      <PopoverTrigger
+      <ComboboxTrigger
+        ref={setTrigger}
         id={triggerId}
-        disabled={disabled}
         aria-label="Select model"
         className={cn(
           buttonVariants({ variant: "ghost" }),
@@ -414,147 +468,134 @@ function ModelSelectorBase({
         )}
       >
         {renderTriggerValue(selectedModel)}
-        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
-      </PopoverTrigger>
+        <ChevronDownIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+      </ComboboxTrigger>
 
-      <PopoverContent
+      <ComboboxContent
+        // Kept mounted so an agent can see the models while the picker is closed.
+        keepMounted
+        ref={setContent}
+        // The combobox only watches its input, so focus leaving from the rail or list must close it here.
+        // A null target is a press on the popup's own padding, and the trigger toggles it itself.
+        onBlur={(event) => {
+          const next = event.relatedTarget;
+          if (next instanceof Node && next !== trigger && !content?.contains(next)) combobox.close();
+        }}
+        anchor={trigger}
         sideOffset={8}
-        includeArrow={false}
+        collisionPadding={8}
         className={cn(
-          "w-[min(28rem,calc(100vw-1rem))] p-0",
+          "z-50 m-0 flex w-[min(28rem,calc(100vw-1rem))] flex-col overflow-hidden p-0",
           "rounded-lg border border-border bg-card text-card-foreground shadow-md ring-1 ring-foreground/8",
+          "origin-(--transform-origin) duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
         )}
       >
-        <div className="flex size-full flex-col overflow-hidden rounded-lg bg-transparent text-popover-foreground">
-          <div className="border-b border-border px-3 py-2.5">
-            <InputGroup className="h-9 border-input bg-background/70 shadow-none! *:data-[slot=input-group-addon]:pl-2.5!">
-              <InputGroupInput
-                role="combobox"
-                aria-expanded="true"
-                aria-controls={listId}
-                aria-activedescendant={highlightedModelId ? `${listId}-${highlightedModelId}` : undefined}
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="Search models..."
-                value={searchQuery}
-                onChange={(event) => {
-                  setSearchQuery(event.target.value);
-                  setActiveModelId(null);
-                }}
-                onKeyDown={handleSearchKeyDown}
-                className="h-9 w-full text-xs outline-hidden placeholder:text-muted-foreground"
-              />
-              <InputGroupAddon>
-                <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-
-          <div className="flex h-[min(27rem,calc(100vh-11rem))] min-h-[18rem]">
-            <div className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-border bg-muted/15 px-1.5 py-2.5">
-              <PickerSectionButton
-                active={selectedSection === "all"}
-                onClick={() => setSelectedSection("all")}
-                label="All models"
-              >
-                <LayersIcon className="size-4" />
-              </PickerSectionButton>
-
-              <PickerSectionButton
-                active={selectedSection === "favorites"}
-                onClick={() => setSelectedSection("favorites")}
-                label="Favorites"
-              >
-                <StarIcon className="size-4" />
-              </PickerSectionButton>
-
-              {PROVIDER_ORDER.map((provider) => (
-                <PickerSectionButton
-                  key={provider}
-                  active={selectedSection === provider}
-                  onClick={() => setSelectedSection(provider)}
-                  label={prettifyProviderName(provider)}
-                >
-                  <Icons.provider provider={provider} className="size-4" />
-                </PickerSectionButton>
-              ))}
-            </div>
-
-            <div
-              id={listId}
-              role="listbox"
-              aria-label="Models"
-              className="h-full max-h-none min-h-0 min-w-0 flex-1 px-2 py-2.5"
-              style={{ scrollbarGutter: "stable both-edges", overflowY: "auto" }}
-            >
-              {filteredGroups.length === 0 ? (
-                <div className="px-2 py-6 text-center text-xs text-muted-foreground">{emptyMessage}</div>
-              ) : null}
-
-              {filteredGroups.map((group) => (
-                <div
-                  key={group.key}
-                  role="group"
-                  aria-labelledby={`${listId}-group-${group.key}`}
-                  className="overflow-hidden text-foreground not-first:mt-2"
-                >
-                  <div
-                    id={`${listId}-group-${group.key}`}
-                    className="text-2xs px-2 py-1.5 font-medium text-muted-foreground"
-                  >
-                    {group.title}
-                  </div>
-                  {group.models.map((model) => (
-                    <ModelItem
-                      key={model.id}
-                      optionId={`${listId}-${model.id}`}
-                      modelId={model.id}
-                      selected={model.id === selectedModel}
-                      active={model.id === highlightedModelId}
-                      favorite={favoriteModelsSet.has(model.id)}
-                      pendingFavorite={isSavingFavorites}
-                      onChange={handleChange}
-                      onActiveChange={setActiveModelId}
-                      onToggleFavorite={handleToggleFavorite}
-                    />
-                  ))}
-                </div>
-              ))}
-            </div>
+        <div className="border-b border-border px-3 py-2.5">
+          <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-background/70 px-2.5 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+            <SearchIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+            <ComboboxInput
+              aria-label="Search models"
+              placeholder="Search models..."
+              autoComplete="off"
+              spellCheck={false}
+              onKeyDown={handleSearchKeyDown}
+              className="h-full min-w-0 flex-1 bg-transparent text-xs outline-hidden placeholder:text-muted-foreground"
+            />
           </div>
         </div>
-      </PopoverContent>
-    </Popover>
+
+        <div className="flex h-[min(27rem,calc(100vh-11rem))] min-h-[18rem]">
+          <SegmentedControl
+            aria-label="Model sections"
+            orientation="vertical"
+            value={selectedSection}
+            onValueChange={(section, details) => {
+              if (!isPickerSection(section)) return;
+              setSelectedSection(section);
+              if (details.source !== "keyboard") combobox.focus();
+            }}
+            className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-border bg-muted/15 px-1.5 py-2.5"
+          >
+            {PICKER_SECTIONS.map((section) => (
+              <SegmentedControlItem
+                key={section}
+                value={section}
+                title={getSectionLabel(section)}
+                className={cn(
+                  "flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors outline-none",
+                  "hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
+                  "ring-inset data-checked:bg-primary/12 data-checked:text-primary data-checked:ring-1 data-checked:ring-primary/25",
+                )}
+              >
+                <SectionIcon section={section} />
+                <span className="sr-only">{getSectionLabel(section)}</span>
+              </SegmentedControlItem>
+            ))}
+          </SegmentedControl>
+
+          <ComboboxList
+            aria-label="Models"
+            tabIndex={-1}
+            className="h-full min-h-0 min-w-0 flex-1 [scrollbar-gutter:stable_both-edges] overflow-y-auto px-2 py-2.5"
+          >
+            <ComboboxEmpty className="px-2 py-6 text-center text-xs text-muted-foreground not-data-empty:hidden">
+              {emptyMessage}
+            </ComboboxEmpty>
+
+            {groups.map((group) => (
+              <ComboboxGroup key={group.key} className="overflow-hidden text-foreground not-first:mt-2">
+                <ComboboxGroupLabel className="text-2xs px-2 py-1.5 font-medium text-muted-foreground">
+                  {group.title}
+                </ComboboxGroupLabel>
+                {group.models.map((model) => (
+                  <ModelItem
+                    key={model.id}
+                    modelId={model.id}
+                    favorite={favoriteModelsSet.has(model.id)}
+                    pendingFavorite={isSavingFavorites}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                ))}
+              </ComboboxGroup>
+            ))}
+          </ComboboxList>
+        </div>
+
+        <div className="text-2xs flex items-center justify-end gap-1.5 border-t border-border px-3 py-2 text-muted-foreground">
+          <Toggle
+            pressed={highlightedIsFavorite}
+            onPressedChange={() => {
+              if (highlightedModelId) void handleToggleFavorite(highlightedModelId);
+            }}
+            disabled={!highlightedModelId || isSavingFavorites}
+            aria-label={
+              highlightedModelId ? `Favorite ${getModelLabel(highlightedModelId)}` : "Favorite model"
+            }
+            className={cn(
+              "mr-auto flex h-7 min-w-0 cursor-pointer items-center gap-1.5 rounded-md px-2 text-muted-foreground transition-colors outline-none",
+              "hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
+              "data-pressed:text-amber-400 data-disabled:cursor-not-allowed data-disabled:opacity-50",
+            )}
+          >
+            <StarIcon
+              aria-hidden="true"
+              className={cn("size-3.5 shrink-0", highlightedIsFavorite && "fill-amber-400")}
+            />
+            <span className="truncate">Favorite</span>
+          </Toggle>
+          <Kbd>Ctrl/⌘</Kbd>
+          <Kbd>Shift</Kbd>
+          <Kbd>F</Kbd>
+        </div>
+      </ComboboxContent>
+    </Combobox>
   );
 }
 
-function PickerSectionButton({
-  active,
-  onClick,
-  label,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      data-active={active}
-      onClick={onClick}
-      className={cn(
-        "flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors",
-        "hover:bg-muted hover:text-foreground",
-        "ring-inset data-[active=true]:bg-primary/12 data-[active=true]:text-primary data-[active=true]:ring-1 data-[active=true]:ring-primary/25",
-      )}
-    >
-      {children}
-    </button>
-  );
+function SectionIcon({ section }: { section: PickerSectionKey }) {
+  if (section === "all") return <LayersIcon aria-hidden="true" className="size-4" />;
+  if (section === "favorites") return <StarIcon aria-hidden="true" className="size-4" />;
+  return <Icons.provider provider={section} aria-hidden="true" className="size-4" />;
 }
 
 export function ChatModelSelector() {
@@ -596,83 +637,86 @@ export function ModelSelector(props: ModelSelectorProps) {
 }
 
 function ModelItem({
-  selected,
-  active,
-  optionId,
   modelId,
   favorite,
   pendingFavorite,
-  onChange,
-  onActiveChange,
   onToggleFavorite,
 }: {
-  selected: boolean;
-  active: boolean;
-  optionId: string;
   modelId: string;
   favorite: boolean;
   pendingFavorite: boolean;
-  onChange?: (id: string) => void;
-  onActiveChange: (id: string) => void;
   onToggleFavorite: (id: string) => void;
 }) {
+  const descriptionId = useId();
   const data = tryGetModelData(modelId);
   if (!data) return null;
 
   const displayName = data.display.unique ?? data.display.name;
 
-  function handleSelect() {
-    onChange?.(modelId);
-  }
-
-  function handleFavoriteClick(event: React.MouseEvent<HTMLButtonElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-    onToggleFavorite(modelId);
+  // Native listeners: the option selects from its own DOM listener, which a React
+  // synthetic stopPropagation (dispatched from the root) can't stop.
+  function favoriteStarRef(element: HTMLSpanElement | null) {
+    if (!element) return undefined;
+    const toggle = (event: Event) => {
+      swallow(event);
+      if (!pendingFavorite) onToggleFavorite(modelId);
+    };
+    element.addEventListener("pointerdown", swallow);
+    element.addEventListener("mousedown", swallow);
+    element.addEventListener("click", toggle);
+    return () => {
+      element.removeEventListener("pointerdown", swallow);
+      element.removeEventListener("mousedown", swallow);
+      element.removeEventListener("click", toggle);
+    };
   }
 
   return (
-    <div
-      tabIndex={0}
-      id={optionId}
-      role="option"
-      aria-selected={selected}
-      onClick={handleSelect}
-      onPointerEnter={() => onActiveChange(modelId)}
-      data-model-selected={selected}
-      data-active={active}
+    <ComboboxItem
+      value={modelId}
+      label={displayName}
+      aria-label={displayName}
+      aria-describedby={`${descriptionId}-capabilities ${descriptionId}-favorite`}
+      keywords={[modelId, data.provider, prettifyProviderName(data.provider)]}
       title={displayName}
       className={cn(
         "mt-0.5 flex w-full cursor-pointer items-center justify-between gap-3 px-2.5 py-2.5 outline-none select-none first:mt-0",
         "rounded-md border border-transparent",
-        "data-[active=true]:bg-muted/70 data-[active=true]:text-foreground",
-        "data-[model-selected=true]:bg-primary/10 data-[model-selected=true]:text-foreground data-[model-selected=true]:ring-1 data-[model-selected=true]:ring-primary/15",
+        "data-highlighted:bg-muted/70 data-highlighted:text-foreground",
+        "data-selected:bg-primary/10 data-selected:text-foreground data-selected:ring-1 data-selected:ring-primary/15",
       )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <Icons.provider provider={data.provider} className="size-4 shrink-0" />
+        <Icons.provider provider={data.provider} aria-hidden="true" className="size-4 shrink-0" />
         <span className="min-w-0 truncate text-xs font-medium">{displayName}</span>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        <ModelCapability model={data} tooltip={false} />
+        {/* Hidden from the option's own text so screen readers and agents name it by the model alone;
+            aria-describedby still reads both. */}
+        <div id={`${descriptionId}-capabilities`} aria-hidden="true">
+          <ModelCapability model={data} tooltip={false} />
+        </div>
+        <span id={`${descriptionId}-favorite`} aria-hidden="true" className="sr-only">
+          {favorite ? "Favorite." : "Not a favorite."}
+        </span>
 
-        <button
-          type="button"
-          onMouseDown={stopFavoriteMouseDown}
-          onClick={handleFavoriteClick}
-          disabled={pendingFavorite}
-          aria-label={favorite ? `Remove ${displayName} from favorites` : `Favorite ${displayName}`}
+        <span
+          ref={favoriteStarRef}
+          aria-hidden="true"
+          title={favorite ? "Remove from favorites" : "Add to favorites"}
+          data-favorite={favorite || undefined}
+          data-pending={pendingFavorite || undefined}
           className={cn(
             "flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors",
             "hover:bg-muted hover:text-foreground",
-            "disabled:cursor-not-allowed disabled:opacity-50",
-            favorite && "text-amber-400",
+            "data-pending:cursor-not-allowed data-pending:opacity-50",
+            "data-favorite:text-amber-400",
           )}
         >
           <StarIcon className={cn("size-3.5", favorite && "fill-amber-400")} />
-        </button>
+        </span>
       </div>
-    </div>
+    </ComboboxItem>
   );
 }

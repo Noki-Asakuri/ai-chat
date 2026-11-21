@@ -208,10 +208,11 @@ export function RegisterEventHandlers() {
 
       const targetElement = document.getElementById(targetId);
       const btn = targetElement instanceof HTMLButtonElement ? targetElement : null;
+      const wasOpen = btn?.hasAttribute("data-open") ?? false;
       btn?.click();
 
       // Re-focus the textarea after closing the model selector
-      if (btn?.dataset.popupOpen === "") {
+      if (wasOpen) {
         const textareaId = isEditMessage ? "textarea-user-message-edit" : "textarea-chat-input";
         focusTextareaByIdAtEnd(textareaId);
       }
