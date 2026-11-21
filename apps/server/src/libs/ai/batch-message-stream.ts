@@ -15,6 +15,12 @@ export function batchMessageStream() {
     }
   }
 
+  function discard() {
+    clearTimeout(timer);
+    timer = undefined;
+    pending = undefined;
+  }
+
   return new TransformStream<UIMessageChunk, UIMessageChunk>({
     transform(chunk, controller) {
       if (
@@ -33,14 +39,12 @@ export function batchMessageStream() {
       pending = pending ? { ...pending, delta: pending.delta + chunk.delta } : chunk;
 
       timer ??= setTimeout(() => {
-        // A disconnected reader errors the controller; discard its buffered text.
-        if (controller.desiredSize === null) {
-          pending = undefined;
-          timer = undefined;
-          return;
+        // A cancelled reader closes the readable side (desiredSize 0, not null), so enqueue throws.
+        try {
+          flush(controller);
+        } catch {
+          discard();
         }
-
-        flush(controller);
       }, 50);
     },
     flush,
