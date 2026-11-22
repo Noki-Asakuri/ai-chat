@@ -378,7 +378,7 @@ describe("composer model settings in a thread", () => {
     if (!meta) throw new Error("Missing thread meta");
     const saved = { ...meta, latestModelParams: { effort: "high" as const, webSearch: true, profile: null } };
     convex.setServerQuery(getMeta, metaArgs, saved);
-    convex.connected = false;
+    convex.withholdQuery(getMeta, metaArgs);
 
     await renderComposer(saved);
     expect(effortShown()).toBe("High");
@@ -391,6 +391,43 @@ describe("composer model settings in a thread", () => {
       webSearch: true,
       profile: null,
     });
+  });
+
+  test("changes before the Convex subscription delivers show, toggle and send at once", async () => {
+    convex.withholdQuery(getMeta, metaArgs);
+    const user = userEvent.setup();
+    await renderComposer(serverMeta());
+    expect(webSearchShown()).toBe(false);
+
+    // Two quick clicks: the second turns web search back off.
+    await user.click(screen.getByRole("button", { name: "Enable Web Search" }));
+    await user.click(screen.getByRole("button", { name: "Disable Web Search" }));
+    expect(settingsSaves()).toEqual([
+      { threadId: THREAD_ID, webSearch: true },
+      { threadId: THREAD_ID, webSearch: false },
+    ]);
+    expect(webSearchShown()).toBe(false);
+
+    // Turn it on and send in the same batch, before anything re-renders.
+    chatStoreActions.setInput("Hello");
+    const button = screen.getByRole("button", { name: "Enable Web Search" });
+    const staleSend = sendRef.current;
+    let sending!: Promise<void>;
+    act(() => {
+      fireEvent.mouseDown(button);
+      sending = staleSend();
+    });
+    await waitFor(() => expect(webSearchShown()).toBe(true));
+
+    // The subscription delivers the server value; the pending saves are replayed over it.
+    act(() => convex.deliverQuery(getMeta, metaArgs));
+    await waitFor(() => expect(webSearchShown()).toBe(true));
+    await runToCompletion(sending);
+
+    const [addMessages] = convex.callsOf(api.functions.messages.addMessagesToThread);
+    expect(addMessages?.messages[1]?.metadata?.modelParams.webSearch).toBe(true);
+    expect(serverMeta()?.latestModelParams.webSearch).toBe(true);
+    expect(webSearchShown()).toBe(true);
   });
 });
 

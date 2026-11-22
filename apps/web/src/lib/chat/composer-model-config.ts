@@ -31,21 +31,26 @@ function threadPageMetaQuery(threadId: Id<"threads"> | undefined) {
   return convexQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip");
 }
 
-/** Applies a settings save to the cached thread page meta right away. Convex undoes it if the save fails. */
-export const optimisticallyUpdateThreadModelConfig: OptimisticUpdate<UpdateArgs> = (
-  localStore,
-  { threadId, ...patch },
-) => {
-  const meta = localStore.getQuery(api.functions.threads.getThreadPageMeta, { threadId });
-  if (!meta) return;
+/**
+ * Applies a settings save to the cached thread page meta right away. Convex undoes it if the save fails.
+ *
+ * Before the Convex subscription delivers its first result, the composer shows the route's prefetched
+ * meta (`base`). The update then starts from that, so the change shows and is readable at once; Convex
+ * replays the update over the server's result when it arrives.
+ */
+export function optimisticThreadModelConfigUpdate(base?: ThreadPageMeta): OptimisticUpdate<UpdateArgs> {
+  return (localStore, { threadId, ...patch }) => {
+    const meta = localStore.getQuery(api.functions.threads.getThreadPageMeta, { threadId }) ?? base;
+    if (!meta) return;
 
-  const next = applyThreadModelConfigPatch(toComposerModelConfig(meta), patch);
-  localStore.setQuery(
-    api.functions.threads.getThreadPageMeta,
-    { threadId },
-    { ...meta, latestModel: next.model, latestModelParams: next.modelParams },
-  );
-};
+    const next = applyThreadModelConfigPatch(toComposerModelConfig(meta), patch);
+    localStore.setQuery(
+      api.functions.threads.getThreadPageMeta,
+      { threadId },
+      { ...meta, latestModel: next.model, latestModelParams: next.modelParams },
+    );
+  };
+}
 
 /**
  * Saves only the given settings for a thread. Convex runs a client's mutations in order, so a save
@@ -56,12 +61,13 @@ export async function saveThreadModelConfig(
   convex: ConvexReactClient,
   threadId: Id<"threads">,
   patch: ComposerModelConfigPatch,
+  prefetched?: ThreadPageMeta,
 ) {
   const [, error] = await tryCatch(
     convex.mutation(
       api.functions.threads.updateThreadModelConfig,
       { threadId, ...patch },
-      { optimisticUpdate: optimisticallyUpdateThreadModelConfig },
+      { optimisticUpdate: optimisticThreadModelConfigUpdate(prefetched) },
     ),
   );
 
@@ -105,13 +111,17 @@ export function useComposerModelConfig() {
   const { data: meta } = useQuery(threadPageMetaQuery(threadId));
   const threadConfig = useMemo(() => (meta ? toComposerModelConfig(meta) : null), [meta]);
 
+  // The route's prefetched meta, which the composer shows until the Convex subscription delivers.
+  function prefetched(id: Id<"threads">) {
+    return queryClient.getQueryData<ThreadPageMeta>(threadPageMetaQuery(id).queryKey);
+  }
+
   function read(): ComposerModelConfig {
     const fallback = storeApi.getState().newThread;
     if (!threadId) return fallback;
 
-    // Convex's cache holds saves still in flight. Until its subscription delivers a first result, the
-    // thread page's prefetched data (what the composer shows) is the latest value.
-    const cached = queryClient.getQueryData<ThreadPageMeta>(threadPageMetaQuery(threadId).queryKey);
+    // Convex's cache holds saves still in flight, also those made before its first result.
+    const cached = prefetched(threadId);
     return readThreadModelConfig(convex, threadId) ?? (cached ? toComposerModelConfig(cached) : fallback);
   }
 
@@ -120,7 +130,7 @@ export function useComposerModelConfig() {
       storeApi.getState().updateNewThread(patch);
       return;
     }
-    await saveThreadModelConfig(convex, threadId, patch);
+    await saveThreadModelConfig(convex, threadId, patch, prefetched(threadId));
   }
 
   return { threadId, config: threadConfig ?? newThread, read, update };

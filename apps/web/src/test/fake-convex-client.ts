@@ -60,8 +60,7 @@ class LocalView implements OptimisticLocalStore {
  */
 export class FakeConvexClient {
   readonly mutations: Array<{ name: string; args: AnyArgs }> = [];
-  /** While false, the subscription has delivered nothing yet: local results are empty and queries wait. */
-  connected = true;
+  private withheld = new Set<string>();
 
   private server = new LocalView(new Map());
   private queue: QueuedMutation[] = [];
@@ -120,14 +119,30 @@ export class FakeConvexClient {
         this.listeners.add(callback);
         return () => this.listeners.delete(callback);
       },
-      localQueryResult: () => (this.connected ? this.local().getQuery(query, args) : undefined),
+      localQueryResult: () => this.local().getQuery(query, args),
       journal: () => undefined,
     };
   }
 
   query<Query extends QueryRef>(query: Query, args: FunctionArgs<Query>) {
-    if (!this.connected) return new Promise<FunctionReturnType<Query> | undefined>(() => {});
+    if (this.withheld.has(keyOf(query, args))) {
+      return new Promise<FunctionReturnType<Query> | undefined>(() => {});
+    }
     return Promise.resolve(this.local().getQuery(query, args));
+  }
+
+  /**
+   * Keeps a query's server value from reaching the client, as before a subscription's first result:
+   * the local cache holds only optimistic updates for it, and fetching it waits.
+   */
+  withholdQuery<Query extends QueryRef>(query: Query, args: FunctionArgs<Query>) {
+    this.withheld.add(keyOf(query, args));
+  }
+
+  /** Delivers a withheld query's server value, with pending optimistic updates replayed over it. */
+  deliverQuery<Query extends QueryRef>(query: Query, args: FunctionArgs<Query>) {
+    this.withheld.delete(keyOf(query, args));
+    this.notify();
   }
 
   mutation<Mutation extends MutationRef>(
@@ -183,6 +198,7 @@ export class FakeConvexClient {
 
   private local() {
     const view = new LocalView(new Map(this.server.results));
+    for (const key of this.withheld) view.results.delete(key);
     for (const { layer } of this.queue) if (layer) layer.update(view, layer.args);
     return view;
   }
