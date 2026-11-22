@@ -2,6 +2,8 @@
 
 import { Button } from "@base-ui/react/button";
 import { Dialog } from "@base-ui/react/dialog";
+import { Listbox, ListboxItem } from "@ui-sdk/react/listbox";
+import { Toolbar, ToolbarButton } from "@ui-sdk/react/toolbar";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -92,8 +94,8 @@ export function ImageLightboxDialog(props: ImageLightboxDialogProps) {
   const positionLabel = hasMultipleImages ? `${safeActiveIndex + 1} of ${images.length}` : "Single image";
   const liveMessage = [positionLabel, activeTitle, metadata].filter(Boolean).join(" - ");
   const description = hasMultipleImages
-    ? "Use left and right arrow keys to switch images. Use the zoom controls, mouse wheel, or pinch gesture to zoom."
-    : "Use the zoom controls, mouse wheel, or pinch gesture to zoom and inspect the image.";
+    ? "Use the left and right arrow keys to switch images. Press plus or minus to zoom and 0 to reset, or use the zoom controls, mouse wheel, or pinch gesture."
+    : "Press plus or minus to zoom and 0 to reset, or use the zoom controls, mouse wheel, or pinch gesture.";
   const imageClassName = hasMultipleImages
     ? "max-h-[min(68vh,calc(100dvh-20rem))] max-w-[80vw]"
     : "max-h-[min(80vh,calc(100dvh-14rem))] max-w-[80vw]";
@@ -114,23 +116,23 @@ export function ImageLightboxDialog(props: ImageLightboxDialogProps) {
     if (hasMultipleImages) navigateTo(safeActiveIndex + 1, 1);
   }
 
-  function handleThumbnailClick(event: React.MouseEvent<HTMLButtonElement>): void {
-    const index = Number(event.currentTarget.dataset.index);
-    if (!hasMultipleImages || !Number.isInteger(index)) return;
+  function handleThumbnailSelect(index: number): void {
+    if (!hasMultipleImages || index === safeActiveIndex) return;
     navigateTo(index, getShortestNavigationDirection(safeActiveIndex, index, images.length));
   }
 
   function handleDialogKeyDown(event: React.KeyboardEvent): void {
-    if (
-      !hasMultipleImages ||
-      event.altKey ||
-      event.ctrlKey ||
-      event.metaKey ||
-      event.shiftKey ||
-      shouldIgnoreArrowKeyTarget(event.target)
-    ) {
+    if (event.altKey || event.ctrlKey || event.metaKey || isTextEntryTarget(event.target)) return;
+
+    const zoomAction = getZoomShortcut(event.key);
+    if (zoomAction && !isWithinListbox(event.target)) {
+      event.preventDefault();
+      event.stopPropagation();
+      zoomRef.current?.[zoomAction]();
       return;
     }
+
+    if (!hasMultipleImages || event.shiftKey || ownsArrowKeys(event.target)) return;
 
     if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
       event.preventDefault();
@@ -237,7 +239,7 @@ export function ImageLightboxDialog(props: ImageLightboxDialogProps) {
             images={images}
             metadata={metadata}
             positionLabel={positionLabel}
-            onThumbnailClick={handleThumbnailClick}
+            onThumbnailSelect={handleThumbnailSelect}
           />
         </div>
       </Dialog.Popup>
@@ -256,56 +258,60 @@ function LightboxToolbar(props: LightboxToolbarProps) {
 
   return (
     <div className="pointer-events-none relative z-10 flex shrink-0 justify-end p-4">
-      <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-md bg-black/60 p-2 backdrop-blur">
-        <ToolbarButton label="Zoom in" onClick={() => zoomRef.current?.zoomIn()}>
+      <Toolbar
+        aria-label="Image actions"
+        className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-md bg-black/60 p-2 backdrop-blur"
+      >
+        <LightboxToolbarButton label="Zoom in" onClick={() => zoomRef.current?.zoomIn()}>
           <PlusIcon aria-hidden="true" />
-        </ToolbarButton>
-        <ToolbarButton label="Zoom out" onClick={() => zoomRef.current?.zoomOut()}>
+        </LightboxToolbarButton>
+        <LightboxToolbarButton label="Zoom out" onClick={() => zoomRef.current?.zoomOut()}>
           <MinusIcon aria-hidden="true" />
-        </ToolbarButton>
-        <ToolbarButton label="Reset zoom" onClick={() => zoomRef.current?.reset()}>
+        </LightboxToolbarButton>
+        <LightboxToolbarButton label="Reset zoom" onClick={() => zoomRef.current?.reset()}>
           <RotateCcwIcon aria-hidden="true" />
-        </ToolbarButton>
-        <ToolbarButton label="Download image" onClick={() => void downloadImage(active)}>
+        </LightboxToolbarButton>
+        <LightboxToolbarButton label="Download image" onClick={() => void downloadImage(active)}>
           <DownloadIcon aria-hidden="true" />
-        </ToolbarButton>
-        <ToolbarButton label="Copy URL" onClick={() => void copyText(activeActionUrl)}>
+        </LightboxToolbarButton>
+        <LightboxToolbarButton label="Copy URL" onClick={() => void copyText(activeActionUrl)}>
           <CopyIcon aria-hidden="true" />
-        </ToolbarButton>
-        <ToolbarButton label="Open in new tab" onClick={() => openInNewTab(activeActionUrl)}>
+        </LightboxToolbarButton>
+        <LightboxToolbarButton label="Open in new tab" onClick={() => openInNewTab(activeActionUrl)}>
           <ExternalLinkIcon aria-hidden="true" />
-        </ToolbarButton>
-        <ToolbarButton label="Copy image" onClick={() => void copyImage(active)}>
+        </LightboxToolbarButton>
+        <LightboxToolbarButton label="Copy image" onClick={() => void copyImage(active)}>
           <ImagesIcon aria-hidden="true" />
-        </ToolbarButton>
-        <Dialog.Close
+        </LightboxToolbarButton>
+        <ToolbarButton
           aria-label="Close"
           title="Close"
           className={cn(actionButtonClassName, "bg-white/15 hover:bg-white/20")}
+          render={<Dialog.Close />}
         >
           <XIcon aria-hidden="true" />
-        </Dialog.Close>
-      </div>
+        </ToolbarButton>
+      </Toolbar>
     </div>
   );
 }
 
-type ToolbarButtonProps = {
+type LightboxToolbarButtonProps = {
   label: string;
   onClick: () => void;
   children: React.ReactNode;
 };
 
-function ToolbarButton(props: ToolbarButtonProps) {
+function LightboxToolbarButton(props: LightboxToolbarButtonProps) {
   return (
-    <Button
+    <ToolbarButton
       aria-label={props.label}
       title={props.label}
       className={actionButtonClassName}
       onClick={props.onClick}
     >
       {props.children}
-    </Button>
+    </ToolbarButton>
   );
 }
 
@@ -361,15 +367,15 @@ type LightboxFooterProps = {
   images: LightboxImage[];
   metadata: string;
   positionLabel: string;
-  onThumbnailClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onThumbnailSelect: (index: number) => void;
 };
 
 function LightboxFooter(props: LightboxFooterProps) {
   const thumbnailsRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
-    const activeThumbnail = thumbnailsRef.current?.querySelector<HTMLButtonElement>(
-      `button[data-index="${props.activeIndex}"]`,
+    const activeThumbnail = thumbnailsRef.current?.querySelector<HTMLElement>(
+      `[data-index="${props.activeIndex}"]`,
     );
     activeThumbnail?.scrollIntoView({ block: "nearest", inline: "center" });
   }, [props.activeIndex]);
@@ -386,27 +392,28 @@ function LightboxFooter(props: LightboxFooterProps) {
         {props.images.length > 1 && (
           <div
             ref={thumbnailsRef}
-            aria-label="Image thumbnails"
             className="w-fit max-w-full overflow-x-auto overscroll-x-contain rounded-md bg-black/60 p-2 backdrop-blur"
           >
-            <div className="flex w-max items-center gap-2">
+            <Listbox
+              aria-label="Image thumbnails"
+              orientation="horizontal"
+              value={String(props.activeIndex)}
+              onValueChange={(value) => {
+                if (value !== null) props.onThumbnailSelect(Number(value));
+              }}
+              className="flex w-max items-center gap-2"
+            >
               {props.images.map((image, index) => {
-                const isActive = index === props.activeIndex;
                 const src = image.thumbnailSrc ?? image.src;
+                const label = image.name ?? `Image ${index + 1}`;
 
                 return (
-                  <button
+                  <ListboxItem
                     key={image.id ?? `${src}-${image.name ?? ""}-${image.downloadSrc ?? ""}`}
-                    type="button"
+                    value={String(index)}
+                    label={label}
                     data-index={index}
-                    onClick={props.onThumbnailClick}
-                    aria-current={isActive ? "true" : undefined}
-                    aria-pressed={isActive}
-                    className={cn(
-                      "size-14 shrink-0 overflow-hidden rounded-md ring-1 ring-white/10 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                      isActive ? "scale-110 ring-white/40" : "hover:scale-105",
-                    )}
-                    aria-label={image.name ? `View ${image.name}` : `View image ${index + 1}`}
+                    className="size-14 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-white/10 transition-transform outline-none hover:scale-105 focus-visible:ring-2 focus-visible:ring-white/50 data-selected:scale-110 data-selected:ring-white/40 data-selected:hover:scale-110"
                   >
                     <img
                       src={src}
@@ -418,10 +425,11 @@ function LightboxFooter(props: LightboxFooterProps) {
                       decoding="async"
                       draggable={false}
                     />
-                  </button>
+                    <span className="sr-only">{label}</span>
+                  </ListboxItem>
                 );
               })}
-            </div>
+            </Listbox>
           </div>
         )}
       </div>
@@ -429,8 +437,27 @@ function LightboxFooter(props: LightboxFooterProps) {
   );
 }
 
-function shouldIgnoreArrowKeyTarget(target: EventTarget | null): boolean {
+type ZoomShortcut = "zoomIn" | "zoomOut" | "reset";
+
+function getZoomShortcut(key: string): ZoomShortcut | null {
+  if (key === "+" || key === "=") return "zoomIn";
+  if (key === "-" || key === "_") return "zoomOut";
+  if (key === "0") return "reset";
+  return null;
+}
+
+function isTextEntryTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
   return !!target.closest("input, textarea, select, [contenteditable='true']");
+}
+
+// The toolbar and thumbnail list move focus with arrow keys; image navigation must not take them.
+function ownsArrowKeys(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && !!target.closest("[role='toolbar'], [role='listbox']");
+}
+
+// The thumbnail list's typeahead jumps to a name starting with the typed character, so "0" belongs to it.
+function isWithinListbox(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && !!target.closest("[role='listbox']");
 }
