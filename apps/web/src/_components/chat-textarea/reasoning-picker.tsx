@@ -5,7 +5,7 @@ import { useParams } from "@tanstack/react-router";
 import { ChevronDownIcon } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "../provider/config-provider";
+import { useConfigStore, useConfigStoreApi, useConfigStoreState } from "../provider/config-provider";
 import { Button, buttonVariants } from "../ui/button";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "../ui/popover";
 
@@ -51,14 +51,19 @@ export function ReasoningPickerBase(props: ReasoningPickerProps) {
 
 function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseInnerProps) {
   const configStore = useConfigStoreState();
-  const modelParams = useConfigStore((state) => state.modelParams);
+  const configStoreApi = useConfigStoreApi();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
 
-  // The thread and settings are captured when the effort changes, so a sync that lands after
-  // switching threads still updates the thread it was chosen in. Leaving the chat sends it at once.
+  // The thread and its config store are captured when the effort changes, so a sync that lands
+  // after switching threads still updates the thread it was chosen in. The settings are read from
+  // that store when the sync runs, so later model, web search or profile changes are not undone.
+  // Unmounting (leaving the thread or chat) sends a pending sync at once.
   const syncEffort = useDebouncedCallback(
-    (options: Parameters<typeof syncThreadModelConfig>[0]) => void syncThreadModelConfig(options),
+    (threadId: Id<"threads">, store: typeof configStoreApi) => {
+      const { model, modelParams } = store.getState();
+      void syncThreadModelConfig({ threadId, model, modelParams });
+    },
     { wait: EFFORT_SYNC_DEBOUNCE_MS, onUnmount: (debouncer) => debouncer.flush() },
   );
 
@@ -71,11 +76,9 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
     }
 
     configStore.setModelParams({ effort });
-    syncEffort({
-      threadId: fromUUID<Id<"threads">>(params?.threadId),
-      model: props.model,
-      modelParams: { ...modelParams, effort },
-    });
+
+    const threadId = fromUUID<Id<"threads">>(params?.threadId);
+    if (threadId) syncEffort(threadId, configStoreApi);
   }
 
   if (validOptions.length === 0) return null;

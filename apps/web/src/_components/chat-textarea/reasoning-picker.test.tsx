@@ -5,6 +5,7 @@ setDefaultTimeout(20_000);
 // The DOM must exist before Testing Library loads: it binds `screen` to the document when first evaluated.
 await import("@/test/dom");
 const { act, render, screen, waitFor } = await import("@testing-library/react");
+const { useEffect } = await import("react");
 const { default: userEvent } = await import("@testing-library/user-event");
 
 type SyncCall = { threadId: string; model: string; modelParams: { effort: string; webSearch: boolean } };
@@ -27,7 +28,7 @@ await mock.module("@/lib/trpc/client", () => ({
   },
 }));
 
-const { ConfigStoreProvider } = await import("../provider/config-provider");
+const { ConfigStoreProvider, useConfigStoreApi } = await import("../provider/config-provider");
 const { ChatReasoningPicker } = await import("./reasoning-picker");
 
 const initialState = { model: "google/gemini-2.5-pro" };
@@ -42,12 +43,29 @@ beforeEach(() => {
 // Unmounting queues a React scheduler task; let it run before the shared setup removes the DOM.
 afterEach(() => new Promise((resolve) => setTimeout(resolve, 20)));
 
-function renderPicker() {
-  return render(
-    <ConfigStoreProvider initialState={initialState}>
+type ConfigStoreApi = ReturnType<typeof useConfigStoreApi>;
+let store: ConfigStoreApi | undefined;
+
+function StoreProbe() {
+  const api = useConfigStoreApi();
+  useEffect(() => {
+    store = api;
+  }, [api]);
+  return null;
+}
+
+// Production keys the provider by thread ID, so switching threads remounts the picker with a new store.
+function pickerTree() {
+  return (
+    <ConfigStoreProvider key={currentThreadId} initialState={initialState}>
+      <StoreProbe />
       <ChatReasoningPicker />
-    </ConfigStoreProvider>,
+    </ConfigStoreProvider>
   );
+}
+
+function renderPicker() {
+  return render(pickerTree());
 }
 
 async function chooseEffort(user: ReturnType<typeof userEvent.setup>, label: string) {
@@ -79,21 +97,31 @@ describe("reasoning effort sync", () => {
     expect(syncCalls).toHaveLength(1);
   });
 
-  test("syncs to the thread the choice was made in after switching threads", async () => {
+  test("switching threads sends the pending choice to the thread it was made in", async () => {
     const user = userEvent.setup();
     const view = renderPicker();
 
     await chooseEffort(user, "High");
     currentThreadId = THREAD_B;
-    view.rerender(
-      <ConfigStoreProvider initialState={initialState}>
-        <ChatReasoningPicker />
-      </ConfigStoreProvider>,
-    );
+    act(() => view.rerender(pickerTree()));
 
-    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: SYNC_WAIT_MS * 2 });
+    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: 200 });
     expect(syncCalls[0]?.threadId).toBe(THREAD_A.replaceAll("-", ""));
     expect(syncCalls[0]?.modelParams.effort).toBe("high");
+
+    await sleep(SYNC_WAIT_MS + 100);
+    expect(syncCalls).toHaveLength(1);
+  });
+
+  test("a setting changed during the wait is not undone by the sync", async () => {
+    const user = userEvent.setup();
+    renderPicker();
+
+    await chooseEffort(user, "High");
+    act(() => store?.getState().setModelParams({ webSearch: true }));
+
+    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: SYNC_WAIT_MS * 2 });
+    expect(syncCalls[0]?.modelParams).toMatchObject({ effort: "high", webSearch: true });
   });
 
   test("sends a pending choice at once when the picker unmounts", async () => {
