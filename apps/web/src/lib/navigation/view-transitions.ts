@@ -3,13 +3,13 @@ type NavigationViewTransition = false | { types: string[] };
 export const SETTINGS_ROUTE_ORDER = [
   "/settings/general",
   "/settings/account",
-  "/settings/threads",
   "/settings/customization",
   "/settings/appearance",
+  "/settings/profiles",
+  "/settings/threads",
   "/settings/statistics",
   "/settings/attachments",
   "/settings/models",
-  "/settings/profiles",
 ] as const;
 
 function matchesRoutePrefix(pathname: string, routePath: string): boolean {
@@ -60,17 +60,13 @@ export function isChatEntryTransition(fromPath: string, toPath: string): boolean
 export function shouldUseViewTransitions(): boolean {
   if (!("window" in globalThis) || !("document" in globalThis)) return false;
 
-  const canStartViewTransition =
-    "startViewTransition" in document;
+  const canStartViewTransition = "startViewTransition" in document;
 
   if (!canStartViewTransition) return false;
   return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-export function getNavigationViewTransition(
-  fromPath: string,
-  toPath: string,
-): NavigationViewTransition {
+export function getNavigationViewTransition(fromPath: string, toPath: string): NavigationViewTransition {
   if (!shouldUseViewTransitions()) return false;
 
   if (isSettingsTransition(fromPath, toPath)) {
