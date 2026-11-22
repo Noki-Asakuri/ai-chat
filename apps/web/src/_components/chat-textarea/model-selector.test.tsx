@@ -10,6 +10,7 @@ const { default: userEvent } = await import("@testing-library/user-event");
 
 const savedFavorites: string[][] = [];
 await mock.module("convex/react", () => ({
+  useConvex: () => ({ mutation: async () => null }),
   useMutation: () => async (args: { data: { favorite: string[] } }) => {
     savedFavorites.push(args.data.favorite);
   },

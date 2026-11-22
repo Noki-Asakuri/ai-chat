@@ -8,12 +8,14 @@ import {
 
 import { useParams } from "@tanstack/react-router";
 import type { OptimisticLocalStore } from "convex/browser";
-import { useMutation } from "convex/react";
+import type { ConvexReactClient } from "convex/react";
+import { useConvex } from "convex/react";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import { use, useCallback } from "react";
 
 import { ConfigStoreContext } from "@/components/provider/config-provider";
 
+import type { createConfigStore } from "@/lib/store/config-store";
 import { fromUUID, tryCatch } from "@/lib/utils";
 
 export type ModelConfigPatch = ThreadModelConfigPatch<Id<"profiles">>;
@@ -54,42 +56,57 @@ function applyModelConfigOptimistically(store: OptimisticLocalStore, args: Updat
   if (next) store.setQuery(query, { threadId: args.threadId }, next);
 }
 
+type ConfigStoreApi = ReturnType<typeof createConfigStore>;
+
 /**
- * Returns a function that changes the composer's model settings. Pass only what changed.
+ * Changes the composer's model settings. Pass only what changed.
  *
- * The local store updates at once. In a thread, the change is also saved with the
- * `updateThreadModelConfig` mutation, whose optimistic update applies the same merge to the
- * thread's `getThreadPageMeta` result. Convex sends one client's mutations in order and keeps
- * their optimistic results until the server reflects them, so the provider never sees an older
- * value replace a newer choice; a failed save rolls back and the provider restores the server value.
+ * In a thread, the thread's `getThreadPageMeta` result is the only source of these settings: the
+ * change is saved with `updateThreadModelConfig`, and its optimistic update applies the same merge
+ * to that result, which the provider copies into the store. Convex sends one client's mutations in
+ * order, keeps each optimistic result until the server reflects it and rolls it back on failure, so
+ * the composer never shows an older value over a newer choice, nor a change that failed to save.
+ *
+ * Without a thread (the welcome page), there is nothing to save and the store is changed directly.
  */
+export function saveModelConfig(options: {
+  convex: Pick<ConvexReactClient, "mutation">;
+  configStore: ConfigStoreApi | null;
+  threadId: Id<"threads"> | null | undefined;
+  patch: ModelConfigPatch;
+}) {
+  const { convex, configStore, threadId, patch } = options;
+
+  if (!threadId) {
+    if (!configStore) return;
+    const state = configStore.getState();
+    const next = mergeThreadModelConfig({ model: state.model, params: state.modelParams }, patch);
+    state.setConfig({ model: next.model });
+    state.setModelParams(next.params);
+    return;
+  }
+
+  void tryCatch(
+    convex.mutation(
+      api.functions.threads.updateThreadModelConfig,
+      { threadId, latestModel: patch.model, latestModelParams: patch.params },
+      { optimisticUpdate: applyModelConfigOptimistically },
+    ),
+  ).then(([, error]) => {
+    if (error) console.error("[Chat] Failed to save model settings", error);
+    return error;
+  });
+}
+
+/** `saveModelConfig` for the current route's thread and config store. */
 export function useUpdateModelConfig() {
+  const convex = useConvex();
   const configStore = use(ConfigStoreContext);
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const threadId = fromUUID<Id<"threads">>(params?.threadId);
 
-  const updateThreadModelConfig = useMutation(
-    api.functions.threads.updateThreadModelConfig,
-  ).withOptimisticUpdate(applyModelConfigOptimistically);
-
   return useCallback(
-    function updateModelConfig(patch: ModelConfigPatch) {
-      if (configStore) {
-        const state = configStore.getState();
-        const next = mergeThreadModelConfig({ model: state.model, params: state.modelParams }, patch);
-        state.setConfig({ model: next.model });
-        state.setModelParams(next.params);
-      }
-
-      if (!threadId) return;
-
-      void tryCatch(
-        updateThreadModelConfig({ threadId, latestModel: patch.model, latestModelParams: patch.params }),
-      ).then(([, error]) => {
-        if (error) console.error("[Chat] Failed to save model settings", error);
-        return error;
-      });
-    },
-    [configStore, threadId, updateThreadModelConfig],
+    (patch: ModelConfigPatch) => saveModelConfig({ convex, configStore, threadId, patch }),
+    [convex, configStore, threadId],
   );
 }

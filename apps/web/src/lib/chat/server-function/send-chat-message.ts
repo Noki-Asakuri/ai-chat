@@ -2,15 +2,21 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useConvex } from "convex/react";
+import { use } from "react";
 import { toast } from "@/components/ui/toast";
 
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
+import {
+  ConfigStoreContext,
+  useConfigStore,
+  useConfigStoreState,
+} from "@/components/provider/config-provider";
 
 import { buildAttachmentUrl } from "@/lib/assets/urls";
 import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
+import { saveModelConfig } from "@/lib/chat/use-update-model-config";
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
@@ -32,6 +38,7 @@ type MessageParts = CreateMessage["parts"];
 export function useSendChatMessage() {
   const navigate = useNavigate();
   const configStore = useConfigStoreState();
+  const configStoreApi = use(ConfigStoreContext);
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
   const convexClient = useConvex();
@@ -213,10 +220,14 @@ export function useSendChatMessage() {
           actionProps: {
             children: `Switch to ${deprecatedModelError.replacementModelName}`,
             onClick: () => {
-              chatStoreActions.retainCompatibleAttachments(deprecatedModelError.replacementModelId);
-              configStore.setConfig({
-                model: deprecatedModelError.replacementModelId,
-                defaultModel: deprecatedModelError.replacementModelId,
+              const replacementModel = deprecatedModelError.replacementModelId;
+              chatStoreActions.retainCompatibleAttachments(replacementModel);
+              configStore.setConfig({ defaultModel: replacementModel });
+              saveModelConfig({
+                convex: convexClient,
+                configStore: configStoreApi,
+                threadId,
+                patch: { model: replacementModel },
               });
             },
           },
