@@ -45,6 +45,8 @@ const SERVER_META: ThreadMeta = {
 };
 
 let currentThreadId: string | undefined = THREAD_ID;
+// Whether Convex has delivered the thread's query result yet (before that, optimistic updates have nothing to apply to).
+let queryLoaded = true;
 let serverMeta = SERVER_META;
 let pending: PendingSave[] = [];
 let showMeta: (meta: ThreadMeta) => void = () => {};
@@ -56,14 +58,14 @@ let showMeta: (meta: ThreadMeta) => void = () => {};
 function publishQueryResult() {
   let view = serverMeta;
   const localStore = {
-    getQuery: () => view,
+    getQuery: () => (queryLoaded ? view : undefined),
     setQuery: (_query: FunctionReference<"query">, _args: { threadId: Id<"threads"> }, value: ThreadMeta) => {
       view = value;
     },
   };
   // @ts-expect-error -- a minimal fake of Convex's OptimisticLocalStore
   for (const save of pending) save.update(localStore, save.args);
-  act(() => showMeta(view));
+  if (queryLoaded) act(() => showMeta(view));
 }
 
 const fakeConvex = {
@@ -108,6 +110,7 @@ const { ChatReasoningPicker } = await import("./reasoning-picker");
 const { ChatModelSelector } = await import("./model-selector");
 const { tryGetModelData } = await import("@/lib/chat/models");
 const { nextThreadPageMeta } = await import("@/lib/chat/use-update-model-config");
+const { chatStoreActions, useChatStore } = await import("@/lib/store/chat-store");
 
 afterAll(() => mock.restore());
 
@@ -115,6 +118,8 @@ beforeEach(() => {
   currentThreadId = THREAD_ID;
   serverMeta = SERVER_META;
   pending = [];
+  queryLoaded = true;
+  chatStoreActions.clearAttachments();
 });
 
 function EffortProbe() {
@@ -223,6 +228,35 @@ describe("composer model settings in a thread", () => {
       latestModel: "openai/gpt-5.5-pro",
       latestModelParams: undefined,
     });
+  });
+});
+
+describe("composer model settings before the thread's query result arrives", () => {
+  test("a change shows at once and is undone if the save fails", async () => {
+    queryLoaded = false;
+    const user = userEvent.setup();
+    render(<Composer />);
+
+    await chooseEffort(user, "High");
+    expect(currentEffort()).toBe("high");
+
+    await settle(0, "reject");
+    expect(currentEffort()).toBe("medium");
+  });
+});
+
+describe("model selection and draft attachments", () => {
+  test("attachments the new model can't take come back if the save fails", async () => {
+    const user = userEvent.setup();
+    render(<Composer />);
+    const pdf = { id: "pdf-1", type: "pdf" as const, file: new File(["%PDF"], "notes.pdf") };
+    chatStoreActions.addAttachments([pdf]);
+
+    await chooseModel(user, "zai/glm-5.3");
+    expect(useChatStore.getState().attachments).toEqual([]);
+
+    await settle(-1, "reject");
+    expect(useChatStore.getState().attachments).toEqual([pdf]);
   });
 });
 

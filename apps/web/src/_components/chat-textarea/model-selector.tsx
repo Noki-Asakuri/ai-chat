@@ -36,7 +36,7 @@ import {
   type Provider,
 } from "@/lib/chat/models";
 import { useUpdateModelConfig } from "@/lib/chat/use-update-model-config";
-import { chatStoreActions } from "@/lib/store/chat-store";
+import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { cn, tryCatch } from "@/lib/utils";
 
 import {
@@ -601,10 +601,18 @@ export function ChatModelSelector() {
   const storeModel = useConfigStore((state) => state.model);
 
   // Send only the model: the effort is resolved for it (kept if supported, else its default),
-  // here and on the server, from the latest saved effort.
+  // here and on the server, from the latest saved effort. Attachments the new model can't take are
+  // removed at once and put back if the save fails, since the model then rolls back too.
   function handleChange(model: string) {
+    const before = useChatStore.getState().attachments;
     chatStoreActions.retainCompatibleAttachments(model);
-    updateModelConfig({ model });
+    const kept = new Set(useChatStore.getState().attachments);
+    const removed = before.filter((attachment) => !kept.has(attachment));
+
+    updateModelConfig(
+      { model },
+      { onFailure: () => removed.length > 0 && chatStoreActions.addAttachments(removed) },
+    );
   }
 
   return (

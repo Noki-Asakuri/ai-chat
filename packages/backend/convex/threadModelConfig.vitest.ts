@@ -354,4 +354,64 @@ describe("updateThreadModelConfig", () => {
       latestModelParams: { effort: "max", webSearch: false, profile: null },
     });
   });
+
+  test("an empty stored model is recovered like a missing one", async () => {
+    const t = await setup();
+    const threadId = await insertThread(t, { model: "", effort: "high" });
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModelParams: { webSearch: true },
+    });
+
+    // No assistant message recorded a model, so the default model applies; it has no reasoning.
+    expect(await readConfig(t, threadId)).toEqual({
+      latestModel: DEFAULT_THREAD_MODEL,
+      latestModelParams: { effort: "none", webSearch: true, profile: null },
+    });
+  });
+
+  test("a legacy profile object is stored as its profile ID, and an unknown one as null", async () => {
+    const t = await setup();
+    const profileId = await t.run(async (ctx) => {
+      return await ctx.db.insert("profiles", {
+        userId: USER_ID,
+        name: "Legacy profile",
+        systemPrompt: "",
+        createdAt: 0,
+        updatedAt: 0,
+      });
+    });
+    const insertLegacyThread = (profile: { id?: Id<"profiles">; name: string }) =>
+      t.run(async (ctx) => {
+        const id = await ctx.db.insert("threads", {
+          title: "Legacy profile thread",
+          userId: USER_ID,
+          updatedAt: 0,
+          pinned: false,
+          latestModel: "openai/gpt-5.5",
+          latestModelParams: { effort: "medium", webSearch: false, profile: null },
+          groupId: null,
+          status: "complete",
+        });
+        // Schema validation is off, so older rows can hold a profile object instead of an ID.
+        // @ts-expect-error -- the legacy shape is not in the current schema
+        await ctx.db.patch(id, { latestModelParams: { effort: "medium", webSearch: false, profile } });
+        return id;
+      });
+    const withObject = await insertLegacyThread({ id: profileId, name: "Legacy profile" });
+    const withUnknown = await insertLegacyThread({ name: "No id" });
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId: withObject,
+      latestModelParams: { webSearch: true },
+    });
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId: withUnknown,
+      latestModelParams: { webSearch: true },
+    });
+
+    expect((await readConfig(t, withObject)).latestModelParams?.profile).toBe(profileId);
+    expect((await readConfig(t, withUnknown)).latestModelParams?.profile).toBeNull();
+  });
 });

@@ -190,21 +190,47 @@ type ThreadModelConfig = {
   latestModelParams: Required<Doc<"threads">["latestModelParams"]>;
 };
 
+/** A stored profile as it may appear in rows written before the schema's `Id<"profiles">` form. */
+type StoredProfile = Id<"profiles"> | { id?: string } | null | undefined;
+
+/**
+ * Returns a valid profile ID or `null` for a stored profile (schema validation is off, so the value
+ * is checked here), or `undefined` when none was stored.
+ */
+function toProfileId(ctx: QueryCtx, stored: StoredProfile): Id<"profiles"> | null | undefined {
+  if (stored === undefined || stored === null) return stored;
+  const id = isLegacyProfileObject(stored) ? stored.id : stored;
+  return id === undefined ? null : ctx.db.normalizeId("profiles", id);
+}
+
+// Branded IDs are primitive strings, so only the legacy object shape is an `Object` instance.
+function isLegacyProfileObject(stored: Id<"profiles"> | { id?: string }): stored is { id?: string } {
+  return stored instanceof Object;
+}
+
 /**
  * Returns the thread's model config, recovering fields missing from threads created before
  * `backfillThreadModelConfig`. Schema validation is off, so such rows can still exist. Missing fields
  * come from the latest assistant message that recorded its config (stopping at the first match),
- * or from the defaults when there is none.
+ * or from the defaults when there is none. `complete` is false when anything had to be recovered
+ * or corrected, so the caller writes the full config back.
  */
 export async function recoverThreadModelConfig(
   ctx: QueryCtx,
   thread: Doc<"threads">,
 ): Promise<{ config: ThreadModelConfig; complete: boolean }> {
-  const storedModel: string | undefined = thread.latestModel;
+  // An empty model ID is as unusable as a missing one; earlier writes could store one.
+  const storedModel = thread.latestModel ? thread.latestModel.trim() || undefined : undefined;
   const storedParams: Partial<Doc<"threads">["latestModelParams"]> | undefined = thread.latestModelParams;
+  const storedProfile: StoredProfile = storedParams?.profile;
+  const storedProfileId = toProfileId(ctx, storedProfile);
   // `profile` is optional in the schema, so a missing one is not a sign of a pre-backfill row.
   const complete =
-    storedModel !== undefined && storedParams?.effort !== undefined && storedParams.webSearch !== undefined;
+    storedModel !== undefined &&
+    storedModel === thread.latestModel &&
+    storedParams?.effort !== undefined &&
+    storedParams.webSearch !== undefined &&
+    storedProfileId === storedProfile;
 
   let fallback: ThreadModelConfig = {
     latestModel: DEFAULT_THREAD_MODEL,
@@ -220,12 +246,13 @@ export async function recoverThreadModelConfig(
       const params = message.metadata?.modelParams;
       if (!model || !params) continue;
 
+      const messageProfile: StoredProfile = params.profile;
       fallback = {
         latestModel: model,
         latestModelParams: {
           effort: params.effort,
           webSearch: params.webSearch,
-          profile: params.profile ?? null,
+          profile: toProfileId(ctx, messageProfile) ?? null,
         },
       };
       break;
@@ -240,8 +267,7 @@ export async function recoverThreadModelConfig(
         effort: storedParams?.effort ?? fallback.latestModelParams.effort,
         webSearch: storedParams?.webSearch ?? fallback.latestModelParams.webSearch,
         // A stored `null` means the profile was cleared, so only a missing one is recovered.
-        profile:
-          storedParams?.profile === undefined ? fallback.latestModelParams.profile : storedParams.profile,
+        profile: storedProfileId === undefined ? fallback.latestModelParams.profile : storedProfileId,
       },
     },
   };
