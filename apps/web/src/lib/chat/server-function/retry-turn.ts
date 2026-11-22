@@ -6,8 +6,9 @@ import { useConvex } from "convex/react";
 import { toast } from "@/components/ui/toast";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
+import { useConfigStore } from "@/components/provider/config-provider";
 
+import { saveThreadModelConfig, useComposerModelConfig } from "@/lib/chat/composer-model-config";
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
@@ -61,11 +62,9 @@ function failRetryPreparation(message: string): never {
 export function useRetryTurn() {
   const convexClient = useConvex();
 
-  const configStore = useConfigStoreState();
-  const { model, modelParams, notificationSound, desktopNotification } = useConfigStore(
+  const composerModelConfig = useComposerModelConfig();
+  const { notificationSound, desktopNotification } = useConfigStore(
     useShallow((state) => ({
-      model: state.model,
-      modelParams: state.modelParams,
       notificationSound: state.notificationSound,
       desktopNotification: state.desktopNotification,
     })),
@@ -124,9 +123,10 @@ export function useRetryTurn() {
 
     const allMessages = convertToUIChatMessages(historySlice);
 
+    const { model, modelParams } = composerModelConfig.read();
     const requestModel = options.modelId ?? assistantMessage?.metadata?.model.request ?? model;
     const mergedModelParams = {
-      ...(assistantMessage?.metadata?.modelParams ?? configStore.modelParams),
+      ...(assistantMessage?.metadata?.modelParams ?? modelParams),
       webSearch: modelParams.webSearch,
       ...options.modelParams,
     };
@@ -307,9 +307,8 @@ export function useRetryTurn() {
               children: `Switch to ${deprecatedModelError.replacementModelName}`,
               onClick: () => {
                 chatStoreActions.retainCompatibleAttachments(deprecatedModelError.replacementModelId);
-                configStore.setConfig({
+                void saveThreadModelConfig(convexClient, threadId, {
                   model: deprecatedModelError.replacementModelId,
-                  defaultModel: deprecatedModelError.replacementModelId,
                 });
               },
             },

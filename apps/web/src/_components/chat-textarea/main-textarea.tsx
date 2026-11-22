@@ -18,7 +18,7 @@ import { ChatSendButton } from "./send-button";
 import { useGetSendDescription, useShouldSend } from "@/lib/chat/send-preference";
 import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
 import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message";
-import { useConfigStore } from "../provider/config-provider";
+import { useComposerModelConfig } from "@/lib/chat/composer-model-config";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { convexQuery } from "@convex-dev/react-query";
@@ -112,7 +112,7 @@ function SettledThreadNotice() {
 
 function InputChatTextArea() {
   const input = useChatStore((state) => state.input);
-  const model = useConfigStore((state) => state.model);
+  const model = useComposerModelConfig().config.model;
   const { sendChatRequest } = useSendChatMessage();
 
   function handleAddAttachments({ files }: { files: File[] }) {

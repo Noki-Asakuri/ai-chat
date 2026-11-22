@@ -9,7 +9,9 @@ const { act, render, screen, waitFor, within } = await import("@testing-library/
 const { default: userEvent } = await import("@testing-library/user-event");
 
 const savedFavorites: string[][] = [];
+const actualConvexReact = await import("convex/react");
 await mock.module("convex/react", () => ({
+  ...actualConvexReact,
   useMutation: () => async (args: { data: { favorite: string[] } }) => {
     savedFavorites.push(args.data.favorite);
   },
@@ -35,7 +37,7 @@ const labelOf = (id: string) => {
 };
 
 function renderSelector(options: { favorites?: string[] } = {}) {
-  const store = createConfigStore({ model: firstId, favoriteModels: options.favorites ?? [] });
+  const store = createConfigStore({ favoriteModels: options.favorites ?? [] });
   const onChange = mock((_id: string) => {});
   const view = render(
     <ConfigStoreContext.Provider value={store}>

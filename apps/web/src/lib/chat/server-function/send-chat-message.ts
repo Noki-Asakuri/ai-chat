@@ -7,9 +7,10 @@ import { toast } from "@/components/ui/toast";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
+import { useConfigStore } from "@/components/provider/config-provider";
 
 import { buildAttachmentUrl } from "@/lib/assets/urls";
+import { saveThreadModelConfig, useComposerModelConfig } from "@/lib/chat/composer-model-config";
 import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
@@ -31,14 +32,12 @@ type MessageParts = CreateMessage["parts"];
 
 export function useSendChatMessage() {
   const navigate = useNavigate();
-  const configStore = useConfigStoreState();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
   const convexClient = useConvex();
-  const { modelParams, model, notificationSound, desktopNotification } = useConfigStore(
+  const composerModelConfig = useComposerModelConfig();
+  const { notificationSound, desktopNotification } = useConfigStore(
     useShallow((state) => ({
-      model: state.model,
-      modelParams: state.modelParams,
       notificationSound: state.notificationSound,
       desktopNotification: state.desktopNotification,
     })),
@@ -58,6 +57,10 @@ export function useSendChatMessage() {
 
     if (!input || lastMessage?.status === "pending" || lastMessage?.status === "streaming") return;
     chatStoreActions.resetInput();
+
+    // Read the settings now rather than from the last render: a change made just before sending is
+    // already in Convex's local cache (or the welcome page's store) but may not have rendered yet.
+    const { model, modelParams } = composerModelConfig.read();
 
     if (!threadId) {
       threadId = await convexClient.mutation(api.functions.threads.createThread, {
@@ -208,15 +211,15 @@ export function useSendChatMessage() {
       }
 
       if (deprecatedModelError) {
+        const failedThreadId = threadId;
         toast.error("Selected model is deprecated", {
           description: deprecatedModelError.message,
           actionProps: {
             children: `Switch to ${deprecatedModelError.replacementModelName}`,
             onClick: () => {
               chatStoreActions.retainCompatibleAttachments(deprecatedModelError.replacementModelId);
-              configStore.setConfig({
+              void saveThreadModelConfig(convexClient, failedThreadId, {
                 model: deprecatedModelError.replacementModelId,
-                defaultModel: deprecatedModelError.replacementModelId,
               });
             },
           },

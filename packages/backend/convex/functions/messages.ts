@@ -752,14 +752,8 @@ export const addMessagesToThread = authenticatedMutation({
       activeAssistantMessageId: assistantMessageId,
     });
 
-    if (assistantMessage.metadata) {
-      await patchThreadModelConfig(
-        ctx,
-        args.threadId,
-        assistantMessage.metadata.model.request,
-        assistantMessage.metadata.modelParams,
-      );
-    }
+    // The composer saves the thread's model settings as they change, so a send doesn't write them:
+    // it could land after a newer settings change and undo it.
 
     await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
       userId: user.userId,

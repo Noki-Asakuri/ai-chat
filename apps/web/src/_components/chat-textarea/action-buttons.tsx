@@ -1,7 +1,5 @@
 import { GlobeIcon } from "lucide-react";
-import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 import { ButtonWithTip } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
@@ -11,12 +9,12 @@ import { ChatModelSelector, ModelSelector } from "./model-selector";
 import { ChatReasoningPicker, ReasoningPicker } from "./reasoning-picker";
 
 import { getDefaultReasoning, getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
-import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
+import { useComposerModelConfig } from "@/lib/chat/composer-model-config";
 import { cn } from "@/lib/utils";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
 export function ChatActionButtons() {
-  const model = useConfigStore((state) => state.model);
+  const model = useComposerModelConfig().config.model;
   const modelData = tryGetModelData(model);
 
   const supportsReasoning = modelData ? getReasoningOptions(modelData).length > 0 : false;
@@ -155,24 +153,14 @@ export function BaseWebSearchButton({
 }
 
 function WebSearchButton() {
-  const configStore = useConfigStoreState();
-  const { syncThreadModelConfig } = useSyncThreadModelConfig();
-  const config = useConfigStore(
-    useShallow((state) => ({ webSearch: state.modelParams.webSearch, model: state.model })),
-  );
+  const { config, read, update } = useComposerModelConfig();
 
   return (
     <BaseWebSearchButton
       model={config.model}
-      webSearch={config.webSearch}
-      setWebSearch={(webSearch) => {
-        configStore.setModelParams({ webSearch });
-
-        void syncThreadModelConfig({
-          model: config.model,
-          modelParams: { webSearch },
-        });
-      }}
+      webSearch={config.modelParams.webSearch}
+      // Toggle the latest value, which a quick second click can be ahead of the rendered one.
+      setWebSearch={() => void update({ webSearch: !read().modelParams.webSearch })}
     />
   );
 }

@@ -1,7 +1,11 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import {
+  applyThreadModelConfigPatch,
+  readStoredThreadModelConfig,
+} from "@ai-chat/shared/chat/thread-model-config";
 
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, redirect, useParams } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
@@ -20,7 +24,6 @@ import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 
 import { buildImageAssetUrl } from "@/lib/assets/urls";
-import { resolveReasoning, tryGetModelData } from "@/lib/chat/models";
 import { cn, fromUUID } from "@/lib/utils";
 
 const getDefaultOpenSidebar = createIsomorphicFn()
@@ -90,25 +93,19 @@ function ChatLayoutConfig() {
   const threadId = fromUUID<Id<"threads">>(params?.threadId);
 
   const { data: chatShell } = useSuspenseQuery(convexQuery(api.functions.users.getChatShell));
-  const { data: threadMeta } = useQuery(
-    convexQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
-  );
 
-  const selectedModel = threadMeta?.latestModel ?? chatShell.preferences.models.defaultModel;
-  const storedModelParams = threadMeta?.latestModelParams ?? chatShell.preferences.models.modelParams;
-  const selectedModelData = tryGetModelData(selectedModel);
-  const selectedModelParams = {
-    ...storedModelParams,
-    effort: selectedModelData
-      ? resolveReasoning(selectedModelData, storedModelParams.effort)
-      : storedModelParams.effort,
-    profile:
-      threadMeta?.latestModelParams.profile ?? chatShell.preferences.models.modelParams.profile ?? null,
-  };
+  // A thread's own model settings are read from Convex by `useComposerModelConfig`. These account
+  // defaults start the welcome page's settings, and are shown on a thread page until its settings load.
+  const accountModels = chatShell.preferences.models;
+  const newThread = applyThreadModelConfigPatch(
+    readStoredThreadModelConfig<Id<"profiles">>(accountModels.defaultModel, accountModels.modelParams),
+    {},
+  );
 
   return (
     <ConfigStoreProvider
       key={threadId ?? "welcome"}
+      newThread={newThread}
       initialState={{
         hiddenModels: chatShell.preferences.models.hidden,
         favoriteModels: chatShell.preferences.models.favorite,
@@ -119,10 +116,6 @@ function ChatLayoutConfig() {
 
         wrapline: chatShell.preferences.code.autoWrap,
         showFullCode: chatShell.preferences.code.showFullCode,
-
-        model: selectedModel,
-        defaultModel: selectedModel,
-        modelParams: selectedModelParams,
       }}
     >
       <GlobalDropzone data-slot="chat" className="relative inset-0 h-dvh w-screen overflow-hidden border-x">

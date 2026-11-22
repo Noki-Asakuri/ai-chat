@@ -2,6 +2,12 @@
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 
+import {
+  applyThreadModelConfigPatch,
+  isSameThreadModelConfig,
+  readStoredThreadModelConfig,
+} from "@ai-chat/shared/chat/thread-model-config";
+
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { internalMutation, query } from "../_generated/server";
@@ -11,6 +17,7 @@ import { authenticatedMutation, authenticatedQuery, authenticatedUserIdQuery } f
 import {
   AISDKModelParams,
   CURRENT_MESSAGE_GRAPH_VERSION,
+  effort,
   MAX_ASSISTANT_VARIANTS_PER_TURN,
   status,
 } from "../schema";
@@ -161,7 +168,6 @@ export const createThread = authenticatedMutation({
       userId: user.userId,
     });
 
-
     const threadId = await ctx.db.insert("threads", {
       title: args.title ?? "New Chat",
       pinned: false,
@@ -182,31 +188,30 @@ export const createThread = authenticatedMutation({
   },
 });
 
+// Saves only the settings a control changed. A client's mutations run in the order it sent them,
+// so each change is merged over every earlier one and an older value can't overwrite a newer one.
 export const updateThreadModelConfig = authenticatedMutation({
   args: {
     threadId: v.id("threads"),
-    latestModel: v.string(),
-    latestModelParams: AISDKModelParams,
+    model: v.optional(v.string()),
+    effort: v.optional(effort),
+    webSearch: v.optional(v.boolean()),
+    profile: v.optional(v.nullable(v.id("profiles"))),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { threadId, ...patch }) => {
     const user = ctx.user;
 
-    const thread = await ctx.db.get("threads", args.threadId);
+    const thread = await ctx.db.get("threads", threadId);
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
-    if (
-      thread.latestModel === args.latestModel &&
-      thread.latestModelParams?.effort === args.latestModelParams.effort &&
-      thread.latestModelParams?.webSearch === args.latestModelParams.webSearch &&
-      thread.latestModelParams?.profile === args.latestModelParams.profile
-    ) {
-      return;
-    }
+    const current = readStoredThreadModelConfig(thread.latestModel, thread.latestModelParams);
+    const next = applyThreadModelConfigPatch(current, patch);
+    if (isSameThreadModelConfig(current, next)) return;
 
-    await ctx.db.patch(args.threadId, {
-      latestModel: args.latestModel,
-      latestModelParams: args.latestModelParams,
+    await ctx.db.patch("threads", threadId, {
+      latestModel: next.model,
+      latestModelParams: next.modelParams,
     });
   },
 });
@@ -327,9 +332,7 @@ export const branchThread = authenticatedMutation({
 
         parentUserMessageId: undefined,
         activeAssistantMessageId: undefined,
-        messageGraphVersion: hasCompleteMessageGraph
-          ? CURRENT_MESSAGE_GRAPH_VERSION
-          : undefined,
+        messageGraphVersion: hasCompleteMessageGraph ? CURRENT_MESSAGE_GRAPH_VERSION : undefined,
         messageGraphIssue: message.messageGraphIssue,
 
         createdAt: Date.now() + 1,
@@ -422,7 +425,9 @@ export const getAllThreads = authenticatedQuery({
         .filter((q) => q.neq(q.field("pinned"), true))
         .take(limit);
 
-      return [...pinned, ...nonPinned].map((thread) => (Object.assign(thread, { pinned: thread.pinned ?? false })));
+      return [...pinned, ...nonPinned].map((thread) =>
+        Object.assign(thread, { pinned: thread.pinned ?? false }),
+      );
     }
 
     // With search query: include only pinned that match + up to N non-pinned that match
@@ -733,9 +738,7 @@ export const deleteThread = authenticatedMutation({
     }
 
     if (args.deleteAttachments) {
-      const attachments = messages
-        .flatMap((message) => message.attachments ?? [])
-        .filter(Boolean);
+      const attachments = messages.flatMap((message) => message.attachments ?? []).filter(Boolean);
 
       for (const attachmentId of attachments) {
         await ctx.db.delete(attachmentId);
