@@ -57,7 +57,7 @@ await mock.module("@/lib/chat/stream-feedback", () => ({ emitStreamFeedback: () 
 
 const { api } = await import("@ai-chat/backend/convex/_generated/api");
 const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
-const { ConvexQueryClient } = await import("@convex-dev/react-query");
+const { ConvexQueryClient, convexQuery } = await import("@convex-dev/react-query");
 const { ConvexProvider } = await import("convex/react");
 const { ConfigStoreProvider } = await import("@/components/provider/config-provider");
 const { ChatActionButtons } = await import("@/components/chat-textarea/action-buttons");
@@ -107,7 +107,7 @@ function setUpServer() {
   convex.onMutation(api.functions.threads.createThread, () => NEW_THREAD_ID);
 }
 
-function Providers({ children }: { children: ReactNode }) {
+function Providers({ children, prefetched }: { children: ReactNode; prefetched?: Meta }) {
   const client = convex.asReactClient();
   const convexQueryClient = new ConvexQueryClient(client);
   const queryClient = new QueryClient({
@@ -116,6 +116,8 @@ function Providers({ children }: { children: ReactNode }) {
     },
   });
   convexQueryClient.connect(queryClient);
+  // As the thread route's loader does, over HTTP, before the Convex subscription has a result.
+  if (prefetched) queryClient.setQueryData(convexQuery(getMeta, metaArgs).queryKey, prefetched);
 
   return (
     <ConvexProvider client={client}>
@@ -144,9 +146,9 @@ function SendProbe() {
   return null;
 }
 
-async function renderComposer() {
+async function renderComposer(prefetched?: Meta) {
   const view = render(
-    <Providers>
+    <Providers prefetched={prefetched}>
       <ChatActionButtons />
       <SendProbe />
     </Providers>,
@@ -349,6 +351,46 @@ describe("composer model settings in a thread", () => {
 
     await act(() => convex.settleAll());
     expect(serverMeta()?.latestModel).toBe("openai/gpt-5.5");
+  });
+  test("a model change starts from the effort shown, not an unsupported stored one", async () => {
+    // A retry with Kimi K2.6 can save Low, which Kimi doesn't offer, so the composer shows Medium.
+    const meta = serverMeta();
+    if (!meta) throw new Error("Missing thread meta");
+    convex.setServerQuery(getMeta, metaArgs, {
+      ...meta,
+      latestModel: "kimi/kimi-k2.6",
+      latestModelParams: { effort: "low", webSearch: false, profile: null },
+    });
+    const user = userEvent.setup();
+    await renderComposer();
+    expect(effortShown()).toBe("Medium");
+
+    await chooseModel(user, "openai/gpt-5");
+    await waitFor(() => expect(effortShown()).toBe("Medium"));
+
+    await act(() => convex.settleAll());
+    expect(serverMeta()?.latestModelParams.effort).toBe("medium");
+    expect(effortShown()).toBe("Medium");
+  });
+
+  test("sending before the Convex subscription delivers uses the prefetched thread settings", async () => {
+    const meta = serverMeta();
+    if (!meta) throw new Error("Missing thread meta");
+    const saved = { ...meta, latestModelParams: { effort: "high" as const, webSearch: true, profile: null } };
+    convex.setServerQuery(getMeta, metaArgs, saved);
+    convex.connected = false;
+
+    await renderComposer(saved);
+    expect(effortShown()).toBe("High");
+    chatStoreActions.setInput("Hello");
+    await runToCompletion(sendRef.current());
+
+    const [addMessages] = convex.callsOf(api.functions.messages.addMessagesToThread);
+    expect(addMessages?.messages[1]?.metadata?.modelParams).toEqual({
+      effort: "high",
+      webSearch: true,
+      profile: null,
+    });
   });
 });
 

@@ -58,12 +58,17 @@ export const DEFAULT_THREAD_MODEL_PARAMS: ThreadModelParams<never> = {
   profile: null,
 };
 
-/** Reads a thread row's stored settings. Older rows can lack some params; those get the defaults. */
+/**
+ * Reads a thread row's stored settings as the composer shows them. Older rows can lack some params;
+ * those get the defaults. The stored effort is resolved for the stored model (a retry with another
+ * model can save an effort that model doesn't offer), so a later change starts from the value the
+ * user saw, on the server and in the client's optimistic update alike.
+ */
 export function readStoredThreadModelConfig<ProfileId extends string>(
   model: string,
   params: Partial<ThreadModelParams<ProfileId>> | undefined,
 ): ThreadModelConfig<ProfileId> {
-  return {
+  const stored = {
     model,
     modelParams: {
       effort: params?.effort ?? DEFAULT_THREAD_MODEL_PARAMS.effort,
@@ -71,4 +76,5 @@ export function readStoredThreadModelConfig<ProfileId extends string>(
       profile: params?.profile ?? null,
     },
   };
+  return applyThreadModelConfigPatch(stored, {});
 }

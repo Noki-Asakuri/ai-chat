@@ -60,6 +60,8 @@ class LocalView implements OptimisticLocalStore {
  */
 export class FakeConvexClient {
   readonly mutations: Array<{ name: string; args: AnyArgs }> = [];
+  /** While false, the subscription has delivered nothing yet: local results are empty and queries wait. */
+  connected = true;
 
   private server = new LocalView(new Map());
   private queue: QueuedMutation[] = [];
@@ -118,12 +120,13 @@ export class FakeConvexClient {
         this.listeners.add(callback);
         return () => this.listeners.delete(callback);
       },
-      localQueryResult: () => this.local().getQuery(query, args),
+      localQueryResult: () => (this.connected ? this.local().getQuery(query, args) : undefined),
       journal: () => undefined,
     };
   }
 
   query<Query extends QueryRef>(query: Query, args: FunctionArgs<Query>) {
+    if (!this.connected) return new Promise<FunctionReturnType<Query> | undefined>(() => {});
     return Promise.resolve(this.local().getQuery(query, args));
   }
 

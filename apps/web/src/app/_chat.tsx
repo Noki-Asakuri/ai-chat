@@ -1,9 +1,6 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
-import {
-  applyThreadModelConfigPatch,
-  readStoredThreadModelConfig,
-} from "@ai-chat/shared/chat/thread-model-config";
+import { readStoredThreadModelConfig } from "@ai-chat/shared/chat/thread-model-config";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, redirect, useParams } from "@tanstack/react-router";
@@ -97,9 +94,9 @@ function ChatLayoutConfig() {
   // A thread's own model settings are read from Convex by `useComposerModelConfig`. These account
   // defaults start the welcome page's settings, and are shown on a thread page until its settings load.
   const accountModels = chatShell.preferences.models;
-  const newThread = applyThreadModelConfigPatch(
-    readStoredThreadModelConfig<Id<"profiles">>(accountModels.defaultModel, accountModels.modelParams),
-    {},
+  const newThread = readStoredThreadModelConfig<Id<"profiles">>(
+    accountModels.defaultModel,
+    accountModels.modelParams,
   );
 
   return (

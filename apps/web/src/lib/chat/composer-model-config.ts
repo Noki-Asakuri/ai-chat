@@ -5,7 +5,7 @@ import {
   readStoredThreadModelConfig,
 } from "@ai-chat/shared/chat/thread-model-config";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 
 import { convexQuery } from "@convex-dev/react-query";
@@ -24,11 +24,11 @@ type ThreadPageMeta = (typeof api.functions.threads.getThreadPageMeta)["_returnT
 type UpdateArgs = (typeof api.functions.threads.updateThreadModelConfig)["_args"];
 
 function toComposerModelConfig(meta: ThreadPageMeta): ComposerModelConfig {
-  // An empty patch resolves the stored effort for the stored model, as the server does on save.
-  return applyThreadModelConfigPatch(
-    readStoredThreadModelConfig(meta.latestModel, meta.latestModelParams),
-    {},
-  );
+  return readStoredThreadModelConfig(meta.latestModel, meta.latestModelParams);
+}
+
+function threadPageMetaQuery(threadId: Id<"threads"> | undefined) {
+  return convexQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip");
 }
 
 /** Applies a settings save to the cached thread page meta right away. Convex undoes it if the save fails. */
@@ -101,15 +101,18 @@ export function useComposerModelConfig() {
 
   // On a thread page this holds the account defaults, shown until the thread's settings load.
   const newThread = useConfigStore((state) => state.newThread);
-  const { data: meta } = useQuery(
-    convexQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
-  );
+  const queryClient = useQueryClient();
+  const { data: meta } = useQuery(threadPageMetaQuery(threadId));
   const threadConfig = useMemo(() => (meta ? toComposerModelConfig(meta) : null), [meta]);
 
   function read(): ComposerModelConfig {
     const fallback = storeApi.getState().newThread;
     if (!threadId) return fallback;
-    return readThreadModelConfig(convex, threadId) ?? fallback;
+
+    // Convex's cache holds saves still in flight. Until its subscription delivers a first result, the
+    // thread page's prefetched data (what the composer shows) is the latest value.
+    const cached = queryClient.getQueryData<ThreadPageMeta>(threadPageMetaQuery(threadId).queryKey);
+    return readThreadModelConfig(convex, threadId) ?? (cached ? toComposerModelConfig(cached) : fallback);
   }
 
   async function update(patch: ComposerModelConfigPatch) {

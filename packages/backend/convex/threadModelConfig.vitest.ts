@@ -72,6 +72,20 @@ describe("updateThreadModelConfig", () => {
     });
   });
 
+  test("a model change starts from the stored effort as resolved for the stored model", async () => {
+    const { t, threadId, readConfig } = await setup();
+    // A retry with Kimi K2.6 can save Low, which Kimi doesn't offer; the composer shows Medium.
+    await t.run(async (ctx) => {
+      await ctx.db.patch("threads", threadId, {
+        latestModel: "kimi/kimi-k2.6",
+        latestModelParams: { effort: "low", webSearch: false, profile: null },
+      });
+    });
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, { threadId, model: "openai/gpt-5" });
+    expect((await readConfig()).modelParams?.effort).toBe("medium");
+  });
+
   test("clears the profile with null", async () => {
     const { t, threadId, readConfig } = await setup();
     const profileId = await t.run(async (ctx) =>
