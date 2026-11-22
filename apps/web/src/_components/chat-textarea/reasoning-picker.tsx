@@ -55,14 +55,27 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
 
-  // The thread and its config store are captured when the effort changes, so a sync that lands
-  // after switching threads still updates the thread it was chosen in. The settings are read from
-  // that store when the sync runs, so later model, web search or profile changes are not undone.
+  // The thread, its config store and the chosen effort are captured when the effort changes, so
+  // a sync that lands after switching threads still updates the thread it was chosen in, and a
+  // server refresh during the wait cannot replace the chosen effort. The other settings are read
+  // from that store when the sync runs, so later web search or profile changes are kept. Switching
+  // models drops the pending sync: the model selector already saves the new model with the effort.
   // Unmounting (leaving the thread or chat) sends a pending sync at once.
   const syncEffort = useDebouncedCallback(
-    (threadId: Id<"threads">, store: typeof configStoreApi) => {
-      const { model, modelParams } = store.getState();
-      void syncThreadModelConfig({ threadId, model, modelParams });
+    (pending: {
+      threadId: Id<"threads">;
+      store: typeof configStoreApi;
+      model: string;
+      effort: ReasoningEffort;
+    }) => {
+      const { model, modelParams } = pending.store.getState();
+      if (model !== pending.model) return;
+
+      void syncThreadModelConfig({
+        threadId: pending.threadId,
+        model,
+        modelParams: { ...modelParams, effort: pending.effort },
+      });
     },
     { wait: EFFORT_SYNC_DEBOUNCE_MS, onUnmount: (debouncer) => debouncer.flush() },
   );
@@ -78,7 +91,7 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
     configStore.setModelParams({ effort });
 
     const threadId = fromUUID<Id<"threads">>(params?.threadId);
-    if (threadId) syncEffort(threadId, configStoreApi);
+    if (threadId) syncEffort({ threadId, store: configStoreApi, model: props.model, effort });
   }
 
   if (validOptions.length === 0) return null;

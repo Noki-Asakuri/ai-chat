@@ -8,6 +8,8 @@ const { act, render, screen, waitFor } = await import("@testing-library/react");
 const { useEffect } = await import("react");
 const { default: userEvent } = await import("@testing-library/user-event");
 
+import type { ComponentProps } from "react";
+
 type SyncCall = { threadId: string; model: string; modelParams: { effort: string; webSearch: boolean } };
 
 const THREAD_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
@@ -55,9 +57,9 @@ function StoreProbe() {
 }
 
 // Production keys the provider by thread ID, so switching threads remounts the picker with a new store.
-function pickerTree() {
+function pickerTree(state: ComponentProps<typeof ConfigStoreProvider>["initialState"] = initialState) {
   return (
-    <ConfigStoreProvider key={currentThreadId} initialState={initialState}>
+    <ConfigStoreProvider key={currentThreadId} initialState={state}>
       <StoreProbe />
       <ChatReasoningPicker />
     </ConfigStoreProvider>
@@ -122,6 +124,37 @@ describe("reasoning effort sync", () => {
 
     await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: SYNC_WAIT_MS * 2 });
     expect(syncCalls[0]?.modelParams).toMatchObject({ effort: "high", webSearch: true });
+  });
+
+  for (const send of ["timer", "unmount"] as const) {
+    test(`a server refresh during the wait keeps the chosen effort (${send})`, async () => {
+      const user = userEvent.setup();
+      const view = renderPicker();
+
+      await chooseEffort(user, "High");
+      // An earlier web search save comes back from the server, still carrying the old effort.
+      const serverState = {
+        ...initialState,
+        modelParams: { effort: "medium" as const, webSearch: true, profile: null },
+      };
+      act(() => view.rerender(pickerTree(serverState)));
+      expect(store?.getState().modelParams.effort).toBe("medium");
+
+      if (send === "unmount") act(() => view.unmount());
+      await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: SYNC_WAIT_MS * 2 });
+      expect(syncCalls[0]?.modelParams).toMatchObject({ effort: "high", webSearch: true });
+    });
+  }
+
+  test("switching models during the wait drops the pending sync", async () => {
+    const user = userEvent.setup();
+    renderPicker();
+
+    await chooseEffort(user, "High");
+    act(() => store?.getState().setConfig({ model: "openai/gpt-5" }));
+
+    await sleep(SYNC_WAIT_MS + 200);
+    expect(syncCalls).toHaveLength(0);
   });
 
   test("sends a pending choice at once when the picker unmounts", async () => {
