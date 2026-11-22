@@ -49,7 +49,7 @@ export function MobileChatToolsMenu() {
 
   function handleEffortChange(effort: ReasoningEffort) {
     configStore.setModelParams({ effort });
-    void syncThreadModelConfig({ modelParams: { effort } });
+    void syncThreadModelConfig({ modelParams: { effort }, expectedModel: config.model });
   }
 
   function handleWebSearchChange() {

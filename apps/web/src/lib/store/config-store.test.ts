@@ -16,11 +16,30 @@ describe("getServerStateChanges", () => {
     const previous = { model: "a", modelParams, hiddenModels: ["x"] };
     const next = { model: "b", modelParams: { ...modelParams, webSearch: true }, hiddenModels: ["x", "y"] };
 
-    expect(getServerStateChanges(previous, next)).toEqual({
+    expect(getServerStateChanges(previous, next, "b")).toEqual({
       model: "b",
       modelParams: { webSearch: true },
       hiddenModels: ["x", "y"],
     });
+  });
+});
+
+describe("getServerStateChanges on a model switch", () => {
+  const previous = { model: "a", modelParams };
+
+  test("applies the server effort when the server switches to another model", () => {
+    const next = { model: "b", modelParams: { ...modelParams } };
+
+    expect(getServerStateChanges(previous, next, "a")).toEqual({
+      model: "b",
+      modelParams: { effort: "medium" },
+    });
+  });
+
+  test("leaves the local effort alone when the switch came from this client", () => {
+    const next = { model: "b", modelParams: { ...modelParams } };
+
+    expect(getServerStateChanges(previous, next, "b")).toEqual({ model: "b" });
   });
 });
 

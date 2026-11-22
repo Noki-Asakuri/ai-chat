@@ -29,6 +29,8 @@ export const threadRouter = router({
           })
           .partial()
           .optional(),
+        // Skip the save unless the thread still uses this model.
+        expectedModel: z.string().optional(),
       }),
     )
     .mutation(async function ({ ctx, input }) {
@@ -38,6 +40,7 @@ export const threadRouter = router({
         threadId: input.threadId,
         latestModel: input.model,
         latestModelParams: input.modelParams,
+        expectedModel: input.expectedModel,
       });
 
       return { ok: true };

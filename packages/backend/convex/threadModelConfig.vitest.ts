@@ -5,7 +5,7 @@ import { describe, expect, test } from "vitest";
 
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { DEFAULT_USER_PREFERENCES } from "./functions/users";
+import { DEFAULT_THREAD_MODEL, DEFAULT_USER_PREFERENCES } from "./functions/users";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -25,15 +25,22 @@ async function setup() {
   return t;
 }
 
-async function insertThread(t: Awaited<ReturnType<typeof setup>>, profile: Id<"profiles"> | null = null) {
+async function insertThread(
+  t: Awaited<ReturnType<typeof setup>>,
+  options: { profile?: Id<"profiles"> | null; model?: string; effort?: "medium" | "high" | "max" } = {},
+) {
   return await t.run(async (ctx) => {
     return await ctx.db.insert("threads", {
       title: "Model config test thread",
       userId: USER_ID,
       updatedAt: Date.now(),
       pinned: false,
-      latestModel: "test/model-a",
-      latestModelParams: { effort: "medium", webSearch: false, profile },
+      latestModel: options.model ?? "test/model-a",
+      latestModelParams: {
+        effort: options.effort ?? "medium",
+        webSearch: false,
+        profile: options.profile ?? null,
+      },
       groupId: null,
       status: "complete",
     });
@@ -93,7 +100,7 @@ describe("updateThreadModelConfig", () => {
         updatedAt: 0,
       });
     });
-    const threadId = await insertThread(t, profileId);
+    const threadId = await insertThread(t, { profile: profileId });
 
     await t.mutation(api.functions.threads.updateThreadModelConfig, {
       threadId,
@@ -109,6 +116,84 @@ describe("updateThreadModelConfig", () => {
       effort: "low",
       webSearch: false,
       profile: null,
+    });
+  });
+
+  test("skips the save when the thread no longer uses the expected model", async () => {
+    const t = await setup();
+    const threadId = await insertThread(t, { model: "openai/gpt-5.5" });
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModelParams: { effort: "max" },
+      expectedModel: "openai/gpt-5.6-sol",
+    });
+    expect((await readConfig(t, threadId)).latestModelParams?.effort).toBe("medium");
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModelParams: { effort: "high" },
+      expectedModel: "openai/gpt-5.5",
+    });
+    expect((await readConfig(t, threadId)).latestModelParams?.effort).toBe("high");
+  });
+
+  test("a model-only change keeps the stored effort when the new model supports it", async () => {
+    const t = await setup();
+    const threadId = await insertThread(t, { model: "openai/gpt-5.6-sol", effort: "high" });
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModel: "openai/gpt-5.6-terra",
+    });
+
+    expect(await readConfig(t, threadId)).toMatchObject({
+      latestModel: "openai/gpt-5.6-terra",
+      latestModelParams: { effort: "high" },
+    });
+  });
+
+  test("a model-only change falls back to the new model's default effort", async () => {
+    const t = await setup();
+    const threadId = await insertThread(t, { model: "openai/gpt-5.6-sol", effort: "max" });
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModel: "openai/gpt-5.5",
+    });
+
+    expect(await readConfig(t, threadId)).toMatchObject({
+      latestModel: "openai/gpt-5.5",
+      latestModelParams: { effort: "medium" },
+    });
+  });
+
+  test("a partial save fills in a thread stored without model config", async () => {
+    const t = await setup();
+    const threadId = await t.run(async (ctx) => {
+      const id = await ctx.db.insert("threads", {
+        title: "Pre-backfill thread",
+        userId: USER_ID,
+        updatedAt: Date.now(),
+        pinned: false,
+        latestModel: "test/model-a",
+        latestModelParams: { effort: "medium", webSearch: false, profile: null },
+        groupId: null,
+        status: "complete",
+      });
+      // Schema validation is off, so stored threads can predate these fields.
+      await ctx.db.patch(id, { latestModel: undefined, latestModelParams: undefined });
+      return id;
+    });
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModelParams: { webSearch: true },
+    });
+
+    expect(await readConfig(t, threadId)).toEqual({
+      latestModel: DEFAULT_THREAD_MODEL,
+      latestModelParams: { effort: "medium", webSearch: true, profile: null },
     });
   });
 });

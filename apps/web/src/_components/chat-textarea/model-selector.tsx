@@ -21,7 +21,7 @@ import { useId, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore } from "@/components/provider/config-provider";
+import { useConfigStore, useConfigStoreApi } from "@/components/provider/config-provider";
 
 import { ModelCapability } from "@/components/capability-icon";
 import { buttonVariants } from "@/components/ui/button";
@@ -601,6 +601,7 @@ function SectionIcon({ section }: { section: PickerSectionKey }) {
 export function ChatModelSelector() {
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
 
+  const configStore = useConfigStoreApi();
   const { effort, storeModel, setConfig, setModelParams } = useConfigStore(
     useShallow((state) => ({
       effort: state.modelParams.effort,
@@ -619,7 +620,17 @@ export function ChatModelSelector() {
     setConfig({ model });
 
     if (nextEffort !== effort) setModelParams({ effort: nextEffort });
-    void syncThreadModelConfig({ model, modelParams: { effort: nextEffort } });
+
+    // An effort chosen moments ago is still waiting for its debounced save, which the model change
+    // drops, so save it here with the new model. Otherwise send only the model: the server resolves
+    // the stored effort for it, which may be newer than this tab's copy.
+    const { effortSyncPending, setEffortSyncPending } = configStore.getState();
+    if (effortSyncPending) {
+      setEffortSyncPending(false);
+      void syncThreadModelConfig({ model, modelParams: { effort: nextEffort } });
+    } else {
+      void syncThreadModelConfig({ model });
+    }
   }
 
   return (

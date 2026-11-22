@@ -1,4 +1,5 @@
 /* oxlint-disable no-await-in-loop -- Thread graph cloning and transaction writes are order-dependent. */
+import { resolveReasoning, tryGetModelData } from "@ai-chat/shared/chat/models";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 
@@ -6,6 +7,7 @@ import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { internalMutation, query } from "../_generated/server";
 import { recordStatisticsThread } from "./statistics";
+import { DEFAULT_THREAD_MODEL } from "./users";
 
 import { authenticatedMutation, authenticatedQuery, authenticatedUserIdQuery } from "../components";
 import {
@@ -181,13 +183,22 @@ export const createThread = authenticatedMutation({
   },
 });
 
-// Saves only the fields given and merges them into the thread's stored config, so a save of one
-// setting cannot overwrite another setting with a stale value from the client.
+const DEFAULT_THREAD_MODEL_PARAMS = { effort: "medium", webSearch: false, profile: null } as const;
+
+/**
+ * Saves only the fields given and merges them into the thread's stored config, so a save of one
+ * setting cannot overwrite another setting with a stale value from the client.
+ *
+ * - `expectedModel`: skip the save unless the thread still uses this model, so an effort chosen for
+ *   one model is not stored for another.
+ * - A model change without an effort resolves the stored effort against the new model.
+ */
 export const updateThreadModelConfig = authenticatedMutation({
   args: {
     threadId: v.id("threads"),
     latestModel: v.optional(v.string()),
     latestModelParams: v.optional(AISDKModelParams.partial()),
+    expectedModel: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
@@ -196,14 +207,38 @@ export const updateThreadModelConfig = authenticatedMutation({
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
-    const latestModel = args.latestModel ?? thread.latestModel;
-    const latestModelParams = { ...thread.latestModelParams, ...args.latestModelParams };
+    // Schema validation is off, so threads from before `backfillThreadModelConfig` can lack
+    // these fields. Fill them with the same defaults so the merge always stores a full config.
+    const storedModel: string | undefined = thread.latestModel;
+    const storedParams: Partial<Doc<"threads">["latestModelParams"]> | undefined = thread.latestModelParams;
+    const currentModel = storedModel ?? DEFAULT_THREAD_MODEL;
+    const currentParams = {
+      effort: storedParams?.effort ?? DEFAULT_THREAD_MODEL_PARAMS.effort,
+      webSearch: storedParams?.webSearch ?? DEFAULT_THREAD_MODEL_PARAMS.webSearch,
+      profile: storedParams?.profile ?? DEFAULT_THREAD_MODEL_PARAMS.profile,
+    };
 
+    if (args.expectedModel !== undefined && args.expectedModel !== currentModel) return;
+
+    const latestModel = args.latestModel ?? currentModel;
+    const latestModelParams = { ...currentParams, ...args.latestModelParams };
+
+    if (args.latestModelParams?.effort === undefined && latestModel !== currentModel) {
+      const modelData = tryGetModelData(latestModel);
+      if (modelData) latestModelParams.effort = resolveReasoning(modelData, currentParams.effort);
+    }
+
+    const complete =
+      storedModel !== undefined &&
+      storedParams?.effort !== undefined &&
+      storedParams.webSearch !== undefined &&
+      storedParams.profile !== undefined;
     if (
-      thread.latestModel === latestModel &&
-      thread.latestModelParams.effort === latestModelParams.effort &&
-      thread.latestModelParams.webSearch === latestModelParams.webSearch &&
-      thread.latestModelParams.profile === latestModelParams.profile
+      complete &&
+      currentModel === latestModel &&
+      currentParams.effort === latestModelParams.effort &&
+      currentParams.webSearch === latestModelParams.webSearch &&
+      currentParams.profile === latestModelParams.profile
     ) {
       return;
     }

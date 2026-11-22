@@ -13,6 +13,7 @@ import type { ComponentProps } from "react";
 type SyncCall = {
   threadId: string;
   model?: string;
+  expectedModel?: string;
   modelParams?: Partial<{ effort: string; webSearch: boolean; profile: string | null }>;
 };
 
@@ -28,6 +29,7 @@ await mock.module("@tanstack/react-router", () => ({
   ...actualRouter,
   useParams: () => (currentThreadId ? { threadId: currentThreadId } : undefined),
 }));
+await mock.module("convex/react", () => ({ useMutation: () => async () => {} }));
 await mock.module("@/lib/trpc/client", () => ({
   syncThreadModelConfig: async (input: SyncCall) => {
     syncCalls.push(input);
@@ -36,9 +38,12 @@ await mock.module("@/lib/trpc/client", () => ({
 
 const { ConfigStoreProvider, useConfigStoreApi } = await import("../provider/config-provider");
 const { ChatReasoningPicker } = await import("./reasoning-picker");
+const { ChatModelSelector } = await import("./model-selector");
+const { tryGetModelData } = await import("@/lib/chat/models");
 
+const MODEL = "google/gemini-2.5-pro";
 const initialState = {
-  model: "google/gemini-2.5-pro",
+  model: MODEL,
   modelParams: { effort: "medium" as const, webSearch: false, profile: null },
 };
 
@@ -97,7 +102,12 @@ describe("reasoning effort sync", () => {
     expect(syncCalls).toHaveLength(0);
 
     await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: SYNC_WAIT_MS * 2 });
-    expect(syncCalls[0]).toEqual({ threadId: THREAD_A.replaceAll("-", ""), modelParams: { effort: "low" } });
+    expect(syncCalls[0]).toEqual({
+      threadId: THREAD_A.replaceAll("-", ""),
+      modelParams: { effort: "low" },
+      expectedModel: MODEL,
+    });
+    expect(store?.getState().effortSyncPending).toBe(false);
     await sleep(SYNC_WAIT_MS + 100);
     expect(syncCalls).toHaveLength(1);
   });
@@ -111,7 +121,11 @@ describe("reasoning effort sync", () => {
     act(() => view.rerender(pickerTree()));
 
     await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: 200 });
-    expect(syncCalls[0]).toEqual({ threadId: THREAD_A.replaceAll("-", ""), modelParams: { effort: "high" } });
+    expect(syncCalls[0]).toEqual({
+      threadId: THREAD_A.replaceAll("-", ""),
+      modelParams: { effort: "high" },
+      expectedModel: MODEL,
+    });
 
     await sleep(SYNC_WAIT_MS + 100);
     expect(syncCalls).toHaveLength(1);
@@ -145,6 +159,19 @@ describe("reasoning effort sync", () => {
     });
   }
 
+  test("a server switch to another model during the wait restores its effort and drops the sync", async () => {
+    const user = userEvent.setup();
+    const view = renderPicker();
+
+    await chooseEffort(user, "High");
+    // For example, selecting a response variant that used another model with Medium.
+    act(() => view.rerender(pickerTree({ ...initialState, model: "openai/gpt-5.5" })));
+    expect(store?.getState()).toMatchObject({ model: "openai/gpt-5.5", modelParams: { effort: "medium" } });
+
+    await sleep(SYNC_WAIT_MS + 200);
+    expect(syncCalls).toHaveLength(0);
+  });
+
   test("switching models during the wait drops the pending sync", async () => {
     const user = userEvent.setup();
     renderPicker();
@@ -177,5 +204,56 @@ describe("reasoning effort sync", () => {
 
     await sleep(100);
     expect(syncCalls).toHaveLength(0);
+  });
+});
+
+function renderWithSelector() {
+  return render(
+    <ConfigStoreProvider key={currentThreadId} initialState={initialState}>
+      <StoreProbe />
+      <ChatReasoningPicker />
+      <ChatModelSelector />
+    </ConfigStoreProvider>,
+  );
+}
+
+async function chooseModel(user: ReturnType<typeof userEvent.setup>, id: string) {
+  const label = tryGetModelData(id)?.display.unique ?? tryGetModelData(id)?.display.name ?? id;
+  await user.click(screen.getByRole("button", { name: "Select model" }));
+  const search = await screen.findByRole("combobox", { name: "Search models" });
+  search.focus();
+  await user.paste(label);
+  await user.keyboard("{Enter}");
+}
+
+describe("model selection after an effort choice", () => {
+  const NEXT_MODEL = "openai/gpt-5.6-sol";
+
+  test("saves a pending effort with the new model", async () => {
+    const user = userEvent.setup();
+    renderWithSelector();
+
+    await chooseEffort(user, "High");
+    await user.keyboard("{Escape}");
+    await chooseModel(user, NEXT_MODEL);
+
+    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: 500 });
+    expect(syncCalls[0]).toEqual({
+      threadId: THREAD_A.replaceAll("-", ""),
+      model: NEXT_MODEL,
+      modelParams: { effort: "high" },
+    });
+    await sleep(SYNC_WAIT_MS + 200);
+    expect(syncCalls).toHaveLength(1);
+  });
+
+  test("sends only the model when no effort choice is pending", async () => {
+    const user = userEvent.setup();
+    renderWithSelector();
+
+    await chooseModel(user, NEXT_MODEL);
+
+    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: 500 });
+    expect(syncCalls[0]).toEqual({ threadId: THREAD_A.replaceAll("-", ""), model: NEXT_MODEL });
   });
 });

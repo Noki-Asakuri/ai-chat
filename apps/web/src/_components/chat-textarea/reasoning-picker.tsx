@@ -57,8 +57,9 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
 
   // The thread, its config store, the model and the chosen effort are captured when the effort
   // changes, so a sync that lands after switching threads still updates the thread it was chosen
-  // in. Only the effort is sent; the server merges it into the thread's other settings. Switching
-  // models drops the pending sync: the model selector already saves the new model with the effort.
+  // in. Only the effort is sent, and only if the thread still uses that model; the server merges
+  // it into the thread's other settings. A model change drops the pending sync: a local model
+  // selection saves the effort itself (see `effortSyncPending`), and a server one brings its own.
   // Unmounting (leaving the thread or chat) sends a pending sync at once.
   const syncEffort = useDebouncedCallback(
     (pending: {
@@ -67,9 +68,15 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
       model: string;
       effort: ReasoningEffort;
     }) => {
-      if (pending.store.getState().model !== pending.model) return;
+      const state = pending.store.getState();
+      state.setEffortSyncPending(false);
+      if (state.model !== pending.model) return;
 
-      void syncThreadModelConfig({ threadId: pending.threadId, modelParams: { effort: pending.effort } });
+      void syncThreadModelConfig({
+        threadId: pending.threadId,
+        modelParams: { effort: pending.effort },
+        expectedModel: pending.model,
+      });
     },
     { wait: EFFORT_SYNC_DEBOUNCE_MS, onUnmount: (debouncer) => debouncer.flush() },
   );
@@ -85,7 +92,10 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
     configStore.setModelParams({ effort });
 
     const threadId = fromUUID<Id<"threads">>(params?.threadId);
-    if (threadId) syncEffort({ threadId, store: configStoreApi, model: props.model, effort });
+    if (!threadId) return;
+
+    configStore.setEffortSyncPending(true);
+    syncEffort({ threadId, store: configStoreApi, model: props.model, effort });
   }
 
   if (validOptions.length === 0) return null;

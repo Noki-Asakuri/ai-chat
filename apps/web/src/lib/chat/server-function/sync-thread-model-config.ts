@@ -14,6 +14,8 @@ type SyncThreadModelConfigOptions = {
     effort: ReasoningEffort;
     profile: Id<"profiles"> | null;
   }>;
+  /** Skip the save unless the thread still uses this model (checked on the server). */
+  expectedModel?: string;
 };
 
 /**
@@ -29,7 +31,12 @@ export function useSyncThreadModelConfig() {
     if (!threadId) return;
 
     const [, error] = await tryCatch(
-      syncThreadModelConfig({ threadId, model: options.model, modelParams: options.modelParams }),
+      syncThreadModelConfig({
+        threadId,
+        model: options.model,
+        modelParams: options.modelParams,
+        expectedModel: options.expectedModel,
+      }),
     );
 
     if (error) {

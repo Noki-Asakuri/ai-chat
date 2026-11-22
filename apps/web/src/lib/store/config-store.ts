@@ -45,6 +45,13 @@ export type ConfigStore = ConfigStoreData & {
   setHiddenModels: (hiddenModels: string[]) => void;
   setFavoriteModels: (favoriteModels: string[]) => void;
   setServerState: (changes: ServerStateChanges) => void;
+
+  /**
+   * Local only: an effort the user chose is waiting for its debounced save. The model selector
+   * then saves that effort with the new model, since the pending save is dropped on a model change.
+   */
+  effortSyncPending: boolean;
+  setEffortSyncPending: (effortSyncPending: boolean) => void;
 };
 
 export function createConfigStore(initialState: Partial<ConfigStoreData>) {
@@ -76,6 +83,9 @@ export function createConfigStore(initialState: Partial<ConfigStoreData>) {
     setServerState: ({ modelParams, ...changes }) =>
       set((state) => ({ ...changes, modelParams: { ...state.modelParams, ...modelParams } })),
 
+    effortSyncPending: false,
+    setEffortSyncPending: (effortSyncPending) => set({ effortSyncPending }),
+
     ...initialState,
   }));
 }
@@ -99,10 +109,15 @@ function changedEntries<T extends object>(previous: Partial<T>, next: Partial<T>
  * Returns the fields of `next` whose values differ from `previous`. The provider applies only these,
  * so a re-render that passes the same (possibly stale) server values does not overwrite local
  * changes, and a server update to one setting does not reset the others.
+ *
+ * When the server switches to a model other than `localModel` (for example, by selecting a
+ * response variant), the server's effort is applied with it: a local effort chosen for the
+ * previous model does not belong to the new one.
  */
 export function getServerStateChanges(
   previous: Partial<ConfigStoreData>,
   next: Partial<ConfigStoreData>,
+  localModel?: string,
 ): ServerStateChanges | null {
   const { modelParams: previousParams, ...previousRest } = previous;
   const { modelParams: nextParams, ...nextRest } = next;
@@ -110,6 +125,7 @@ export function getServerStateChanges(
   const changes: ServerStateChanges = changedEntries(previousRest, nextRest);
   if (nextParams) {
     const paramChanges = changedEntries<ModelParams>(previousParams ?? {}, nextParams);
+    if (changes.model !== undefined && changes.model !== localModel) paramChanges.effort = nextParams.effort;
     if (Object.keys(paramChanges).length > 0) changes.modelParams = paramChanges;
   }
 
