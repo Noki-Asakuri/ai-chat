@@ -4,19 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
-import {
-  BrainIcon,
-  ChartNoAxesColumnIcon,
-  ChevronRightIcon,
-  SlidersHorizontalIcon,
-  CircleUserRoundIcon,
-  Columns3CogIcon,
-  LogOutIcon,
-  MessagesSquareIcon,
-  PaperclipIcon,
-  PaletteIcon,
-  UserRoundPenIcon,
-} from "lucide-react";
+import { ChevronRightIcon, LogOutIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -24,6 +12,7 @@ import { Menu } from "../ui/menu";
 import { Progress } from "../ui/progress";
 import { Skeleton } from "../ui/skeleton";
 import { toast } from "../ui/toast";
+import { SETTINGS_NAVIGATION_GROUPS } from "../settings/settings-navigation";
 
 import { logout } from "@/lib/authkit/logout";
 import {
@@ -121,62 +110,20 @@ export function ThreadUserProfile({ user, returnThreadId }: ThreadUserProfilePro
               <UserQuota variant="panel" />
             </div>
 
-            <Menu.Group className="mt-1">
-              <Menu.GroupLabel className="text-3xs px-2.5 py-1.5 font-medium tracking-widest text-muted-foreground uppercase">
-                Account
-              </Menu.GroupLabel>
+            {SETTINGS_NAVIGATION_GROUPS.map((group) => (
+              <Menu.Group key={group.label} className="mt-1">
+                <Menu.GroupLabel className="text-3xs px-2.5 py-1.5 font-medium tracking-widest text-muted-foreground uppercase">
+                  {group.label}
+                </Menu.GroupLabel>
 
-              <UserMenuSettingItem href="/settings/general" returnThreadId={returnThreadId}>
-                <SlidersHorizontalIcon />
-                General
-              </UserMenuSettingItem>
-
-              <UserMenuSettingItem href="/settings/account" returnThreadId={returnThreadId}>
-                <CircleUserRoundIcon />
-                Account
-              </UserMenuSettingItem>
-
-              <UserMenuSettingItem href="/settings/customization" returnThreadId={returnThreadId}>
-                <Columns3CogIcon />
-                Customize
-              </UserMenuSettingItem>
-
-              <UserMenuSettingItem href="/settings/appearance" returnThreadId={returnThreadId}>
-                <PaletteIcon />
-                Appearance
-              </UserMenuSettingItem>
-
-              <UserMenuSettingItem href="/settings/profiles" returnThreadId={returnThreadId}>
-                <UserRoundPenIcon />
-                Profiles
-              </UserMenuSettingItem>
-            </Menu.Group>
-
-            <Menu.Group className="mt-1">
-              <Menu.GroupLabel className="text-3xs px-2.5 py-1.5 font-medium tracking-widest text-muted-foreground uppercase">
-                Workspace
-              </Menu.GroupLabel>
-
-              <UserMenuSettingItem href="/settings/threads" returnThreadId={returnThreadId}>
-                <MessagesSquareIcon />
-                Threads
-              </UserMenuSettingItem>
-
-              <UserMenuSettingItem href="/settings/statistics" returnThreadId={returnThreadId}>
-                <ChartNoAxesColumnIcon />
-                Statistics
-              </UserMenuSettingItem>
-
-              <UserMenuSettingItem href="/settings/attachments" returnThreadId={returnThreadId}>
-                <PaperclipIcon />
-                Attachments
-              </UserMenuSettingItem>
-
-              <UserMenuSettingItem href="/settings/models" returnThreadId={returnThreadId}>
-                <BrainIcon />
-                Models
-              </UserMenuSettingItem>
-            </Menu.Group>
+                {group.items.map((item) => (
+                  <UserMenuSettingItem key={item.path} href={item.path} returnThreadId={returnThreadId}>
+                    <item.icon />
+                    {item.label}
+                  </UserMenuSettingItem>
+                ))}
+              </Menu.Group>
+            ))}
 
             <Menu.Separator className="mx-1 my-1.5 h-px bg-border" />
 

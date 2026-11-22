@@ -20,7 +20,7 @@ import { VersionUpdateNotifier } from "@/components/version-update-notifier";
 
 import { getNavigationViewTransition } from "@/lib/navigation/view-transitions";
 
-import { SETTINGS_NAVIGATION } from "./settings-navigation";
+import { SETTINGS_NAVIGATION_GROUPS } from "./settings-navigation";
 
 export function SettingsSidebar() {
   const { user } = useLoaderData({ from: "/settings" });
@@ -39,36 +39,38 @@ export function SettingsSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="mt-2 flex flex-1 flex-col px-2 md:px-0">
-        <SidebarGroup>
-          <SidebarGroupLabel>Settings</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-1.5">
-              {SETTINGS_NAVIGATION.map((item) => {
-                const Icon = item.icon;
+        {SETTINGS_NAVIGATION_GROUPS.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1.5">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
 
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      className="h-11 gap-3 px-3 text-sm focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground focus-visible:ring-0 [&_svg]:size-5"
-                      isActive={pathname === item.path || pathname.startsWith(`${item.path}/`)}
-                      render={
-                        <Link
-                          to={item.path}
-                          search={search}
-                          viewTransition={getNavigationViewTransition(pathname, item.path)}
-                          onClick={() => setOpenMobile(false)}
-                        />
-                      }
-                    >
-                      <Icon />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                  return (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton
+                        className="h-11 gap-3 px-3 text-sm focus-visible:bg-sidebar-accent focus-visible:text-sidebar-accent-foreground focus-visible:ring-0 [&_svg]:size-5"
+                        isActive={pathname === item.path || pathname.startsWith(`${item.path}/`)}
+                        render={
+                          <Link
+                            to={item.path}
+                            search={search}
+                            viewTransition={getNavigationViewTransition(pathname, item.path)}
+                            onClick={() => setOpenMobile(false)}
+                          />
+                        }
+                      >
+                        <Icon />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
 
         <SidebarGroup className="mt-auto p-2">
           <SidebarGroupContent>
