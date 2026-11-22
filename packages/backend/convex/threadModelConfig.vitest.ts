@@ -196,4 +196,51 @@ describe("updateThreadModelConfig", () => {
       latestModelParams: { effort: "medium", webSearch: true, profile: null },
     });
   });
+
+  test("a partial save recovers a legacy thread's config from its latest assistant message", async () => {
+    const t = await setup();
+    const threadId = await t.run(async (ctx) => {
+      const id = await ctx.db.insert("threads", {
+        title: "Pre-backfill thread",
+        userId: USER_ID,
+        updatedAt: 2,
+        pinned: false,
+        latestModel: "test/model-a",
+        latestModelParams: { effort: "medium", webSearch: false, profile: null },
+        groupId: null,
+        status: "complete",
+      });
+      await ctx.db.patch(id, { latestModel: undefined, latestModelParams: undefined });
+      await ctx.db.insert("messages", {
+        threadId: id,
+        userId: USER_ID,
+        messageId: crypto.randomUUID(),
+        parts: [{ type: "text", text: "answer" }],
+        status: "complete",
+        role: "assistant",
+        attachments: [],
+        createdAt: 1,
+        updatedAt: 1,
+        metadata: {
+          model: { request: "openai/gpt-5.5", response: null },
+          finishReason: "stop",
+          usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+          timeToFirstTokenMs: 0,
+          durations: { request: 0, reasoning: 0, text: 0 },
+          modelParams: { effort: "high", webSearch: false, profile: null },
+        },
+      });
+      return id;
+    });
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModelParams: { webSearch: true },
+    });
+
+    expect(await readConfig(t, threadId)).toEqual({
+      latestModel: "openai/gpt-5.5",
+      latestModelParams: { effort: "high", webSearch: true, profile: null },
+    });
+  });
 });

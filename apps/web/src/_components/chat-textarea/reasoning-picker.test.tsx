@@ -41,7 +41,7 @@ const { ChatReasoningPicker } = await import("./reasoning-picker");
 const { ChatModelSelector } = await import("./model-selector");
 const { tryGetModelData } = await import("@/lib/chat/models");
 
-const MODEL = "google/gemini-2.5-pro";
+const MODEL = "openai/gpt-5.6-terra";
 const initialState = {
   model: MODEL,
   modelParams: { effort: "medium" as const, webSearch: false, profile: null },
@@ -107,7 +107,7 @@ describe("reasoning effort sync", () => {
       modelParams: { effort: "low" },
       expectedModel: MODEL,
     });
-    expect(store?.getState().effortSyncPending).toBe(false);
+    expect(store?.getState().effortIntent).toMatchObject({ effort: "low", queued: false });
     await sleep(SYNC_WAIT_MS + 100);
     expect(syncCalls).toHaveLength(1);
   });
@@ -207,14 +207,18 @@ describe("reasoning effort sync", () => {
   });
 });
 
-function renderWithSelector() {
-  return render(
-    <ConfigStoreProvider key={currentThreadId} initialState={initialState}>
+function selectorTree(state: ComponentProps<typeof ConfigStoreProvider>["initialState"] = initialState) {
+  return (
+    <ConfigStoreProvider key={currentThreadId} initialState={state}>
       <StoreProbe />
       <ChatReasoningPicker />
       <ChatModelSelector />
-    </ConfigStoreProvider>,
+    </ConfigStoreProvider>
   );
+}
+
+function renderWithSelector() {
+  return render(selectorTree());
 }
 
 async function chooseModel(user: ReturnType<typeof userEvent.setup>, id: string) {
@@ -245,6 +249,48 @@ describe("model selection after an effort choice", () => {
     });
     await sleep(SYNC_WAIT_MS + 200);
     expect(syncCalls).toHaveLength(1);
+  });
+
+  test("an older snapshot does not replace a newer choice, which a model change then carries", async () => {
+    const user = userEvent.setup();
+    const view = renderWithSelector();
+
+    await chooseEffort(user, "High");
+    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: SYNC_WAIT_MS * 2 });
+    await chooseEffort(user, "Low");
+    await user.keyboard("{Escape}");
+    // The High save comes back after Low was chosen.
+    act(() =>
+      view.rerender(
+        selectorTree({ ...initialState, modelParams: { ...initialState.modelParams, effort: "high" } }),
+      ),
+    );
+    expect(store?.getState().modelParams.effort).toBe("low");
+
+    await chooseModel(user, NEXT_MODEL);
+    await waitFor(() => expect(syncCalls).toHaveLength(2), { timeout: 500 });
+    expect(syncCalls[1]).toEqual({
+      threadId: THREAD_A.replaceAll("-", ""),
+      model: NEXT_MODEL,
+      modelParams: { effort: "low" },
+    });
+
+    await sleep(SYNC_WAIT_MS + 200);
+    expect(syncCalls).toHaveLength(2);
+  });
+
+  test("switching away and back before the wait ends sends no extra effort save", async () => {
+    const user = userEvent.setup();
+    renderWithSelector();
+
+    await chooseEffort(user, "High");
+    await user.keyboard("{Escape}");
+    await chooseModel(user, NEXT_MODEL);
+    await chooseModel(user, MODEL);
+
+    await sleep(SYNC_WAIT_MS + 200);
+    expect(syncCalls.map((call) => call.model)).toEqual([NEXT_MODEL, MODEL]);
+    expect(syncCalls.every((call) => call.modelParams?.effort === "high")).toBe(true);
   });
 
   test("sends only the model when no effort choice is pending", async () => {

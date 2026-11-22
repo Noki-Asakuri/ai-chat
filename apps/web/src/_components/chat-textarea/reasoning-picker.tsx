@@ -14,6 +14,8 @@ import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread
 import type { ReasoningEffort } from "@/lib/types";
 import { cn, fromUUID } from "@/lib/utils";
 
+import { clearEffortIntent, createEffortIntent } from "@/lib/store/config-store";
+
 import { REASONING_OPTIONS } from "./reasoning-options";
 
 const EFFORT_SYNC_DEBOUNCE_MS = 1_000;
@@ -55,27 +57,27 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
 
-  // The thread, its config store, the model and the chosen effort are captured when the effort
-  // changes, so a sync that lands after switching threads still updates the thread it was chosen
-  // in. Only the effort is sent, and only if the thread still uses that model; the server merges
-  // it into the thread's other settings. A model change drops the pending sync: a local model
-  // selection saves the effort itself (see `effortSyncPending`), and a server one brings its own.
-  // Unmounting (leaving the thread or chat) sends a pending sync at once.
+  // Each choice records an effort intent (see `EffortIntent`) and queues a debounced save for it.
+  // The save carries its thread and store, so one that lands after switching threads still updates
+  // the thread it was chosen in. It runs only if its intent is still the current one: a model
+  // selection carries the choice forward itself, and a server model switch discards it. Only the
+  // effort is sent, and only if the thread still uses that model. Unmounting sends it at once.
   const syncEffort = useDebouncedCallback(
-    (pending: {
-      threadId: Id<"threads">;
-      store: typeof configStoreApi;
-      model: string;
-      effort: ReasoningEffort;
-    }) => {
+    (pending: { threadId: Id<"threads">; store: typeof configStoreApi; intentId: number }) => {
       const state = pending.store.getState();
-      state.setEffortSyncPending(false);
-      if (state.model !== pending.model) return;
+      const intent = state.effortIntent;
+      if (intent?.id !== pending.intentId || !intent.queued) return;
+      if (state.model !== intent.model) {
+        state.setEffortIntent(null);
+        return;
+      }
 
+      state.setEffortIntent({ ...intent, queued: false });
       void syncThreadModelConfig({
         threadId: pending.threadId,
-        modelParams: { effort: pending.effort },
-        expectedModel: pending.model,
+        modelParams: { effort: intent.effort },
+        expectedModel: intent.model,
+        onFailure: () => clearEffortIntent(pending.store, intent.id),
       });
     },
     { wait: EFFORT_SYNC_DEBOUNCE_MS, onUnmount: (debouncer) => debouncer.flush() },
@@ -94,8 +96,9 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
     const threadId = fromUUID<Id<"threads">>(params?.threadId);
     if (!threadId) return;
 
-    configStore.setEffortSyncPending(true);
-    syncEffort({ threadId, store: configStoreApi, model: props.model, effort });
+    const intent = createEffortIntent(props.model, effort, true);
+    configStore.setEffortIntent(intent);
+    syncEffort({ threadId, store: configStoreApi, intentId: intent.id });
   }
 
   if (validOptions.length === 0) return null;

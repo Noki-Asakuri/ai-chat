@@ -5,7 +5,7 @@ import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import { internalMutation, query } from "../_generated/server";
+import { internalMutation, query, type QueryCtx } from "../_generated/server";
 import { recordStatisticsThread } from "./statistics";
 import { DEFAULT_THREAD_MODEL } from "./users";
 
@@ -185,6 +185,66 @@ export const createThread = authenticatedMutation({
 
 const DEFAULT_THREAD_MODEL_PARAMS = { effort: "medium", webSearch: false, profile: null } as const;
 
+type ThreadModelConfig = {
+  latestModel: string;
+  latestModelParams: Doc<"threads">["latestModelParams"];
+};
+
+/**
+ * Returns the thread's model config, recovering fields missing from threads created before
+ * `backfillThreadModelConfig`. Schema validation is off, so such rows can still exist. Missing fields
+ * come from the latest assistant message that recorded its config (stopping at the first match),
+ * or from the defaults when there is none.
+ */
+export async function recoverThreadModelConfig(
+  ctx: QueryCtx,
+  thread: Doc<"threads">,
+): Promise<{ config: ThreadModelConfig; complete: boolean }> {
+  const storedModel: string | undefined = thread.latestModel;
+  const storedParams: Partial<Doc<"threads">["latestModelParams"]> | undefined = thread.latestModelParams;
+  // `profile` is optional in the schema, so a missing one is not a sign of a pre-backfill row.
+  const complete =
+    storedModel !== undefined && storedParams?.effort !== undefined && storedParams.webSearch !== undefined;
+
+  let fallback: ThreadModelConfig = {
+    latestModel: DEFAULT_THREAD_MODEL,
+    latestModelParams: { ...DEFAULT_THREAD_MODEL_PARAMS },
+  };
+  if (!complete) {
+    const messages = ctx.db
+      .query("messages")
+      .withIndex("by_threadId", (q) => q.eq("threadId", thread._id))
+      .order("desc");
+    for await (const message of messages) {
+      const model = message.role === "assistant" ? message.metadata?.model.request?.trim() : undefined;
+      const params = message.metadata?.modelParams;
+      if (!model || !params) continue;
+
+      fallback = {
+        latestModel: model,
+        latestModelParams: {
+          effort: params.effort,
+          webSearch: params.webSearch,
+          profile: params.profile ?? null,
+        },
+      };
+      break;
+    }
+  }
+
+  return {
+    complete,
+    config: {
+      latestModel: storedModel ?? fallback.latestModel,
+      latestModelParams: {
+        effort: storedParams?.effort ?? fallback.latestModelParams.effort,
+        webSearch: storedParams?.webSearch ?? fallback.latestModelParams.webSearch,
+        profile: storedParams?.profile ?? fallback.latestModelParams.profile,
+      },
+    },
+  };
+}
+
 /**
  * Saves only the fields given and merges them into the thread's stored config, so a save of one
  * setting cannot overwrite another setting with a stale value from the client.
@@ -207,38 +267,23 @@ export const updateThreadModelConfig = authenticatedMutation({
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
-    // Schema validation is off, so threads from before `backfillThreadModelConfig` can lack
-    // these fields. Fill them with the same defaults so the merge always stores a full config.
-    const storedModel: string | undefined = thread.latestModel;
-    const storedParams: Partial<Doc<"threads">["latestModelParams"]> | undefined = thread.latestModelParams;
-    const currentModel = storedModel ?? DEFAULT_THREAD_MODEL;
-    const currentParams = {
-      effort: storedParams?.effort ?? DEFAULT_THREAD_MODEL_PARAMS.effort,
-      webSearch: storedParams?.webSearch ?? DEFAULT_THREAD_MODEL_PARAMS.webSearch,
-      profile: storedParams?.profile ?? DEFAULT_THREAD_MODEL_PARAMS.profile,
-    };
+    const { config: current, complete } = await recoverThreadModelConfig(ctx, thread);
+    if (args.expectedModel !== undefined && args.expectedModel !== current.latestModel) return;
 
-    if (args.expectedModel !== undefined && args.expectedModel !== currentModel) return;
+    const latestModel = args.latestModel ?? current.latestModel;
+    const latestModelParams = { ...current.latestModelParams, ...args.latestModelParams };
 
-    const latestModel = args.latestModel ?? currentModel;
-    const latestModelParams = { ...currentParams, ...args.latestModelParams };
-
-    if (args.latestModelParams?.effort === undefined && latestModel !== currentModel) {
+    if (args.latestModelParams?.effort === undefined && latestModel !== current.latestModel) {
       const modelData = tryGetModelData(latestModel);
-      if (modelData) latestModelParams.effort = resolveReasoning(modelData, currentParams.effort);
+      if (modelData) latestModelParams.effort = resolveReasoning(modelData, current.latestModelParams.effort);
     }
 
-    const complete =
-      storedModel !== undefined &&
-      storedParams?.effort !== undefined &&
-      storedParams.webSearch !== undefined &&
-      storedParams.profile !== undefined;
     if (
       complete &&
-      currentModel === latestModel &&
-      currentParams.effort === latestModelParams.effort &&
-      currentParams.webSearch === latestModelParams.webSearch &&
-      currentParams.profile === latestModelParams.profile
+      current.latestModel === latestModel &&
+      current.latestModelParams.effort === latestModelParams.effort &&
+      current.latestModelParams.webSearch === latestModelParams.webSearch &&
+      current.latestModelParams.profile === latestModelParams.profile
     ) {
       return;
     }

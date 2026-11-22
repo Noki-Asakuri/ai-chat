@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { createConfigStore, getServerStateChanges } from "./config-store";
+import { createConfigStore, createEffortIntent, getServerStateChanges } from "./config-store";
 
 const modelParams = { effort: "medium" as const, webSearch: false, profile: null };
 
@@ -16,7 +16,7 @@ describe("getServerStateChanges", () => {
     const previous = { model: "a", modelParams, hiddenModels: ["x"] };
     const next = { model: "b", modelParams: { ...modelParams, webSearch: true }, hiddenModels: ["x", "y"] };
 
-    expect(getServerStateChanges(previous, next, "b")).toEqual({
+    expect(getServerStateChanges(previous, next)).toEqual({
       model: "b",
       modelParams: { webSearch: true },
       hiddenModels: ["x", "y"],
@@ -24,32 +24,79 @@ describe("getServerStateChanges", () => {
   });
 });
 
-describe("getServerStateChanges on a model switch", () => {
-  const previous = { model: "a", modelParams };
+describe("applyServerSnapshot", () => {
+  const snapshot = { model: "a", modelParams };
 
-  test("applies the server effort when the server switches to another model", () => {
-    const next = { model: "b", modelParams: { ...modelParams } };
+  function storeWithLocalEffort(effort: "high" | "low", queued: boolean) {
+    const store = createConfigStore(snapshot);
+    store.getState().setModelParams({ effort });
+    store.getState().setEffortIntent(createEffortIntent("a", effort, queued));
+    return store;
+  }
 
-    expect(getServerStateChanges(previous, next, "a")).toEqual({
+  test("merges changed model params into the local ones", () => {
+    const store = createConfigStore(snapshot);
+    store.getState().setModelParams({ effort: "high" });
+
+    store
+      .getState()
+      .applyServerSnapshot(snapshot, { ...snapshot, modelParams: { ...modelParams, webSearch: true } });
+
+    expect(store.getState().modelParams).toEqual({ effort: "high", webSearch: true, profile: null });
+  });
+
+  test("an older server effort for the same model does not replace an unconfirmed choice", () => {
+    const store = storeWithLocalEffort("low", true);
+
+    // The save of an earlier High choice comes back after Low was chosen.
+    store
+      .getState()
+      .applyServerSnapshot(snapshot, { ...snapshot, modelParams: { ...modelParams, effort: "high" } });
+
+    expect(store.getState().modelParams.effort).toBe("low");
+    expect(store.getState().effortIntent).not.toBeNull();
+  });
+
+  test("a snapshot showing the sent choice confirms it", () => {
+    const store = storeWithLocalEffort("high", false);
+
+    store
+      .getState()
+      .applyServerSnapshot(snapshot, { ...snapshot, modelParams: { ...modelParams, effort: "high" } });
+
+    expect(store.getState().effortIntent).toBeNull();
+    expect(store.getState().modelParams.effort).toBe("high");
+  });
+
+  test("a choice still waiting for its save stays after a matching snapshot", () => {
+    const store = storeWithLocalEffort("high", true);
+
+    store
+      .getState()
+      .applyServerSnapshot(snapshot, { ...snapshot, modelParams: { ...modelParams, effort: "high" } });
+
+    expect(store.getState().effortIntent?.queued).toBe(true);
+  });
+
+  test("a server switch to another model applies its effort and drops the choice", () => {
+    const store = storeWithLocalEffort("high", true);
+
+    store.getState().applyServerSnapshot(snapshot, { model: "b", modelParams: { ...modelParams } });
+
+    expect(store.getState()).toMatchObject({
       model: "b",
       modelParams: { effort: "medium" },
+      effortIntent: null,
     });
   });
 
-  test("leaves the local effort alone when the switch came from this client", () => {
-    const next = { model: "b", modelParams: { ...modelParams } };
-
-    expect(getServerStateChanges(previous, next, "b")).toEqual({ model: "b" });
-  });
-});
-
-describe("setServerState", () => {
-  test("merges changed model params into the local ones", () => {
-    const store = createConfigStore({ model: "a", modelParams });
+  test("a server echo of a local model switch keeps the local effort", () => {
+    const store = createConfigStore(snapshot);
+    store.getState().setConfig({ model: "b" });
     store.getState().setModelParams({ effort: "high" });
 
-    store.getState().setServerState({ modelParams: { webSearch: true } });
+    store.getState().applyServerSnapshot(snapshot, { model: "b", modelParams: { ...modelParams } });
 
-    expect(store.getState().modelParams).toEqual({ effort: "high", webSearch: true, profile: null });
+    expect(store.getState().modelParams.effort).toBe("high");
   });
 });

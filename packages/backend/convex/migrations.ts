@@ -4,12 +4,15 @@ import { Migrations } from "@convex-dev/migrations";
 import { components, internal } from "./_generated/api";
 import type { DataModel, Doc } from "./_generated/dataModel";
 
-import { DEFAULT_THREAD_MODEL, mergeUserPreferences } from "./functions/users";
-import { backfillModelTokens, isHistoricalBranchCopy, recordStatisticsMessage, recordStatisticsThread } from "./functions/statistics";
+import { recoverThreadModelConfig } from "./functions/threads";
+import { mergeUserPreferences } from "./functions/users";
 import {
-  CURRENT_MESSAGE_GRAPH_VERSION,
-  MAX_ASSISTANT_VARIANTS_PER_TURN,
-} from "./schema";
+  backfillModelTokens,
+  isHistoricalBranchCopy,
+  recordStatisticsMessage,
+  recordStatisticsThread,
+} from "./functions/statistics";
+import { CURRENT_MESSAGE_GRAPH_VERSION, MAX_ASSISTANT_VARIANTS_PER_TURN } from "./schema";
 
 /**
  * Initialize migrations component with DataModel for proper typing.
@@ -63,32 +66,6 @@ export const runBackfillMonthlyStatistics = migrations.runner([
   internal.migrations.markStatisticsHistoryReady,
 ]);
 
-function getThreadModelConfigFromMessages(messages: Doc<"messages">[]): {
-  latestModel: string;
-  latestModelParams: NonNullable<Doc<"threads">["latestModelParams"]>;
-} | null {
-  for (const message of messages) {
-    if (message.role !== "assistant") continue;
-
-    const latestModel = message.metadata?.model.request?.trim();
-    if (!latestModel) continue;
-
-    const modelParams = message.metadata?.modelParams;
-    if (!modelParams) continue;
-
-    return {
-      latestModel,
-      latestModelParams: {
-        effort: modelParams.effort,
-        webSearch: modelParams.webSearch,
-        profile: modelParams.profile ?? null,
-      },
-    };
-  }
-
-  return null;
-}
-
 type FinalizedStreamingParts = {
   changed: boolean;
   parts: Doc<"messages">["parts"];
@@ -114,31 +91,8 @@ function finalizeStreamingParts(parts: Doc<"messages">["parts"]): FinalizedStrea
 export const backfillThreadModelConfig = migrations.define({
   table: "threads",
   migrateOne: async (ctx, thread) => {
-    if (thread.latestModel && thread.latestModelParams) {
-      return;
-    }
-
-    const messages = await ctx.db
-      .query("messages")
-      .withIndex("by_threadId", (q) => q.eq("threadId", thread._id))
-      .order("desc")
-      .collect();
-
-    const configFromMessages = getThreadModelConfigFromMessages(messages);
-
-    if (configFromMessages) {
-      await ctx.db.patch(thread._id, configFromMessages);
-      return;
-    }
-
-    await ctx.db.patch(thread._id, {
-      latestModel: DEFAULT_THREAD_MODEL,
-      latestModelParams: {
-        effort: "medium",
-        webSearch: false,
-        profile: null,
-      },
-    });
+    const { config, complete } = await recoverThreadModelConfig(ctx, thread);
+    if (!complete) await ctx.db.patch(thread._id, config);
   },
 });
 
@@ -415,9 +369,7 @@ export const certifyMessageGraphs = migrations.define({
     }
 
     if (message.activeAssistantMessageId) {
-      const activeAssistant = variants.find(
-        (variant) => variant._id === message.activeAssistantMessageId,
-      );
+      const activeAssistant = variants.find((variant) => variant._id === message.activeAssistantMessageId);
       if (!activeAssistant) return undefined;
     }
 
@@ -462,8 +414,7 @@ export const markMigratedMessageGraphs = migrations.define({
 
     if (uncertifiedMessage || olderMessage || newerMessage) {
       console.warn("Thread message graph remains incomplete", {
-        messageId:
-          uncertifiedMessage?._id ?? olderMessage?._id ?? newerMessage?._id ?? firstMessage._id,
+        messageId: uncertifiedMessage?._id ?? olderMessage?._id ?? newerMessage?._id ?? firstMessage._id,
         threadId: thread._id,
       });
       return undefined;

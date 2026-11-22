@@ -2,7 +2,11 @@ import { BrainIcon, GlobeIcon, PaperclipIcon, SlidersHorizontalIcon } from "luci
 import { useRef } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
+import {
+  useConfigStore,
+  useConfigStoreApi,
+  useConfigStoreState,
+} from "@/components/provider/config-provider";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,11 +27,13 @@ import { REASONING_OPTIONS } from "./reasoning-options";
 import { getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
 import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
 import { chatStoreActions } from "@/lib/store/chat-store";
+import { clearEffortIntent, createEffortIntent } from "@/lib/store/config-store";
 import type { ReasoningEffort } from "@/lib/types";
 
 export function MobileChatToolsMenu() {
   const inputRef = useRef<HTMLInputElement>(null);
   const configStore = useConfigStoreState();
+  const configStoreApi = useConfigStoreApi();
   const config = useConfigStore(
     useShallow((state) => ({
       effort: state.modelParams.effort,
@@ -49,7 +55,14 @@ export function MobileChatToolsMenu() {
 
   function handleEffortChange(effort: ReasoningEffort) {
     configStore.setModelParams({ effort });
-    void syncThreadModelConfig({ modelParams: { effort }, expectedModel: config.model });
+
+    const intent = createEffortIntent(config.model, effort, false);
+    configStore.setEffortIntent(intent);
+    void syncThreadModelConfig({
+      modelParams: { effort },
+      expectedModel: config.model,
+      onFailure: () => clearEffortIntent(configStoreApi, intent.id),
+    });
   }
 
   function handleWebSearchChange() {

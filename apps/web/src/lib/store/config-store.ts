@@ -44,15 +44,38 @@ export type ConfigStore = ConfigStoreData & {
 
   setHiddenModels: (hiddenModels: string[]) => void;
   setFavoriteModels: (favoriteModels: string[]) => void;
-  setServerState: (changes: ServerStateChanges) => void;
+  /** Applies the server values that changed between two snapshots (see `getServerStateChanges`). */
+  applyServerSnapshot: (previous: Partial<ConfigStoreData>, next: Partial<ConfigStoreData>) => void;
 
-  /**
-   * Local only: an effort the user chose is waiting for its debounced save. The model selector
-   * then saves that effort with the new model, since the pending save is dropped on a model change.
-   */
-  effortSyncPending: boolean;
-  setEffortSyncPending: (effortSyncPending: boolean) => void;
+  /** Local only: the latest effort the user chose, until the server confirms it (see `EffortIntent`). */
+  effortIntent: EffortIntent | null;
+  setEffortIntent: (effortIntent: EffortIntent | null) => void;
 };
+
+/**
+ * An effort the user chose for `model`, kept until a server snapshot shows it or a model change
+ * replaces it. While it exists, server snapshots of the same model do not change the local effort,
+ * because they may predate the save. `queued` means its debounced save has not been sent yet.
+ */
+export type EffortIntent = {
+  id: number;
+  model: string;
+  effort: ReasoningEffort;
+  queued: boolean;
+};
+
+let lastEffortIntentId = 0;
+
+/** Clears the effort intent if it is still `id`, so a failed save does not pin the local effort. */
+export function clearEffortIntent(store: { getState: () => ConfigStore }, id: number) {
+  const state = store.getState();
+  if (state.effortIntent?.id === id) state.setEffortIntent(null);
+}
+
+export function createEffortIntent(model: string, effort: ReasoningEffort, queued: boolean): EffortIntent {
+  lastEffortIntentId += 1;
+  return { id: lastEffortIntentId, model, effort, queued };
+}
 
 export function createConfigStore(initialState: Partial<ConfigStoreData>) {
   return create<ConfigStore>()((set) => ({
@@ -80,11 +103,33 @@ export function createConfigStore(initialState: Partial<ConfigStoreData>) {
     favoriteModels: [],
     setFavoriteModels: (favoriteModels) => set({ favoriteModels }),
 
-    setServerState: ({ modelParams, ...changes }) =>
-      set((state) => ({ ...changes, modelParams: { ...state.modelParams, ...modelParams } })),
+    applyServerSnapshot: (previous, next) =>
+      set((state) => {
+        const changes = getServerStateChanges(previous, next);
+        if (!changes) return {};
 
-    effortSyncPending: false,
-    setEffortSyncPending: (effortSyncPending) => set({ effortSyncPending }),
+        const { modelParams: paramChanges, ...rest } = changes;
+        const params = { ...paramChanges };
+        let effortIntent = state.effortIntent;
+
+        if (rest.model !== undefined && rest.model !== state.model) {
+          // The server switched models (for example, a response variant was selected): a local
+          // effort chosen for the previous model does not belong to the new one.
+          effortIntent = null;
+          if (next.modelParams) params.effort = next.modelParams.effort;
+        } else if (effortIntent) {
+          delete params.effort;
+          const confirmed =
+            (next.model ?? state.model) === effortIntent.model &&
+            next.modelParams?.effort === effortIntent.effort;
+          if (confirmed && !effortIntent.queued) effortIntent = null;
+        }
+
+        return { ...rest, modelParams: { ...state.modelParams, ...params }, effortIntent };
+      }),
+
+    effortIntent: null,
+    setEffortIntent: (effortIntent) => set({ effortIntent }),
 
     ...initialState,
   }));
@@ -109,15 +154,10 @@ function changedEntries<T extends object>(previous: Partial<T>, next: Partial<T>
  * Returns the fields of `next` whose values differ from `previous`. The provider applies only these,
  * so a re-render that passes the same (possibly stale) server values does not overwrite local
  * changes, and a server update to one setting does not reset the others.
- *
- * When the server switches to a model other than `localModel` (for example, by selecting a
- * response variant), the server's effort is applied with it: a local effort chosen for the
- * previous model does not belong to the new one.
  */
 export function getServerStateChanges(
   previous: Partial<ConfigStoreData>,
   next: Partial<ConfigStoreData>,
-  localModel?: string,
 ): ServerStateChanges | null {
   const { modelParams: previousParams, ...previousRest } = previous;
   const { modelParams: nextParams, ...nextRest } = next;
@@ -125,7 +165,6 @@ export function getServerStateChanges(
   const changes: ServerStateChanges = changedEntries(previousRest, nextRest);
   if (nextParams) {
     const paramChanges = changedEntries<ModelParams>(previousParams ?? {}, nextParams);
-    if (changes.model !== undefined && changes.model !== localModel) paramChanges.effort = nextParams.effort;
     if (Object.keys(paramChanges).length > 0) changes.modelParams = paramChanges;
   }
 

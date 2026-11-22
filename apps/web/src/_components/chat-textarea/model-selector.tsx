@@ -22,6 +22,7 @@ import { toast } from "@/components/ui/toast";
 import { useShallow } from "zustand/shallow";
 
 import { useConfigStore, useConfigStoreApi } from "@/components/provider/config-provider";
+import { clearEffortIntent, createEffortIntent } from "@/lib/store/config-store";
 
 import { ModelCapability } from "@/components/capability-icon";
 import { buttonVariants } from "@/components/ui/button";
@@ -621,16 +622,22 @@ export function ChatModelSelector() {
 
     if (nextEffort !== effort) setModelParams({ effort: nextEffort });
 
-    // An effort chosen moments ago is still waiting for its debounced save, which the model change
-    // drops, so save it here with the new model. Otherwise send only the model: the server resolves
-    // the stored effort for it, which may be newer than this tab's copy.
-    const { effortSyncPending, setEffortSyncPending } = configStore.getState();
-    if (effortSyncPending) {
-      setEffortSyncPending(false);
-      void syncThreadModelConfig({ model, modelParams: { effort: nextEffort } });
-    } else {
+    // An effort the user chose and the server has not confirmed yet is carried to the new model
+    // and saved with it; replacing the intent also cancels its pending debounced save. Otherwise
+    // send only the model: the server resolves its stored effort, which may be newer than ours.
+    const { effortIntent, setEffortIntent } = configStore.getState();
+    if (!effortIntent) {
       void syncThreadModelConfig({ model });
+      return;
     }
+
+    const intent = createEffortIntent(model, nextEffort, false);
+    setEffortIntent(intent);
+    void syncThreadModelConfig({
+      model,
+      modelParams: { effort: nextEffort },
+      onFailure: () => clearEffortIntent(configStore, intent.id),
+    });
   }
 
   return (
