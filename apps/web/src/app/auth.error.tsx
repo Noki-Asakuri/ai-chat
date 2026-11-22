@@ -21,6 +21,12 @@ function AuthErrorPage() {
         <p className="mt-2 text-sm text-muted-foreground">
           The sign-in request could not be completed. Try again or return home.
         </p>
+        {diagnostic?.message.includes("already been exchanged") ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            This sign-in link was already used, usually because the page reloaded mid-sign-in. You may already
+            be signed in.
+          </p>
+        ) : null}
 
         <div className="mt-4 space-y-3 text-left text-sm">
           <div>
@@ -43,7 +49,9 @@ function AuthErrorPage() {
               {diagnostic?.stack ?? "No stack trace recorded."}
             </pre>
             {diagnostic?.stackTruncated ? (
-              <p className="mt-1 text-xs text-muted-foreground">Stack trace truncated to fit the diagnostic cookie.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Stack trace truncated to fit the diagnostic cookie.
+              </p>
             ) : null}
           </div>
         </div>
