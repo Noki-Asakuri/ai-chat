@@ -1,16 +1,15 @@
 import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
+import { useConfigStore } from "@/components/provider/config-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ButtonWithTip } from "@/components/ui/button";
 
 import { buildImageAssetUrl } from "@/lib/assets/urls";
-import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
+import { useUpdateModelConfig } from "@/lib/chat/use-update-model-config";
 import { cn } from "@/lib/utils";
 
 export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
-  const configStore = useConfigStoreState();
-  const { syncThreadModelConfig } = useSyncThreadModelConfig();
+  const updateModelConfig = useUpdateModelConfig();
   const configState = useConfigStore((currentState) => currentState);
 
   const isActive = configState.modelParams.profile === profile._id;
@@ -27,9 +26,7 @@ export function ProfileDisplay({ profile }: { profile: Doc<"profiles"> }) {
         isActive ? "bg-primary/40 ring-2 ring-primary ring-offset-4 ring-offset-sidebar/80" : "",
       )}
       onClick={() => {
-        const nextProfile = isActive ? null : profile._id;
-        configStore.setModelParams({ profile: nextProfile });
-        void syncThreadModelConfig({ modelParams: { profile: nextProfile } });
+        updateModelConfig({ params: { profile: isActive ? null : profile._id } });
       }}
     >
       <Avatar className="size-full">

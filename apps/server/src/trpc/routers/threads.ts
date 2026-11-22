@@ -1,6 +1,5 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
-import { reasoningEffortSchema } from "@ai-chat/shared/chat/metadata";
 
 import { TRPCError } from "@trpc/server";
 import type { TextPart } from "ai";
@@ -12,40 +11,8 @@ import { createServerConvexClient } from "../../libs/convex";
 import { protectedProcedure, router } from "../index";
 
 const threadIdSchema = z.string().pipe(z.custom<Id<"threads">>());
-const profileIdSchema = z.string().pipe(z.custom<Id<"profiles">>());
 
 export const threadRouter = router({
-  // Saves only the fields given; the mutation merges them into the thread's stored config.
-  syncModelConfig: protectedProcedure
-    .input(
-      z.object({
-        threadId: threadIdSchema,
-        model: z.string().optional(),
-        modelParams: z
-          .object({
-            webSearch: z.boolean(),
-            effort: reasoningEffortSchema,
-            profile: profileIdSchema.nullable(),
-          })
-          .partial()
-          .optional(),
-        // Skip the save unless the thread still uses this model.
-        expectedModel: z.string().optional(),
-      }),
-    )
-    .mutation(async function ({ ctx, input }) {
-      const convexClient = await createServerConvexClient(ctx.honoCtx);
-
-      await convexClient.mutation(api.functions.threads.updateThreadModelConfig, {
-        threadId: input.threadId,
-        latestModel: input.model,
-        latestModelParams: input.modelParams,
-        expectedModel: input.expectedModel,
-      });
-
-      return { ok: true };
-    }),
-
   regenerateTitle: protectedProcedure.input(z.object({ threadId: threadIdSchema })).mutation(async function ({
     ctx,
     input,

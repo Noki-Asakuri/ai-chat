@@ -10,6 +10,7 @@
     "./chat/ui": "./src/chat/ui.ts",
     "./chat/request": "./src/chat/request.ts",
     "./chat/models": "./src/chat/models/index.ts",
+    "./chat/thread-model-config": "./src/chat/thread-model-config.ts",
     "./assets/urls": "./src/assets/urls.ts",
     "./utils/async": "./src/utils/async.ts"
   },

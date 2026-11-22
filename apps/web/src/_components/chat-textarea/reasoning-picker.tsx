@@ -1,24 +1,16 @@
-import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
-
-import { useDebouncedCallback } from "@tanstack/react-pacer";
-import { useParams } from "@tanstack/react-router";
 import { ChevronDownIcon } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreApi, useConfigStoreState } from "../provider/config-provider";
+import { useConfigStore } from "../provider/config-provider";
 import { Button, buttonVariants } from "../ui/button";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 import { getDefaultReasoning, getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
-import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
+import { useUpdateModelConfig } from "@/lib/chat/use-update-model-config";
 import type { ReasoningEffort } from "@/lib/types";
-import { cn, fromUUID } from "@/lib/utils";
-
-import { clearEffortIntent, createEffortIntent } from "@/lib/store/config-store";
+import { cn } from "@/lib/utils";
 
 import { REASONING_OPTIONS } from "./reasoning-options";
-
-const EFFORT_SYNC_DEBOUNCE_MS = 1_000;
 
 type ReasoningPickerProps = {
   value: ReasoningEffort;
@@ -52,36 +44,7 @@ export function ReasoningPickerBase(props: ReasoningPickerProps) {
 }
 
 function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseInnerProps) {
-  const configStore = useConfigStoreState();
-  const configStoreApi = useConfigStoreApi();
-  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
-  const { syncThreadModelConfig } = useSyncThreadModelConfig();
-
-  // Each choice records an effort intent (see `EffortIntent`) and queues a debounced save for it.
-  // The save carries its thread and store, so one that lands after switching threads still updates
-  // the thread it was chosen in. It runs only if its intent is still the current one: a model
-  // selection carries the choice forward itself, and a server model switch discards it. Only the
-  // effort is sent, and only if the thread still uses that model. Unmounting sends it at once.
-  const syncEffort = useDebouncedCallback(
-    (pending: { threadId: Id<"threads">; store: typeof configStoreApi; intentId: number }) => {
-      const state = pending.store.getState();
-      const intent = state.effortIntent;
-      if (intent?.id !== pending.intentId || !intent.queued) return;
-      if (state.model !== intent.model) {
-        state.setEffortIntent(null);
-        return;
-      }
-
-      state.setEffortIntent({ ...intent, queued: false });
-      void syncThreadModelConfig({
-        threadId: pending.threadId,
-        modelParams: { effort: intent.effort },
-        expectedModel: intent.model,
-        onFailure: () => clearEffortIntent(pending.store, intent.id),
-      });
-    },
-    { wait: EFFORT_SYNC_DEBOUNCE_MS, onUnmount: (debouncer) => debouncer.flush() },
-  );
+  const updateModelConfig = useUpdateModelConfig();
 
   const validOptions = getReasoningOptions(modelData);
 
@@ -91,14 +54,7 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
       return;
     }
 
-    configStore.setModelParams({ effort });
-
-    const threadId = fromUUID<Id<"threads">>(params?.threadId);
-    if (!threadId) return;
-
-    const intent = createEffortIntent(props.model, effort, true);
-    configStore.setEffortIntent(intent);
-    syncEffort({ threadId, store: configStoreApi, intentId: intent.id });
+    updateModelConfig({ params: { effort } });
   }
 
   if (validOptions.length === 0) return null;

@@ -2,11 +2,7 @@ import { BrainIcon, GlobeIcon, PaperclipIcon, SlidersHorizontalIcon } from "luci
 import { useRef } from "react";
 import { useShallow } from "zustand/shallow";
 
-import {
-  useConfigStore,
-  useConfigStoreApi,
-  useConfigStoreState,
-} from "@/components/provider/config-provider";
+import { useConfigStore } from "@/components/provider/config-provider";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,15 +21,13 @@ import { useChatAttachmentInput } from "./use-chat-attachment-input";
 import { REASONING_OPTIONS } from "./reasoning-options";
 
 import { getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
-import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
+import { useUpdateModelConfig } from "@/lib/chat/use-update-model-config";
 import { chatStoreActions } from "@/lib/store/chat-store";
-import { clearEffortIntent, createEffortIntent } from "@/lib/store/config-store";
 import type { ReasoningEffort } from "@/lib/types";
 
 export function MobileChatToolsMenu() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const configStore = useConfigStoreState();
-  const configStoreApi = useConfigStoreApi();
+  const updateModelConfig = useUpdateModelConfig();
   const config = useConfigStore(
     useShallow((state) => ({
       effort: state.modelParams.effort,
@@ -41,7 +35,6 @@ export function MobileChatToolsMenu() {
       webSearch: state.modelParams.webSearch,
     })),
   );
-  const { syncThreadModelConfig } = useSyncThreadModelConfig();
   const { accept, handleChange, supportsAttachments } = useChatAttachmentInput({
     model: config.model,
     handleAddAttachments: chatStoreActions.addAttachments,
@@ -54,21 +47,11 @@ export function MobileChatToolsMenu() {
   if (reasoningOptions.length === 0 && !supportsWebSearch && !supportsAttachments) return null;
 
   function handleEffortChange(effort: ReasoningEffort) {
-    configStore.setModelParams({ effort });
-
-    const intent = createEffortIntent(config.model, effort, false);
-    configStore.setEffortIntent(intent);
-    void syncThreadModelConfig({
-      modelParams: { effort },
-      expectedModel: config.model,
-      onFailure: () => clearEffortIntent(configStoreApi, intent.id),
-    });
+    updateModelConfig({ params: { effort } });
   }
 
   function handleWebSearchChange() {
-    const webSearch = !config.webSearch;
-    configStore.setModelParams({ webSearch });
-    void syncThreadModelConfig({ modelParams: { webSearch } });
+    updateModelConfig({ params: { webSearch: !config.webSearch } });
   }
 
   return (

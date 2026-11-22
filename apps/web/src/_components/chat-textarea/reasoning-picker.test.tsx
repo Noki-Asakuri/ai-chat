@@ -1,47 +1,40 @@
-import { afterAll, afterEach, beforeEach, describe, expect, mock, setDefaultTimeout, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, setDefaultTimeout, test } from "bun:test";
 
 setDefaultTimeout(20_000);
 
 // The DOM must exist before Testing Library loads: it binds `screen` to the document when first evaluated.
 await import("@/test/dom");
-const { act, render, screen, waitFor } = await import("@testing-library/react");
-const { useEffect } = await import("react");
+const { render, screen, waitFor } = await import("@testing-library/react");
 const { default: userEvent } = await import("@testing-library/user-event");
 
-import type { ComponentProps } from "react";
-
-type SyncCall = {
+type SaveCall = {
   threadId: string;
-  model?: string;
-  expectedModel?: string;
-  modelParams?: Partial<{ effort: string; webSearch: boolean; profile: string | null }>;
+  latestModel?: string;
+  latestModelParams?: Partial<{ effort: string; webSearch: boolean; profile: string | null }>;
 };
 
-const THREAD_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
-const THREAD_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
-const SYNC_WAIT_MS = 1_000;
+const THREAD_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+const MODEL = "openai/gpt-5.6-terra";
 
-const syncCalls: SyncCall[] = [];
-let currentThreadId: string | undefined = THREAD_A;
+const saveCalls: SaveCall[] = [];
+let currentThreadId: string | undefined = THREAD_ID;
 
 const actualRouter = await import("@tanstack/react-router");
 await mock.module("@tanstack/react-router", () => ({
   ...actualRouter,
   useParams: () => (currentThreadId ? { threadId: currentThreadId } : undefined),
 }));
-await mock.module("convex/react", () => ({ useMutation: () => async () => {} }));
-await mock.module("@/lib/trpc/client", () => ({
-  syncThreadModelConfig: async (input: SyncCall) => {
-    syncCalls.push(input);
-  },
-}));
+async function mutate(args: SaveCall) {
+  saveCalls.push(args);
+}
+const mutation = Object.assign(mutate, { withOptimisticUpdate: () => mutate });
+await mock.module("convex/react", () => ({ useMutation: () => mutation }));
 
-const { ConfigStoreProvider, useConfigStoreApi } = await import("../provider/config-provider");
+const { ConfigStoreProvider, useConfigStore } = await import("../provider/config-provider");
 const { ChatReasoningPicker } = await import("./reasoning-picker");
 const { ChatModelSelector } = await import("./model-selector");
 const { tryGetModelData } = await import("@/lib/chat/models");
 
-const MODEL = "openai/gpt-5.6-terra";
 const initialState = {
   model: MODEL,
   modelParams: { effort: "medium" as const, webSearch: false, profile: null },
@@ -50,256 +43,83 @@ const initialState = {
 afterAll(() => mock.restore());
 
 beforeEach(() => {
-  syncCalls.length = 0;
-  currentThreadId = THREAD_A;
+  saveCalls.length = 0;
+  currentThreadId = THREAD_ID;
 });
 
-// Unmounting queues a React scheduler task; let it run before the shared setup removes the DOM.
-afterEach(() => new Promise((resolve) => setTimeout(resolve, 20)));
-
-type ConfigStoreApi = ReturnType<typeof useConfigStoreApi>;
-let store: ConfigStoreApi | undefined;
-
-function StoreProbe() {
-  const api = useConfigStoreApi();
-  useEffect(() => {
-    store = api;
-  }, [api]);
-  return null;
+function EffortProbe() {
+  const effort = useConfigStore((state) => state.modelParams.effort);
+  return <output aria-label="Current effort">{effort}</output>;
 }
 
-// Production keys the provider by thread ID, so switching threads remounts the picker with a new store.
-function pickerTree(state: ComponentProps<typeof ConfigStoreProvider>["initialState"] = initialState) {
-  return (
-    <ConfigStoreProvider key={currentThreadId} initialState={state}>
-      <StoreProbe />
+function renderComposer() {
+  return render(
+    <ConfigStoreProvider initialState={initialState}>
+      <EffortProbe />
       <ChatReasoningPicker />
-    </ConfigStoreProvider>
+      <ChatModelSelector />
+    </ConfigStoreProvider>,
   );
-}
-
-function renderPicker() {
-  return render(pickerTree());
 }
 
 async function chooseEffort(user: ReturnType<typeof userEvent.setup>, label: string) {
-  const trigger = screen.getByRole("button", { name: "Reasoning effort" });
-  if (trigger.getAttribute("aria-expanded") !== "true") await user.click(trigger);
+  await user.click(screen.getByRole("button", { name: "Reasoning effort" }));
   await user.click(await screen.findByRole("button", { name: label }));
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-describe("reasoning effort sync", () => {
-  test("waits, then sends only the last chosen effort once", async () => {
-    const user = userEvent.setup();
-    renderPicker();
-
-    await chooseEffort(user, "High");
-    await chooseEffort(user, "Low");
-    expect(syncCalls).toHaveLength(0);
-
-    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: SYNC_WAIT_MS * 2 });
-    expect(syncCalls[0]).toEqual({
-      threadId: THREAD_A.replaceAll("-", ""),
-      modelParams: { effort: "low" },
-      expectedModel: MODEL,
-    });
-    expect(store?.getState().effortIntent).toMatchObject({ effort: "low", queued: false });
-    await sleep(SYNC_WAIT_MS + 100);
-    expect(syncCalls).toHaveLength(1);
-  });
-
-  test("switching threads sends the pending choice to the thread it was made in", async () => {
-    const user = userEvent.setup();
-    const view = renderPicker();
-
-    await chooseEffort(user, "High");
-    currentThreadId = THREAD_B;
-    act(() => view.rerender(pickerTree()));
-
-    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: 200 });
-    expect(syncCalls[0]).toEqual({
-      threadId: THREAD_A.replaceAll("-", ""),
-      modelParams: { effort: "high" },
-      expectedModel: MODEL,
-    });
-
-    await sleep(SYNC_WAIT_MS + 100);
-    expect(syncCalls).toHaveLength(1);
-  });
-
-  test("a re-render with unchanged server values keeps the local choice", async () => {
-    const user = userEvent.setup();
-    const view = renderPicker();
-
-    await chooseEffort(user, "High");
-    // Same values as before, but a new object, as the chat layout passes on every render.
-    act(() => view.rerender(pickerTree({ ...initialState, modelParams: { ...initialState.modelParams } })));
-
-    expect(store?.getState().modelParams.effort).toBe("high");
-  });
-
-  for (const send of ["timer", "unmount"] as const) {
-    test(`a server update to another setting keeps the chosen effort (${send})`, async () => {
-      const user = userEvent.setup();
-      const view = renderPicker();
-
-      await chooseEffort(user, "High");
-      // An earlier web search save comes back from the server, still carrying the old effort.
-      const serverState = { ...initialState, modelParams: { ...initialState.modelParams, webSearch: true } };
-      act(() => view.rerender(pickerTree(serverState)));
-      expect(store?.getState().modelParams).toMatchObject({ effort: "high", webSearch: true });
-
-      if (send === "unmount") act(() => view.unmount());
-      await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: SYNC_WAIT_MS * 2 });
-      expect(syncCalls[0]?.modelParams).toEqual({ effort: "high" });
-    });
-  }
-
-  test("a server switch to another model during the wait restores its effort and drops the sync", async () => {
-    const user = userEvent.setup();
-    const view = renderPicker();
-
-    await chooseEffort(user, "High");
-    // For example, selecting a response variant that used another model with Medium.
-    act(() => view.rerender(pickerTree({ ...initialState, model: "openai/gpt-5.5" })));
-    expect(store?.getState()).toMatchObject({ model: "openai/gpt-5.5", modelParams: { effort: "medium" } });
-
-    await sleep(SYNC_WAIT_MS + 200);
-    expect(syncCalls).toHaveLength(0);
-  });
-
-  test("switching models during the wait drops the pending sync", async () => {
-    const user = userEvent.setup();
-    renderPicker();
-
-    await chooseEffort(user, "High");
-    act(() => store?.getState().setConfig({ model: "openai/gpt-5" }));
-
-    await sleep(SYNC_WAIT_MS + 200);
-    expect(syncCalls).toHaveLength(0);
-  });
-
-  test("sends a pending choice at once when the picker unmounts", async () => {
-    const user = userEvent.setup();
-    const view = renderPicker();
-
-    await chooseEffort(user, "High");
-    expect(syncCalls).toHaveLength(0);
-    act(() => view.unmount());
-
-    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: 200 });
-    expect(syncCalls[0]).toMatchObject({
-      threadId: THREAD_A.replaceAll("-", ""),
-      modelParams: { effort: "high" },
-    });
-  });
-
-  test("unmounting with nothing pending sends nothing", async () => {
-    const view = renderPicker();
-    act(() => view.unmount());
-
-    await sleep(100);
-    expect(syncCalls).toHaveLength(0);
-  });
-});
-
-function selectorTree(state: ComponentProps<typeof ConfigStoreProvider>["initialState"] = initialState) {
-  return (
-    <ConfigStoreProvider key={currentThreadId} initialState={state}>
-      <StoreProbe />
-      <ChatReasoningPicker />
-      <ChatModelSelector />
-    </ConfigStoreProvider>
-  );
-}
-
-function renderWithSelector() {
-  return render(selectorTree());
+  await user.keyboard("{Escape}");
 }
 
 async function chooseModel(user: ReturnType<typeof userEvent.setup>, id: string) {
-  const label = tryGetModelData(id)?.display.unique ?? tryGetModelData(id)?.display.name ?? id;
+  const data = tryGetModelData(id);
   await user.click(screen.getByRole("button", { name: "Select model" }));
   const search = await screen.findByRole("combobox", { name: "Search models" });
   search.focus();
-  await user.paste(label);
+  await user.paste(data?.display.unique ?? data?.display.name ?? id);
   await user.keyboard("{Enter}");
 }
 
-describe("model selection after an effort choice", () => {
-  const NEXT_MODEL = "openai/gpt-5.6-sol";
+const currentEffort = () => screen.getByRole("status", { name: "Current effort" }).textContent;
 
-  test("saves a pending effort with the new model", async () => {
+describe("composer model settings", () => {
+  test("choosing an effort in a thread saves only the effort, at once", async () => {
     const user = userEvent.setup();
-    renderWithSelector();
+    renderComposer();
 
     await chooseEffort(user, "High");
-    await user.keyboard("{Escape}");
-    await chooseModel(user, NEXT_MODEL);
 
-    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: 500 });
-    expect(syncCalls[0]).toEqual({
-      threadId: THREAD_A.replaceAll("-", ""),
-      model: NEXT_MODEL,
-      modelParams: { effort: "high" },
-    });
-    await sleep(SYNC_WAIT_MS + 200);
-    expect(syncCalls).toHaveLength(1);
+    expect(currentEffort()).toBe("high");
+    expect(saveCalls).toEqual([
+      {
+        threadId: THREAD_ID.replaceAll("-", ""),
+        latestModel: undefined,
+        latestModelParams: { effort: "high" },
+      },
+    ]);
   });
 
-  test("an older snapshot does not replace a newer choice, which a model change then carries", async () => {
+  test("on the welcome page an effort changes the composer and saves nothing", async () => {
+    currentThreadId = undefined;
     const user = userEvent.setup();
-    const view = renderWithSelector();
+    renderComposer();
 
-    await chooseEffort(user, "High");
-    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: SYNC_WAIT_MS * 2 });
     await chooseEffort(user, "Low");
-    await user.keyboard("{Escape}");
-    // The High save comes back after Low was chosen.
-    act(() =>
-      view.rerender(
-        selectorTree({ ...initialState, modelParams: { ...initialState.modelParams, effort: "high" } }),
-      ),
-    );
-    expect(store?.getState().modelParams.effort).toBe("low");
 
-    await chooseModel(user, NEXT_MODEL);
-    await waitFor(() => expect(syncCalls).toHaveLength(2), { timeout: 500 });
-    expect(syncCalls[1]).toEqual({
-      threadId: THREAD_A.replaceAll("-", ""),
-      model: NEXT_MODEL,
-      modelParams: { effort: "low" },
+    expect(currentEffort()).toBe("low");
+    expect(saveCalls).toEqual([]);
+  });
+
+  test("choosing a model saves only the model and resolves the effort for it", async () => {
+    const user = userEvent.setup();
+    renderComposer();
+
+    await chooseEffort(user, "Max");
+    await chooseModel(user, "openai/gpt-5.5-pro");
+
+    // GPT 5.5 Pro has no Max, so it falls back to its default.
+    await waitFor(() => expect(currentEffort()).toBe("medium"));
+    expect(saveCalls.at(-1)).toEqual({
+      threadId: THREAD_ID.replaceAll("-", ""),
+      latestModel: "openai/gpt-5.5-pro",
+      latestModelParams: undefined,
     });
-
-    await sleep(SYNC_WAIT_MS + 200);
-    expect(syncCalls).toHaveLength(2);
-  });
-
-  test("switching away and back before the wait ends sends no extra effort save", async () => {
-    const user = userEvent.setup();
-    renderWithSelector();
-
-    await chooseEffort(user, "High");
-    await user.keyboard("{Escape}");
-    await chooseModel(user, NEXT_MODEL);
-    await chooseModel(user, MODEL);
-
-    await sleep(SYNC_WAIT_MS + 200);
-    expect(syncCalls.map((call) => call.model)).toEqual([NEXT_MODEL, MODEL]);
-    expect(syncCalls.every((call) => call.modelParams?.effort === "high")).toBe(true);
-  });
-
-  test("sends only the model when no effort choice is pending", async () => {
-    const user = userEvent.setup();
-    renderWithSelector();
-
-    await chooseModel(user, NEXT_MODEL);
-
-    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: 500 });
-    expect(syncCalls[0]).toEqual({ threadId: THREAD_A.replaceAll("-", ""), model: NEXT_MODEL });
   });
 });

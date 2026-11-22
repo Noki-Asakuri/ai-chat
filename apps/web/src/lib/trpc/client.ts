@@ -27,11 +27,6 @@ export function getTRPCClient() {
   return trpcClientSingleton;
 }
 
-export async function syncThreadModelConfig(input: RouterInput["thread"]["syncModelConfig"]) {
-  const client = getTRPCClient();
-  await client.thread.syncModelConfig.mutate(input);
-}
-
 export async function regenerateThreadTitle(input: RouterInput["thread"]["regenerateTitle"]) {
   const client = getTRPCClient();
   await client.thread.regenerateTitle.mutate(input);

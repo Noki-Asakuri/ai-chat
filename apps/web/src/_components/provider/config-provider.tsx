@@ -15,7 +15,8 @@ export function ConfigStoreProvider(props: ConfigStoreProviderProps) {
   const serverStateRef = useRef(props.initialState);
 
   // Apply only the server values that changed. `initialState` is often a new object on every
-  // render, and reapplying all of it would replace local changes the server has not caught up on.
+  // render, and reapplying all of it would undo local changes such as a model picked on the
+  // welcome page. Thread settings saved from this client reach here through optimistic updates.
   useEffect(() => {
     store.getState().applyServerSnapshot(serverStateRef.current, props.initialState);
     serverStateRef.current = props.initialState;
@@ -29,13 +30,6 @@ export function useConfigStore<T>(selector: (state: ConfigStore) => T): T {
   if (!configStore) throw new Error("useConfigStore must be used within a ConfigStoreProvider");
 
   return useStore(configStore, selector);
-}
-
-export function useConfigStoreApi() {
-  const configStore = use(ConfigStoreContext);
-  if (!configStore) throw new Error("useConfigStore must be used within a ConfigStoreProvider");
-
-  return configStore;
 }
 
 export function useConfigStoreState() {

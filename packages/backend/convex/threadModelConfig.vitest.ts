@@ -119,23 +119,37 @@ describe("updateThreadModelConfig", () => {
     });
   });
 
-  test("skips the save when the thread no longer uses the expected model", async () => {
+  test("an effort the thread's model does not support is resolved to its default", async () => {
     const t = await setup();
     const threadId = await insertThread(t, { model: "openai/gpt-5.5" });
 
     await t.mutation(api.functions.threads.updateThreadModelConfig, {
       threadId,
       latestModelParams: { effort: "max" },
-      expectedModel: "openai/gpt-5.6-sol",
     });
     expect((await readConfig(t, threadId)).latestModelParams?.effort).toBe("medium");
 
     await t.mutation(api.functions.threads.updateThreadModelConfig, {
       threadId,
       latestModelParams: { effort: "high" },
-      expectedModel: "openai/gpt-5.5",
     });
     expect((await readConfig(t, threadId)).latestModelParams?.effort).toBe("high");
+  });
+
+  test("a model and effort saved together keep the effort when the model supports it", async () => {
+    const t = await setup();
+    const threadId = await insertThread(t, { model: "openai/gpt-5.5" });
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModel: "openai/gpt-5.6-sol",
+      latestModelParams: { effort: "max" },
+    });
+
+    expect(await readConfig(t, threadId)).toMatchObject({
+      latestModel: "openai/gpt-5.6-sol",
+      latestModelParams: { effort: "max" },
+    });
   });
 
   test("a model-only change keeps the stored effort when the new model supports it", async () => {
@@ -191,9 +205,10 @@ describe("updateThreadModelConfig", () => {
       latestModelParams: { webSearch: true },
     });
 
+    // The default model has no reasoning options, so its effort resolves to "none".
     expect(await readConfig(t, threadId)).toEqual({
       latestModel: DEFAULT_THREAD_MODEL,
-      latestModelParams: { effort: "medium", webSearch: true, profile: null },
+      latestModelParams: { effort: "none", webSearch: true, profile: null },
     });
   });
 
@@ -241,6 +256,63 @@ describe("updateThreadModelConfig", () => {
     expect(await readConfig(t, threadId)).toEqual({
       latestModel: "openai/gpt-5.5",
       latestModelParams: { effort: "high", webSearch: true, profile: null },
+    });
+  });
+
+  test("recovery keeps a profile that was cleared to null", async () => {
+    const t = await setup();
+    const profileId = await t.run(async (ctx) => {
+      return await ctx.db.insert("profiles", {
+        userId: USER_ID,
+        name: "Old profile",
+        systemPrompt: "",
+        createdAt: 0,
+        updatedAt: 0,
+      });
+    });
+    const threadId = await t.run(async (ctx) => {
+      const id = await ctx.db.insert("threads", {
+        title: "Pre-backfill thread",
+        userId: USER_ID,
+        updatedAt: 2,
+        pinned: false,
+        latestModel: "test/model-a",
+        latestModelParams: { effort: "medium", webSearch: false, profile: null },
+        groupId: null,
+        status: "complete",
+      });
+      // The model is missing, but the profile was explicitly cleared.
+      await ctx.db.patch(id, { latestModel: undefined });
+      await ctx.db.insert("messages", {
+        threadId: id,
+        userId: USER_ID,
+        messageId: crypto.randomUUID(),
+        parts: [{ type: "text", text: "answer" }],
+        status: "complete",
+        role: "assistant",
+        attachments: [],
+        createdAt: 1,
+        updatedAt: 1,
+        metadata: {
+          model: { request: "openai/gpt-5.5", response: null },
+          finishReason: "stop",
+          usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+          timeToFirstTokenMs: 0,
+          durations: { request: 0, reasoning: 0, text: 0 },
+          modelParams: { effort: "high", webSearch: false, profile: profileId },
+        },
+      });
+      return id;
+    });
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModelParams: { webSearch: true },
+    });
+
+    expect(await readConfig(t, threadId)).toEqual({
+      latestModel: "openai/gpt-5.5",
+      latestModelParams: { effort: "medium", webSearch: true, profile: null },
     });
   });
 });

@@ -46,36 +46,7 @@ export type ConfigStore = ConfigStoreData & {
   setFavoriteModels: (favoriteModels: string[]) => void;
   /** Applies the server values that changed between two snapshots (see `getServerStateChanges`). */
   applyServerSnapshot: (previous: Partial<ConfigStoreData>, next: Partial<ConfigStoreData>) => void;
-
-  /** Local only: the latest effort the user chose, until the server confirms it (see `EffortIntent`). */
-  effortIntent: EffortIntent | null;
-  setEffortIntent: (effortIntent: EffortIntent | null) => void;
 };
-
-/**
- * An effort the user chose for `model`, kept until a server snapshot shows it or a model change
- * replaces it. While it exists, server snapshots of the same model do not change the local effort,
- * because they may predate the save. `queued` means its debounced save has not been sent yet.
- */
-export type EffortIntent = {
-  id: number;
-  model: string;
-  effort: ReasoningEffort;
-  queued: boolean;
-};
-
-let lastEffortIntentId = 0;
-
-/** Clears the effort intent if it is still `id`, so a failed save does not pin the local effort. */
-export function clearEffortIntent(store: { getState: () => ConfigStore }, id: number) {
-  const state = store.getState();
-  if (state.effortIntent?.id === id) state.setEffortIntent(null);
-}
-
-export function createEffortIntent(model: string, effort: ReasoningEffort, queued: boolean): EffortIntent {
-  lastEffortIntentId += 1;
-  return { id: lastEffortIntentId, model, effort, queued };
-}
 
 export function createConfigStore(initialState: Partial<ConfigStoreData>) {
   return create<ConfigStore>()((set) => ({
@@ -108,28 +79,9 @@ export function createConfigStore(initialState: Partial<ConfigStoreData>) {
         const changes = getServerStateChanges(previous, next);
         if (!changes) return {};
 
-        const { modelParams: paramChanges, ...rest } = changes;
-        const params = { ...paramChanges };
-        let effortIntent = state.effortIntent;
-
-        if (rest.model !== undefined && rest.model !== state.model) {
-          // The server switched models (for example, a response variant was selected): a local
-          // effort chosen for the previous model does not belong to the new one.
-          effortIntent = null;
-          if (next.modelParams) params.effort = next.modelParams.effort;
-        } else if (effortIntent) {
-          delete params.effort;
-          const confirmed =
-            (next.model ?? state.model) === effortIntent.model &&
-            next.modelParams?.effort === effortIntent.effort;
-          if (confirmed && !effortIntent.queued) effortIntent = null;
-        }
-
-        return { ...rest, modelParams: { ...state.modelParams, ...params }, effortIntent };
+        const { modelParams, ...rest } = changes;
+        return { ...rest, modelParams: { ...state.modelParams, ...modelParams } };
       }),
-
-    effortIntent: null,
-    setEffortIntent: (effortIntent) => set({ effortIntent }),
 
     ...initialState,
   }));
@@ -151,9 +103,9 @@ function changedEntries<T extends object>(previous: Partial<T>, next: Partial<T>
 }
 
 /**
- * Returns the fields of `next` whose values differ from `previous`. The provider applies only these,
- * so a re-render that passes the same (possibly stale) server values does not overwrite local
- * changes, and a server update to one setting does not reset the others.
+ * Returns the fields of `next` whose values differ from `previous`. The provider applies only these:
+ * the chat layout passes a new object on every render, and reapplying all of it would replace
+ * local changes (such as a model picked on the welcome page) with the same server values.
  */
 export function getServerStateChanges(
   previous: Partial<ConfigStoreData>,

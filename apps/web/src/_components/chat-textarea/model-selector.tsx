@@ -21,8 +21,7 @@ import { useId, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreApi } from "@/components/provider/config-provider";
-import { clearEffortIntent, createEffortIntent } from "@/lib/store/config-store";
+import { useConfigStore } from "@/components/provider/config-provider";
 
 import { ModelCapability } from "@/components/capability-icon";
 import { buttonVariants } from "@/components/ui/button";
@@ -32,13 +31,11 @@ import { Kbd } from "@/components/ui/kbd";
 import {
   AllModelIds,
   SelectableModelIds,
-  getDefaultReasoning,
-  getReasoningOptions,
   prettifyProviderName,
   tryGetModelData,
   type Provider,
 } from "@/lib/chat/models";
-import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
+import { useUpdateModelConfig } from "@/lib/chat/use-update-model-config";
 import { chatStoreActions } from "@/lib/store/chat-store";
 import { cn, tryCatch } from "@/lib/utils";
 
@@ -600,44 +597,14 @@ function SectionIcon({ section }: { section: PickerSectionKey }) {
 }
 
 export function ChatModelSelector() {
-  const { syncThreadModelConfig } = useSyncThreadModelConfig();
+  const updateModelConfig = useUpdateModelConfig();
+  const storeModel = useConfigStore((state) => state.model);
 
-  const configStore = useConfigStoreApi();
-  const { effort, storeModel, setConfig, setModelParams } = useConfigStore(
-    useShallow((state) => ({
-      effort: state.modelParams.effort,
-      storeModel: state.model,
-      setConfig: state.setConfig,
-      setModelParams: state.setModelParams,
-    })),
-  );
-
+  // Send only the model: the effort is resolved for it (kept if supported, else its default),
+  // here and on the server, from the latest saved effort.
   function handleChange(model: string) {
     chatStoreActions.retainCompatibleAttachments(model);
-    const modelData = tryGetModelData(model);
-    const nextEffort =
-      modelData && !getReasoningOptions(modelData).includes(effort) ? getDefaultReasoning(modelData) : effort;
-
-    setConfig({ model });
-
-    if (nextEffort !== effort) setModelParams({ effort: nextEffort });
-
-    // An effort the user chose and the server has not confirmed yet is carried to the new model
-    // and saved with it; replacing the intent also cancels its pending debounced save. Otherwise
-    // send only the model: the server resolves its stored effort, which may be newer than ours.
-    const { effortIntent, setEffortIntent } = configStore.getState();
-    if (!effortIntent) {
-      void syncThreadModelConfig({ model });
-      return;
-    }
-
-    const intent = createEffortIntent(model, nextEffort, false);
-    setEffortIntent(intent);
-    void syncThreadModelConfig({
-      model,
-      modelParams: { effort: nextEffort },
-      onFailure: () => clearEffortIntent(configStore, intent.id),
-    });
+    updateModelConfig({ model });
   }
 
   return (

@@ -1,5 +1,5 @@
 /* oxlint-disable no-await-in-loop -- Thread graph cloning and transaction writes are order-dependent. */
-import { resolveReasoning, tryGetModelData } from "@ai-chat/shared/chat/models";
+import { mergeThreadModelConfig } from "@ai-chat/shared/chat/thread-model-config";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 
@@ -187,7 +187,7 @@ const DEFAULT_THREAD_MODEL_PARAMS = { effort: "medium", webSearch: false, profil
 
 type ThreadModelConfig = {
   latestModel: string;
-  latestModelParams: Doc<"threads">["latestModelParams"];
+  latestModelParams: Required<Doc<"threads">["latestModelParams"]>;
 };
 
 /**
@@ -239,26 +239,24 @@ export async function recoverThreadModelConfig(
       latestModelParams: {
         effort: storedParams?.effort ?? fallback.latestModelParams.effort,
         webSearch: storedParams?.webSearch ?? fallback.latestModelParams.webSearch,
-        profile: storedParams?.profile ?? fallback.latestModelParams.profile,
+        // A stored `null` means the profile was cleared, so only a missing one is recovered.
+        profile:
+          storedParams?.profile === undefined ? fallback.latestModelParams.profile : storedParams.profile,
       },
     },
   };
 }
 
 /**
- * Saves only the fields given and merges them into the thread's stored config, so a save of one
- * setting cannot overwrite another setting with a stale value from the client.
- *
- * - `expectedModel`: skip the save unless the thread still uses this model, so an effort chosen for
- *   one model is not stored for another.
- * - A model change without an effort resolves the stored effort against the new model.
+ * Merges a partial update into the thread's stored config (see `mergeThreadModelConfig`), so a
+ * save of one setting never overwrites another. The web app calls this with an optimistic update
+ * that runs the same merge.
  */
 export const updateThreadModelConfig = authenticatedMutation({
   args: {
     threadId: v.id("threads"),
     latestModel: v.optional(v.string()),
     latestModelParams: v.optional(AISDKModelParams.partial()),
-    expectedModel: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
@@ -268,27 +266,22 @@ export const updateThreadModelConfig = authenticatedMutation({
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
     const { config: current, complete } = await recoverThreadModelConfig(ctx, thread);
-    if (args.expectedModel !== undefined && args.expectedModel !== current.latestModel) return;
-
-    const latestModel = args.latestModel ?? current.latestModel;
-    const latestModelParams = { ...current.latestModelParams, ...args.latestModelParams };
-
-    if (args.latestModelParams?.effort === undefined && latestModel !== current.latestModel) {
-      const modelData = tryGetModelData(latestModel);
-      if (modelData) latestModelParams.effort = resolveReasoning(modelData, current.latestModelParams.effort);
-    }
+    const next = mergeThreadModelConfig<Id<"profiles">>(
+      { model: current.latestModel, params: current.latestModelParams },
+      { model: args.latestModel, params: args.latestModelParams },
+    );
 
     if (
       complete &&
-      current.latestModel === latestModel &&
-      current.latestModelParams.effort === latestModelParams.effort &&
-      current.latestModelParams.webSearch === latestModelParams.webSearch &&
-      current.latestModelParams.profile === latestModelParams.profile
+      current.latestModel === next.model &&
+      current.latestModelParams.effort === next.params.effort &&
+      current.latestModelParams.webSearch === next.params.webSearch &&
+      current.latestModelParams.profile === next.params.profile
     ) {
       return;
     }
 
-    await ctx.db.patch(args.threadId, { latestModel, latestModelParams });
+    await ctx.db.patch(args.threadId, { latestModel: next.model, latestModelParams: next.params });
   },
 });
 
