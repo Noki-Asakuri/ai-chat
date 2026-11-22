@@ -1,16 +1,18 @@
-import { useDebounce } from "@uidotdev/usehooks";
+import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+
+import { useDebouncedCallback } from "@tanstack/react-pacer";
+import { useParams } from "@tanstack/react-router";
 import { ChevronDownIcon } from "lucide-react";
-import { useEffect, useEffectEvent, useState } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "../provider/config-provider";
+import { useConfigStore, useConfigStoreApi, useConfigStoreState } from "../provider/config-provider";
 import { Button, buttonVariants } from "../ui/button";
 import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 import { getDefaultReasoning, getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
 import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
 import type { ReasoningEffort } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, fromUUID } from "@/lib/utils";
 
 import { REASONING_OPTIONS } from "./reasoning-options";
 
@@ -49,10 +51,34 @@ export function ReasoningPickerBase(props: ReasoningPickerProps) {
 
 function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseInnerProps) {
   const configStore = useConfigStoreState();
+  const configStoreApi = useConfigStoreApi();
+  const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
 
-  const [pendingSyncEffort, setPendingSyncEffort] = useState<ReasoningEffort | null>(null);
-  const debouncedSyncEffort = useDebounce(pendingSyncEffort, EFFORT_SYNC_DEBOUNCE_MS);
+  // The thread, its config store and the chosen effort are captured when the effort changes, so
+  // a sync that lands after switching threads still updates the thread it was chosen in, and a
+  // server refresh during the wait cannot replace the chosen effort. The other settings are read
+  // from that store when the sync runs, so later web search or profile changes are kept. Switching
+  // models drops the pending sync: the model selector already saves the new model with the effort.
+  // Unmounting (leaving the thread or chat) sends a pending sync at once.
+  const syncEffort = useDebouncedCallback(
+    (pending: {
+      threadId: Id<"threads">;
+      store: typeof configStoreApi;
+      model: string;
+      effort: ReasoningEffort;
+    }) => {
+      const { model, modelParams } = pending.store.getState();
+      if (model !== pending.model) return;
+
+      void syncThreadModelConfig({
+        threadId: pending.threadId,
+        model,
+        modelParams: { ...modelParams, effort: pending.effort },
+      });
+    },
+    { wait: EFFORT_SYNC_DEBOUNCE_MS, onUnmount: (debouncer) => debouncer.flush() },
+  );
 
   const validOptions = getReasoningOptions(modelData);
 
@@ -63,21 +89,10 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
     }
 
     configStore.setModelParams({ effort });
-    setPendingSyncEffort(effort);
+
+    const threadId = fromUUID<Id<"threads">>(params?.threadId);
+    if (threadId) syncEffort({ threadId, store: configStoreApi, model: props.model, effort });
   }
-
-  const syncPendingEffort = useEffectEvent((effort: ReasoningEffort) => {
-    void syncThreadModelConfig({
-      model: props.model,
-      modelParams: { effort },
-    });
-  });
-
-  useEffect(() => {
-    if (debouncedSyncEffort === null) return;
-
-    syncPendingEffort(debouncedSyncEffort);
-  }, [debouncedSyncEffort]);
 
   if (validOptions.length === 0) return null;
   const value = validOptions.includes(props.value) ? props.value : getDefaultReasoning(modelData);

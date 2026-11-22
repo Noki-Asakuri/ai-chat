@@ -1,11 +1,7 @@
 import { createContext, use, useEffect, useState } from "react";
 import { useStore } from "zustand";
 
-import {
-  createConfigStore,
-  type ConfigStore,
-  type ConfigStoreData,
-} from "@/lib/store/config-store";
+import { createConfigStore, type ConfigStore, type ConfigStoreData } from "@/lib/store/config-store";
 
 export const ConfigStoreContext = createContext<ReturnType<typeof createConfigStore> | null>(null);
 
@@ -21,11 +17,7 @@ export function ConfigStoreProvider(props: ConfigStoreProviderProps) {
     store.getState().setServerState(props.initialState);
   }, [props.initialState, store]);
 
-  return (
-    <ConfigStoreContext.Provider value={store}>
-      {props.children}
-    </ConfigStoreContext.Provider>
-  );
+  return <ConfigStoreContext.Provider value={store}>{props.children}</ConfigStoreContext.Provider>;
 }
 
 export function useConfigStore<T>(selector: (state: ConfigStore) => T): T {
@@ -33,6 +25,13 @@ export function useConfigStore<T>(selector: (state: ConfigStore) => T): T {
   if (!configStore) throw new Error("useConfigStore must be used within a ConfigStoreProvider");
 
   return useStore(configStore, selector);
+}
+
+export function useConfigStoreApi() {
+  const configStore = use(ConfigStoreContext);
+  if (!configStore) throw new Error("useConfigStore must be used within a ConfigStoreProvider");
+
+  return configStore;
 }
 
 export function useConfigStoreState() {
