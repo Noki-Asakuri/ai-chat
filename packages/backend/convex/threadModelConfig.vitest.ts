@@ -1,0 +1,114 @@
+/// <reference types="vite/client" />
+
+import { convexTest } from "convex-test";
+import { describe, expect, test } from "vitest";
+
+import { api } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
+import { DEFAULT_USER_PREFERENCES } from "./functions/users";
+import schema from "./schema";
+
+const modules = import.meta.glob("./**/*.ts");
+const USER_ID = "user_thread_model_config_test";
+
+async function setup() {
+  const t = convexTest(schema, modules).withIdentity({ subject: USER_ID });
+  await t.run(async (ctx) => {
+    await ctx.db.insert("users", {
+      userId: USER_ID,
+      username: null,
+      emailAddress: null,
+      imageUrl: null,
+      preferences: DEFAULT_USER_PREFERENCES,
+    });
+  });
+  return t;
+}
+
+async function insertThread(t: Awaited<ReturnType<typeof setup>>, profile: Id<"profiles"> | null = null) {
+  return await t.run(async (ctx) => {
+    return await ctx.db.insert("threads", {
+      title: "Model config test thread",
+      userId: USER_ID,
+      updatedAt: Date.now(),
+      pinned: false,
+      latestModel: "test/model-a",
+      latestModelParams: { effort: "medium", webSearch: false, profile },
+      groupId: null,
+      status: "complete",
+    });
+  });
+}
+
+async function readConfig(t: Awaited<ReturnType<typeof setup>>, threadId: Id<"threads">) {
+  return await t.run(async (ctx) => {
+    const thread = await ctx.db.get("threads", threadId);
+    return { latestModel: thread?.latestModel, latestModelParams: thread?.latestModelParams };
+  });
+}
+
+describe("updateThreadModelConfig", () => {
+  test("merges a single param into the stored config", async () => {
+    const t = await setup();
+    const threadId = await insertThread(t);
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModelParams: { effort: "high" },
+    });
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModelParams: { webSearch: true },
+    });
+
+    expect(await readConfig(t, threadId)).toEqual({
+      latestModel: "test/model-a",
+      latestModelParams: { effort: "high", webSearch: true, profile: null },
+    });
+  });
+
+  test("changes the model without touching the params", async () => {
+    const t = await setup();
+    const threadId = await insertThread(t);
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModel: "test/model-b",
+    });
+
+    expect(await readConfig(t, threadId)).toEqual({
+      latestModel: "test/model-b",
+      latestModelParams: { effort: "medium", webSearch: false, profile: null },
+    });
+  });
+
+  test("keeps the profile when omitted and clears it when given null", async () => {
+    const t = await setup();
+    const profileId = await t.run(async (ctx) => {
+      return await ctx.db.insert("profiles", {
+        userId: USER_ID,
+        name: "Test profile",
+        systemPrompt: "",
+        createdAt: 0,
+        updatedAt: 0,
+      });
+    });
+    const threadId = await insertThread(t, profileId);
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModelParams: { effort: "low" },
+    });
+    expect((await readConfig(t, threadId)).latestModelParams?.profile).toBe(profileId);
+
+    await t.mutation(api.functions.threads.updateThreadModelConfig, {
+      threadId,
+      latestModelParams: { profile: null },
+    });
+    expect((await readConfig(t, threadId)).latestModelParams).toEqual({
+      effort: "low",
+      webSearch: false,
+      profile: null,
+    });
+  });
+});

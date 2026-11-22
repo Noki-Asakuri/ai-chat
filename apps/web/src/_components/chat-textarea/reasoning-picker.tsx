@@ -55,10 +55,9 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
   const { syncThreadModelConfig } = useSyncThreadModelConfig();
 
-  // The thread, its config store and the chosen effort are captured when the effort changes, so
-  // a sync that lands after switching threads still updates the thread it was chosen in, and a
-  // server refresh during the wait cannot replace the chosen effort. The other settings are read
-  // from that store when the sync runs, so later web search or profile changes are kept. Switching
+  // The thread, its config store, the model and the chosen effort are captured when the effort
+  // changes, so a sync that lands after switching threads still updates the thread it was chosen
+  // in. Only the effort is sent; the server merges it into the thread's other settings. Switching
   // models drops the pending sync: the model selector already saves the new model with the effort.
   // Unmounting (leaving the thread or chat) sends a pending sync at once.
   const syncEffort = useDebouncedCallback(
@@ -68,14 +67,9 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
       model: string;
       effort: ReasoningEffort;
     }) => {
-      const { model, modelParams } = pending.store.getState();
-      if (model !== pending.model) return;
+      if (pending.store.getState().model !== pending.model) return;
 
-      void syncThreadModelConfig({
-        threadId: pending.threadId,
-        model,
-        modelParams: { ...modelParams, effort: pending.effort },
-      });
+      void syncThreadModelConfig({ threadId: pending.threadId, modelParams: { effort: pending.effort } });
     },
     { wait: EFFORT_SYNC_DEBOUNCE_MS, onUnmount: (debouncer) => debouncer.flush() },
   );

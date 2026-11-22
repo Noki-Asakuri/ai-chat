@@ -168,10 +168,7 @@ function WebSearchButton() {
       setWebSearch={(webSearch) => {
         configStore.setModelParams({ webSearch });
 
-        void syncThreadModelConfig({
-          model: config.model,
-          modelParams: { webSearch },
-        });
+        void syncThreadModelConfig({ modelParams: { webSearch } });
       }}
     />
   );

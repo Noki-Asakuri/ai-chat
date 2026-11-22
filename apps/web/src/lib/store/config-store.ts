@@ -29,6 +29,13 @@ type UserCustomization = {
 
 export type ConfigStoreData = ChatConfig & UserCustomization;
 
+type ModelParams = ChatConfig["modelParams"];
+
+/** Server values that changed since the previous snapshot; `modelParams` holds only changed params. */
+export type ServerStateChanges = Partial<Omit<ConfigStoreData, "modelParams">> & {
+  modelParams?: Partial<ModelParams>;
+};
+
 export type ConfigStore = ConfigStoreData & {
   toggleWrapline: () => void;
 
@@ -37,7 +44,7 @@ export type ConfigStore = ConfigStoreData & {
 
   setHiddenModels: (hiddenModels: string[]) => void;
   setFavoriteModels: (favoriteModels: string[]) => void;
-  setServerState: (nextState: Partial<ConfigStoreData>) => void;
+  setServerState: (changes: ServerStateChanges) => void;
 };
 
 export function createConfigStore(initialState: Partial<ConfigStoreData>) {
@@ -66,8 +73,45 @@ export function createConfigStore(initialState: Partial<ConfigStoreData>) {
     favoriteModels: [],
     setFavoriteModels: (favoriteModels) => set({ favoriteModels }),
 
-    setServerState: (nextState) => set(() => nextState),
+    setServerState: ({ modelParams, ...changes }) =>
+      set((state) => ({ ...changes, modelParams: { ...state.modelParams, ...modelParams } })),
 
     ...initialState,
   }));
+}
+
+function sameValue<V>(a: V, b: V) {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, index) => item === b[index]);
+  }
+  return a === b;
+}
+
+function changedEntries<T extends object>(previous: Partial<T>, next: Partial<T>): Partial<T> {
+  const changes: Partial<T> = {};
+  for (const key in next) {
+    if (!sameValue(previous[key], next[key])) changes[key] = next[key];
+  }
+  return changes;
+}
+
+/**
+ * Returns the fields of `next` whose values differ from `previous`. The provider applies only these,
+ * so a re-render that passes the same (possibly stale) server values does not overwrite local
+ * changes, and a server update to one setting does not reset the others.
+ */
+export function getServerStateChanges(
+  previous: Partial<ConfigStoreData>,
+  next: Partial<ConfigStoreData>,
+): ServerStateChanges | null {
+  const { modelParams: previousParams, ...previousRest } = previous;
+  const { modelParams: nextParams, ...nextRest } = next;
+
+  const changes: ServerStateChanges = changedEntries(previousRest, nextRest);
+  if (nextParams) {
+    const paramChanges = changedEntries<ModelParams>(previousParams ?? {}, nextParams);
+    if (Object.keys(paramChanges).length > 0) changes.modelParams = paramChanges;
+  }
+
+  return Object.keys(changes).length > 0 ? changes : null;
 }

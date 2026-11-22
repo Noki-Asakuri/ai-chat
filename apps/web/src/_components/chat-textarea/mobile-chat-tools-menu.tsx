@@ -49,19 +49,13 @@ export function MobileChatToolsMenu() {
 
   function handleEffortChange(effort: ReasoningEffort) {
     configStore.setModelParams({ effort });
-    void syncThreadModelConfig({
-      model: config.model,
-      modelParams: { effort },
-    });
+    void syncThreadModelConfig({ modelParams: { effort } });
   }
 
   function handleWebSearchChange() {
     const webSearch = !config.webSearch;
     configStore.setModelParams({ webSearch });
-    void syncThreadModelConfig({
-      model: config.model,
-      modelParams: { webSearch },
-    });
+    void syncThreadModelConfig({ modelParams: { webSearch } });
   }
 
   return (

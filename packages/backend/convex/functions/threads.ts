@@ -161,7 +161,6 @@ export const createThread = authenticatedMutation({
       userId: user.userId,
     });
 
-
     const threadId = await ctx.db.insert("threads", {
       title: args.title ?? "New Chat",
       pinned: false,
@@ -182,11 +181,13 @@ export const createThread = authenticatedMutation({
   },
 });
 
+// Saves only the fields given and merges them into the thread's stored config, so a save of one
+// setting cannot overwrite another setting with a stale value from the client.
 export const updateThreadModelConfig = authenticatedMutation({
   args: {
     threadId: v.id("threads"),
-    latestModel: v.string(),
-    latestModelParams: AISDKModelParams,
+    latestModel: v.optional(v.string()),
+    latestModelParams: v.optional(AISDKModelParams.partial()),
   },
   handler: async (ctx, args) => {
     const user = ctx.user;
@@ -195,19 +196,19 @@ export const updateThreadModelConfig = authenticatedMutation({
     if (!thread) throw new Error("Thread not found");
     if (thread.userId !== user.userId) throw new Error("Not authorized");
 
+    const latestModel = args.latestModel ?? thread.latestModel;
+    const latestModelParams = { ...thread.latestModelParams, ...args.latestModelParams };
+
     if (
-      thread.latestModel === args.latestModel &&
-      thread.latestModelParams?.effort === args.latestModelParams.effort &&
-      thread.latestModelParams?.webSearch === args.latestModelParams.webSearch &&
-      thread.latestModelParams?.profile === args.latestModelParams.profile
+      thread.latestModel === latestModel &&
+      thread.latestModelParams.effort === latestModelParams.effort &&
+      thread.latestModelParams.webSearch === latestModelParams.webSearch &&
+      thread.latestModelParams.profile === latestModelParams.profile
     ) {
       return;
     }
 
-    await ctx.db.patch(args.threadId, {
-      latestModel: args.latestModel,
-      latestModelParams: args.latestModelParams,
-    });
+    await ctx.db.patch(args.threadId, { latestModel, latestModelParams });
   },
 });
 
@@ -327,9 +328,7 @@ export const branchThread = authenticatedMutation({
 
         parentUserMessageId: undefined,
         activeAssistantMessageId: undefined,
-        messageGraphVersion: hasCompleteMessageGraph
-          ? CURRENT_MESSAGE_GRAPH_VERSION
-          : undefined,
+        messageGraphVersion: hasCompleteMessageGraph ? CURRENT_MESSAGE_GRAPH_VERSION : undefined,
         messageGraphIssue: message.messageGraphIssue,
 
         createdAt: Date.now() + 1,
@@ -422,7 +421,9 @@ export const getAllThreads = authenticatedQuery({
         .filter((q) => q.neq(q.field("pinned"), true))
         .take(limit);
 
-      return [...pinned, ...nonPinned].map((thread) => (Object.assign(thread, { pinned: thread.pinned ?? false })));
+      return [...pinned, ...nonPinned].map((thread) =>
+        Object.assign(thread, { pinned: thread.pinned ?? false }),
+      );
     }
 
     // With search query: include only pinned that match + up to N non-pinned that match
@@ -733,9 +734,7 @@ export const deleteThread = authenticatedMutation({
     }
 
     if (args.deleteAttachments) {
-      const attachments = messages
-        .flatMap((message) => message.attachments ?? [])
-        .filter(Boolean);
+      const attachments = messages.flatMap((message) => message.attachments ?? []).filter(Boolean);
 
       for (const attachmentId of attachments) {
         await ctx.db.delete(attachmentId);

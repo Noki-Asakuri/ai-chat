@@ -10,7 +10,11 @@ const { default: userEvent } = await import("@testing-library/user-event");
 
 import type { ComponentProps } from "react";
 
-type SyncCall = { threadId: string; model: string; modelParams: { effort: string; webSearch: boolean } };
+type SyncCall = {
+  threadId: string;
+  model?: string;
+  modelParams?: Partial<{ effort: string; webSearch: boolean; profile: string | null }>;
+};
 
 const THREAD_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const THREAD_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
@@ -33,7 +37,10 @@ await mock.module("@/lib/trpc/client", () => ({
 const { ConfigStoreProvider, useConfigStoreApi } = await import("../provider/config-provider");
 const { ChatReasoningPicker } = await import("./reasoning-picker");
 
-const initialState = { model: "google/gemini-2.5-pro" };
+const initialState = {
+  model: "google/gemini-2.5-pro",
+  modelParams: { effort: "medium" as const, webSearch: false, profile: null },
+};
 
 afterAll(() => mock.restore());
 
@@ -81,7 +88,7 @@ function sleep(ms: number) {
 }
 
 describe("reasoning effort sync", () => {
-  test("waits, then syncs the last choice once", async () => {
+  test("waits, then sends only the last chosen effort once", async () => {
     const user = userEvent.setup();
     renderPicker();
 
@@ -90,11 +97,7 @@ describe("reasoning effort sync", () => {
     expect(syncCalls).toHaveLength(0);
 
     await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: SYNC_WAIT_MS * 2 });
-    expect(syncCalls[0]).toMatchObject({
-      threadId: THREAD_A.replaceAll("-", ""),
-      model: "google/gemini-2.5-pro",
-      modelParams: { effort: "low", webSearch: false },
-    });
+    expect(syncCalls[0]).toEqual({ threadId: THREAD_A.replaceAll("-", ""), modelParams: { effort: "low" } });
     await sleep(SYNC_WAIT_MS + 100);
     expect(syncCalls).toHaveLength(1);
   });
@@ -108,41 +111,37 @@ describe("reasoning effort sync", () => {
     act(() => view.rerender(pickerTree()));
 
     await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: 200 });
-    expect(syncCalls[0]?.threadId).toBe(THREAD_A.replaceAll("-", ""));
-    expect(syncCalls[0]?.modelParams.effort).toBe("high");
+    expect(syncCalls[0]).toEqual({ threadId: THREAD_A.replaceAll("-", ""), modelParams: { effort: "high" } });
 
     await sleep(SYNC_WAIT_MS + 100);
     expect(syncCalls).toHaveLength(1);
   });
 
-  test("a setting changed during the wait is not undone by the sync", async () => {
+  test("a re-render with unchanged server values keeps the local choice", async () => {
     const user = userEvent.setup();
-    renderPicker();
+    const view = renderPicker();
 
     await chooseEffort(user, "High");
-    act(() => store?.getState().setModelParams({ webSearch: true }));
+    // Same values as before, but a new object, as the chat layout passes on every render.
+    act(() => view.rerender(pickerTree({ ...initialState, modelParams: { ...initialState.modelParams } })));
 
-    await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: SYNC_WAIT_MS * 2 });
-    expect(syncCalls[0]?.modelParams).toMatchObject({ effort: "high", webSearch: true });
+    expect(store?.getState().modelParams.effort).toBe("high");
   });
 
   for (const send of ["timer", "unmount"] as const) {
-    test(`a server refresh during the wait keeps the chosen effort (${send})`, async () => {
+    test(`a server update to another setting keeps the chosen effort (${send})`, async () => {
       const user = userEvent.setup();
       const view = renderPicker();
 
       await chooseEffort(user, "High");
       // An earlier web search save comes back from the server, still carrying the old effort.
-      const serverState = {
-        ...initialState,
-        modelParams: { effort: "medium" as const, webSearch: true, profile: null },
-      };
+      const serverState = { ...initialState, modelParams: { ...initialState.modelParams, webSearch: true } };
       act(() => view.rerender(pickerTree(serverState)));
-      expect(store?.getState().modelParams.effort).toBe("medium");
+      expect(store?.getState().modelParams).toMatchObject({ effort: "high", webSearch: true });
 
       if (send === "unmount") act(() => view.unmount());
       await waitFor(() => expect(syncCalls).toHaveLength(1), { timeout: SYNC_WAIT_MS * 2 });
-      expect(syncCalls[0]?.modelParams).toMatchObject({ effort: "high", webSearch: true });
+      expect(syncCalls[0]?.modelParams).toEqual({ effort: "high" });
     });
   }
 
