@@ -315,4 +315,43 @@ describe("updateThreadModelConfig", () => {
       latestModelParams: { effort: "medium", webSearch: true, profile: null },
     });
   });
+
+  test("sending a message does not overwrite the thread's model config", async () => {
+    const t = await setup();
+    const threadId = await insertThread(t, { model: "openai/gpt-5.6-sol", effort: "max" });
+
+    // Sent with settings from before a change the sender had not seen yet.
+    await t.mutation(api.functions.messages.addMessagesToThread, {
+      threadId,
+      messages: [
+        {
+          messageId: crypto.randomUUID(),
+          role: "user",
+          status: "complete",
+          parts: [{ type: "text", text: "question" }],
+          attachments: [],
+        },
+        {
+          messageId: crypto.randomUUID(),
+          role: "assistant",
+          status: "pending",
+          parts: [],
+          attachments: [],
+          metadata: {
+            model: { request: "openai/gpt-5.5", response: null },
+            finishReason: null,
+            usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+            timeToFirstTokenMs: 0,
+            durations: { request: 0, reasoning: 0, text: 0 },
+            modelParams: { effort: "medium", webSearch: true, profile: null },
+          },
+        },
+      ],
+    });
+
+    expect(await readConfig(t, threadId)).toEqual({
+      latestModel: "openai/gpt-5.6-sol",
+      latestModelParams: { effort: "max", webSearch: false, profile: null },
+    });
+  });
 });

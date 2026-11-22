@@ -3,13 +3,19 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useConvex } from "convex/react";
+import { use } from "react";
 import { toast } from "@/components/ui/toast";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
+import {
+  ConfigStoreContext,
+  useConfigStore,
+  useConfigStoreState,
+} from "@/components/provider/config-provider";
 
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
+import { saveModelConfig } from "@/lib/chat/use-update-model-config";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import { chatStoreActions } from "@/lib/store/chat-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
@@ -62,6 +68,7 @@ export function useRetryTurn() {
   const convexClient = useConvex();
 
   const configStore = useConfigStoreState();
+  const configStoreApi = use(ConfigStoreContext);
   const { model, modelParams, notificationSound, desktopNotification } = useConfigStore(
     useShallow((state) => ({
       model: state.model,
@@ -306,10 +313,14 @@ export function useRetryTurn() {
             actionProps: {
               children: `Switch to ${deprecatedModelError.replacementModelName}`,
               onClick: () => {
-                chatStoreActions.retainCompatibleAttachments(deprecatedModelError.replacementModelId);
-                configStore.setConfig({
-                  model: deprecatedModelError.replacementModelId,
-                  defaultModel: deprecatedModelError.replacementModelId,
+                const replacementModel = deprecatedModelError.replacementModelId;
+                chatStoreActions.retainCompatibleAttachments(replacementModel);
+                configStore.setConfig({ defaultModel: replacementModel });
+                saveModelConfig({
+                  convex: convexClient,
+                  configStore: configStoreApi,
+                  threadId,
+                  patch: { model: replacementModel },
                 });
               },
             },

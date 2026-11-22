@@ -752,14 +752,9 @@ export const addMessagesToThread = authenticatedMutation({
       activeAssistantMessageId: assistantMessageId,
     });
 
-    if (assistantMessage.metadata) {
-      await patchThreadModelConfig(
-        ctx,
-        args.threadId,
-        assistantMessage.metadata.model.request,
-        assistantMessage.metadata.modelParams,
-      );
-    }
+    // The thread's model config is not written here. `createThread` sets it for a new thread and
+    // `updateThreadModelConfig` keeps it current; writing the config this message was sent with
+    // would undo a settings change saved just before it that the sender had not yet seen.
 
     await ctx.runMutation(internal.functions.userStats.incrementOnUserMessage, {
       userId: user.userId,

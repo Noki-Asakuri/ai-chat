@@ -31,12 +31,19 @@ export function nextThreadPageMeta(
   meta: ThreadPageMeta,
   args: UpdateThreadModelConfigArgs,
 ): ThreadPageMeta | null {
+  const storedModel: string | undefined = meta.latestModel;
   const storedParams: Partial<ThreadModelParams<Id<"profiles">>> | undefined = meta.latestModelParams;
-  if (storedParams?.effort === undefined || storedParams.webSearch === undefined) return null;
+  if (
+    storedModel === undefined ||
+    storedParams?.effort === undefined ||
+    storedParams.webSearch === undefined
+  ) {
+    return null;
+  }
 
   const next = mergeThreadModelConfig(
     {
-      model: meta.latestModel,
+      model: storedModel,
       params: {
         effort: storedParams.effort,
         webSearch: storedParams.webSearch,

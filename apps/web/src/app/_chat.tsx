@@ -102,8 +102,10 @@ function ChatLayoutConfig() {
     effort: selectedModelData
       ? resolveReasoning(selectedModelData, storedModelParams.effort)
       : storedModelParams.effort,
-    profile:
-      threadMeta?.latestModelParams.profile ?? chatShell.preferences.models.modelParams.profile ?? null,
+    // A thread's `null` profile means it was cleared, so the account default applies only without a thread.
+    profile: threadMeta
+      ? (threadMeta.latestModelParams.profile ?? null)
+      : (chatShell.preferences.models.modelParams.profile ?? null),
   };
 
   return (

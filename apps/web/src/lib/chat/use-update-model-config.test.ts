@@ -41,4 +41,11 @@ describe("nextThreadPageMeta", () => {
     // @ts-expect-error -- stored rows from before the backfill can lack fields the type requires
     expect(nextThreadPageMeta(legacy, { threadId, latestModelParams: { webSearch: true } })).toBeNull();
   });
+
+  test("returns null for a legacy thread meta without a model", () => {
+    const legacy = { ...meta, latestModel: undefined };
+
+    // @ts-expect-error -- stored rows from before the backfill can lack fields the type requires
+    expect(nextThreadPageMeta(legacy, { threadId, latestModelParams: { effort: "max" } })).toBeNull();
+  });
 });
