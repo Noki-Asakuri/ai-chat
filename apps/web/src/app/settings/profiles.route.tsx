@@ -8,7 +8,7 @@ import { z } from "zod";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useDebounce } from "@uidotdev/usehooks";
+import { useDebouncedValue } from "@tanstack/react-pacer";
 
 import { SettingsSection } from "@/components/settings/settings-section";
 import { Button } from "@/components/ui/button";
@@ -157,7 +157,7 @@ function AiProfilesPage() {
   const navigate = Route.useNavigate();
 
   const search = searchParams.q ?? "";
-  const debouncedSearch = useDebounce(search, 300);
+  const [debouncedSearch] = useDebouncedValue(search, { wait: 300 });
   const sort = searchParams.sort ?? ("recently-updated" satisfies SortOption);
 
   const { data, isPending } = useQuery({

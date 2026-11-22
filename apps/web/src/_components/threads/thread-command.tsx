@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 
 import { convexQuery } from "@convex-dev/react-query";
-import { useDebounce } from "@uidotdev/usehooks";
+import { useDebouncedValue } from "@tanstack/react-pacer";
 import {
   ArrowLeftIcon,
   ChevronRightIcon,
@@ -121,7 +121,7 @@ export function ThreadCommandDialog() {
   const [query, setQuery] = useState("");
   const [pages, setPages] = useState<string[]>([]);
   const selectingGroup = pages.at(-1) === GROUPS_PAGE;
-  const debouncedQuery = useDebounce(query, 250);
+  const [debouncedQuery] = useDebouncedValue(query, { wait: 250 });
 
   const { data, isFetching } = useQuery({
     enabled: threadCommandOpen && !selectingGroup,
