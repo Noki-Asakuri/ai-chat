@@ -6,7 +6,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { convexQuery } from "@convex-dev/react-query";
 import { toast } from "@/components/ui/toast";
 
-import { useConfigStore } from "../provider/config-provider";
+import { useComposerModelConfig } from "@/lib/chat/composer-model-config";
 import { ThreadCommandDialog } from "../threads/thread-command";
 
 import {
@@ -46,7 +46,7 @@ export function RegisterEventHandlers() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { abortChatStream } = useAbortChatStream();
-  const model = useConfigStore((state) => state.model);
+  const model = useComposerModelConfig().config.model;
   const threadCommandOpen = useThreadStore((state) => state.threadCommandOpen);
   // Handle global paste events
   useWindowEvent("paste", function handlePaste(event) {

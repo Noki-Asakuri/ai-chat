@@ -21,7 +21,6 @@ import * as React from "react";
 import { useShallow } from "zustand/shallow";
 
 import { CopyButton } from "../copy-button";
-import { useConfigStore } from "../provider/config-provider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +48,7 @@ import { MessageRetryMenu } from "./message-retry-menu";
 import { CancelledRetryDialog } from "./cancelled-retry-dialog";
 import { useMessageRetry } from "./use-message-retry";
 
+import { useComposerModelConfig } from "@/lib/chat/composer-model-config";
 import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
@@ -325,8 +325,7 @@ function DebugButton({ menu = false, messageId }: { menu?: boolean; messageId: I
 }
 
 function EditButton({ menu = false, message }: { menu?: boolean; message: ChatMessage }) {
-  const configModel = useConfigStore((state) => state.model);
-  const configModelParams = useConfigStore((state) => state.modelParams);
+  const { config: composerConfig } = useComposerModelConfig();
 
   const { canEdit, isPending, model, modelParams } = useMessageStore(
     useShallow((state): EditState => {
@@ -366,8 +365,8 @@ function EditButton({ menu = false, message }: { menu?: boolean; message: ChatMe
       attachments: [],
       currentAttachments: message.attachments,
       keptAttachmentIds: message.attachments.map((a) => a._id),
-      model: model ?? configModel,
-      modelParams: modelParams ?? configModelParams,
+      model: model ?? composerConfig.model,
+      modelParams: modelParams ?? composerConfig.modelParams,
     });
   }
 

@@ -2,13 +2,13 @@
 import { useRef } from "react";
 import { toast } from "@/components/ui/toast";
 
-import { useConfigStore } from "@/components/provider/config-provider";
+import { useComposerModelConfig } from "@/lib/chat/composer-model-config";
 import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
 export function GlobalDropzone({ children, ...props }: React.ComponentPropsWithoutRef<"main">) {
   const dragCounterRef = useRef<number>(0);
-  const model = useConfigStore((state) => state.model);
+  const model = useComposerModelConfig().config.model;
 
   function handleAddAttachments(files: Array<File>) {
     const editMessage = useChatStore.getState().editMessage;

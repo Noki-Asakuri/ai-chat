@@ -31,13 +31,11 @@ import { Kbd } from "@/components/ui/kbd";
 import {
   AllModelIds,
   SelectableModelIds,
-  getDefaultReasoning,
-  getReasoningOptions,
   prettifyProviderName,
   tryGetModelData,
   type Provider,
 } from "@/lib/chat/models";
-import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
+import { useComposerModelConfig } from "@/lib/chat/composer-model-config";
 import { chatStoreActions } from "@/lib/store/chat-store";
 import { cn, tryCatch } from "@/lib/utils";
 
@@ -49,7 +47,7 @@ import {
 
 type ModelSelectorProps = {
   value: string;
-  onChange?: (id: string) => void;
+  onChange: (id: string) => void;
   triggerId?: string;
   className?: string;
   disabled?: boolean;
@@ -218,22 +216,13 @@ function ModelSelectorBase({
 
   const updateUserModelPreferences = useMutation(api.functions.users.updateUserModelPreferences);
 
-  const { hiddenModels, favoriteModels, setFavoriteModels, storeModel, storeDefaultModel, setConfig } =
-    useConfigStore(
-      useShallow((state) => ({
-        hiddenModels: state.hiddenModels,
-        favoriteModels: state.favoriteModels,
-        setFavoriteModels: state.setFavoriteModels,
-        storeModel: state.model,
-        storeDefaultModel: state.defaultModel,
-        setConfig: state.setConfig,
-      })),
-    );
-
-  const selectedModel =
-    (value && value.length > 0 ? value : null) ??
-    (storeModel && storeModel.length > 0 ? storeModel : null) ??
-    storeDefaultModel;
+  const { hiddenModels, favoriteModels, setFavoriteModels } = useConfigStore(
+    useShallow((state) => ({
+      hiddenModels: state.hiddenModels,
+      favoriteModels: state.favoriteModels,
+      setFavoriteModels: state.setFavoriteModels,
+    })),
+  );
 
   const selectableModelIdSet = useMemo(() => new Set<string>(SelectableModelIds), []);
   const knownModelIdSet = useMemo(() => new Set<string>(AllModelIds), []);
@@ -374,16 +363,6 @@ function ModelSelectorBase({
     return "No models match your search.";
   }, [allViewModels.length, favoriteVisibleModels.length, selectedSection]);
 
-  function handleChange(model: string) {
-    if (onChange) {
-      onChange(model);
-      return;
-    }
-
-    chatStoreActions.retainCompatibleAttachments(model);
-    setConfig({ model });
-  }
-
   async function handleToggleFavorite(modelId: string) {
     if (!selectableModelIdSet.has(modelId)) return;
     if (isSavingFavorites) return;
@@ -416,9 +395,9 @@ function ModelSelectorBase({
   return (
     <Combobox
       controller={combobox}
-      value={selectedModel}
+      value={value}
       onValueChange={(nextValue) => {
-        if (nextValue) handleChange(nextValue);
+        if (nextValue) onChange(nextValue);
       }}
       query={searchQuery}
       onQueryChange={setSearchQuery}
@@ -467,7 +446,7 @@ function ModelSelectorBase({
           className,
         )}
       >
-        {renderTriggerValue(selectedModel)}
+        {renderTriggerValue(value)}
         <ChevronDownIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
       </ComboboxTrigger>
 
@@ -599,32 +578,17 @@ function SectionIcon({ section }: { section: PickerSectionKey }) {
 }
 
 export function ChatModelSelector() {
-  const { syncThreadModelConfig } = useSyncThreadModelConfig();
-
-  const { effort, storeModel, setConfig, setModelParams } = useConfigStore(
-    useShallow((state) => ({
-      effort: state.modelParams.effort,
-      storeModel: state.model,
-      setConfig: state.setConfig,
-      setModelParams: state.setModelParams,
-    })),
-  );
+  const { config, update } = useComposerModelConfig();
 
   function handleChange(model: string) {
     chatStoreActions.retainCompatibleAttachments(model);
-    const modelData = tryGetModelData(model);
-    const nextEffort =
-      modelData && !getReasoningOptions(modelData).includes(effort) ? getDefaultReasoning(modelData) : effort;
-
-    setConfig({ model });
-
-    if (nextEffort !== effort) setModelParams({ effort: nextEffort });
-    void syncThreadModelConfig({ model, modelParams: { effort: nextEffort } });
+    // The effort is resolved for the new model by the save itself.
+    void update({ model });
   }
 
   return (
     <ModelSelectorBase
-      value={storeModel}
+      value={config.model}
       onChange={handleChange}
       triggerId="button-chat-model-selector-trigger"
       className="min-w-15 shrink sm:shrink-0"

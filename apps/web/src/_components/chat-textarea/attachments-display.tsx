@@ -2,7 +2,7 @@ import { PaperclipIcon, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ImageLightboxProvider, ImageLightboxTrigger } from "@/components/image-lightbox";
-import { useConfigStore } from "@/components/provider/config-provider";
+import { useComposerModelConfig } from "@/lib/chat/composer-model-config";
 import { ButtonWithTip } from "@/components/ui/button";
 
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
@@ -48,7 +48,7 @@ export function BaseChatAttachmentsButton({
 }
 
 export function ChatAttachmentsButton() {
-  const model = useConfigStore((state) => state.model);
+  const model = useComposerModelConfig().config.model;
 
   return <BaseChatAttachmentsButton model={model} handleAddAttachments={chatStoreActions.addAttachments} />;
 }
