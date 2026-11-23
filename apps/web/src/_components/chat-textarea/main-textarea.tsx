@@ -9,20 +9,19 @@ import { toast } from "@/components/ui/toast";
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
 import { Button } from "../ui/button";
-import { Textarea } from "../ui/textarea";
 
 import { ChatActionButtons } from "./action-buttons";
 import { ChatAttachmentsDisplay } from "./attachments-display";
+import { RichComposer } from "./rich-composer";
 import { ChatSendButton } from "./send-button";
 
-import { useGetSendDescription, useShouldSend } from "@/lib/chat/send-preference";
 import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
 import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message";
 import { useConfigStore } from "../provider/config-provider";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { getConvexReactClient } from "@/lib/convex/client";
 import { convexQuery } from "@convex-dev/react-query";
-import { cn, fromUUID, tryCatch } from "@/lib/utils";
+import { fromUUID, tryCatch } from "@/lib/utils";
 
 const convexClient = getConvexReactClient();
 
@@ -130,104 +129,14 @@ function InputChatTextArea() {
   }
 
   return (
-    <BaseInputTextArea
+    <RichComposer
       id="textarea-chat-input"
       input={input}
       setInput={chatStoreActions.setInput}
+      model={model}
       handleAddAttachments={handleAddAttachments}
       onConfirm={sendChatRequest}
-      className="leading-normal placeholder:text-muted-foreground/90"
+      enableProfiles
     />
-  );
-}
-
-function TextareaDescription() {
-  const sendDescription = useGetSendDescription();
-
-  return (
-    <span id="textarea-description" className="sr-only">
-      {sendDescription}
-    </span>
-  );
-}
-
-type BaseInputTextAreaProps = React.ComponentPropsWithoutRef<typeof Textarea> & {
-  input: string;
-  setInput: (content: string) => void;
-
-  handleAddAttachments: (data: { files: File[] }) => void;
-
-  onConfirm?: () => void;
-};
-
-export function BaseInputTextArea({
-  input,
-  setInput,
-  handleAddAttachments,
-  onConfirm,
-  onKeyDown,
-  className,
-  ...props
-}: BaseInputTextAreaProps) {
-  const shouldSend = useShouldSend();
-
-  return (
-    <div className="flex grow flex-row items-start p-2.5">
-      <Textarea
-        {...props}
-        rows={3}
-        name="user-input"
-        autoComplete="off"
-        aria-multiline="true"
-        aria-autocomplete="none"
-        aria-describedby="textarea-description"
-        aria-label="Type your message here..."
-        placeholder="Type your message here..."
-        data-slot={props.id}
-        value={input}
-        onChange={(event) => setInput(event.target.value)}
-        className={cn(
-          "max-h-62.5 w-full resize-none rounded-none border-0 bg-transparent! p-0 caret-primary ring-0!",
-          className,
-        )}
-        onPaste={(event) => {
-          const { items } = event.clipboardData;
-          const files = Array.from(items).reduce<Array<File>>((result, item) => {
-            if (item.kind !== "file") return result;
-
-            const file = item.getAsFile();
-            if (file) result.push(file);
-
-            return result;
-          }, []);
-
-          if (files.length === 0) return;
-
-          event.preventDefault();
-          event.stopPropagation();
-
-          handleAddAttachments({ files });
-        }}
-        onKeyDown={(event) => {
-          onKeyDown?.(event);
-          if (event.defaultPrevented) return;
-          if (event.nativeEvent.isComposing) return;
-
-          const send = shouldSend({
-            key: event.key,
-            shiftKey: event.shiftKey,
-            ctrlKey: event.ctrlKey,
-            metaKey: event.metaKey,
-          });
-
-          if (!send) return;
-
-          event.preventDefault();
-          onConfirm?.();
-        }}
-      />
-
-      <TextareaDescription />
-    </div>
   );
 }
