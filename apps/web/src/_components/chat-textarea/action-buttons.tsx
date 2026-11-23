@@ -1,7 +1,7 @@
 import { GlobeIcon } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
+import { useConfigStore } from "@/components/provider/config-provider";
 import { ButtonWithTip } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
@@ -11,7 +11,7 @@ import { ChatModelSelector, ModelSelector } from "./model-selector";
 import { ChatReasoningPicker, ReasoningPicker } from "./reasoning-picker";
 
 import { getDefaultReasoning, getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
-import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
+import { useSetChatWebSearch } from "@/lib/chat/use-chat-settings";
 import { cn } from "@/lib/utils";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
@@ -155,24 +155,12 @@ export function BaseWebSearchButton({
 }
 
 function WebSearchButton() {
-  const configStore = useConfigStoreState();
-  const { syncThreadModelConfig } = useSyncThreadModelConfig();
+  const setChatWebSearch = useSetChatWebSearch();
   const config = useConfigStore(
     useShallow((state) => ({ webSearch: state.modelParams.webSearch, model: state.model })),
   );
 
   return (
-    <BaseWebSearchButton
-      model={config.model}
-      webSearch={config.webSearch}
-      setWebSearch={(webSearch) => {
-        configStore.setModelParams({ webSearch });
-
-        void syncThreadModelConfig({
-          model: config.model,
-          modelParams: { webSearch },
-        });
-      }}
-    />
+    <BaseWebSearchButton model={config.model} webSearch={config.webSearch} setWebSearch={setChatWebSearch} />
   );
 }

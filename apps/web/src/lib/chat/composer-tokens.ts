@@ -1,4 +1,5 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
+import { findAttachmentNames, splitMessageTokens } from "@ai-chat/shared/chat/message-content";
 import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { fromText, type Token, type TokenInputController, toText } from "@ui-sdk/react/token-input";
@@ -115,4 +116,36 @@ export function registerComposerController(id: string, controller: TokenInputCon
 
 export function getComposerController(id: string): TokenInputController | undefined {
   return composerControllers.get(id);
+}
+
+// Code and markdown links stay as typed; only plain text gets chips.
+const PROTECTED_MARKDOWN = /(```[\s\S]*?```|`[^`\n]*`|\[[^\]\n]*\]\([^)\n]*\))/;
+
+export function linkAttachmentNames(
+  text: string,
+  attachments: ReadonlyArray<{ _id: string; name: string }>,
+): string {
+  if (splitMessageTokens(text).some((segment) => segment.kind === "token")) return text;
+
+  const value: Array<string | Token> = [];
+
+  for (const [index, chunk] of text.split(PROTECTED_MARKDOWN).entries()) {
+    if (index % 2 === 1) {
+      value.push(chunk);
+      continue;
+    }
+
+    let lastIndex = 0;
+    for (const match of findAttachmentNames(chunk, attachments)) {
+      value.push(chunk.slice(lastIndex, match.index), {
+        type: FILE_TOKEN_TYPE,
+        value: match.id,
+        label: match.name,
+      });
+      lastIndex = match.index + match.name.length;
+    }
+    value.push(chunk.slice(lastIndex));
+  }
+
+  return toText(value.filter((segment) => segment !== ""));
 }

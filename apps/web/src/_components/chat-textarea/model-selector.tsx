@@ -31,13 +31,11 @@ import { Kbd } from "@/components/ui/kbd";
 import {
   AllModelIds,
   SelectableModelIds,
-  getDefaultReasoning,
-  getReasoningOptions,
   prettifyProviderName,
   tryGetModelData,
   type Provider,
 } from "@/lib/chat/models";
-import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
+import { useChangeChatModel } from "@/lib/chat/use-chat-settings";
 import { chatStoreActions } from "@/lib/store/chat-store";
 import { cn, tryCatch } from "@/lib/utils";
 
@@ -599,33 +597,13 @@ function SectionIcon({ section }: { section: PickerSectionKey }) {
 }
 
 export function ChatModelSelector() {
-  const { syncThreadModelConfig } = useSyncThreadModelConfig();
-
-  const { effort, storeModel, setConfig, setModelParams } = useConfigStore(
-    useShallow((state) => ({
-      effort: state.modelParams.effort,
-      storeModel: state.model,
-      setConfig: state.setConfig,
-      setModelParams: state.setModelParams,
-    })),
-  );
-
-  function handleChange(model: string) {
-    chatStoreActions.retainCompatibleAttachments(model);
-    const modelData = tryGetModelData(model);
-    const nextEffort =
-      modelData && !getReasoningOptions(modelData).includes(effort) ? getDefaultReasoning(modelData) : effort;
-
-    setConfig({ model });
-
-    if (nextEffort !== effort) setModelParams({ effort: nextEffort });
-    void syncThreadModelConfig({ model, modelParams: { effort: nextEffort } });
-  }
+  const storeModel = useConfigStore((state) => state.model);
+  const changeChatModel = useChangeChatModel();
 
   return (
     <ModelSelectorBase
       value={storeModel}
-      onChange={handleChange}
+      onChange={changeChatModel}
       triggerId="button-chat-model-selector-trigger"
       className="min-w-15 shrink sm:shrink-0"
     />

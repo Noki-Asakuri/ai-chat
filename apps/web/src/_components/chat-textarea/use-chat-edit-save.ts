@@ -33,8 +33,18 @@ export function useChatEditSave() {
 
     startSaving(async () => {
       const acceptedInputs = tryGetModelData(editMessage.model)?.modalities.input ?? [];
-      const referenced = (await resolveComposerAttachments(convexClient, referencedIds)).filter(
-        (attachment) => acceptedInputs.includes(attachment.type),
+      // Chips for files already on the message need no lookup; they are in currentAttachments.
+      const referencedSet = new Set<string>(referencedIds);
+      const currentReferenced = editMessage.currentAttachments.filter((attachment) =>
+        referencedSet.has(attachment._id),
+      );
+      const currentIds = new Set<string>(editMessage.currentAttachments.map((attachment) => attachment._id));
+      const newReferenced = await resolveComposerAttachments(
+        convexClient,
+        referencedIds.filter((id) => !currentIds.has(id)),
+      );
+      const referenced = [...currentReferenced, ...newReferenced].filter((attachment) =>
+        acceptedInputs.includes(attachment.type),
       );
       const uploaded = await uploadUserAttachment(editMessage.attachments, threadId);
 
