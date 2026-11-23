@@ -154,7 +154,7 @@ export function ChatEditSendButton({ isSaving, onSave }: ChatEditSendButtonProps
   const [open, setOpen] = React.useState(false);
 
   return (
-    <div className="flex gap-2">
+    <div className="ml-auto flex gap-2">
       <ButtonWithTip
         type="button"
         size="none"

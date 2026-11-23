@@ -30,7 +30,7 @@ import {
 } from "@ui-sdk/react/trigger-menu";
 import { useConvex } from "convex/react";
 import { BrainIcon, CheckIcon, CpuIcon, GlobeIcon, UserRoundIcon, XIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Icons } from "../ui/icons";
@@ -76,6 +76,7 @@ export type RichComposerProps = {
   onConfirm?: () => void;
   disabled?: boolean;
   enableCommands?: boolean;
+  compact?: boolean;
   className?: string;
 };
 
@@ -88,6 +89,7 @@ export function RichComposer({
   onConfirm,
   disabled,
   enableCommands = false,
+  compact = false,
   className,
 }: RichComposerProps) {
   const convexClient = useConvex();
@@ -102,6 +104,7 @@ export function RichComposer({
   });
   const profiles = profilesQuery.data ?? [];
   const commands = useComposerCommands();
+  const isNarrowScreen = useIsNarrowScreen();
 
   useEffect(() => registerComposerController(id, controller), [id, controller]);
 
@@ -168,7 +171,7 @@ export function RichComposer({
 
   return (
     <div
-      className="flex grow flex-row items-start p-2.5"
+      className={cn("flex grow flex-row items-start", compact ? "px-3 pt-2.5 pb-1 sm:p-2.5" : "p-2.5")}
       onPasteCapture={(event) => {
         const files = Array.from(event.clipboardData.items).flatMap((item) => {
           if (item.kind !== "file") return [];
@@ -207,10 +210,16 @@ export function RichComposer({
           data-composer={id}
           aria-label="Type your message here..."
           aria-describedby="textarea-description"
-          placeholder={getPlaceholder({ commands: enableCommands, files: acceptedTypes !== null })}
+          placeholder={getPlaceholder({
+            commands: enableCommands,
+            files: acceptedTypes !== null,
+            short: compact && isNarrowScreen,
+          })}
           spellCheck
           className={cn(
-            "max-h-62.5 min-h-[calc(3lh)] w-full overflow-y-auto text-sm leading-normal break-words whitespace-pre-wrap caret-primary outline-none",
+            "w-full overflow-y-auto text-sm leading-normal break-words whitespace-pre-wrap caret-primary outline-none",
+            // On phones the compact composer starts as one line and grows as you type.
+            compact ? "max-h-40 min-h-lh sm:max-h-62.5 sm:min-h-[calc(3lh)]" : "max-h-62.5 min-h-[calc(3lh)]",
             "data-disabled:cursor-not-allowed data-disabled:opacity-50",
             "data-empty:before:pointer-events-none data-empty:before:text-muted-foreground/90 data-empty:before:content-[attr(aria-placeholder)]",
             className,
@@ -482,7 +491,38 @@ function getAcceptedAttachmentTypes(modelId: string): "all" | "image" | "pdf" | 
   return null;
 }
 
-function getPlaceholder({ commands, files }: { commands: boolean; files: boolean }): string {
+const NARROW_SCREEN_QUERY = "(max-width: 639px)";
+
+function subscribeToNarrowScreen(onChange: () => void): () => void {
+  const query = window.matchMedia(NARROW_SCREEN_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function useIsNarrowScreen(): boolean {
+  return useSyncExternalStore(
+    subscribeToNarrowScreen,
+    () => window.matchMedia(NARROW_SCREEN_QUERY).matches,
+    () => false,
+  );
+}
+
+function getPlaceholder({
+  commands,
+  files,
+  short,
+}: {
+  commands: boolean;
+  files: boolean;
+  short: boolean;
+}): string {
+  if (short) {
+    if (commands && files) return "Message, / commands, @ files";
+    if (commands) return "Message, / for commands";
+    if (files) return "Message, @ for files";
+    return "Message";
+  }
+
   if (commands && files) return "Type your message. / for commands, @ for a past file";
   if (commands) return "Type your message. / for commands";
   if (files) return "Type your message. @ for a past file";

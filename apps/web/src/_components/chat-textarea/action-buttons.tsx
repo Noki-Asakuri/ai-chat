@@ -61,7 +61,7 @@ export function ChatEditActionButtons() {
     modelData?.modalities.input.some((modality) => modality === "image" || modality === "pdf") ?? false;
 
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
       <ModelSelector
         value={editMessage.model}
         onChange={(model) => {
@@ -78,11 +78,12 @@ export function ChatEditActionButtons() {
           });
         }}
         triggerId="button-edit-model-selector-trigger"
+        className="max-w-full shrink"
       />
 
       {supportsReasoning && (
         <>
-          <ActionButtonSeparator />
+          <ActionButtonSeparator className="hidden sm:block" />
           <ReasoningPicker
             model={editMessage.model}
             value={editMessage.modelParams.effort ?? "medium"}
@@ -96,7 +97,7 @@ export function ChatEditActionButtons() {
       )}
       {supportsWebSearch && (
         <>
-          <ActionButtonSeparator />
+          <ActionButtonSeparator className="hidden sm:block" />
           <BaseWebSearchButton
             model={editMessage.model}
             webSearch={editMessage.modelParams.webSearch ?? false}
@@ -110,7 +111,7 @@ export function ChatEditActionButtons() {
       )}
       {supportsAttachments && (
         <>
-          <ActionButtonSeparator />
+          <ActionButtonSeparator className="hidden sm:block" />
           <BaseChatAttachmentsButton
             model={editMessage.model}
             handleAddAttachments={(attachments) => {
@@ -123,8 +124,8 @@ export function ChatEditActionButtons() {
   );
 }
 
-function ActionButtonSeparator() {
-  return <Separator orientation="vertical" className="h-5 self-auto" />;
+function ActionButtonSeparator({ className }: { className?: string }) {
+  return <Separator orientation="vertical" className={cn("h-5 self-auto", className)} />;
 }
 
 export function BaseWebSearchButton({

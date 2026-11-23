@@ -127,7 +127,7 @@ export function ChatEditTextarea() {
               disabled={isSaving}
             />
 
-            <div className="flex items-end justify-between border-t px-2.5 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t px-2.5 py-2">
               <ChatEditActionButtons />
               <ChatEditSendButton isSaving={isSaving} onSave={saveEdits} />
             </div>
