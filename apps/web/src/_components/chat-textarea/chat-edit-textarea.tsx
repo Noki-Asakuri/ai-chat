@@ -3,7 +3,7 @@ import { toast } from "@/components/ui/toast";
 
 import { ChatEditActionButtons } from "./action-buttons";
 import { ChatEditAttachmentsDisplay } from "./chat-edit-attachments-display";
-import { BaseInputTextArea } from "./main-textarea";
+import { RichComposer } from "./rich-composer";
 import { ChatEditSendButton } from "./send-button";
 import { useChatEditSave } from "./use-chat-edit-save";
 
@@ -117,10 +117,11 @@ export function ChatEditTextarea() {
           <ChatEditAttachmentsDisplay />
 
           <div>
-            <BaseInputTextArea
+            <RichComposer
               id="textarea-user-message-edit"
               input={editMessage.input}
               setInput={(input) => chatStoreActions.updateEditMessage({ input })}
+              model={editMessage.model}
               handleAddAttachments={handleAddAttachments}
               onConfirm={saveEdits}
               disabled={isSaving}

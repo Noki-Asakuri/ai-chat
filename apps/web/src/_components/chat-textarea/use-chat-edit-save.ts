@@ -2,10 +2,12 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useSessionId } from "convex-helpers/react/sessions";
-import { useMutation } from "convex/react";
+import { useConvex, useMutation } from "convex/react";
 import * as React from "react";
 
 import { buildAttachmentUrl } from "@/lib/assets/urls";
+import { parseComposerInput, resolveComposerAttachments } from "@/lib/chat/composer-tokens";
+import { tryGetModelData } from "@/lib/chat/models";
 import { useRetryTurn } from "@/lib/chat/server-function/retry-turn";
 import { uploadUserAttachment } from "@/lib/chat/shared";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
@@ -16,6 +18,7 @@ export function useChatEditSave() {
   const { retryTurn } = useRetryTurn();
   const deleteAttachments = useMutation(api.functions.attachments.deleteAttachments);
   const [sessionId] = useSessionId();
+  const convexClient = useConvex();
   const [isSaving, startSaving] = React.useTransition();
 
   function saveEdits() {
@@ -26,18 +29,25 @@ export function useChatEditSave() {
 
     if (!editMessage || !sessionId || !threadId) return;
 
+    const { text, attachmentIds: referencedIds } = parseComposerInput(editMessage.input);
+
     startSaving(async () => {
+      const acceptedInputs = tryGetModelData(editMessage.model)?.modalities.input ?? [];
+      const referenced = (await resolveComposerAttachments(convexClient, referencedIds)).filter((attachment) =>
+        acceptedInputs.includes(attachment.type),
+      );
       const uploaded = await uploadUserAttachment(editMessage.attachments, threadId);
 
-      const attachmentById = new Map<Id<"attachments">, Doc<"attachments">>();
-      for (const attachment of editMessage.currentAttachments) {
+      const attachmentById = new Map<Id<"attachments">, Pick<Doc<"attachments">, "path" | "mimeType">>();
+      for (const attachment of [...editMessage.currentAttachments, ...referenced]) {
         attachmentById.set(attachment._id, attachment);
       }
 
+      const keptAttachmentIds = [...editMessage.keptAttachmentIds, ...referenced.map((attachment) => attachment._id)];
       const finalAttachmentIds: Array<Id<"attachments">> = [];
       const seenIds = new Set<Id<"attachments">>();
 
-      for (const attachmentId of editMessage.keptAttachmentIds) {
+      for (const attachmentId of keptAttachmentIds) {
         if (seenIds.has(attachmentId)) continue;
         seenIds.add(attachmentId);
         finalAttachmentIds.push(attachmentId);
@@ -51,7 +61,7 @@ export function useChatEditSave() {
 
       const fileParts: Array<ChatMessage["parts"][number]> = [];
 
-      for (const attachmentId of editMessage.keptAttachmentIds) {
+      for (const attachmentId of new Set(keptAttachmentIds)) {
         const attachment = attachmentById.get(attachmentId);
         if (!attachment) continue;
 
@@ -66,7 +76,7 @@ export function useChatEditSave() {
         fileParts.push({ type: "file", url, mediaType: item.mediaType });
       }
 
-      const parts: ChatMessage["parts"] = [{ type: "text", text: editMessage.input, state: "done" }];
+      const parts: ChatMessage["parts"] = [{ type: "text", text, state: "done" }];
 
       for (const part of fileParts) {
         parts.push(part);

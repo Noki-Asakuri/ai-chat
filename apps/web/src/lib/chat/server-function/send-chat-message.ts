@@ -10,6 +10,8 @@ import { useShallow } from "zustand/shallow";
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 
 import { buildAttachmentUrl } from "@/lib/assets/urls";
+import { parseComposerInput, resolveComposerAttachments } from "@/lib/chat/composer-tokens";
+import { tryGetModelData } from "@/lib/chat/models";
 import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
@@ -25,6 +27,7 @@ import {
   isAbortError,
   throwIfChatResponseError,
 } from "./chat-errors";
+import { useSyncThreadModelConfig } from "./sync-thread-model-config";
 
 type CreateMessage = (typeof api.functions.messages.addMessagesToThread)["_args"]["messages"][number];
 type MessageParts = CreateMessage["parts"];
@@ -35,6 +38,7 @@ export function useSendChatMessage() {
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
   const convexClient = useConvex();
+  const { syncThreadModelConfig } = useSyncThreadModelConfig();
   const { modelParams, model, notificationSound, desktopNotification } = useConfigStore(
     useShallow((state) => ({
       model: state.model,
@@ -47,7 +51,9 @@ export function useSendChatMessage() {
   async function sendChatRequest() {
     let threadId: Id<"threads"> | null = fromUUID<Id<"threads">>(params?.threadId) ?? null;
 
-    const { input, attachments } = useChatStore.getState();
+    const { input: composerInput, attachments } = useChatStore.getState();
+    const { text: input, profileId, profileLabel, attachmentIds: pastAttachmentIds } =
+      parseComposerInput(composerInput);
     const messageState = useMessageStore.getState();
 
     const messagesHistory = messageState.messageIds
@@ -56,14 +62,41 @@ export function useSendChatMessage() {
 
     const lastMessage = messagesHistory[messagesHistory.length - 1];
 
-    if (!input || lastMessage?.status === "pending" || lastMessage?.status === "streaming") return;
+    if (lastMessage?.status === "pending" || lastMessage?.status === "streaming") return;
+
+    if (profileId && profileId !== modelParams.profile) {
+      configStore.setModelParams({ profile: profileId });
+      if (threadId) void syncThreadModelConfig({ threadId, modelParams: { profile: profileId } });
+    }
+
+    if (!input) {
+      if (!profileId) return;
+
+      chatStoreActions.setInput("");
+      toast.success(`Using ${profileLabel ?? "profile"} for this thread`);
+      return;
+    }
+
     chatStoreActions.resetInput();
+
+    const requestModelParams = { ...modelParams, profile: profileId ?? modelParams.profile };
+    const acceptedInputs = tryGetModelData(model)?.modalities.input ?? [];
+    const [pastAttachments, pastAttachmentsError] = await tryCatch(
+      resolveComposerAttachments(convexClient, pastAttachmentIds),
+    );
+    if (pastAttachmentsError) {
+      console.error("[Chat] Failed to resolve referenced attachments", pastAttachmentsError);
+      toast.error("Couldn't attach referenced files", { description: pastAttachmentsError.message });
+    }
+    const referencedAttachments = (pastAttachments ?? []).filter((attachment) =>
+      acceptedInputs.includes(attachment.type),
+    );
 
     if (!threadId) {
       threadId = await convexClient.mutation(api.functions.threads.createThread, {
         groupId: useThreadStore.getState().activeGroupId,
         latestModel: model,
-        latestModelParams: modelParams,
+        latestModelParams: requestModelParams,
       });
 
       await navigate({ to: "/threads/$threadId", params: { threadId: toUUID(threadId) } });
@@ -92,7 +125,7 @@ export function useSendChatMessage() {
         timeToFirstTokenMs: 0,
         usages: { inputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
         durations: { request: 0, reasoning: 0, text: 0 },
-        modelParams: modelParams,
+        modelParams: requestModelParams,
       },
     };
 
@@ -123,10 +156,19 @@ export function useSendChatMessage() {
       parts: userMessageRequestParts,
     });
 
-    if (uploadedAttachments.length > 0) {
-      const attachmentIds = uploadedAttachments.map((a) => a.attachmentId);
+    const linkedAttachments = [
+      ...referencedAttachments.map((attachment) => ({
+        attachmentId: attachment._id,
+        path: attachment.path,
+        mediaType: attachment.mimeType,
+      })),
+      ...uploadedAttachments,
+    ];
 
-      for (const { path, mediaType } of uploadedAttachments) {
+    if (linkedAttachments.length > 0) {
+      const attachmentIds = linkedAttachments.map((a) => a.attachmentId);
+
+      for (const { path, mediaType } of linkedAttachments) {
         const url = buildAttachmentUrl(path, mediaType);
 
         messages[messages.length - 1]!.parts.push({ type: "file", url, mediaType });
@@ -146,7 +188,7 @@ export function useSendChatMessage() {
         threadId,
         messages,
         assistantMessageId,
-        modelParams: modelParams,
+        modelParams: requestModelParams,
       };
 
       const response = await fetch(new URL("/api/ai/chat", import.meta.env.VITE_API_ENDPOINT), {
@@ -197,7 +239,7 @@ export function useSendChatMessage() {
             error: errorMessage,
             metadata: {
               model: { request: model, response: null },
-              modelParams: modelParams,
+              modelParams: requestModelParams,
             },
           }),
         );

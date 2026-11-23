@@ -16,7 +16,8 @@ import {
   setStickyToBottom,
 } from "@/lib/chat/scroll-stickiness";
 import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
-import { focusTextareaByIdAtEnd } from "@/lib/chat/focus-textarea";
+import { getComposerController } from "@/lib/chat/composer-tokens";
+import { focusTextareaByIdAtEnd, isEditableTarget } from "@/lib/chat/focus-textarea";
 import { useAbortChatStream } from "@/lib/chat/server-function/abort-chat-stream";
 import { useWindowEvent } from "@/lib/hooks/use-window-event";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
@@ -54,8 +55,8 @@ export function RegisterEventHandlers() {
     if (event.clipboardData?.files.length) {
       const target = event.target;
 
-      // If paste is inside either composer textarea, let that component handle it
-      if (target instanceof HTMLTextAreaElement) return;
+      // If paste is inside either composer, let that component handle it
+      if (isEditableTarget(target)) return;
 
       // Default behavior: add files to the global chat composer
       const files = Array.from(event.clipboardData.files ?? []);
@@ -82,17 +83,14 @@ export function RegisterEventHandlers() {
     const text = event.clipboardData?.getData("text") ?? "";
     if (!text) return;
 
-    const target = event.target;
-    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return;
-
-    const chatInput = document.querySelector<HTMLTextAreaElement>("#textarea-chat-input");
-    if (!chatInput) return;
+    if (isEditableTarget(event.target)) return;
+    if (!getComposerController("textarea-chat-input")) return;
 
     event.preventDefault();
     event.stopPropagation();
 
-    chatInput.focus();
-    chatInput.value += text;
+    chatStoreActions.setInput(`${useChatStore.getState().input}${text}`);
+    focusTextareaByIdAtEnd("textarea-chat-input");
   });
 
   // Handle global copy events, prevent trailing newline
@@ -126,10 +124,7 @@ export function RegisterEventHandlers() {
     const isEditMessage = getIsEditMessage();
     const { status, threadId } = getStatusAndThreadId();
 
-    const shouldFocusTextarea =
-      !(target instanceof HTMLTextAreaElement) &&
-      !(target instanceof HTMLInputElement) &&
-      !(target instanceof HTMLElement && target.isContentEditable);
+    const shouldFocusTextarea = !isEditableTarget(target);
 
     if (
       !event.ctrlKey &&
