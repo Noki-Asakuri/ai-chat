@@ -1,5 +1,6 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import { toPlainMessageText } from "@ai-chat/shared/chat/message-content";
 
 import { toast } from "@/components/ui/toast";
 import { useCopyToClipboard } from "@uidotdev/usehooks";
@@ -126,7 +127,8 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
 
   const content = message.parts
     .reduce<Array<string>>((textParts, part) => {
-      if (isTextPart(part)) textParts.push(part.text);
+      if (isTextPart(part))
+        textParts.push(message.role === "user" ? toPlainMessageText(part.text) : part.text);
       return textParts;
     }, [])
     .join("\n\n");

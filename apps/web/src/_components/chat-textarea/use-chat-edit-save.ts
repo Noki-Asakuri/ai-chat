@@ -29,12 +29,12 @@ export function useChatEditSave() {
 
     if (!editMessage || !sessionId || !threadId) return;
 
-    const { text, attachmentIds: referencedIds } = parseComposerInput(editMessage.input);
+    const { displayText, attachmentIds: referencedIds } = parseComposerInput(editMessage.input);
 
     startSaving(async () => {
       const acceptedInputs = tryGetModelData(editMessage.model)?.modalities.input ?? [];
-      const referenced = (await resolveComposerAttachments(convexClient, referencedIds)).filter((attachment) =>
-        acceptedInputs.includes(attachment.type),
+      const referenced = (await resolveComposerAttachments(convexClient, referencedIds)).filter(
+        (attachment) => acceptedInputs.includes(attachment.type),
       );
       const uploaded = await uploadUserAttachment(editMessage.attachments, threadId);
 
@@ -43,7 +43,10 @@ export function useChatEditSave() {
         attachmentById.set(attachment._id, attachment);
       }
 
-      const keptAttachmentIds = [...editMessage.keptAttachmentIds, ...referenced.map((attachment) => attachment._id)];
+      const keptAttachmentIds = [
+        ...editMessage.keptAttachmentIds,
+        ...referenced.map((attachment) => attachment._id),
+      ];
       const finalAttachmentIds: Array<Id<"attachments">> = [];
       const seenIds = new Set<Id<"attachments">>();
 
@@ -76,7 +79,7 @@ export function useChatEditSave() {
         fileParts.push({ type: "file", url, mediaType: item.mediaType });
       }
 
-      const parts: ChatMessage["parts"] = [{ type: "text", text, state: "done" }];
+      const parts: ChatMessage["parts"] = [{ type: "text", text: displayText, state: "done" }];
 
       for (const part of fileParts) {
         parts.push(part);

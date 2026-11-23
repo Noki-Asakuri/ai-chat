@@ -52,8 +52,13 @@ export function useSendChatMessage() {
     let threadId: Id<"threads"> | null = fromUUID<Id<"threads">>(params?.threadId) ?? null;
 
     const { input: composerInput, attachments } = useChatStore.getState();
-    const { text: input, profileId, profileLabel, attachmentIds: pastAttachmentIds } =
-      parseComposerInput(composerInput);
+    const {
+      text: input,
+      displayText,
+      profileId,
+      profileLabel,
+      attachmentIds: pastAttachmentIds,
+    } = parseComposerInput(composerInput);
     const messageState = useMessageStore.getState();
 
     const messagesHistory = messageState.messageIds
@@ -109,7 +114,7 @@ export function useSendChatMessage() {
       messageId: crypto.randomUUID(),
       role: "user",
       status: "complete",
-      parts: [{ type: "text", text: input, state: "done" }],
+      parts: [{ type: "text", text: displayText, state: "done" }],
       attachments: [],
     };
 
@@ -148,7 +153,7 @@ export function useSendChatMessage() {
     const messages = convertToUIChatMessages(messagesHistory);
     const uploadedAttachments = await uploadUserAttachment(attachments, threadId);
     const userMessageRequestParts: UIChatMessage["parts"] = [{ type: "text", text: input }];
-    const userMessageDisplayParts: MessageParts = [{ type: "text", text: input }];
+    const userMessageDisplayParts: MessageParts = [{ type: "text", text: displayText }];
 
     messages.push({
       role: "user",

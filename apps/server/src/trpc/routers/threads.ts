@@ -1,6 +1,7 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { chatModelParamsSchema } from "@ai-chat/shared/chat/request";
+import { toPlainMessageText } from "@ai-chat/shared/chat/message-content";
 
 import { TRPCError } from "@trpc/server";
 import type { TextPart } from "ai";
@@ -73,7 +74,10 @@ export const threadRouter = router({
     }
 
     const textParts = firstUser.parts.filter((part): part is TextPart => part.type === "text");
-    const content = textParts.length > 0 ? textParts.map((part) => part.text).join("\n\n") : "Empty Message";
+    const content =
+      textParts.length > 0
+        ? textParts.map((part) => toPlainMessageText(part.text)).join("\n\n")
+        : "Empty Message";
 
     await generateNewThreadTitleAndSave(convexClient, {
       modelMessages: [{ role: "user", content }],
