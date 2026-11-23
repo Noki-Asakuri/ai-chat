@@ -2,7 +2,7 @@ import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
 import { splitMessageTokens } from "@ai-chat/shared/chat/message-content";
 
 import { createContext, use, useMemo } from "react";
-import { defaultComponents, type Components } from "streamdown";
+import { defaultComponents, defaultRehypePlugins, type Components, type StreamdownProps } from "streamdown";
 
 import { fileChipClassName, FileChipContent, tokenChipClassName } from "../chat-textarea/token-chip";
 
@@ -17,7 +17,7 @@ const SANITIZED_TOKEN_HREF_PREFIX = "#user-content-message-token/";
 const USER_ROLE: ChatMessage["role"] = "user";
 
 type MessageAttachments = ReadonlyArray<
-  { _id: string } & Pick<Doc<"attachments">, "type" | "path" | "mimeType">
+  { _id: string } & Pick<Doc<"attachments">, "name" | "type" | "path" | "mimeType">
 >;
 
 const MessageAttachmentsContext = createContext<MessageAttachments>([]);
@@ -32,10 +32,13 @@ function toMarkdownWithTokenLinks(text: string): string {
     .map((segment) => {
       if (segment.kind === "text") return segment.text;
 
-      const path = [segment.type, segment.value, segment.label].map(encodeURIComponent).join("/");
-      return `[${escapeLinkText(segment.label)}](${TOKEN_HREF_PREFIX}${path})`;
+      return `[${escapeLinkText(segment.label)}](${toTokenHref(segment.type, segment.value, segment.label)})`;
     })
     .join("");
+}
+
+function toTokenHref(type: string, value: string, label: string): string {
+  return `${TOKEN_HREF_PREFIX}${[type, value, label].map(encodeURIComponent).join("/")}`;
 }
 
 function parseTokenHref(href: string | undefined) {
@@ -48,6 +51,76 @@ function parseTokenHref(href: string | undefined) {
   if (!type || !value || label === undefined) return null;
 
   return { type, value, label };
+}
+
+type HastText = { type: "text"; value: string };
+type HastElement = {
+  type: "element";
+  tagName: string;
+  properties: Record<string, boolean | number | string | Array<number | string> | null | undefined>;
+  children: HastNode[];
+};
+type HastNode =
+  HastText | HastElement | { type: "root" | "comment" | "doctype" | "raw"; children?: HastNode[] };
+type RehypePlugin = NonNullable<StreamdownProps["rehypePlugins"]>[number];
+
+const SKIPPED_TAGS = new Set(["a", "code", "pre"]);
+
+function escapeRegExp(text: string): string {
+  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Messages sent before file chips were saved hold the attachment's name as plain text. Turn those
+// names into the same token links, after markdown parsing so code spans and links stay untouched.
+function createAttachmentNamePlugin(attachments: MessageAttachments): RehypePlugin | null {
+  const idByName = new Map<string, string>();
+  for (const attachment of attachments) {
+    if (attachment.name.trim().length > 0 && !idByName.has(attachment.name)) {
+      idByName.set(attachment.name, attachment._id);
+    }
+  }
+  if (idByName.size === 0) return null;
+
+  const names = [...idByName.keys()].toSorted((a, b) => b.length - a.length).map(escapeRegExp);
+  // A name counts only as a whole word: not inside a longer file name, though a trailing period may end the sentence.
+  const pattern = new RegExp(`(?<![\\w.-])(?:${names.join("|")})(?![\\w-])(?!\\.\\w)`, "g");
+
+  function splitText(node: HastText): HastNode[] {
+    const nodes: HastNode[] = [];
+    let lastIndex = 0;
+
+    for (const match of node.value.matchAll(pattern)) {
+      const id = idByName.get(match[0]);
+      if (!id) continue;
+
+      if (match.index > lastIndex)
+        nodes.push({ type: "text", value: node.value.slice(lastIndex, match.index) });
+      nodes.push({
+        type: "element",
+        tagName: "a",
+        properties: { href: toTokenHref(FILE_TOKEN_TYPE, id, match[0]) },
+        children: [{ type: "text", value: match[0] }],
+      });
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex === 0) return [node];
+    if (lastIndex < node.value.length) nodes.push({ type: "text", value: node.value.slice(lastIndex) });
+    return nodes;
+  }
+
+  function visit(node: HastNode): void {
+    if (!("children" in node) || !node.children) return;
+    if (node.type === "element" && SKIPPED_TAGS.has(node.tagName)) return;
+
+    node.children = node.children.flatMap((child) => {
+      if (child.type === "text") return splitText(child);
+      visit(child);
+      return [child];
+    });
+  }
+
+  return () => (tree: HastNode) => visit(tree);
 }
 
 const DefaultLink = defaultComponents.a;
@@ -86,9 +159,15 @@ const components: Components = { a: MessageLink };
 export function MessageUserText({ text, attachments }: { text: string; attachments: MessageAttachments }) {
   const markdown = useMemo(() => toMarkdownWithTokenLinks(text), [text]);
 
+  const rehypePlugins = useMemo(() => {
+    const hasSavedTokens = splitMessageTokens(text).some((segment) => segment.kind === "token");
+    const attachmentNames = hasSavedTokens ? null : createAttachmentNamePlugin(attachments);
+    return attachmentNames ? [...Object.values(defaultRehypePlugins), attachmentNames] : undefined;
+  }, [text, attachments]);
+
   return (
     <MessageAttachmentsContext value={attachments}>
-      <StreamDownWrapper role={USER_ROLE} components={components}>
+      <StreamDownWrapper role={USER_ROLE} components={components} rehypePlugins={rehypePlugins}>
         {markdown}
       </StreamDownWrapper>
     </MessageAttachmentsContext>
