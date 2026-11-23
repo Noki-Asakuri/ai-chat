@@ -58,7 +58,7 @@ export function ChatTextarea() {
           <div>
             <InputChatTextArea />
 
-            <div className="flex items-end gap-2 px-2 pt-1 pb-2.5 sm:px-3 sm:pb-3">
+            <div className="flex items-end gap-2 px-2 pt-1 pb-2 sm:px-3 sm:pb-3">
               <ChatActionButtons />
               <ChatSendButton />
             </div>
@@ -137,6 +137,7 @@ function InputChatTextArea() {
       handleAddAttachments={handleAddAttachments}
       onConfirm={sendChatRequest}
       enableCommands
+      compact
     />
   );
 }
