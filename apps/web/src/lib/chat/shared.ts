@@ -1,5 +1,6 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import { toPlainMessageText } from "@ai-chat/shared/chat/message-content";
 import { z } from "zod/v4";
 
 import { consumeUIMessageStreamResponse } from "./stream-handler";
@@ -73,16 +74,24 @@ export async function readResponseErrorMessage(response: Response): Promise<stri
 }
 
 export function convertToUIChatMessages(messages: UIConvertibleMessage[]): UIChatMessage[] {
-  return messages.map(
-    (message): UIChatMessage => ({
+  return messages.map((message): UIChatMessage => {
+    // SAFETY: Convex validates persisted message parts with AISDKParts, which mirrors UIMessagePart.
+    // eslint-disable-next-line typescript/no-unsafe-type-assertion
+    const parts = message.parts as UIChatMessage["parts"];
+
+    return {
       id: message.messageId,
       role: message.role,
-      // SAFETY: Convex validates persisted message parts with AISDKParts, which mirrors UIMessagePart.
-      // eslint-disable-next-line typescript/no-unsafe-type-assertion
-      parts: message.parts as UIChatMessage["parts"],
+      // User text is stored with composer chips as `[@label](type:value)`; the model reads the labels.
+      parts:
+        message.role === "user"
+          ? parts.map((part) =>
+              part.type === "text" ? { ...part, text: toPlainMessageText(part.text) } : part,
+            )
+          : parts,
       metadata: message.metadata,
-    }),
-  );
+    };
+  });
 }
 
 export async function processStreamResponse(
@@ -143,21 +152,16 @@ export function uploadUserAttachment(
   const uploadPromises: Promise<UploadedAttachment>[] = [];
   const convexClient = getConvexReactClient();
 
-  async function createAttachmentAndUploadToR2(
-    attachment: UserAttachment,
-  ): Promise<UploadedAttachment> {
-    const createAttachmentPromise = convexClient.mutation(
-      api.functions.attachments.createAttachment,
-      {
-        id: attachment.id,
-        name: attachment.file.name,
-        size: attachment.file.size,
-        mimeType: attachment.file.type,
-        threadId: threadId,
-        source: "user",
-        type: attachment.type,
-      },
-    );
+  async function createAttachmentAndUploadToR2(attachment: UserAttachment): Promise<UploadedAttachment> {
+    const createAttachmentPromise = convexClient.mutation(api.functions.attachments.createAttachment, {
+      id: attachment.id,
+      name: attachment.file.name,
+      size: attachment.file.size,
+      mimeType: attachment.file.type,
+      threadId: threadId,
+      source: "user",
+      type: attachment.type,
+    });
 
     const uploadFilePromise = uploadFileToR2(attachment.file, { fileId: attachment.id, threadId });
 

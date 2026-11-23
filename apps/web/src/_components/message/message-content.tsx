@@ -20,6 +20,7 @@ import { StreamDownWrapper } from "./message-markdown";
 import { MessagePending } from "./message-pending";
 import { MessageReasoning } from "./message-reasoning";
 import { MessageStepDivider, MessageToolParts } from "./message-tool-parts";
+import { MessageUserText } from "./message-user-text";
 
 import { getUserDisplayName } from "@/lib/authkit/user";
 import { tryGetModelData } from "@/lib/chat/models";
@@ -125,9 +126,7 @@ export function MessageContent({ message, showUserAvatar = true }: MessageConten
                     key={`${message._id}-${i}`}
                     className="surface-edge bg-background/75 backdrop-blur-md backdrop-saturate-150 group-data-[role=assistant]:w-full md:p-4"
                   >
-                    <StreamDownWrapper isAnimating={part.state === "streaming"} role={message.role}>
-                      {part.text}
-                    </StreamDownWrapper>
+                    <MessageUserText text={part.text} attachments={message.attachments} />
                   </MessageBubble>
                 ))}
               </div>

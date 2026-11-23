@@ -1,7 +1,7 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { fromText, type Token, type TokenInputController } from "@ui-sdk/react/token-input";
+import { fromText, type Token, type TokenInputController, toText } from "@ui-sdk/react/token-input";
 import type { ConvexReactClient } from "convex/react";
 
 export const PROFILE_TOKEN_TYPE = "profile";
@@ -24,6 +24,7 @@ export type ComposerAttachment = Pick<
 
 export type ParsedComposerInput = {
   text: string;
+  displayText: string;
   profileId: Id<"profiles"> | null;
   profileLabel: string | null;
   attachmentIds: Array<Id<"attachments">>;
@@ -45,8 +46,11 @@ export function parseComposerInput(input: string): ParsedComposerInput {
   let profileId: Id<"profiles"> | null = null;
   let profileLabel: string | null = null;
   const attachmentIds: Array<Id<"attachments">> = [];
+  const displaySegments: Array<string | Token> = [];
 
   for (const segment of fromText(input)) {
+    if (!isToken(segment) || segment.type !== PROFILE_TOKEN_TYPE) displaySegments.push(segment);
+
     if (!isToken(segment)) {
       text += segment;
       continue;
@@ -66,7 +70,13 @@ export function parseComposerInput(input: string): ParsedComposerInput {
     text += segment.label;
   }
 
-  return { text: text.trim(), profileId, profileLabel, attachmentIds };
+  return {
+    text: text.trim(),
+    displayText: toText(displaySegments).trim(),
+    profileId,
+    profileLabel,
+    attachmentIds,
+  };
 }
 
 const attachmentCache = new Map<Id<"attachments">, ComposerAttachment>();

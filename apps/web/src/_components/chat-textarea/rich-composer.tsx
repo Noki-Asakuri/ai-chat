@@ -23,12 +23,20 @@ import {
   TriggerMenuList,
 } from "@ui-sdk/react/trigger-menu";
 import { useConvex } from "convex/react";
-import { FileTextIcon, ImageIcon, UserRoundIcon, XIcon } from "lucide-react";
+import { UserRoundIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
-import { buildAttachmentUrl, buildImageAssetUrl, buildImageThumbnailUrl } from "@/lib/assets/urls";
+import {
+  AttachmentGlyph,
+  FileChipContent,
+  fileChipClassName,
+  profileChipClassName,
+  tokenChipClassName,
+} from "./token-chip";
+
+import { buildImageAssetUrl } from "@/lib/assets/urls";
 import {
   type ComposerAttachment,
   FILE_TOKEN_TYPE,
@@ -42,7 +50,6 @@ import { useGetSendDescription } from "@/lib/chat/send-preference";
 import { useConfigStore } from "../provider/config-provider";
 import { cn, format } from "@/lib/utils";
 
-const CHIP_THUMBNAIL_TRANSFORM = "tr=w-64,h-64,c-at_max,f-auto,q-70";
 const ATTACHMENT_SUGGESTION_LIMIT = 8;
 
 export type RichComposerProps = {
@@ -136,7 +143,7 @@ export function RichComposer({
       return <FileChip label={token.label} attachment={getCachedComposerAttachment(token.value)} />;
     }
 
-    return <TokenInputToken className={chipClassName}>{token.label}</TokenInputToken>;
+    return <TokenInputToken className={tokenChipClassName}>{token.label}</TokenInputToken>;
   }
 
   return (
@@ -287,16 +294,9 @@ function ComposerSuggestion({ trigger, item }: { trigger: string | null; item: S
   );
 }
 
-const chipClassName = cn(
-  "mx-px inline-flex h-[1.5em] max-w-[24ch] items-center gap-1 rounded-[0.35rem] px-1.5 align-middle text-[0.9em] leading-none font-medium whitespace-nowrap select-none",
-  "ring-1 transition-[box-shadow,background-color] ring-inset data-selected:ring-2 data-pending:animate-pulse",
-);
-
 function ProfileChip({ label, imageKey }: { label: string; imageKey?: string }) {
   return (
-    <TokenInputToken
-      className={cn(chipClassName, "bg-primary/12 text-primary ring-primary/30 data-selected:ring-primary")}
-    >
+    <TokenInputToken className={profileChipClassName}>
       <Avatar className="size-[1.05em] rounded-full after:rounded-full">
         <AvatarImage src={imageKey ? buildImageAssetUrl(imageKey) : undefined} className="object-cover" />
         <AvatarFallback className="bg-primary/25 text-[0.6em] leading-none">
@@ -311,15 +311,8 @@ function ProfileChip({ label, imageKey }: { label: string; imageKey?: string }) 
 
 function FileChip({ label, attachment }: { label: string; attachment?: ComposerAttachment }) {
   return (
-    <TokenInputToken
-      className={cn(chipClassName, "bg-muted text-foreground ring-border data-selected:ring-primary")}
-    >
-      <AttachmentGlyph
-        attachment={attachment}
-        className="size-[1.05em] rounded-[0.2rem]"
-        iconClassName="size-[1em] text-muted-foreground"
-      />
-      <span className="truncate">{label}</span>
+    <TokenInputToken className={fileChipClassName}>
+      <FileChipContent label={label} attachment={attachment} />
       <ChipRemove />
     </TokenInputToken>
   );
@@ -331,29 +324,6 @@ function ChipRemove() {
       <XIcon aria-hidden="true" className="size-[0.95em]" />
     </TokenInputTokenRemove>
   );
-}
-
-function AttachmentGlyph({
-  attachment,
-  className,
-  iconClassName,
-}: {
-  attachment?: ComposerAttachment;
-  className?: string;
-  iconClassName?: string;
-}) {
-  if (attachment?.type === "image") {
-    const url = buildImageThumbnailUrl(
-      buildAttachmentUrl(attachment.path, attachment.mimeType),
-      CHIP_THUMBNAIL_TRANSFORM,
-    );
-    return <img src={url} alt="" className={cn("shrink-0 object-cover", className)} />;
-  }
-
-  if (attachment?.type === "pdf")
-    return <FileTextIcon aria-hidden="true" className={cn("shrink-0", iconClassName)} />;
-
-  return <ImageIcon aria-hidden="true" className={cn("shrink-0", iconClassName)} />;
 }
 
 function getAcceptedAttachmentTypes(modelId: string): "all" | "image" | "pdf" | null {
