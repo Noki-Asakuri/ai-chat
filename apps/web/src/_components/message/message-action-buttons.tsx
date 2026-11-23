@@ -50,6 +50,7 @@ import { MessageRetryMenu } from "./message-retry-menu";
 import { CancelledRetryDialog } from "./cancelled-retry-dialog";
 import { useMessageRetry } from "./use-message-retry";
 
+import { linkAttachmentNames } from "@/lib/chat/composer-tokens";
 import { useBranchThread } from "@/lib/chat/server-function/branch-thread";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
@@ -358,12 +359,15 @@ function EditButton({ menu = false, message }: { menu?: boolean; message: ChatMe
   function handleEditMessage() {
     chatStoreActions.setEditMessage({
       _id: message._id,
-      input: message.parts
-        .reduce<Array<string>>((textParts, part) => {
-          if (isTextPart(part)) textParts.push(part.text);
-          return textParts;
-        }, [])
-        .join("\n\n"),
+      input: linkAttachmentNames(
+        message.parts
+          .reduce<Array<string>>((textParts, part) => {
+            if (isTextPart(part)) textParts.push(part.text);
+            return textParts;
+          }, [])
+          .join("\n\n"),
+        message.attachments,
+      ),
 
       attachments: [],
       currentAttachments: message.attachments,

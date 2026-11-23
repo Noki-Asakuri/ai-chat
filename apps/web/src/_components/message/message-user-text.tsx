@@ -1,5 +1,5 @@
 import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
-import { splitMessageTokens } from "@ai-chat/shared/chat/message-content";
+import { findAttachmentNames, splitMessageTokens } from "@ai-chat/shared/chat/message-content";
 
 import { createContext, use, useMemo } from "react";
 import { defaultComponents, defaultRehypePlugins, type Components, type StreamdownProps } from "streamdown";
@@ -66,42 +66,26 @@ type RehypePlugin = NonNullable<StreamdownProps["rehypePlugins"]>[number];
 
 const SKIPPED_TAGS = new Set(["a", "code", "pre"]);
 
-function escapeRegExp(text: string): string {
-  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 // Messages sent before file chips were saved hold the attachment's name as plain text. Turn those
 // names into the same token links, after markdown parsing so code spans and links stay untouched.
 function createAttachmentNamePlugin(attachments: MessageAttachments): RehypePlugin | null {
-  const idByName = new Map<string, string>();
-  for (const attachment of attachments) {
-    if (attachment.name.trim().length > 0 && !idByName.has(attachment.name)) {
-      idByName.set(attachment.name, attachment._id);
-    }
-  }
-  if (idByName.size === 0) return null;
-
-  const names = [...idByName.keys()].toSorted((a, b) => b.length - a.length).map(escapeRegExp);
-  // A name counts only as a whole word: not inside a longer file name, though a trailing period may end the sentence.
-  const pattern = new RegExp(`(?<![\\w.-])(?:${names.join("|")})(?![\\w-])(?!\\.\\w)`, "g");
+  if (!attachments.some((attachment) => attachment.name.trim().length > 0)) return null;
 
   function splitText(node: HastText): HastNode[] {
     const nodes: HastNode[] = [];
     let lastIndex = 0;
 
-    for (const match of node.value.matchAll(pattern)) {
-      const id = idByName.get(match[0]);
-      if (!id) continue;
-
-      if (match.index > lastIndex)
+    for (const match of findAttachmentNames(node.value, attachments)) {
+      if (match.index > lastIndex) {
         nodes.push({ type: "text", value: node.value.slice(lastIndex, match.index) });
+      }
       nodes.push({
         type: "element",
         tagName: "a",
-        properties: { href: toTokenHref(FILE_TOKEN_TYPE, id, match[0]) },
-        children: [{ type: "text", value: match[0] }],
+        properties: { href: toTokenHref(FILE_TOKEN_TYPE, match.id, match.name) },
+        children: [{ type: "text", value: match.name }],
       });
-      lastIndex = match.index + match[0].length;
+      lastIndex = match.index + match.name.length;
     }
 
     if (lastIndex === 0) return [node];

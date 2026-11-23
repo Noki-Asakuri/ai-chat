@@ -136,7 +136,7 @@ function InputChatTextArea() {
       model={model}
       handleAddAttachments={handleAddAttachments}
       onConfirm={sendChatRequest}
-      enableProfiles
+      enableCommands
     />
   );
 }

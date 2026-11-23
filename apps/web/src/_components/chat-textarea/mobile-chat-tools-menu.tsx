@@ -2,7 +2,7 @@ import { BrainIcon, GlobeIcon, PaperclipIcon, SlidersHorizontalIcon } from "luci
 import { useRef } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
+import { useConfigStore } from "@/components/provider/config-provider";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,13 +21,12 @@ import { useChatAttachmentInput } from "./use-chat-attachment-input";
 import { REASONING_OPTIONS } from "./reasoning-options";
 
 import { getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
-import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread-model-config";
+import { useSetChatEffort, useSetChatWebSearch } from "@/lib/chat/use-chat-settings";
 import { chatStoreActions } from "@/lib/store/chat-store";
 import type { ReasoningEffort } from "@/lib/types";
 
 export function MobileChatToolsMenu() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const configStore = useConfigStoreState();
   const config = useConfigStore(
     useShallow((state) => ({
       effort: state.modelParams.effort,
@@ -35,7 +34,8 @@ export function MobileChatToolsMenu() {
       webSearch: state.modelParams.webSearch,
     })),
   );
-  const { syncThreadModelConfig } = useSyncThreadModelConfig();
+  const setChatEffort = useSetChatEffort();
+  const setChatWebSearch = useSetChatWebSearch();
   const { accept, handleChange, supportsAttachments } = useChatAttachmentInput({
     model: config.model,
     handleAddAttachments: chatStoreActions.addAttachments,
@@ -48,20 +48,11 @@ export function MobileChatToolsMenu() {
   if (reasoningOptions.length === 0 && !supportsWebSearch && !supportsAttachments) return null;
 
   function handleEffortChange(effort: ReasoningEffort) {
-    configStore.setModelParams({ effort });
-    void syncThreadModelConfig({
-      model: config.model,
-      modelParams: { effort },
-    });
+    setChatEffort(effort);
   }
 
   function handleWebSearchChange() {
-    const webSearch = !config.webSearch;
-    configStore.setModelParams({ webSearch });
-    void syncThreadModelConfig({
-      model: config.model,
-      modelParams: { webSearch },
-    });
+    setChatWebSearch(!config.webSearch);
   }
 
   return (
