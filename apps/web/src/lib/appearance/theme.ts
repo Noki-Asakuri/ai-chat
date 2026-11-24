@@ -103,6 +103,32 @@ function applyResolvedTheme(root: HTMLElement, resolved: ResolvedTheme) {
   if (meta) meta.content = resolved === "light" ? LIGHT_THEME_COLOR : DARK_THEME_COLOR;
 }
 
+function setAccentVariables(root: HTMLElement, accent: string | null) {
+  if (accent) {
+    root.style.setProperty("--custom-primary", accent);
+    root.style.setProperty("--custom-primary-foreground", getAccentForeground(accent));
+  } else {
+    root.style.removeProperty("--custom-primary");
+    root.style.removeProperty("--custom-primary-foreground");
+  }
+}
+
+/**
+ * Live accent preview for a color picker drag. It writes the accent straight to <html>, skipping
+ * React, and marks <html> so CSS turns transitions off; otherwise every step would restart color
+ * transitions across the page. Call `endAccentPreview` when the drag ends.
+ */
+export function previewAccent(root: HTMLElement, accent: string): void {
+  root.dataset.accentPreview = "";
+  setAccentVariables(root, accent);
+}
+
+/** Ends a live accent preview, optionally restoring an accent when the preview is discarded. */
+export function endAccentPreview(root: HTMLElement, restore?: { accent: string | null }): void {
+  if (restore) setAccentVariables(root, restore.accent);
+  delete root.dataset.accentPreview;
+}
+
 export function applyAppearance(root: HTMLElement, appearance: AppearancePreferences): void {
   for (const [name, value] of Object.entries(getAppearanceVariables(appearance))) {
     if (value) root.style.setProperty(name, value);
