@@ -94,6 +94,9 @@ export function ThemeCard(props: ThemeCardProps) {
     paintDraftAccent();
     draftRef.current = null;
     endAccentPreview(document.documentElement);
+    // Remount so the swatch and hex label drop the direct DOM writes and match React again
+    // (e.g. a dragged color that equals a preset leaves the custom swatch's props unchanged).
+    setPickerKey((key) => key + 1);
     props.onAccentChange(pending);
   }
 
@@ -192,7 +195,6 @@ export function ThemeCard(props: ThemeCardProps) {
                 <input
                   ref={attachPicker}
                   type="color"
-                  onBlur={commitDraftAccent}
                   className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
                   disabled={props.disabled}
                   defaultValue={customAccent ?? DEFAULT_CUSTOM_ACCENT}

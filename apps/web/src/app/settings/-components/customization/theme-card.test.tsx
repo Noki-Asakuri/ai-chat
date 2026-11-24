@@ -69,9 +69,10 @@ describe("ThemeCard custom accent", () => {
     const { onAccentChange, picker } = renderCard();
 
     await interact(() => fireEvent.input(picker, { target: { value: "#ff0000" } }));
+    // A real click moves focus off the picker before the preset's handler runs.
     await interact(() => {
-      fireEvent.click(screen.getByRole("radio", { name: "Emerald" }));
       fireEvent.blur(picker);
+      fireEvent.click(screen.getByRole("radio", { name: "Emerald" }));
     });
 
     expect(onAccentChange.mock.calls).toEqual([["#10b981"]]);
@@ -79,6 +80,22 @@ describe("ThemeCard custom accent", () => {
     expect(screen.queryByText("#ff0000")).toBeNull();
     expect(root.style.getPropertyValue("--custom-primary")).toBe("#10b981");
     expect(root.dataset.accentPreview).toBeUndefined();
+  });
+
+  test("committing a color that equals a preset clears the custom swatch preview", async () => {
+    const { onAccentChange, picker } = renderCard();
+
+    await interact(() => fireEvent.input(picker, { target: { value: "#10b981" } }));
+    expect(screen.getByText("#10b981")).toBeTruthy();
+
+    await interact(() => fireEvent.change(picker));
+    expect(onAccentChange.mock.calls).toEqual([["#10b981"]]);
+
+    // The parent keeps accent=null here, so React's custom swatch props never changed; the
+    // remount must still drop the previewed hex label and background.
+    const freshPicker = document.querySelector<HTMLInputElement>('input[type="color"]')!;
+    expect(screen.queryByText("#10b981")).toBeNull();
+    expect(freshPicker.closest("label")!.style.background).toContain("conic-gradient");
   });
 
   test("leaving the page mid-drag still saves the last color", async () => {
