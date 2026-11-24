@@ -1,5 +1,6 @@
 import { CheckIcon, MonitorIcon, MoonIcon, PipetteIcon, SunIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { useThrottler } from "@tanstack/react-pacer";
+import { useState, type ReactNode } from "react";
 
 import { SettingsSection } from "@/components/settings/settings-section";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,12 @@ const THEME_OPTIONS = [
 ] as const satisfies ReadonlyArray<{ value: ThemeMode; label: string; icon: typeof SunIcon }>;
 
 const DEFAULT_CUSTOM_ACCENT = "#8b7cf6";
+
+/**
+ * The native picker fires on every drag movement, and each accent change re-themes the whole
+ * page. Commit at most this often while dragging; the swatch itself follows the drag locally.
+ */
+const CUSTOM_ACCENT_COMMIT_MS = 120;
 
 export type ThemeCardProps = {
   disabled: boolean;
@@ -44,7 +51,26 @@ function SettingRow(props: { id: string; title: string; description: string; chi
 
 export function ThemeCard(props: ThemeCardProps) {
   const isPresetAccent = ACCENT_PRESETS.some((preset) => preset.value === props.accent);
-  const customAccent = !isPresetAccent && props.accent ? props.accent : null;
+  const savedCustomAccent = !isPresetAccent && props.accent ? props.accent : null;
+
+  // The color under the picker while dragging, until the throttled commit catches up.
+  const [draftAccent, setDraftAccent] = useState<string | null>(null);
+  const customAccent = draftAccent ?? savedCustomAccent;
+  const accentCommitter = useThrottler(
+    (accent: string) => {
+      props.onAccentChange(accent);
+      setDraftAccent((current) => (current === accent ? null : current));
+    },
+    // Leaving the page mid-drag still saves the last color.
+    { wait: CUSTOM_ACCENT_COMMIT_MS, onUnmount: (throttler) => throttler.flush() },
+  );
+
+  function selectPresetAccent(accent: string | null) {
+    // Drop a pending custom color so it can't land after the preset.
+    accentCommitter.cancel();
+    setDraftAccent(null);
+    props.onAccentChange(accent);
+  }
 
   return (
     <SettingsSection
@@ -86,7 +112,7 @@ export function ThemeCard(props: ThemeCardProps) {
         <div className="flex flex-wrap items-center gap-2">
           <div role="radiogroup" aria-labelledby="theme-accent-label" className="contents">
             {ACCENT_PRESETS.map((preset) => {
-              const selected = preset.value === props.accent;
+              const selected = draftAccent === null && preset.value === props.accent;
               return (
                 <AccentSwatch
                   key={preset.name}
@@ -94,7 +120,7 @@ export function ThemeCard(props: ThemeCardProps) {
                   color={preset.swatch}
                   selected={selected}
                   disabled={props.disabled}
-                  onSelect={() => props.onAccentChange(preset.value)}
+                  onSelect={() => selectPresetAccent(preset.value)}
                 />
               );
             })}
@@ -120,7 +146,9 @@ export function ThemeCard(props: ThemeCardProps) {
               value={customAccent ?? DEFAULT_CUSTOM_ACCENT}
               onChange={(event) => {
                 const value = event.target.value.toLowerCase();
-                if (isHexColor(value)) props.onAccentChange(value);
+                if (!isHexColor(value)) return;
+                setDraftAccent(value);
+                accentCommitter.maybeExecute(value);
               }}
             />
             {customAccent ? (
