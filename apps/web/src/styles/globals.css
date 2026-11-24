@@ -584,6 +584,13 @@
   backdrop-filter: none !important;
 }
 
+/* While a color picker drag previews the accent live, color changes apply instantly. */
+html[data-accent-preview] *,
+html[data-accent-preview] *::before,
+html[data-accent-preview] *::after {
+  transition: none !important;
+}
+
 .katex-display {
   @apply block w-full max-w-full overflow-x-auto overflow-y-hidden;
 }

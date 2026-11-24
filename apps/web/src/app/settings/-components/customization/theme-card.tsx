@@ -7,7 +7,13 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { ACCENT_PRESETS, isHexColor, type ThemeMode } from "@/lib/appearance/theme";
+import {
+  ACCENT_PRESETS,
+  endAccentPreview,
+  isHexColor,
+  previewAccent,
+  type ThemeMode,
+} from "@/lib/appearance/theme";
 import { cn } from "@/lib/utils";
 
 const THEME_OPTIONS = [
@@ -47,19 +53,23 @@ export function ThemeCard(props: ThemeCardProps) {
   const customAccent = !isPresetAccent && props.accent ? props.accent : null;
 
   /**
-   * The native picker fires on every drag movement. Any re-render or shared CSS variable change
-   * per movement restyles many elements and restarts their color transitions, which made dragging
-   * lag. So while dragging, only the custom swatch and its hex label are written, straight to the
-   * DOM; React state and the app's accent change once, when the picker commits (closes).
+   * The native picker fires on every drag movement. Each step previews the accent across the app
+   * without React: at most once per frame it writes the swatch, hex label and <html> accent
+   * variables, with transitions off. The form, autosave and React state take the color once, when
+   * the picker commits (closes).
    */
   const draftRef = useRef<string | null>(null);
+  const frameRef = useRef<number | null>(null);
   const swatchRef = useRef<HTMLLabelElement>(null);
   const hexRef = useRef<HTMLSpanElement>(null);
   // Remounts the picker to drop a previewed-but-uncommitted color from the DOM.
   const [pickerKey, setPickerKey] = useState(0);
 
-  function previewDraftAccent(accent: string) {
-    draftRef.current = accent;
+  function paintDraftAccent() {
+    frameRef.current = null;
+    const accent = draftRef.current;
+    if (!accent) return;
+    previewAccent(document.documentElement, accent);
     if (swatchRef.current) swatchRef.current.style.background = accent;
     if (hexRef.current) {
       hexRef.current.textContent = accent;
@@ -67,10 +77,23 @@ export function ThemeCard(props: ThemeCardProps) {
     }
   }
 
+  function previewDraftAccent(accent: string) {
+    draftRef.current = accent;
+    frameRef.current ??= requestAnimationFrame(paintDraftAccent);
+  }
+
+  function cancelDraftFrame() {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    frameRef.current = null;
+  }
+
   function commitDraftAccent() {
     const pending = draftRef.current;
     if (!pending) return;
+    cancelDraftFrame();
+    paintDraftAccent();
     draftRef.current = null;
+    endAccentPreview(document.documentElement);
     props.onAccentChange(pending);
   }
 
@@ -87,7 +110,10 @@ export function ThemeCard(props: ThemeCardProps) {
 
   function selectPresetAccent(accent: string | null) {
     if (draftRef.current) {
+      cancelDraftFrame();
       draftRef.current = null;
+      // Put the chosen accent back on <html> in case the saved value doesn't change.
+      endAccentPreview(document.documentElement, { accent });
       setPickerKey((key) => key + 1);
     }
     props.onAccentChange(accent);

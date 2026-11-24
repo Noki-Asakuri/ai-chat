@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, mock, test } from "bun:test";
 
 // The DOM must exist before Testing Library loads: it binds `screen` to the document when first evaluated.
 await import("@/test/dom");
@@ -8,11 +8,20 @@ const { act, fireEvent, render, screen } = await import("@testing-library/react"
 async function interact(run: () => void) {
   await act(async () => {
     run();
+    // Let the frame-limited preview paint.
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
 
 const { ThemeCard } = await import("./theme-card");
+
+const root = document.documentElement;
+afterEach(() => {
+  root.style.removeProperty("--custom-primary");
+  root.style.removeProperty("--custom-primary-foreground");
+  delete root.dataset.accentPreview;
+});
 
 function renderCard() {
   const onAccentChange = mock((_accent: string | null) => {});
@@ -32,8 +41,8 @@ function renderCard() {
 }
 
 describe("ThemeCard custom accent", () => {
-  test("dragging previews on the swatch only and commits once when the picker closes", async () => {
-    const { onAccentChange, picker, view } = renderCard();
+  test("dragging previews live with transitions off and commits once when the picker closes", async () => {
+    const { onAccentChange, picker } = renderCard();
     const swatch = picker.closest("label")!;
 
     await interact(() => {
@@ -43,14 +52,17 @@ describe("ThemeCard custom accent", () => {
       }
     });
 
-    // The swatch and hex label follow the drag; nothing else is restyled and nothing is committed.
-    expect(screen.getByText("#2d0000")).toBeTruthy();
+    // The app previews the latest color without going through React or the form.
+    expect(root.style.getPropertyValue("--custom-primary")).toBe("#2d0000");
+    expect(root.style.getPropertyValue("--custom-primary-foreground")).toBe("#ffffff");
+    expect(root.dataset.accentPreview).toBe("");
     expect(swatch.style.background).toBe("#2d0000");
-    expect(view.container.querySelector("[style*='--primary']")).toBeNull();
+    expect(screen.getByText("#2d0000")).toBeTruthy();
     expect(onAccentChange).not.toHaveBeenCalled();
 
     await interact(() => fireEvent.change(picker));
     expect(onAccentChange.mock.calls).toEqual([["#2d0000"]]);
+    expect(root.dataset.accentPreview).toBeUndefined();
   });
 
   test("choosing a preset drops an uncommitted custom color", async () => {
@@ -63,8 +75,10 @@ describe("ThemeCard custom accent", () => {
     });
 
     expect(onAccentChange.mock.calls).toEqual([["#10b981"]]);
-    // The previewed color is dropped from the swatch too.
+    // The previewed color is dropped from the swatch and <html>.
     expect(screen.queryByText("#ff0000")).toBeNull();
+    expect(root.style.getPropertyValue("--custom-primary")).toBe("#10b981");
+    expect(root.dataset.accentPreview).toBeUndefined();
   });
 
   test("leaving the page mid-drag still saves the last color", async () => {
@@ -77,5 +91,6 @@ describe("ThemeCard custom accent", () => {
     view.unmount();
 
     expect(onAccentChange.mock.calls).toEqual([["#0000ff"]]);
+    expect(root.dataset.accentPreview).toBeUndefined();
   });
 });
