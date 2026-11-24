@@ -184,3 +184,12 @@ export function splitAssistantFlow(
 
   return { workBlocks: [], responseBlocks: blocks, hasFinalResponse: false };
 }
+
+function isImageGenerationPart(part: MessagePart): boolean {
+  return isToolPart(part) && isImageGenerationToolName(getToolName(part));
+}
+
+/** Image generation reports token usage that doesn't reflect the visible output. */
+export function hasImageGenerationPart(parts: MessagePart[]): boolean {
+  return parts.some(isImageGenerationPart);
+}

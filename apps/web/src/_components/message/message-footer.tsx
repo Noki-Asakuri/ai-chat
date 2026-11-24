@@ -1,4 +1,5 @@
 import { MessageActionButtons, MessageVariantPager } from "./message-action-buttons";
+import { hasImageGenerationPart } from "./message-flow";
 import { MessageMetadata } from "./message-metadata";
 
 import type { ChatMessage } from "@/lib/types";
@@ -37,6 +38,7 @@ export function MessageFooter({
       {message.role === "assistant" && (
         <MessageMetadata
           metadata={message.metadata}
+          showTokenStats={!hasImageGenerationPart(message.parts ?? [])}
           rightAccessory={readOnly ? undefined : <MessageVariantPager message={message} />}
         />
       )}
