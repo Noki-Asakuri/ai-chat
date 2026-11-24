@@ -15,9 +15,11 @@ import type { ReactNode } from "react";
 type MessageMetadataProps = {
   metadata: ChatMessage["metadata"];
   rightAccessory?: ReactNode;
+  /** Image generation token usage doesn't reflect the output, so callers can hide it. */
+  showTokenStats?: boolean;
 };
 
-export function MessageMetadata({ metadata, rightAccessory }: MessageMetadataProps) {
+export function MessageMetadata({ metadata, rightAccessory, showTokenStats = true }: MessageMetadataProps) {
   if (!metadata) return null;
 
   const hasFullMetadata = metadata.usages.inputTokens > 0;
@@ -30,10 +32,11 @@ export function MessageMetadata({ metadata, rightAccessory }: MessageMetadataPro
       {rightAccessory}
       {hasFullMetadata && durationSeconds > 0 && (
         <span className="hidden truncate px-1 text-muted-foreground sm:inline">
-          {format.time(durationSeconds)} · {getTokensPerSecond(metadata)} tok/s
+          {format.time(durationSeconds)}
+          {showTokenStats && ` · ${getTokensPerSecond(metadata)} tok/s`}
         </span>
       )}
-      {hasFullMetadata && <PopoverInfo metadata={metadata} />}
+      {hasFullMetadata && <PopoverInfo metadata={metadata} showTokenStats={showTokenStats} />}
     </div>
   );
 }
@@ -45,9 +48,9 @@ function getTokensPerSecond(metadata: NonNullable<ChatMessage["metadata"]>): str
   return ((metadata.usages.outputTokens + metadata.usages.reasoningTokens) / seconds).toFixed(2);
 }
 
-type PopoverInfoProps = { metadata: ChatMessage["metadata"] };
+type PopoverInfoProps = { metadata: ChatMessage["metadata"]; showTokenStats: boolean };
 
-function PopoverInfo({ metadata }: PopoverInfoProps) {
+function PopoverInfo({ metadata, showTokenStats }: PopoverInfoProps) {
   const profile = useResolvedProfile(metadata?.modelParams.profile ?? null);
   if (!metadata) return null;
 
@@ -66,7 +69,7 @@ function PopoverInfo({ metadata }: PopoverInfoProps) {
         <PopoverArrow className="fill-card" />
 
         <div className="grid grid-cols-1 gap-x-4 gap-y-2">
-          <div data-slot="metadata-tok-per-sec" className="flex items-center gap-2">
+          <div data-slot="metadata-tok-per-sec" className="flex items-center gap-2" hidden={!showTokenStats}>
             <ZapIcon className="size-4" />
             <span>Speed: {tokPerSec} tok/sec</span>
           </div>
@@ -74,13 +77,13 @@ function PopoverInfo({ metadata }: PopoverInfoProps) {
           <div
             data-slot="metadata-input-tokens"
             className="flex items-center gap-2"
-            hidden={metadata.usages.inputTokens === 0}
+            hidden={!showTokenStats || metadata.usages.inputTokens === 0}
           >
             <QuoteIcon className="size-4" />
             <span>Input: {format.number(metadata.usages.inputTokens)} Tokens</span>
           </div>
 
-          <div data-slot="metadata-total-tokens" className="flex items-center gap-2">
+          <div data-slot="metadata-total-tokens" className="flex items-center gap-2" hidden={!showTokenStats}>
             <BoltIcon className="size-4" />
             <span>Consume: {format.number(metadata.usages.outputTokens)} Tokens</span>
           </div>
@@ -88,7 +91,7 @@ function PopoverInfo({ metadata }: PopoverInfoProps) {
           <div
             data-slot="metadata-thinking-tokens"
             className="flex items-center gap-2"
-            hidden={metadata.usages.reasoningTokens === 0}
+            hidden={!showTokenStats || metadata.usages.reasoningTokens === 0}
           >
             <BrainIcon className="size-4" />
             <span>Reasoning: {format.number(metadata.usages.reasoningTokens)} Tokens</span>

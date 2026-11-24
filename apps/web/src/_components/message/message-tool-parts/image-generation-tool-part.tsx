@@ -98,16 +98,16 @@ export function ImageGenerationToolPart({ part, isStreaming }: { part: ToolPart;
     <figure
       className={cn(
         "message-tool-part flex max-w-full min-w-0 flex-col overflow-hidden rounded-lg border bg-background/80 backdrop-blur-md backdrop-saturate-150",
-        showFrame ? "w-fit min-w-72" : "w-full",
+        imageSrc ? "w-fit" : isRunning ? "w-fit min-w-72" : "w-full",
       )}
     >
       {imageSrc ? (
-        <div className="relative bg-black/20">
+        <div className="relative">
           <ImageLightboxProvider images={[{ src: imageSrc, alt: "Generated image", downloadName }]}>
             <ImageLightboxTrigger
               index={0}
               aria-label={isComplete ? "View generated image" : "View image preview"}
-              className="flex w-full justify-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+              className="flex w-full justify-center focus-visible:ring-0"
             >
               <img
                 src={imageSrc}
@@ -141,12 +141,17 @@ export function ImageGenerationToolPart({ part, isStreaming }: { part: ToolPart;
       ) : null}
 
       <figcaption
-        className={cn("flex min-w-0 items-start gap-3 px-3 py-2", showFrame && "border-t border-border/60")}
+        className={cn(
+          "flex min-w-0 items-start gap-3 px-3 py-2",
+          showFrame && "border-t border-border/60",
+          // Size to the image, not the caption, so the frame never pads the image with bars.
+          imageSrc && "w-0 min-w-full",
+        )}
       >
         <div className="min-w-0 grow">
           <output
             className={cn(
-              "flex min-h-7 items-center gap-1.5 text-xs font-medium text-foreground/85",
+              "flex min-h-7 flex-wrap items-center gap-x-1.5 text-xs font-medium text-foreground/85",
               isError && "text-destructive",
             )}
           >
@@ -160,7 +165,7 @@ export function ImageGenerationToolPart({ part, isStreaming }: { part: ToolPart;
             />
             {status}
             {isComplete && imageSize && (
-              <span className="ml-1 font-normal text-muted-foreground tabular-nums">
+              <span className="font-normal text-muted-foreground tabular-nums">
                 {imageSize.width}×{imageSize.height}
               </span>
             )}

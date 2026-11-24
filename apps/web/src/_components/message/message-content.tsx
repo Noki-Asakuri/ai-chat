@@ -111,7 +111,8 @@ function AssistantMessageContent({ message }: MessageContentProps) {
       <div
         data-slot="message-content"
         data-message-surface="card"
-        className="flex min-w-0 flex-1 flex-col gap-2 px-0.5 sm:px-0"
+        // Hug the content (capped at the row) so the card only ever grows while streaming.
+        className="flex w-fit max-w-full min-w-0 flex-col gap-2 px-0.5 sm:px-0"
       >
         <div
           data-slot="message-header"
