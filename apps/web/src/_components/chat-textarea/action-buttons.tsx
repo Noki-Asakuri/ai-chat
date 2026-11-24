@@ -6,7 +6,6 @@ import { ButtonWithTip } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 import { BaseChatAttachmentsButton, ChatAttachmentsButton } from "./attachments-display";
-import { MobileChatToolsMenu } from "./mobile-chat-tools-menu";
 import { ChatModelSelector, ModelSelector } from "./model-selector";
 import { ChatReasoningPicker, ReasoningPicker } from "./reasoning-picker";
 
@@ -27,7 +26,6 @@ export function ChatActionButtons() {
   return (
     <div className="flex min-w-0 flex-1 items-center justify-start gap-1.5 sm:gap-2">
       <ChatModelSelector />
-      <MobileChatToolsMenu />
 
       <div className="hidden items-center gap-2 sm:flex">
         {supportsReasoning && (
