@@ -23,14 +23,26 @@ export function MessageMetadata({ metadata, rightAccessory }: MessageMetadataPro
   const hasFullMetadata = metadata.usages.inputTokens > 0;
   if (!rightAccessory && !hasFullMetadata) return null;
 
+  const durationSeconds = metadata.durations.request / 1000;
+
   return (
-    <div className="flex h-full w-full items-center justify-between">
-      <div className="ml-auto flex items-center gap-2">
-        {rightAccessory}
-        {hasFullMetadata && <PopoverInfo metadata={metadata} />}
-      </div>
+    <div className="ml-auto flex min-w-0 items-center gap-1">
+      {rightAccessory}
+      {hasFullMetadata && durationSeconds > 0 && (
+        <span className="hidden truncate px-1 text-muted-foreground sm:inline">
+          {format.time(durationSeconds)} · {getTokensPerSecond(metadata)} tok/s
+        </span>
+      )}
+      {hasFullMetadata && <PopoverInfo metadata={metadata} />}
     </div>
   );
+}
+
+function getTokensPerSecond(metadata: NonNullable<ChatMessage["metadata"]>): string {
+  const seconds = metadata.durations.text / 1000;
+  if (seconds <= 0) return "0";
+
+  return ((metadata.usages.outputTokens + metadata.usages.reasoningTokens) / seconds).toFixed(2);
 }
 
 type PopoverInfoProps = { metadata: ChatMessage["metadata"] };
@@ -39,15 +51,15 @@ function PopoverInfo({ metadata }: PopoverInfoProps) {
   const profile = useResolvedProfile(metadata?.modelParams.profile ?? null);
   if (!metadata) return null;
 
-  const tokPerSec = (
-    (metadata.usages.outputTokens + metadata.usages.reasoningTokens) /
-    (metadata.durations.text / 1000)
-  ).toFixed(2);
+  const tokPerSec = getTokensPerSecond(metadata);
 
   return (
     <Popover>
-      <PopoverTrigger className="flex size-10 shrink-0 items-center justify-center rounded-full border bg-background/80 p-0 backdrop-blur-md backdrop-saturate-150">
-        <InfoIcon className="size-4" />
+      <PopoverTrigger
+        aria-label="Message details"
+        className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 data-popup-open:bg-muted data-popup-open:text-foreground"
+      >
+        <InfoIcon className="size-3.5" />
       </PopoverTrigger>
 
       <PopoverContent className="w-max bg-card p-2 text-sm" align="end" sideOffset={12} includeArrow={false}>

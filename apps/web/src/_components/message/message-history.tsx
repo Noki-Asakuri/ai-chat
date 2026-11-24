@@ -60,7 +60,7 @@ export function MessageHistory({
         >
           <MessageScrollerContent
             data-slot="message-history"
-            className="mx-auto min-h-full w-full max-w-[calc(56rem+32px)] gap-4 px-4"
+            className="mx-auto min-h-full w-full max-w-[calc(56rem+32px)] gap-6 px-3 sm:px-4"
             style={{ paddingTop: `${topPaddingPx}px`, paddingBottom: `${resolvedBottomPadding}px` }}
           >
             {canLoadOlder && onLoadOlder && (
@@ -166,7 +166,7 @@ function MessageHistoryItem({ animateEntrance, ...props }: MessageHistoryItemPro
       initial={
         prefersReducedMotion || !animateEntrance
           ? false
-          : { height: 0, marginTop: "-1rem", opacity: 0, y: 8, overflow: "hidden" }
+          : { height: 0, marginTop: "-1.5rem", opacity: 0, y: 8, overflow: "hidden" }
       }
       animate={{
         height: "auto",
