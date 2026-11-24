@@ -171,7 +171,12 @@ export function RichComposer({
 
   return (
     <div
-      className={cn("flex grow flex-row items-start", compact ? "px-3 pt-2.5 pb-1 sm:p-2.5" : "p-2.5")}
+      className={cn(
+        "flex grow flex-row items-start",
+        compact
+          ? "px-1 pt-2.5 pb-1 group-data-[expanded=false]/composer:max-sm:py-1.5 sm:px-0 sm:pt-2.5"
+          : "p-2.5",
+      )}
       onPasteCapture={(event) => {
         const files = Array.from(event.clipboardData.items).flatMap((item) => {
           if (item.kind !== "file") return [];

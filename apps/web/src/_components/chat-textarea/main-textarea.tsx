@@ -4,7 +4,7 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import { CircleCheckIcon } from "lucide-react";
-import { useEffect, useEffectEvent, useRef, useTransition } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useTransition, type FocusEvent } from "react";
 import { toast } from "@/components/ui/toast";
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
@@ -12,6 +12,7 @@ import { Button } from "../ui/button";
 
 import { ChatActionButtons } from "./action-buttons";
 import { ChatAttachmentsDisplay } from "./attachments-display";
+import { MobileChatToolsMenu } from "./mobile-chat-tools-menu";
 import { RichComposer } from "./rich-composer";
 import { ChatSendButton } from "./send-button";
 
@@ -27,6 +28,7 @@ const convexClient = getConvexReactClient();
 
 export function ChatTextarea() {
   const parentRef = useRef<HTMLFormElement>(null);
+  const { ref: composerRef, expanded, onFocusCapture, onBlurCapture } = useComposerExpanded();
   const onResize = useEffectEvent((entries: ResizeObserverEntry[]) => {
     const entry = entries[0];
     if (!entry) return;
@@ -55,11 +57,31 @@ export function ChatTextarea() {
         <div className="surface-edge pointer-events-auto relative mx-auto max-w-4xl space-y-2 overflow-hidden rounded-xl border border-border/80 bg-background/80 shadow-lg backdrop-blur-md backdrop-saturate-150 transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-primary/45 focus-within:bg-background/85 focus-within:ring-2 focus-within:ring-primary/15 motion-reduce:transition-none">
           <ChatAttachmentsDisplay />
 
-          <div>
-            <InputChatTextArea />
+          {/*
+           * On phones the composer has two states. Collapsed (empty, not focused) it is one row:
+           * tools, a one-line input and send. Expanded, the input takes the full width and the
+           * tools, model picker and send move to a row below. Only the flex order changes, so the
+           * input is never remounted and keeps focus. Wider screens always use the expanded layout.
+           */}
+          <div
+            ref={composerRef}
+            data-slot="chat-composer"
+            data-expanded={expanded}
+            className="group/composer flex flex-wrap items-end gap-x-2 gap-y-1 px-2 pb-2 data-[expanded=false]:max-sm:items-center data-[expanded=false]:max-sm:pt-2 sm:px-2.5 sm:pb-3"
+            onFocusCapture={onFocusCapture}
+            onBlurCapture={onBlurCapture}
+          >
+            <div className="order-1 min-w-0 basis-full group-data-[expanded=false]/composer:max-sm:order-2 group-data-[expanded=false]/composer:max-sm:flex-1 group-data-[expanded=false]/composer:max-sm:basis-0">
+              <InputChatTextArea />
+            </div>
 
-            <div className="flex items-end gap-2 px-2 pt-1 pb-2 sm:px-3 sm:pb-3">
+            <MobileChatToolsMenu className="order-2 group-data-[expanded=false]/composer:max-sm:order-1" />
+
+            <div className="order-3 flex min-w-0 flex-1 group-data-[expanded=false]/composer:max-sm:hidden">
               <ChatActionButtons />
+            </div>
+
+            <div className="order-4 group-data-[expanded=false]/composer:max-sm:order-3">
               <ChatSendButton />
             </div>
           </div>
@@ -67,6 +89,42 @@ export function ChatTextarea() {
       </form>
     </div>
   );
+}
+
+const EDITOR_SELECTOR = "[data-composer]";
+const OPEN_POPUP_SELECTOR = '[aria-expanded="true"], [data-popup-open]';
+
+/**
+ * Tracks whether the phone composer is expanded. It expands when the input gets focus or holds
+ * text or attachments, and collapses once focus leaves the composer while it is empty. Focus on
+ * the tools button alone does not expand it, so its menu opens from the collapsed row.
+ */
+function useComposerExpanded() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isFocused, setIsFocused] = useState(false);
+  const hasContent = useChatStore((state) => state.input.trim().length > 0 || state.attachments.length > 0);
+
+  function onFocusCapture(event: FocusEvent<HTMLDivElement>) {
+    if (event.target instanceof Element && event.target.closest(EDITOR_SELECTOR)) {
+      setIsFocused(true);
+    }
+  }
+
+  function onBlurCapture(event: FocusEvent<HTMLDivElement>) {
+    const container = ref.current;
+    const next = event.relatedTarget;
+    if (!container || (next instanceof Node && container.contains(next))) return;
+
+    // Focus moves to menus rendered in a portal; wait a frame and keep the layout while one is open,
+    // so the model picker does not jump away from its anchor.
+    requestAnimationFrame(() => {
+      if (container.contains(document.activeElement)) return;
+      if (container.querySelector(OPEN_POPUP_SELECTOR)) return;
+      setIsFocused(false);
+    });
+  }
+
+  return { ref, expanded: isFocused || hasContent, onFocusCapture, onBlurCapture };
 }
 
 function SettledThreadNotice() {

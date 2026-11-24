@@ -24,8 +24,9 @@ import { getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
 import { useSetChatEffort, useSetChatWebSearch } from "@/lib/chat/use-chat-settings";
 import { chatStoreActions } from "@/lib/store/chat-store";
 import type { ReasoningEffort } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-export function MobileChatToolsMenu() {
+export function MobileChatToolsMenu({ className }: { className?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const config = useConfigStore(
     useShallow((state) => ({
@@ -63,7 +64,7 @@ export function MobileChatToolsMenu() {
             <Button
               variant="ghost"
               size="icon-lg"
-              className="surface-edge border border-border sm:hidden"
+              className={cn("surface-edge border border-border sm:hidden", className)}
               aria-label="Chat tools"
               title="Chat tools"
             >
