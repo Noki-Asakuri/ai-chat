@@ -4,7 +4,15 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import { CircleCheckIcon } from "lucide-react";
-import { useEffect, useEffectEvent, useRef, useState, useTransition, type FocusEvent } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useTransition,
+  type FocusEvent,
+} from "react";
 import { toast } from "@/components/ui/toast";
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
@@ -12,6 +20,12 @@ import { Button } from "../ui/button";
 
 import { ChatActionButtons } from "./action-buttons";
 import { ChatAttachmentsDisplay } from "./attachments-display";
+import {
+  animateComposerFrom,
+  measureComposer,
+  prefersReducedMotion,
+  type ComposerSnapshot,
+} from "./composer-flip";
 import { MobileChatToolsMenu } from "./mobile-chat-tools-menu";
 import { RichComposer } from "./rich-composer";
 import { ChatSendButton } from "./send-button";
@@ -67,7 +81,7 @@ export function ChatTextarea() {
             ref={composerRef}
             data-slot="chat-composer"
             data-expanded={expanded}
-            className="group/composer flex flex-wrap items-end gap-x-2 gap-y-1 px-2 pb-2 data-[expanded=false]:max-sm:items-center data-[expanded=false]:max-sm:pt-2 sm:px-2.5 sm:pb-3"
+            className="group/composer flex flex-wrap content-start items-end gap-x-2 gap-y-1 px-2 pb-2 data-[expanded=false]:max-sm:items-center data-[expanded=false]:max-sm:pt-2 sm:px-2.5 sm:pb-3"
             onFocusCapture={onFocusCapture}
             onBlurCapture={onBlurCapture}
           >
@@ -98,15 +112,47 @@ const OPEN_POPUP_SELECTOR = '[aria-expanded="true"], [data-popup-open]';
  * Tracks whether the phone composer is expanded. It expands when the input gets focus or holds
  * text or attachments, and collapses once focus leaves the composer while it is empty. Focus on
  * the tools button alone does not expand it, so its menu opens from the collapsed row.
+ *
+ * The layout is measured right before each switch and animated from there after React renders
+ * the new one. On wider screens the layout does not change, so nothing animates.
  */
 function useComposerExpanded() {
   const ref = useRef<HTMLDivElement>(null);
-  const [isFocused, setIsFocused] = useState(false);
-  const hasContent = useChatStore((state) => state.input.trim().length > 0 || state.attachments.length > 0);
+  const isFocusedRef = useRef(false);
+  // Only the first value matters; later changes go through update() so the layout is measured first.
+  const initialExpanded = useChatStore(hasComposerContent);
+  const expandedRef = useRef(initialExpanded);
+  const snapshotRef = useRef<ComposerSnapshot | null>(null);
+  const [expanded, setExpanded] = useState(initialExpanded);
+
+  function update() {
+    const next = isFocusedRef.current || hasComposerContent(useChatStore.getState());
+    if (next === expandedRef.current) return;
+
+    if (ref.current && !prefersReducedMotion()) {
+      snapshotRef.current = measureComposer(ref.current);
+    }
+
+    expandedRef.current = next;
+    setExpanded(next);
+  }
+
+  const onStoreChange = useEffectEvent(update);
+  useEffect(() => useChatStore.subscribe(() => onStoreChange()), []);
+
+  // Runs after every render, but only animates when update() left a snapshot for this switch.
+  useLayoutEffect(() => {
+    const snapshot = snapshotRef.current;
+    if (!snapshot || !ref.current) return;
+
+    snapshotRef.current = null;
+    animateComposerFrom(ref.current, snapshot);
+  });
 
   function onFocusCapture(event: FocusEvent<HTMLDivElement>) {
     if (event.target instanceof Element && event.target.closest(EDITOR_SELECTOR)) {
-      setIsFocused(true);
+      isFocusedRef.current = true;
+      update();
     }
   }
 
@@ -120,11 +166,16 @@ function useComposerExpanded() {
     requestAnimationFrame(() => {
       if (container.contains(document.activeElement)) return;
       if (container.querySelector(OPEN_POPUP_SELECTOR)) return;
-      setIsFocused(false);
+      isFocusedRef.current = false;
+      update();
     });
   }
 
-  return { ref, expanded: isFocused || hasContent, onFocusCapture, onBlurCapture };
+  return { ref, expanded, onFocusCapture, onBlurCapture };
+}
+
+function hasComposerContent(state: { input: string; attachments: readonly unknown[] }): boolean {
+  return state.input.trim().length > 0 || state.attachments.length > 0;
 }
 
 function SettledThreadNotice() {
