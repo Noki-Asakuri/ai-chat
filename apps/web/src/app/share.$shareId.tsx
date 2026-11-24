@@ -144,7 +144,7 @@ function ReadOnlyMessageHistory() {
     );
   }
 
-  return <MessageHistory readOnly bottomPaddingPx={64} />;
+  return <MessageHistory readOnly showUserAvatar={false} bottomPaddingPx={64} />;
 }
 
 function PrivateShareGate({ shareId }: { shareId: string }) {

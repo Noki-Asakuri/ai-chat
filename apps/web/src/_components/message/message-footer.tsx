@@ -8,9 +8,15 @@ type MessageFooterProps = {
   isLast: boolean;
   message: ChatMessage;
   readOnly?: boolean;
+  showUserAvatar?: boolean;
 };
 
-export function MessageFooter({ isLast, message, readOnly = false }: MessageFooterProps) {
+export function MessageFooter({
+  isLast,
+  message,
+  readOnly = false,
+  showUserAvatar = true,
+}: MessageFooterProps) {
   const isFinished = message.status === "complete" || message.status === "error";
 
   return (
@@ -21,7 +27,8 @@ export function MessageFooter({ isLast, message, readOnly = false }: MessageFoot
         "opacity-0 transition-opacity duration-200 motion-reduce:transition-none pointer-coarse:opacity-100",
         "group-focus-within/message-row:opacity-100 group-hover/message-row:opacity-100",
         "has-[[aria-expanded=true]]:opacity-100",
-        message.role === "user" ? "justify-end" : "px-0 sm:px-0.5",
+        message.role === "user" ? "justify-end" : "sm:pl-12",
+        message.role === "user" && showUserAvatar && "pr-9 sm:pr-11",
         isLast && "opacity-100",
       )}
     >

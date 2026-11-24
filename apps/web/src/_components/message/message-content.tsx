@@ -2,7 +2,6 @@
 import { ChevronRightIcon, Clock3Icon, TriangleAlertIcon } from "lucide-react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
-import { Icons } from "../ui/icons";
 
 import {
   buildAssistantFlowBlocks,
@@ -12,6 +11,7 @@ import {
   type AssistantFlowBlock,
 } from "./message-flow";
 import { MessageAttachmentsDisplay } from "./message-attachments-display";
+import { ProviderAvatar, UserMessageAvatar } from "./message-avatars";
 import { StreamDownWrapper } from "./message-markdown";
 import { MessagePending } from "./message-pending";
 import { MessageReasoning } from "./message-reasoning";
@@ -23,30 +23,45 @@ import type { ChatMessage } from "@/lib/types";
 
 type MessageContentProps = {
   message: ChatMessage;
+  showUserAvatar?: boolean;
 };
 
-export function MessageContent({ message }: MessageContentProps) {
-  if (message.role === "user") return <UserMessageContent message={message} />;
+export function MessageContent({ message, showUserAvatar = true }: MessageContentProps) {
+  if (message.role === "user")
+    return <UserMessageContent message={message} showUserAvatar={showUserAvatar} />;
   return <AssistantMessageContent message={message} />;
 }
 
-function UserMessageContent({ message }: MessageContentProps) {
-  const parts = message.parts ?? [];
-  const fileParts = parts.filter(isFilePart);
-  const textParts = parts.filter(isTextPart);
+function UserMessageContent({ message, showUserAvatar = true }: MessageContentProps) {
+  const fileParts = getFileParts(message);
+  const textParts = getTextParts(message);
 
-  if (message.status === "error") {
-    return (
-      <div className="flex w-full justify-end">
-        <MessageError message={getErrorText(message)} />
-      </div>
-    );
-  }
-
-  if (fileParts.length === 0 && textParts.length === 0) return null;
+  const isError = message.status === "error";
+  if (!isError && fileParts.length === 0 && textParts.length === 0) return null;
 
   return (
-    <div data-slot="message-content" className="flex w-full min-w-0 flex-col items-end gap-1.5">
+    <div className="flex w-full min-w-0 items-start justify-end gap-2">
+      {isError ? (
+        <MessageError message={getErrorText(message)} />
+      ) : (
+        <UserMessageBody message={message} fileParts={fileParts} textParts={textParts} />
+      )}
+      {showUserAvatar && <UserMessageAvatar className="mt-0.5" />}
+    </div>
+  );
+}
+
+function UserMessageBody({
+  message,
+  fileParts,
+  textParts,
+}: {
+  message: ChatMessage;
+  fileParts: ReturnType<typeof getFileParts>;
+  textParts: ReturnType<typeof getTextParts>;
+}) {
+  return (
+    <div data-slot="message-content" className="flex min-w-0 flex-1 flex-col items-end gap-1.5">
       <MessageAttachmentsDisplay
         parts={fileParts}
         attachments={message.attachments}
@@ -68,9 +83,17 @@ function UserMessageContent({ message }: MessageContentProps) {
   );
 }
 
+function getFileParts(message: ChatMessage) {
+  return (message.parts ?? []).filter(isFilePart);
+}
+
+function getTextParts(message: ChatMessage) {
+  return (message.parts ?? []).filter(isTextPart);
+}
+
 function AssistantMessageContent({ message }: MessageContentProps) {
   const parts = message.parts ?? [];
-  const fileParts = parts.filter(isFilePart);
+  const fileParts = getFileParts(message);
   const blocks = buildAssistantFlowBlocks(parts);
   const flow = splitAssistantFlow(blocks, message);
 
@@ -81,40 +104,40 @@ function AssistantMessageContent({ message }: MessageContentProps) {
   const isGenerating = message.status === "pending" || message.status === "streaming";
 
   return (
-    <div data-slot="message-content" className="flex w-full min-w-0 flex-col gap-2 px-0.5 sm:px-1">
-      <div
-        data-slot="message-header"
-        className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-muted-foreground"
-      >
-        {modelData ? (
-          <Icons.provider provider={modelData.provider} className="size-3.5 shrink-0" />
+    <div className="flex w-full min-w-0 items-start gap-3">
+      <ProviderAvatar modelData={modelData} className="hidden sm:flex" />
+
+      <div data-slot="message-content" className="flex min-w-0 flex-1 flex-col gap-2 px-0.5 sm:px-0">
+        <div
+          data-slot="message-header"
+          className="flex min-h-7 min-w-0 items-center gap-2 text-sm font-medium text-foreground sm:min-h-9"
+        >
+          <ProviderAvatar modelData={modelData} className="size-7 sm:hidden" />
+          <span className="truncate">{modelData?.display.name ?? modelId ?? "Model"}</span>
+        </div>
+
+        {message.status === "error" ? (
+          <MessageError message={getErrorText(message)} />
         ) : (
-          <Icons.unknown className="size-3.5 shrink-0" />
+          <>
+            <MessageAttachmentsDisplay
+              parts={fileParts}
+              attachments={message.attachments}
+              role={message.role}
+              messageId={message._id}
+            />
+
+            {blocks.length > 0 && (
+              <div className="flex w-full min-w-0 flex-col gap-2">
+                {flow.hasFinalResponse && <MessageWorkLog blocks={flow.workBlocks} message={message} />}
+                <AssistantBlocks blocks={flow.responseBlocks} message={message} />
+              </div>
+            )}
+
+            {isGenerating && blocks.length === 0 && <MessagePending isReasoning={isReasoningActive} />}
+          </>
         )}
-        <span className="truncate">{modelData?.display.name ?? modelId ?? "Model"}</span>
       </div>
-
-      {message.status === "error" ? (
-        <MessageError message={getErrorText(message)} />
-      ) : (
-        <>
-          <MessageAttachmentsDisplay
-            parts={fileParts}
-            attachments={message.attachments}
-            role={message.role}
-            messageId={message._id}
-          />
-
-          {blocks.length > 0 && (
-            <div className="flex w-full min-w-0 flex-col gap-2">
-              {flow.hasFinalResponse && <MessageWorkLog blocks={flow.workBlocks} message={message} />}
-              <AssistantBlocks blocks={flow.responseBlocks} message={message} />
-            </div>
-          )}
-
-          {isGenerating && blocks.length === 0 && <MessagePending isReasoning={isReasoningActive} />}
-        </>
-      )}
     </div>
   );
 }

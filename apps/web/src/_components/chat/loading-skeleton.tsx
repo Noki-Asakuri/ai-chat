@@ -26,11 +26,12 @@ function MessageBubbleSkeleton({ from, showActions = false }: { from: MessageRol
     case "user":
       return (
         <div className="flex flex-col gap-1">
-          <div className="flex w-full justify-end">
-            <div className="w-[85%] max-w-md space-y-2 rounded-2xl rounded-br-md bg-secondary px-4 py-3 sm:w-[80%]">
+          <div className="flex w-full items-start justify-end gap-2">
+            <div className="w-[80%] max-w-md space-y-2 rounded-2xl rounded-br-md bg-secondary px-4 py-3">
               <Skeleton className="h-4 w-[68%]" />
               <Skeleton className="h-4 w-[46%]" />
             </div>
+            <Skeleton className="mt-0.5 size-7 shrink-0 rounded-md sm:size-9" />
           </div>
 
           <MessageActionsSkeleton show={showActions} from="user" />
@@ -40,9 +41,13 @@ function MessageBubbleSkeleton({ from, showActions = false }: { from: MessageRol
     case "assistant":
       return (
         <div className="flex flex-col gap-1">
-          <div className="flex w-full justify-start px-0.5 sm:px-1">
+          <div className="flex w-full items-start gap-3 px-0.5 sm:px-0">
+            <Skeleton className="hidden size-9 shrink-0 rounded-md sm:block" />
             <div className="w-full space-y-2.5">
-              <Skeleton className="h-3 w-24" />
+              <div className="flex min-h-7 items-center gap-2 sm:min-h-9">
+                <Skeleton className="size-7 shrink-0 rounded-md sm:hidden" />
+                <Skeleton className="h-3.5 w-28" />
+              </div>
               <Skeleton className="h-4 w-[72%]" />
               <Skeleton className="h-4 w-[58%]" />
               <Skeleton className="h-4 w-[40%]" />
@@ -68,7 +73,7 @@ function MessageActionsSkeleton({ show, from }: { show: boolean; from: MessageRo
   switch (from) {
     case "user":
       return (
-        <div className={cn(sharedClassName, "ml-auto")}>
+        <div className={cn(sharedClassName, "ml-auto pr-9 sm:pr-11")}>
           <MessageButtonAction icon={<CopyIcon />} />
           <MessageButtonAction icon={<RefreshCcwIcon />} />
           <MessageButtonAction icon={<TrashIcon />} />
@@ -78,7 +83,7 @@ function MessageActionsSkeleton({ show, from }: { show: boolean; from: MessageRo
 
     case "assistant":
       return (
-        <div className={cn(sharedClassName)}>
+        <div className={cn(sharedClassName, "sm:pl-12")}>
           <MessageButtonAction icon={<CopyIcon />} />
           <MessageButtonAction icon={<SplitIcon className="rotate-180" />} />
           <MessageButtonAction icon={<RefreshCcwIcon />} />

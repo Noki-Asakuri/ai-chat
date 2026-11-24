@@ -28,6 +28,7 @@ const AnimatedMessageScrollerItem = m.create(MessageScrollerItem);
 
 type MessageHistoryProps = {
   readOnly?: boolean;
+  showUserAvatar?: boolean;
   bottomPaddingPx?: number;
   topPaddingPx?: number;
   canLoadOlder?: boolean;
@@ -37,6 +38,7 @@ type MessageHistoryProps = {
 
 export function MessageHistory({
   readOnly = false,
+  showUserAvatar = true,
   bottomPaddingPx,
   topPaddingPx = 48,
   canLoadOlder = false,
@@ -73,7 +75,7 @@ export function MessageHistory({
                 {isLoadingOlder ? "Loading earlier messages..." : "Load earlier messages"}
               </Button>
             )}
-            <Messages readOnly={readOnly} />
+            <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />
           </MessageScrollerContent>
         </MessageScrollerViewport>
 
@@ -109,7 +111,13 @@ function MessageScrollerEvents() {
   return null;
 }
 
-function Messages({ readOnly = false }: { readOnly?: boolean }) {
+function Messages({
+  readOnly = false,
+  showUserAvatar = true,
+}: {
+  readOnly?: boolean;
+  showUserAvatar?: boolean;
+}) {
   const messages = useMessageStore((state) => state.messageIds);
   const [entrance, setEntrance] = useState({ messages, firstNewIndex: messages.length });
 
@@ -132,6 +140,7 @@ function Messages({ readOnly = false }: { readOnly?: boolean }) {
           index={index}
           total={messages.length}
           readOnly={readOnly}
+          showUserAvatar={showUserAvatar}
           animateEntrance={index >= entrance.firstNewIndex}
         />
       ))}
@@ -144,6 +153,7 @@ type MessageHistoryItemProps = {
   index: number;
   total: number;
   readOnly: boolean;
+  showUserAvatar: boolean;
   animateEntrance: boolean;
 };
 

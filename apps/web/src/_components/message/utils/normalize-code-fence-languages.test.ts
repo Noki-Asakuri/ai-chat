@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  extractOriginalFenceLanguage,
-  normalizeCodeFenceLanguages,
-} from "./normalize-code-fence-languages";
+import { extractOriginalFenceLanguage, normalizeCodeFenceLanguages } from "./normalize-code-fence-languages";
 
 const passthroughLanguages = new Set(["mermaid"]);
 
@@ -59,23 +56,17 @@ describe("normalizeCodeFenceLanguages", function () {
   });
 
   test("preserves nested blockquote prefixes when normalizing languages", function () {
-    const markdown = ["> > ~~~tsx title=\"Demo\"", "> > <Component />", "> > ~~~"].join("\n");
+    const markdown = ['> > ~~~tsx title="Demo"', "> > <Component />", "> > ~~~"].join("\n");
 
     expect(normalizeCodeFenceLanguages(markdown, { passthroughLanguages })).toBe(
-      [
-        '> > ~~~text sdOriginalLanguage="tsx" title="Demo"',
-        "> > <Component />",
-        "> > ~~~",
-      ].join("\n"),
+      ['> > ~~~text sdOriginalLanguage="tsx" title="Demo"', "> > <Component />", "> > ~~~"].join("\n"),
     );
   });
 });
 
 describe("extractOriginalFenceLanguage", function () {
   test("extracts escaped original language metadata", function () {
-    expect(extractOriginalFenceLanguage('sdOriginalLanguage="weird\\"lang" title="Demo"')).toBe(
-      'weird"lang',
-    );
+    expect(extractOriginalFenceLanguage('sdOriginalLanguage="weird\\"lang" title="Demo"')).toBe('weird"lang');
   });
 
   test("returns null when metadata is missing", function () {
