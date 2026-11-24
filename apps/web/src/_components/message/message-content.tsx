@@ -42,7 +42,7 @@ function UserMessageContent({ message, showUserAvatar = true }: MessageContentPr
   return (
     <div className="flex w-full min-w-0 items-start justify-end gap-2">
       {isError ? (
-        <MessageError message={getErrorText(message)} />
+        <MessageError message={getErrorText(message)} withSurface />
       ) : (
         <UserMessageBody message={message} fileParts={fileParts} textParts={textParts} />
       )}
@@ -74,6 +74,7 @@ function UserMessageBody({
         <div
           key={`${message._id}-${i}`}
           data-slot="message-bubble"
+          data-message-surface="bubble"
           className="max-w-[85%] min-w-0 rounded-2xl rounded-br-md bg-secondary px-3.5 py-2.5 wrap-break-word text-secondary-foreground sm:max-w-[80%] sm:px-4 sm:py-3"
         >
           <MessageUserText text={part.text} attachments={message.attachments} />
@@ -107,7 +108,11 @@ function AssistantMessageContent({ message }: MessageContentProps) {
     <div className="flex w-full min-w-0 items-start gap-3">
       <ProviderAvatar modelData={modelData} className="hidden sm:flex" />
 
-      <div data-slot="message-content" className="flex min-w-0 flex-1 flex-col gap-2 px-0.5 sm:px-0">
+      <div
+        data-slot="message-content"
+        data-message-surface="card"
+        className="flex min-w-0 flex-1 flex-col gap-2 px-0.5 sm:px-0"
+      >
         <div
           data-slot="message-header"
           className="flex min-h-7 min-w-0 items-center gap-2 text-sm font-medium text-foreground sm:min-h-9"
@@ -231,10 +236,11 @@ function formatWorkDuration(durationMs: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
-function MessageError({ message }: { message: string }) {
+function MessageError({ message, withSurface = false }: { message: string; withSurface?: boolean }) {
   return (
     <div
       data-slot="message-error"
+      data-message-surface={withSurface ? "chip" : undefined}
       role="alert"
       className="flex max-w-full min-w-0 items-start gap-2.5 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
     >

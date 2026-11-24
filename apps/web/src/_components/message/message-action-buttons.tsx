@@ -136,7 +136,10 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
 
   return (
     <>
-      <div className="hidden items-center gap-0.5 text-muted-foreground sm:flex">
+      <div
+        data-message-surface="chip"
+        className="hidden items-center gap-0.5 rounded-lg text-muted-foreground sm:flex"
+      >
         {isFinished && (
           <>
             <CopyButton
@@ -231,7 +234,8 @@ function MobileMessageActionsMenu({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-8 text-muted-foreground aria-expanded:bg-muted aria-expanded:text-foreground"
+                  data-message-surface="chip"
+                  className="size-8 rounded-lg text-muted-foreground aria-expanded:bg-muted aria-expanded:text-foreground"
                   aria-label="Message actions"
                   title="Message actions"
                 >

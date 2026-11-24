@@ -75,7 +75,10 @@ function MessageInner({ message, isLast, readOnly = false, showUserAvatar = true
 function CancelledMessage() {
   return (
     <div className="flex px-0.5 sm:pl-12">
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 px-2 py-0.5 text-xs text-muted-foreground">
+      <span
+        data-message-surface="chip"
+        className="inline-flex items-center gap-1.5 rounded-full border border-border/70 px-2 py-0.5 text-xs text-muted-foreground"
+      >
         <BanIcon aria-hidden="true" className="size-3" />
         Cancelled
       </span>
