@@ -308,12 +308,25 @@ export const AISDKMetadata = v.object({
   modelParams: AISDKModelParams,
 });
 
+export const themeMode = v.union(v.literal("dark"), v.literal("light"), v.literal("system"));
+export const blurMode = v.union(v.literal("messages"), v.literal("backdrop"));
+
 export const userPreferences = v.object({
   name: v.string(),
   globalSystemInstruction: v.string(),
 
   backgroundImage: v.nullable(v.string()),
   performanceEnabled: v.boolean(),
+
+  appearance: v.optional(
+    v.object({
+      theme: themeMode,
+      accent: v.nullable(v.string()),
+      tint: v.number(),
+      blurMode: blurMode,
+      backdropBlur: v.number(),
+    }),
+  ),
 
   fonts: v.object({
     ui: v.string(),

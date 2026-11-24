@@ -6,14 +6,23 @@ import { internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
 
 import { authenticatedMutation, authenticatedQuery } from "../components";
-import { AISDKModelParams, effort } from "../schema";
+import { AISDKModelParams, blurMode, effort, themeMode } from "../schema";
 
 const MODEL_IDS: ReadonlySet<string> = new Set(AllModelIds);
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+function isNumberInRange(value: number, min: number, max: number) {
+  return Number.isFinite(value) && value >= min && value <= max;
+}
 
 export type UserPreferences = Doc<"users">["preferences"];
 export type UserPreferencesPatch = Partial<
-  Omit<UserPreferences, "models" | "notifications" | "code" | "fonts" | "threads" | "confirmations" | "textGeneration">
+  Omit<
+    UserPreferences,
+    "models" | "notifications" | "code" | "fonts" | "threads" | "confirmations" | "textGeneration" | "appearance"
+  >
 > & {
+  appearance?: Partial<NonNullable<UserPreferences["appearance"]>>;
   confirmations?: Partial<NonNullable<UserPreferences["confirmations"]>>;
   textGeneration?: Partial<NonNullable<UserPreferences["textGeneration"]>>;
   notifications?: Partial<UserPreferences["notifications"]>;
@@ -30,6 +39,15 @@ const userPreferencesPatch = v.object({
   globalSystemInstruction: v.optional(v.string()),
   backgroundImage: v.optional(v.nullable(v.string())),
   performanceEnabled: v.optional(v.boolean()),
+  appearance: v.optional(
+    v.object({
+      theme: v.optional(themeMode),
+      accent: v.optional(v.nullable(v.string())),
+      tint: v.optional(v.number()),
+      blurMode: v.optional(blurMode),
+      backdropBlur: v.optional(v.number()),
+    }),
+  ),
   sendPreference: v.optional(v.union(v.literal("enter"), v.literal("ctrlEnter"))),
   fonts: v.optional(
     v.object({
@@ -83,6 +101,13 @@ export const DEFAULT_USER_PREFERENCES = {
   globalSystemInstruction: "You are a helpful assistant.",
   backgroundImage: null,
   performanceEnabled: false,
+  appearance: {
+    theme: "dark",
+    accent: null,
+    tint: 0,
+    blurMode: "messages",
+    backdropBlur: 24,
+  },
   sendPreference: "enter",
   fonts: {
     ui: "Space Grotesk",
@@ -150,6 +175,11 @@ export function mergeUserPreferences(
         DEFAULT_USER_PREFERENCES.threads?.autoSettleDays ??
         0,
     },
+    appearance: {
+      ...DEFAULT_USER_PREFERENCES.appearance,
+      ...current?.appearance,
+      ...updates?.appearance,
+    },
     fonts: {
       ...DEFAULT_USER_PREFERENCES.fonts,
       ...current?.fonts,
@@ -214,6 +244,17 @@ export const updateUserPreferences = authenticatedMutation({
       if (resolveReasoning(model, nextPreferences.textGeneration?.effort ?? "medium") !== (nextPreferences.textGeneration?.effort ?? "medium")) {
         throw new Error("Unsupported reasoning effort for the text generation model");
       }
+    }
+
+    const appearance = updates.appearance;
+    if (appearance?.accent != null && !HEX_COLOR.test(appearance.accent)) {
+      throw new Error("Accent color must be a 6-digit hex color");
+    }
+    if (appearance?.tint !== undefined && !isNumberInRange(appearance.tint, 0, 100)) {
+      throw new Error("Surface tint must be between 0 and 100");
+    }
+    if (appearance?.backdropBlur !== undefined && !isNumberInRange(appearance.backdropBlur, 0, 64)) {
+      throw new Error("Background blur must be between 0 and 64");
     }
 
     const autoSettleDays = updates.threads?.autoSettleDays;

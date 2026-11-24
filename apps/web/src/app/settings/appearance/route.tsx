@@ -22,12 +22,14 @@ import {
   cacheTypography,
   getTypographyStyle,
 } from "@/lib/appearance/typography";
+import { normalizeAppearance, setAppearancePreview } from "@/lib/appearance/theme";
 
 import { Button } from "@/components/ui/button";
 
 import { BackgroundCard } from "../-components/customization/background-card";
 import { BehaviorOptionsCard } from "../-components/customization/behavior-options-card";
 import { FontsCard } from "../-components/customization/fonts-card";
+import { ThemeCard } from "../-components/customization/theme-card";
 import { AutosaveStatus } from "../-components/autosave-status";
 import { flushAutosave } from "../-components/flush-autosave";
 
@@ -56,6 +58,7 @@ function RouteComponent() {
       code: data.fonts?.code ?? DEFAULT_CODE_FONT,
       codeSize: data.fonts?.codeSize ?? DEFAULT_CODE_FONT_SIZE,
     },
+    appearance: normalizeAppearance(data.appearance),
     behavior: {
       sendPreference: data.sendPreference,
       notifications: data.notifications,
@@ -66,7 +69,9 @@ function RouteComponent() {
   const save = useQueryMutation({
     scope: { id: "appearance" },
     mutationFn: async (values: typeof defaultValues) => {
-      await updateUserPreferences({ data: { fonts: values.fonts, ...values.behavior } });
+      await updateUserPreferences({
+        data: { fonts: values.fonts, appearance: values.appearance, ...values.behavior },
+      });
       return values;
     },
     onError: (error) => {
@@ -85,12 +90,18 @@ function RouteComponent() {
     onSubmit: ({ value }) => save.mutate(value),
   });
   const fonts = useStore(form.store, (state) => state.values.fonts);
+  const appearance = useStore(form.store, (state) => state.values.appearance);
 
   useEffect(() => {
     if (!user) return;
     cacheTypography(user.id, fonts);
     applyTypography(document.documentElement, fonts);
   }, [fonts, user]);
+
+  // The root AppearanceSync paints this preview right away and keeps it over saved snapshots
+  // until the page unmounts, so pending autosaves can't flip the theme back.
+  useEffect(() => setAppearancePreview(appearance), [appearance]);
+  useEffect(() => () => setAppearancePreview(null), []);
 
   const background = useQueryMutation({
     scope: { id: "appearance-background" },
@@ -177,6 +188,19 @@ function RouteComponent() {
               </form.Subscribe>
             )}
           </div>
+          <form.Field name="appearance">
+            {(field) => (
+              <ThemeCard
+                disabled={false}
+                theme={field.state.value.theme}
+                accent={field.state.value.accent}
+                tint={field.state.value.tint}
+                onThemeChange={(theme) => field.handleChange((previous) => ({ ...previous, theme }))}
+                onAccentChange={(accent) => field.handleChange((previous) => ({ ...previous, accent }))}
+                onTintChange={(tint) => field.handleChange((previous) => ({ ...previous, tint }))}
+              />
+            )}
+          </form.Field>
           <form.Field name="fonts">
             {(field) => (
               <FontsCard
@@ -254,17 +278,29 @@ function RouteComponent() {
               />
             )}
           </form.Field>
-          <div className="max-w-3xl">
-            <BackgroundCard
-              key={data.backgroundImage}
-              disabled={background.isPending}
-              failed={background.isError}
-              existingBackgroundId={data.backgroundImage ?? null}
-              onRetry={() => background.mutate(background.variables ?? null)}
-              onDiscard={() => background.reset()}
-              onFileChange={(file) => background.mutate(file)}
-              onRemoveExistingBackground={() => background.mutateAsync(null)}
-            />
+          <div>
+            <form.Field name="appearance">
+              {(field) => (
+                <BackgroundCard
+                  key={data.backgroundImage}
+                  blurMode={field.state.value.blurMode}
+                  backdropBlur={field.state.value.backdropBlur}
+                  onBlurModeChange={(blurMode) =>
+                    field.handleChange((previous) => ({ ...previous, blurMode }))
+                  }
+                  onBackdropBlurChange={(backdropBlur) =>
+                    field.handleChange((previous) => ({ ...previous, backdropBlur }))
+                  }
+                  disabled={background.isPending}
+                  failed={background.isError}
+                  existingBackgroundId={data.backgroundImage ?? null}
+                  onRetry={() => background.mutate(background.variables ?? null)}
+                  onDiscard={() => background.reset()}
+                  onFileChange={(file) => background.mutate(file)}
+                  onRemoveExistingBackground={() => background.mutateAsync(null)}
+                />
+              )}
+            </form.Field>
           </div>
         </div>
       </form>

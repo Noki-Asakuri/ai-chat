@@ -149,12 +149,13 @@ function transformHighlightResult(result: HighlightResult) {
 }
 
 async function loadHighlighter() {
-  const [highlighter, { default: oneDarkPro }] = await Promise.all([
+  const [highlighter, { default: githubLight }, { default: oneDarkPro }] = await Promise.all([
     import("@pierre/highlights"),
+    import("@pierre/highlights/themes/github-light"),
     import("@pierre/highlights/themes/one-dark-pro"),
   ]);
 
-  return { ...highlighter, oneDarkPro };
+  return { ...highlighter, githubLight, oneDarkPro };
 }
 
 function HighlightedCodeBlock({
@@ -194,7 +195,9 @@ function HighlightedCodeBlock({
     const lang = language.trim().toLowerCase();
     const options = {
       lang: highlighter.isSupportedLanguage(lang) ? lang : "text",
-      themes: { light: highlighter.oneDarkPro },
+      // The light theme colors tokens inline; `dark:` classes in the body swap in --shiki-dark.
+      themes: { light: highlighter.githubLight, dark: highlighter.oneDarkPro },
+      cssVariablePrefix: "--shiki-",
     };
 
     // Re-tokenizing the whole fence on every streamed chunk is quadratic, so stream only the delta.
