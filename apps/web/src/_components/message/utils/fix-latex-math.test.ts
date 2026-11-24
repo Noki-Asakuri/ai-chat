@@ -39,9 +39,13 @@ describe("fixLatexMath", function () {
   });
 
   test("handles mixed prose, inline code, and fenced code", function () {
-    const input = ["Prose \\(a\\) and `\\(b\\)`.", "```plaintext", "\\(c\\)", "```", "Tail \\[d\\]"].join(
-      "\n",
-    );
+    const input = [
+      "Prose \\(a\\) and `\\(b\\)`.",
+      "```plaintext",
+      "\\(c\\)",
+      "```",
+      "Tail \\[d\\]",
+    ].join("\n");
 
     const expected = [
       "Prose $ a $ and `\\(b\\)`.",

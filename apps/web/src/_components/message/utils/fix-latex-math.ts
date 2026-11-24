@@ -81,7 +81,11 @@ function fixLatexOutsideInlineCode(text: string): string {
     result += fixLatexInProse(text.slice(index, backtickIndex));
 
     const delimiterLength = getBacktickRunLength(text, backtickIndex);
-    const closingIndex = findClosingBacktickRun(text, backtickIndex + delimiterLength, delimiterLength);
+    const closingIndex = findClosingBacktickRun(
+      text,
+      backtickIndex + delimiterLength,
+      delimiterLength,
+    );
 
     if (closingIndex === -1) {
       result += text.slice(backtickIndex);
