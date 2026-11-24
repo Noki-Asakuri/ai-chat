@@ -9,6 +9,7 @@ await mock.module("@/lib/assets/urls", () => ({
   buildAttachmentUrl: (path: string) => `https://files.test/${path}`,
   buildImageAssetUrl: (path: string) => `https://assets.test/${path}`,
   buildImageThumbnailUrl: (url: string) => url,
+  toRawFileUrl: (url: string) => url,
 }));
 
 const { MessageUserText } = await import("./message-user-text");
@@ -49,6 +50,14 @@ describe("MessageUserText", () => {
     expect(container.querySelector('[data-slot="message-token"]')).not.toBeNull();
     expect(container.querySelector('[data-streamdown="link"]')?.textContent).toBe("the docs");
     expect(container.querySelectorAll('[data-slot="message-token"]').length).toBe(1);
+  });
+
+  test("opens image chips in the lightbox", () => {
+    const { container } = renderText("Who is [@cat.webp](file:attachment_cat)?");
+    const chip = container.querySelector('[data-slot="message-token"]');
+
+    expect(chip?.tagName).toBe("BUTTON");
+    expect(chip?.getAttribute("aria-label")).toBe("View cat.webp");
   });
 
   test("falls back to a file icon when the attachment is gone", () => {
