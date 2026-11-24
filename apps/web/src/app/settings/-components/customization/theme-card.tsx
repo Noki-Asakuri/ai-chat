@@ -280,7 +280,10 @@ function AccentSwatch(props: {
         aria-label={props.label}
         checked={props.selected}
         disabled={props.disabled}
-        onChange={props.onSelect}
+        // `click` fires even on the already-checked radio (and for keyboard selection), so choosing
+        // the active preset still discards an uncommitted custom color; `change` would not.
+        onClick={props.onSelect}
+        readOnly
       />
       {props.selected && <CheckIcon aria-hidden className="size-4 text-white mix-blend-difference" />}
     </label>

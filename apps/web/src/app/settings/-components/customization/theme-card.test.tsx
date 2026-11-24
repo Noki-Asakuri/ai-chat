@@ -82,6 +82,26 @@ describe("ThemeCard custom accent", () => {
     expect(root.dataset.accentPreview).toBeUndefined();
   });
 
+  test("choosing the already-selected preset also drops an uncommitted custom color", async () => {
+    const { onAccentChange, picker, view } = renderCard();
+
+    // Violet (accent null) is selected; its radio stays checked during the drag.
+    await interact(() => fireEvent.input(picker, { target: { value: "#ff0000" } }));
+    await interact(() => {
+      fireEvent.blur(picker);
+      fireEvent.click(screen.getByRole("radio", { name: "Violet" }));
+    });
+
+    expect(onAccentChange.mock.calls).toEqual([[null]]);
+    expect(screen.queryByText("#ff0000")).toBeNull();
+    expect(root.style.getPropertyValue("--custom-primary")).toBe("");
+    expect(root.dataset.accentPreview).toBeUndefined();
+
+    // Nothing is left to save when the page is left.
+    view.unmount();
+    expect(onAccentChange.mock.calls).toEqual([[null]]);
+  });
+
   test("committing a color that equals a preset clears the custom swatch preview", async () => {
     const { onAccentChange, picker } = renderCard();
 
