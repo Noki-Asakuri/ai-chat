@@ -73,6 +73,7 @@ function RouteComponent() {
       id="sidebar-provider"
       defaultOpen={defaultOpenSidebar}
       data-performance-mode={chatShell.preferences.performanceEnabled ? "true" : "false"}
+      data-has-background={chatShell.preferences.backgroundImage ? "true" : "false"}
       className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat font-sans"
       style={backgroundStyle}
     >

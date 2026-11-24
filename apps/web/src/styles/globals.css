@@ -490,6 +490,39 @@
   @apply backdrop-blur-none! backdrop-saturate-100!;
 }
 
+/*
+ * Messages sit directly on the chat background. When the user sets a wallpaper, give them a
+ * translucent, blurred surface so text stays readable; performance mode swaps the blur for a
+ * solid fill.
+ */
+#sidebar-provider[data-has-background="true"] [data-message-surface] {
+  background-color: color-mix(in srgb, var(--background) 78%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  backdrop-filter: blur(12px) saturate(1.5);
+}
+
+#sidebar-provider[data-has-background="true"] [data-message-surface="card"] {
+  border-radius: 1rem;
+  padding: 0.625rem 0.75rem;
+}
+
+#sidebar-provider[data-has-background="true"][data-performance-mode="true"] [data-message-surface],
+#sidebar-provider[data-has-background="true"][data-disable-blur="true"] [data-message-surface] {
+  background-color: var(--background);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+#sidebar-provider[data-has-background="true"] [data-message-surface="bubble"] {
+  background-image: linear-gradient(var(--secondary), var(--secondary));
+}
+
+@media (min-width: 40rem) {
+  #sidebar-provider[data-has-background="true"] [data-message-surface="card"] {
+    padding: 0.75rem 1rem;
+  }
+}
+
 .katex-display {
   @apply block w-full max-w-full overflow-x-auto overflow-y-hidden;
 }

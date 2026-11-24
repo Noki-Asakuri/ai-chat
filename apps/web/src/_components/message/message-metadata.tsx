@@ -26,7 +26,7 @@ export function MessageMetadata({ metadata, rightAccessory }: MessageMetadataPro
   const durationSeconds = metadata.durations.request / 1000;
 
   return (
-    <div className="ml-auto flex min-w-0 items-center gap-1">
+    <div data-message-surface="chip" className="ml-auto flex min-w-0 items-center gap-1 rounded-lg">
       {rightAccessory}
       {hasFullMetadata && durationSeconds > 0 && (
         <span className="hidden truncate px-1 text-muted-foreground sm:inline">
