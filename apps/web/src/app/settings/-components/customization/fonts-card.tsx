@@ -46,9 +46,9 @@ export function formatUser(user: User) {
   const displayName = user.name.trim();
   return \`\${displayName} <\${user.email}>\`;
 }`;
-const CODE_PREVIEW_HIGHLIGHT: HighlightResult = {
+const ONE_DARK_PREVIEW_HIGHLIGHT: HighlightResult = {
   bg: "transparent",
-  fg: "#abb2bf",
+  fg: "inherit",
   tokens: [
     [
       { content: "type", color: "#C678DD", offset: 0 },
@@ -118,6 +118,32 @@ const CODE_PREVIEW_HIGHLIGHT: HighlightResult = {
     ],
     [{ content: "}", color: "#ABB2BF", offset: 175 }],
   ],
+};
+
+// GitHub Light equivalents for the One Dark colors above, so the preview reads in both themes.
+const LIGHT_PREVIEW_COLORS = new Map([
+  ["#ABB2BF", "#24292E"],
+  ["#C678DD", "#D73A49"],
+  ["#56B6C2", "#D73A49"],
+  ["#E06C75", "#E36209"],
+  ["#E5C07B", "#005CC5"],
+  ["#61AFEF", "#6F42C1"],
+  ["#98C379", "#032F62"],
+]);
+
+const CODE_PREVIEW_HIGHLIGHT: HighlightResult = {
+  ...ONE_DARK_PREVIEW_HIGHLIGHT,
+  tokens: ONE_DARK_PREVIEW_HIGHLIGHT.tokens.map((line) =>
+    line.map((token) =>
+      token.color
+        ? {
+            ...token,
+            color: LIGHT_PREVIEW_COLORS.get(token.color) ?? token.color,
+            htmlStyle: { "--shiki-dark": token.color },
+          }
+        : token,
+    ),
+  ),
 };
 
 type FontAccessStatus = "idle" | "requesting" | "granted" | "denied" | "unavailable";

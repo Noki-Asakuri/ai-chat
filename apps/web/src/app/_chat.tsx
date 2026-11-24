@@ -19,6 +19,7 @@ import { ThreadProfileSidebar } from "@/components/threads/profile/profile-sideb
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 
+import { normalizeAppearance } from "@/lib/appearance/theme";
 import { buildImageAssetUrl } from "@/lib/assets/urls";
 import { resolveReasoning, tryGetModelData } from "@/lib/chat/models";
 import { cn, fromUUID } from "@/lib/utils";
@@ -62,26 +63,49 @@ function RouteComponent() {
   const { defaultOpenSidebar } = Route.useLoaderData();
   const { data: chatShell } = useSuspenseQuery(convexQuery(api.functions.users.getChatShell));
 
-  const backgroundStyle = {
-    backgroundImage: chatShell.preferences.backgroundImage
-      ? `url(${buildImageAssetUrl(chatShell.preferences.backgroundImage)})`
-      : undefined,
-  };
+  const appearance = normalizeAppearance(chatShell.preferences.appearance);
+  const backgroundImage = chatShell.preferences.backgroundImage;
 
   return (
     <SidebarProvider
       id="sidebar-provider"
       defaultOpen={defaultOpenSidebar}
       data-performance-mode={chatShell.preferences.performanceEnabled ? "true" : "false"}
-      data-has-background={chatShell.preferences.backgroundImage ? "true" : "false"}
-      className="group/sidebar-provider -z-9999 bg-sidebar bg-cover bg-fixed bg-center bg-no-repeat font-sans"
-      style={backgroundStyle}
+      data-has-background={backgroundImage ? "true" : "false"}
+      data-blur-mode={backgroundImage ? appearance.blurMode : undefined}
+      className="group/sidebar-provider isolate bg-sidebar font-sans"
     >
+      {backgroundImage && (
+        <ChatBackdrop
+          src={buildImageAssetUrl(backgroundImage)}
+          blur={appearance.blurMode === "backdrop" ? appearance.backdropBlur : 0}
+        />
+      )}
       <SidebarTrigger size="icon-lg" className="fixed top-1.5 left-3.5 z-60 [&_svg]:size-5!" />
       <ThreadSidebar />
 
       <ChatLayoutConfig />
     </SidebarProvider>
+  );
+}
+
+function ChatBackdrop({ src, blur }: { src: string; blur: number }) {
+  return (
+    <div
+      aria-hidden
+      data-slot="chat-backdrop"
+      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+    >
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url(${JSON.stringify(src)})`,
+          // Scale past the edges so the blur doesn't fade them to the page color.
+          filter: blur > 0 ? `blur(${blur}px)` : undefined,
+          transform: blur > 0 ? `scale(${1 + Math.min(blur, 64) / 200})` : undefined,
+        }}
+      />
+    </div>
   );
 }
 

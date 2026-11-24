@@ -38,6 +38,14 @@ import { Toaster } from "@/components/ui/toast";
 import { env } from "@/env";
 
 import {
+  applyAppearance,
+  cacheAppearance,
+  getAppearancePrePaintScript,
+  normalizeAppearance,
+  useAppearancePreview,
+  watchSystemTheme,
+} from "@/lib/appearance/theme";
+import {
   applyTypography,
   cacheTypography,
   getTypographyPrePaintScript,
@@ -96,7 +104,6 @@ export const Route = createRootRouteWithContext<RootContext>()({
         },
 
         // --- Visuals ---
-        { name: "color-scheme", content: "dark" },
         { name: "theme-color", content: "#1a1a1a" },
 
         // --- iOS PWA Specifics ---
@@ -167,11 +174,38 @@ function TypographySync() {
   return null;
 }
 
+function AppearanceSync() {
+  const { auth } = Route.useLoaderData();
+  const { data: chatShell } = useQuery({
+    ...convexQuery(api.functions.users.getChatShell),
+    enabled: !!auth.user,
+  });
+
+  const savedAppearance = chatShell?.preferences.appearance;
+  const previewAppearance = useAppearancePreview();
+  const appearance = useMemo(
+    () => previewAppearance ?? (savedAppearance ? normalizeAppearance(savedAppearance) : null),
+    [previewAppearance, savedAppearance],
+  );
+
+  useEffect(() => watchSystemTheme(document.documentElement), []);
+
+  useEffect(() => {
+    if (!appearance || !auth.user) return;
+
+    cacheAppearance(auth.user.id, appearance);
+    applyAppearance(document.documentElement, appearance);
+  }, [auth.user, appearance]);
+
+  return null;
+}
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const loaderData = Route.useLoaderData();
   const { convexReactClient } = Route.useRouteContext();
   const typographyPrePaintScript = getTypographyPrePaintScript(loaderData.auth.user?.id);
+  const appearancePrePaintScript = getAppearancePrePaintScript(loaderData.auth.user?.id);
 
   useWindowEvent(
     CHAT_NAVIGATE_TO_THREAD_EVENT,
@@ -194,13 +228,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <html lang="en" className="antialiased" suppressHydrationWarning>
+    <html lang="en" className="dark antialiased" data-theme="dark" suppressHydrationWarning>
       <head>
+        {appearancePrePaintScript && <ScriptOnce>{appearancePrePaintScript}</ScriptOnce>}
         {typographyPrePaintScript && <ScriptOnce>{typographyPrePaintScript}</ScriptOnce>}
         <HeadContent />
       </head>
 
-      <body className="dark isolate max-h-svh overflow-hidden font-sans">
+      <body className="isolate max-h-svh overflow-hidden font-sans">
         <AuthKitProvider initialAuth={loaderData.auth}>
           <RootElement convexClient={convexReactClient}>{children}</RootElement>
         </AuthKitProvider>
@@ -248,6 +283,7 @@ function RootElement({
     <ConvexProviderWithAuth client={convexClient} useAuth={() => convexAuth}>
       <SessionProvider useStorage={sessionUseCookie}>
         <TypographySync />
+        <AppearanceSync />
         <AvatarCacheSync />
         {children}
       </SessionProvider>

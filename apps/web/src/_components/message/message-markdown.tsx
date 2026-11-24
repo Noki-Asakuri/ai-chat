@@ -8,6 +8,7 @@ import { memo, useMemo } from "react";
 import { defaultRemarkPlugins, Streamdown, type StreamdownProps } from "streamdown";
 
 import { CodeBlock } from "@/components/ui/code-block";
+import { useResolvedTheme } from "@/lib/appearance/theme";
 
 import { ExternalLinkSafetyModal } from "./external-link-safety-modal";
 import { addMissingFenceLanguages } from "./utils/add-missing-fence-languages";
@@ -25,12 +26,15 @@ type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
 const mermaid = createMermaidPlugin();
 const math = createMathPlugin({ singleDollarTextMath: true, errorColor: "var(--destructive)" });
 const passthroughCodeFenceLanguages = new Set(["mermaid"]);
+// Matches anywhere (blockquotes, lists); a false match only costs one extra remount.
+const MERMAID_FENCE = /(`{3,}|~{3,})\s*mermaid\b/i;
 
 export const StreamDownWrapper = memo(function StreamDownWrapper({
   children,
   className,
   ...props
 }: MarkdownProps) {
+  const resolvedTheme = useResolvedTheme();
   const normalizedChildren = useMemo(() => {
     const fixedFenceLanguages = addMissingFenceLanguages(children);
     const normalizedFenceLanguages = normalizeCodeFenceLanguages(fixedFenceLanguages, {
@@ -51,7 +55,7 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
     // Streamdown renders different trees per mode; switching when a reply finishes would remount
     // its code blocks (losing expanded/scroll state), so keep assistant messages in streaming mode.
     mode: props.role === "assistant" ? "streaming" : "static",
-    mermaid: { config: { theme: "dark" } },
+    mermaid: { config: { theme: resolvedTheme === "light" ? "default" : "dark" } },
 
     linkSafety: {
       enabled: true,
@@ -67,7 +71,15 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
     ...props,
   };
 
-  return <Streamdown {...streamdownProps}>{normalizedChildren}</Streamdown>;
+  // Streamdown's memo skips `mermaid` prop changes, so remount diagrams when the theme flips.
+  // Only messages with a Mermaid fence pay for the remount.
+  const themeKey = MERMAID_FENCE.test(normalizedChildren) ? resolvedTheme : undefined;
+
+  return (
+    <Streamdown key={themeKey} {...streamdownProps}>
+      {normalizedChildren}
+    </Streamdown>
+  );
 });
 
 StreamDownWrapper.displayName = "StreamDownWrapper";
