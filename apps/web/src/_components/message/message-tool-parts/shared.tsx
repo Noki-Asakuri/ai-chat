@@ -1,9 +1,10 @@
 import type { DynamicToolUIPart, ToolUIPart } from "@ai-chat/shared/chat/ui";
 import { z } from "zod/v4";
 
-import { CheckIcon, CircleDashedIcon, XIcon } from "lucide-react";
+import { CheckIcon, CircleAlertIcon, CircleDashedIcon, XIcon } from "lucide-react";
 
 import type { ChatMessage } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export type ToolPart = ToolUIPart | DynamicToolUIPart;
 
@@ -119,55 +120,78 @@ export function summarizeValue(cause: unknown): string {
   return normalizeSummaryText(String(cause));
 }
 
-export function ToolStateBadge({ part }: { part: ToolPart }) {
+const TOOL_BADGE_BASE_CLASS = "items-center gap-1 rounded-full border px-1.5 py-px text-xs";
+const TOOL_BADGE_TONE_CLASS = {
+  muted: "border-border/70 text-muted-foreground",
+  warning: "border-amber-600/50 text-amber-500",
+  success: "border-emerald-600/50 text-emerald-500",
+  error: "border-destructive/50 text-destructive",
+} as const;
+
+function getToolStateBadge(
+  part: ToolPart,
+): { label: string; tone: keyof typeof TOOL_BADGE_TONE_CLASS } | null {
   switch (part.state) {
     case "input-streaming":
-      return (
-        <span className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
-          <CircleDashedIcon className="size-3 animate-spin" />
-          Calling
-        </span>
-      );
+      return { label: "Calling", tone: "muted" };
     case "input-available":
-      return (
-        <span className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
-          Input ready
-        </span>
-      );
+      return { label: "Input ready", tone: "muted" };
     case "approval-requested":
-      return (
-        <span className="inline-flex items-center gap-1 rounded-md border border-amber-600/60 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-500">
-          Awaiting approval
-        </span>
-      );
+      return { label: "Awaiting approval", tone: "warning" };
     case "approval-responded":
-      return (
-        <span className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
-          Approval sent
-        </span>
-      );
+      return { label: "Approval sent", tone: "muted" };
     case "output-available":
-      return (
-        <span className="inline-flex items-center gap-1 rounded-md border border-emerald-600/60 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-500">
-          <CheckIcon className="size-3" />
-          Completed
-        </span>
-      );
+      return { label: "Completed", tone: "success" };
     case "output-error":
-      return (
-        <span className="inline-flex items-center gap-1 rounded-md border border-destructive/60 bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
-          <XIcon className="size-3" />
-          Error
-        </span>
-      );
+      return { label: "Error", tone: "error" };
     case "output-denied":
-      return (
-        <span className="inline-flex items-center gap-1 rounded-md border border-amber-600/60 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-500">
-          Denied
-        </span>
-      );
+      return { label: "Denied", tone: "warning" };
     default:
       return null;
+  }
+}
+
+export function ToolStateBadge({ part, className }: { part: ToolPart; className?: string }) {
+  const badge = getToolStateBadge(part);
+  if (!badge) return null;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0",
+        TOOL_BADGE_BASE_CLASS,
+        TOOL_BADGE_TONE_CLASS[badge.tone],
+        className,
+      )}
+    >
+      {badge.label}
+    </span>
+  );
+}
+
+export function ToolStateIcon({ part }: { part: ToolPart }) {
+  const className = "size-3.5 shrink-0";
+  const label = getToolStateBadge(part)?.label;
+
+  switch (part.state) {
+    case "input-streaming":
+    case "input-available":
+    case "approval-responded":
+      return (
+        <CircleDashedIcon
+          aria-label={label}
+          className={cn(className, "animate-spin text-muted-foreground motion-reduce:animate-none")}
+        />
+      );
+    case "output-available":
+      return <CheckIcon aria-label={label} className={cn(className, "text-emerald-500")} />;
+    case "output-error":
+      return <XIcon aria-label={label} className={cn(className, "text-destructive")} />;
+    case "approval-requested":
+    case "output-denied":
+      return <CircleAlertIcon aria-label={label} className={cn(className, "text-amber-500")} />;
+    default:
+      return <CircleDashedIcon aria-hidden="true" className={cn(className, "text-muted-foreground")} />;
   }
 }
 

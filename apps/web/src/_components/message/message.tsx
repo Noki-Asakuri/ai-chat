@@ -17,23 +17,16 @@ type MessageProps = {
   index: number;
   total: number;
   readOnly?: boolean;
-  showUserAvatar?: boolean;
 };
 
-export function Message({
-  messageId,
-  index,
-  total,
-  readOnly = false,
-  showUserAvatar = true,
-}: MessageProps) {
+export function Message({ messageId, index, total, readOnly = false }: MessageProps) {
   const message = useMessageStore(useShallow((state) => state.messagesById[messageId]!));
   const isLast = isLastMessage(message.role, index, total);
 
   return (
     <div
       data-slot="message"
-      className="group flex flex-col gap-2"
+      className="group/message-row flex flex-col gap-1"
       key={message._id}
       data-index={index}
       data-islast={isLast}
@@ -43,12 +36,7 @@ export function Message({
       data-effort={message.metadata?.modelParams.effort}
       data-web-search={message.metadata?.modelParams.webSearch ?? false}
     >
-      <MessageInner
-        message={message}
-        isLast={isLast}
-        readOnly={readOnly}
-        showUserAvatar={showUserAvatar}
-      />
+      <MessageInner message={message} isLast={isLast} readOnly={readOnly} />
     </div>
   );
 }
@@ -63,26 +51,19 @@ type MessageInnerProps = {
   message: ChatMessage;
   isLast: boolean;
   readOnly?: boolean;
-  showUserAvatar?: boolean;
 };
 
-function MessageInner({
-  message,
-  isLast,
-  readOnly = false,
-  showUserAvatar = true,
-}: MessageInnerProps) {
+function MessageInner({ message, isLast, readOnly = false }: MessageInnerProps) {
   const editMessageId = useChatStore((state) => state.editMessage?._id);
   const isEditingMessage = message._id === editMessageId;
 
   if (isEditingMessage && !readOnly) return <ChatEditTextarea />;
 
-  const isMessageCancelled =
-    message.role === "assistant" && message.metadata?.finishReason === "aborted";
+  const isMessageCancelled = message.role === "assistant" && message.metadata?.finishReason === "aborted";
 
   return (
     <>
-      <MessageContent message={message} showUserAvatar={showUserAvatar} />
+      <MessageContent message={message} />
       {isMessageCancelled && <CancelledMessage />}
       <MessageFooter isLast={isLast} message={message} readOnly={readOnly} />
     </>
@@ -91,11 +72,11 @@ function MessageInner({
 
 function CancelledMessage() {
   return (
-    <div className="mt-2 flex w-full justify-center">
-      <div className="inline-flex items-center gap-2 rounded-md border border-destructive/50 bg-background/80 px-3 py-1 text-sm font-medium text-destructive backdrop-blur-md backdrop-saturate-150">
-        <BanIcon className="size-4" />
-        <span>Cancelled</span>
-      </div>
+    <div className="flex px-0.5 sm:px-1">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 px-2 py-0.5 text-xs text-muted-foreground">
+        <BanIcon aria-hidden="true" className="size-3" />
+        Cancelled
+      </span>
     </div>
   );
 }

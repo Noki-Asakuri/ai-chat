@@ -136,7 +136,7 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
 
   return (
     <>
-      <div className="hidden items-center gap-0.5 rounded-md border bg-background/80 p-1 backdrop-blur-md backdrop-saturate-150 group-data-[disable-blur=true]/sidebar-provider:border-0 lg:flex">
+      <div className="hidden items-center gap-0.5 text-muted-foreground sm:flex">
         {isFinished && (
           <>
             <CopyButton
@@ -218,7 +218,7 @@ function MobileMessageActionsMenu({
   if (!isFinished && message.role !== "user" && import.meta.env.PROD) return null;
 
   return (
-    <div className="lg:hidden">
+    <div className="sm:hidden">
       <DeleteButton menu message={message}>
         {(deleteButton, dialogOpen) => (
           <DropdownMenu
@@ -231,7 +231,7 @@ function MobileMessageActionsMenu({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-10 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150"
+                  className="size-8 text-muted-foreground aria-expanded:bg-muted aria-expanded:text-foreground"
                   aria-label="Message actions"
                   title="Message actions"
                 >
@@ -845,7 +845,7 @@ function VariantPager({ message }: { message: ChatMessage }) {
   }
 
   return (
-    <div className="inline-flex items-center gap-1 rounded-md border bg-background/80 p-1 backdrop-blur-md backdrop-saturate-150">
+    <div className="inline-flex items-center text-muted-foreground">
       <ButtonWithTip
         variant="ghost"
         side="bottom"
@@ -861,7 +861,7 @@ function VariantPager({ message }: { message: ChatMessage }) {
         )}
       </ButtonWithTip>
 
-      <span className="min-w-10 text-center text-xs text-muted-foreground">
+      <span className="min-w-8 text-center text-xs tabular-nums">
         {activeVariantIndex + 1}/{variants.length}
       </span>
 

@@ -28,7 +28,6 @@ const AnimatedMessageScrollerItem = m.create(MessageScrollerItem);
 
 type MessageHistoryProps = {
   readOnly?: boolean;
-  showUserAvatar?: boolean;
   bottomPaddingPx?: number;
   topPaddingPx?: number;
   canLoadOlder?: boolean;
@@ -38,7 +37,6 @@ type MessageHistoryProps = {
 
 export function MessageHistory({
   readOnly = false,
-  showUserAvatar = true,
   bottomPaddingPx,
   topPaddingPx = 48,
   canLoadOlder = false,
@@ -60,7 +58,7 @@ export function MessageHistory({
         >
           <MessageScrollerContent
             data-slot="message-history"
-            className="mx-auto min-h-full w-full max-w-[calc(56rem+32px)] gap-4 px-4"
+            className="mx-auto min-h-full w-full max-w-[calc(56rem+32px)] gap-6 px-3 sm:px-4"
             style={{ paddingTop: `${topPaddingPx}px`, paddingBottom: `${resolvedBottomPadding}px` }}
           >
             {canLoadOlder && onLoadOlder && (
@@ -75,7 +73,7 @@ export function MessageHistory({
                 {isLoadingOlder ? "Loading earlier messages..." : "Load earlier messages"}
               </Button>
             )}
-            <Messages readOnly={readOnly} showUserAvatar={showUserAvatar} />
+            <Messages readOnly={readOnly} />
           </MessageScrollerContent>
         </MessageScrollerViewport>
 
@@ -111,13 +109,7 @@ function MessageScrollerEvents() {
   return null;
 }
 
-function Messages({
-  readOnly = false,
-  showUserAvatar = true,
-}: {
-  readOnly?: boolean;
-  showUserAvatar?: boolean;
-}) {
+function Messages({ readOnly = false }: { readOnly?: boolean }) {
   const messages = useMessageStore((state) => state.messageIds);
   const [entrance, setEntrance] = useState({ messages, firstNewIndex: messages.length });
 
@@ -140,7 +132,6 @@ function Messages({
           index={index}
           total={messages.length}
           readOnly={readOnly}
-          showUserAvatar={showUserAvatar}
           animateEntrance={index >= entrance.firstNewIndex}
         />
       ))}
@@ -153,7 +144,6 @@ type MessageHistoryItemProps = {
   index: number;
   total: number;
   readOnly: boolean;
-  showUserAvatar: boolean;
   animateEntrance: boolean;
 };
 
@@ -166,7 +156,7 @@ function MessageHistoryItem({ animateEntrance, ...props }: MessageHistoryItemPro
       initial={
         prefersReducedMotion || !animateEntrance
           ? false
-          : { height: 0, marginTop: "-1rem", opacity: 0, y: 8, overflow: "hidden" }
+          : { height: 0, marginTop: "-1.5rem", opacity: 0, y: 8, overflow: "hidden" }
       }
       animate={{
         height: "auto",

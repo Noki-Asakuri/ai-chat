@@ -63,13 +63,13 @@ export function MessageAttachmentsDisplay({
   return (
     <div className={cn("flex max-w-full flex-col gap-2", className)} {...props}>
       {role === "assistant" && (
-        <div className="flex w-max items-center gap-2 rounded-md bg-card px-2 py-1 text-sm text-foreground">
-          <BotIcon />
-          <span>AI generated</span>
-        </div>
+        <span className="inline-flex w-max items-center gap-1.5 rounded-full border border-border/70 px-2 py-0.5 text-xs text-muted-foreground">
+          <BotIcon aria-hidden="true" className="size-3.5" />
+          AI generated
+        </span>
       )}
 
-      <div className="flex max-w-full gap-2 overflow-x-auto">
+      <div className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain">
         <ImageLightboxProvider images={images}>
           {parts.map((part, index) => {
             const isImage = part.mediaType.includes("image");
@@ -78,7 +78,7 @@ export function MessageAttachmentsDisplay({
               return (
                 <div
                   key={`${messageId}-attachment-${index}`}
-                  className="flex aspect-square size-full items-center justify-center bg-card"
+                  className="flex size-28 shrink-0 items-center justify-center rounded-xl border bg-muted/40 text-muted-foreground sm:size-40"
                 >
                   <FileTextIcon />
                 </div>
@@ -90,7 +90,10 @@ export function MessageAttachmentsDisplay({
 
             if (imageIndex < 0) {
               return (
-                <div key={`${messageId}-attachment-${index}`} className="size-40 overflow-hidden rounded-md">
+                <div
+                  key={`${messageId}-attachment-${index}`}
+                  className="size-28 shrink-0 overflow-hidden rounded-xl border sm:size-40"
+                >
                   <AttachmentImageThumbnail
                     key={thumbnailUrl}
                     src={thumbnailUrl}
@@ -102,7 +105,7 @@ export function MessageAttachmentsDisplay({
 
             return (
               <ImageLightboxTrigger index={imageIndex} key={`${messageId}-attachment-${index}`}>
-                <div className="size-40 overflow-hidden rounded-md">
+                <div className="size-28 shrink-0 overflow-hidden rounded-xl border sm:size-40">
                   <AttachmentImageThumbnail
                     key={thumbnailUrl}
                     src={thumbnailUrl}

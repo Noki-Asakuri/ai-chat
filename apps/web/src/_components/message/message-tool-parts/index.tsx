@@ -1,4 +1,4 @@
-import { ChevronDownIcon, WrenchIcon } from "lucide-react";
+import { ChevronRightIcon, WrenchIcon } from "lucide-react";
 
 import * as React from "react";
 
@@ -14,6 +14,7 @@ import {
   stringifyForDetails,
   summarizeValue,
   ToolStateBadge,
+  ToolStateIcon,
   type ToolPart,
 } from "./shared";
 import {
@@ -114,31 +115,38 @@ function MessageToolPart({ part }: { part: ToolPart }) {
   const detailValue = detail?.value ?? "";
 
   return (
-    <div className="message-tool-part rounded-md border bg-background/80 px-2 py-1.5 backdrop-blur-md backdrop-saturate-150">
+    <div className="message-tool-part min-w-0">
       <button
         type="button"
-        className="flex w-full items-center gap-2 text-left"
+        aria-expanded={isOpen}
+        className="-mx-1 flex min-h-7 w-[calc(100%+0.5rem)] min-w-0 items-center gap-2 rounded-md px-1 text-left text-sm transition-colors outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/60"
         onClick={() => setIsOpen((prev) => !prev)}
       >
-        <ChevronDownIcon
-          className={cn("size-3 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-180")}
+        <ToolStateIcon part={part} />
+
+        <span className="shrink-0 font-medium text-foreground">{getToolLabel(toolName)}</span>
+
+        <span className="min-w-0 grow truncate text-xs text-muted-foreground">{summaryText}</span>
+
+        <ToolStateBadge part={part} className="hidden sm:inline-flex" />
+
+        <ChevronRightIcon
+          aria-hidden="true"
+          className={cn(
+            "size-3.5 shrink-0 text-muted-foreground transition-transform",
+            isOpen && "rotate-90",
+          )}
         />
-
-        <span className="min-w-0 shrink text-xs font-medium text-foreground">{getToolLabel(toolName)}</span>
-
-        <span className="text-2xs min-w-0 grow truncate text-muted-foreground">{summaryText}</span>
-
-        <ToolStateBadge part={part} />
       </button>
 
       {isOpen && webSearchOutput && <WebSearchOutputView output={webSearchOutput} />}
 
       {detail && detailValue.length > 0 && (
-        <div className="mt-1 rounded-md bg-background/80 px-2 py-1.5">
+        <div className="mt-1 mb-1.5 ml-5.5 rounded-lg bg-muted/40 px-2.5 py-2">
           <div className="text-3xs mb-1 font-medium tracking-wide text-muted-foreground uppercase">
             {detail.label}
           </div>
-          <pre className="overflow-x-auto text-xs break-words whitespace-pre-wrap text-foreground">
+          <pre className="max-h-72 overflow-auto text-xs break-words whitespace-pre-wrap text-foreground">
             {detailValue}
           </pre>
         </div>
@@ -186,13 +194,16 @@ export function MessageToolParts({ parts, className, isStreaming = true }: Messa
 
   return (
     <Collapsible className={cn("w-full", className)}>
-      <CollapsibleTrigger className="group flex min-h-8 w-full items-center gap-2 rounded-md border bg-background/80 px-2 text-left text-sm text-muted-foreground backdrop-blur-md backdrop-saturate-150 transition-colors hover:text-foreground">
-        <WrenchIcon className="size-4" />
-        <span className="grow">{getToolGroupLabel(toolParts)}</span>
-        <ChevronDownIcon className="size-4 transition-transform group-data-panel-open:rotate-180" />
+      <CollapsibleTrigger className="group/tool-group -mx-1 flex h-7 w-[calc(100%+0.5rem)] min-w-0 items-center gap-2 rounded-md px-1 text-left text-sm text-muted-foreground transition-colors outline-none hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60">
+        <WrenchIcon aria-hidden="true" className="size-3.5 shrink-0" />
+        <span className="min-w-0 grow truncate">{getToolGroupLabel(toolParts)}</span>
+        <ChevronRightIcon
+          aria-hidden="true"
+          className="size-3.5 shrink-0 transition-transform group-data-panel-open/tool-group:rotate-90"
+        />
       </CollapsibleTrigger>
-      <CollapsibleContent className="flex h-[var(--collapsible-panel-height)] flex-col overflow-hidden transition-[height] duration-150 ease-out data-ending-style:h-0 data-starting-style:h-0 [&[hidden]:not([hidden='until-found'])]:hidden">
-        <div className="flex flex-col gap-1 pt-1">
+      <CollapsibleContent className="flex h-[var(--collapsible-panel-height)] flex-col overflow-hidden transition-[height] duration-150 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none [&[hidden]:not([hidden='until-found'])]:hidden">
+        <div className="ml-[0.4375rem] flex flex-col border-l border-border/70 py-1 pl-3.5">
           {toolParts.map((part) => (
             <MessageToolPart key={part.toolCallId} part={part} />
           ))}
@@ -216,5 +227,5 @@ function getToolGroupLabel(parts: ToolPart[]): string {
 }
 
 export function MessageStepDivider({ className }: { className?: string }) {
-  return <Separator className={cn("my-0.5 opacity-50", className)} />;
+  return <Separator className={cn("my-1 opacity-60", className)} />;
 }
