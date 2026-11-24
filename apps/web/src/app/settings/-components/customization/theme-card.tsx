@@ -7,8 +7,8 @@ import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { ACCENT_PRESETS, getAccentForeground, isHexColor, type ThemeMode } from "@/lib/appearance/theme";
-import { cn, cssVariables } from "@/lib/utils";
+import { ACCENT_PRESETS, isHexColor, type ThemeMode } from "@/lib/appearance/theme";
+import { cn } from "@/lib/utils";
 
 const THEME_OPTIONS = [
   { value: "light", label: "Light", icon: SunIcon },
@@ -44,49 +44,57 @@ function SettingRow(props: { id: string; title: string; description: string; chi
 
 export function ThemeCard(props: ThemeCardProps) {
   const isPresetAccent = ACCENT_PRESETS.some((preset) => preset.value === props.accent);
-  const savedCustomAccent = !isPresetAccent && props.accent ? props.accent : null;
+  const customAccent = !isPresetAccent && props.accent ? props.accent : null;
 
   /**
-   * The native picker fires on every drag movement, and re-theming the whole app costs a full
-   * style recalc plus color transitions on every element. While dragging, the new accent only
-   * themes this section; the app takes it once, when the picker commits (closes).
+   * The native picker fires on every drag movement. Any re-render or shared CSS variable change
+   * per movement restyles many elements and restarts their color transitions, which made dragging
+   * lag. So while dragging, only the custom swatch and its hex label are written, straight to the
+   * DOM; React state and the app's accent change once, when the picker commits (closes).
    */
-  const [draftAccent, setDraftAccent] = useState<string | null>(null);
-  const customAccent = draftAccent ?? savedCustomAccent;
-  const draftStyle = draftAccent
-    ? cssVariables({
-        "--primary": draftAccent,
-        "--primary-foreground": getAccentForeground(draftAccent),
-        "--ring": draftAccent,
-      })
-    : undefined;
+  const draftRef = useRef<string | null>(null);
+  const swatchRef = useRef<HTMLLabelElement>(null);
+  const hexRef = useRef<HTMLSpanElement>(null);
+  // Remounts the picker to drop a previewed-but-uncommitted color from the DOM.
+  const [pickerKey, setPickerKey] = useState(0);
 
-  function commitDraftAccent() {
-    if (!draftAccent) return;
-    setDraftAccent(null);
-    props.onAccentChange(draftAccent);
+  function previewDraftAccent(accent: string) {
+    draftRef.current = accent;
+    if (swatchRef.current) swatchRef.current.style.background = accent;
+    if (hexRef.current) {
+      hexRef.current.textContent = accent;
+      hexRef.current.hidden = false;
+    }
   }
 
-  // React's onChange is the native `input` event (every movement); `change` fires on commit.
-  const onPickerCommit = useEffectEvent(commitDraftAccent);
-  const pickerRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    const picker = pickerRef.current;
-    const handleChange = () => onPickerCommit();
-    picker?.addEventListener("change", handleChange);
-    return () => picker?.removeEventListener("change", handleChange);
-  }, []);
+  function commitDraftAccent() {
+    const pending = draftRef.current;
+    if (!pending) return;
+    draftRef.current = null;
+    props.onAccentChange(pending);
+  }
 
+  // The uncontrolled picker's React onChange is the native `input` event (every movement);
+  // the native `change` event fires once, on commit.
+  function attachPicker(picker: HTMLInputElement) {
+    picker.addEventListener("change", commitDraftAccent);
+    return () => picker.removeEventListener("change", commitDraftAccent);
+  }
+
+  const onPickerCommit = useEffectEvent(commitDraftAccent);
   // Leaving the page with the picker still open keeps the last color.
   useEffect(() => () => onPickerCommit(), []);
 
   function selectPresetAccent(accent: string | null) {
-    setDraftAccent(null);
+    if (draftRef.current) {
+      draftRef.current = null;
+      setPickerKey((key) => key + 1);
+    }
     props.onAccentChange(accent);
   }
 
   return (
-    <div style={draftStyle}>
+    <div>
       <SettingsSection
         id="theme"
         title="Theme"
@@ -126,7 +134,7 @@ export function ThemeCard(props: ThemeCardProps) {
           <div className="flex flex-wrap items-center gap-2">
             <div role="radiogroup" aria-labelledby="theme-accent-label" className="contents">
               {ACCENT_PRESETS.map((preset) => {
-                const selected = draftAccent === null && preset.value === props.accent;
+                const selected = preset.value === props.accent;
                 return (
                   <AccentSwatch
                     key={preset.name}
@@ -140,42 +148,48 @@ export function ThemeCard(props: ThemeCardProps) {
               })}
             </div>
 
-            <label
-              className={cn(
-                "relative flex size-8 cursor-pointer items-center justify-center rounded-full ring-1 ring-foreground/15 ring-offset-2 ring-offset-background transition-shadow focus-within:ring-2 focus-within:ring-ring has-disabled:cursor-not-allowed has-disabled:opacity-50",
-                customAccent && "ring-2 ring-foreground",
-              )}
-              style={{
-                background:
-                  customAccent ??
-                  "conic-gradient(from 0deg, #f87171, #fbbf24, #34d399, #22d3ee, #818cf8, #e879f9, #f87171)",
-              }}
-              title="Custom color"
-            >
-              <span className="sr-only">Custom accent color</span>
-              <input
-                ref={pickerRef}
-                type="color"
-                onBlur={commitDraftAccent}
-                className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
-                disabled={props.disabled}
-                value={customAccent ?? DEFAULT_CUSTOM_ACCENT}
-                onChange={(event) => {
-                  const value = event.target.value.toLowerCase();
-                  if (!isHexColor(value)) return;
-                  setDraftAccent(value);
+            <span key={pickerKey} className="contents">
+              <label
+                ref={swatchRef}
+                className={cn(
+                  "relative flex size-8 cursor-pointer items-center justify-center rounded-full ring-1 ring-foreground/15 ring-offset-2 ring-offset-background focus-within:ring-2 focus-within:ring-ring has-disabled:cursor-not-allowed has-disabled:opacity-50",
+                  customAccent && "ring-2 ring-foreground",
+                )}
+                style={{
+                  background:
+                    customAccent ??
+                    "conic-gradient(from 0deg, #f87171, #fbbf24, #34d399, #22d3ee, #818cf8, #e879f9, #f87171)",
                 }}
-              />
-              {customAccent ? (
-                <CheckIcon aria-hidden className="size-4 text-white mix-blend-difference" />
-              ) : (
-                <PipetteIcon aria-hidden className="size-3.5 text-white drop-shadow" />
-              )}
-            </label>
+                title="Custom color"
+              >
+                <span className="sr-only">Custom accent color</span>
+                <input
+                  ref={attachPicker}
+                  type="color"
+                  onBlur={commitDraftAccent}
+                  className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                  disabled={props.disabled}
+                  defaultValue={customAccent ?? DEFAULT_CUSTOM_ACCENT}
+                  onChange={(event) => {
+                    const value = event.target.value.toLowerCase();
+                    if (isHexColor(value)) previewDraftAccent(value);
+                  }}
+                />
+                {customAccent ? (
+                  <CheckIcon aria-hidden className="size-4 text-white mix-blend-difference" />
+                ) : (
+                  <PipetteIcon aria-hidden className="size-3.5 text-white drop-shadow" />
+                )}
+              </label>
 
-            {customAccent && (
-              <span className="font-mono text-xs text-muted-foreground tabular-nums">{customAccent}</span>
-            )}
+              <span
+                ref={hexRef}
+                hidden={!customAccent}
+                className="font-mono text-xs text-muted-foreground tabular-nums"
+              >
+                {customAccent ?? ""}
+              </span>
+            </span>
           </div>
         </SettingRow>
 

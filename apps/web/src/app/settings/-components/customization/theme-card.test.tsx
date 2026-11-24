@@ -4,8 +4,7 @@ import { describe, expect, mock, test } from "bun:test";
 await import("@/test/dom");
 const { act, fireEvent, render, screen } = await import("@testing-library/react");
 
-// Base UI's slider re-measures when the section's preview style changes; run interactions in an
-// async act so that follow-up update settles inside it.
+// Run interactions in an async act so any follow-up updates from Base UI settle inside it.
 async function interact(run: () => void) {
   await act(async () => {
     run();
@@ -33,8 +32,9 @@ function renderCard() {
 }
 
 describe("ThemeCard custom accent", () => {
-  test("dragging previews in the section only and commits once when the picker closes", async () => {
+  test("dragging previews on the swatch only and commits once when the picker closes", async () => {
     const { onAccentChange, picker, view } = renderCard();
+    const swatch = picker.closest("label")!;
 
     await interact(() => {
       for (let step = 0; step < 30; step++) {
@@ -43,14 +43,14 @@ describe("ThemeCard custom accent", () => {
       }
     });
 
-    // The swatch, label and section accent follow the drag; the app isn't re-themed yet.
+    // The swatch and hex label follow the drag; nothing else is restyled and nothing is committed.
     expect(screen.getByText("#2d0000")).toBeTruthy();
-    expect(view.container.firstElementChild?.getAttribute("style")).toContain("--primary: #2d0000");
+    expect(swatch.style.background).toBe("#2d0000");
+    expect(view.container.querySelector("[style*='--primary']")).toBeNull();
     expect(onAccentChange).not.toHaveBeenCalled();
 
     await interact(() => fireEvent.change(picker));
     expect(onAccentChange.mock.calls).toEqual([["#2d0000"]]);
-    expect(view.container.firstElementChild?.getAttribute("style")).toBeNull();
   });
 
   test("choosing a preset drops an uncommitted custom color", async () => {
@@ -63,6 +63,8 @@ describe("ThemeCard custom accent", () => {
     });
 
     expect(onAccentChange.mock.calls).toEqual([["#10b981"]]);
+    // The previewed color is dropped from the swatch too.
+    expect(screen.queryByText("#ff0000")).toBeNull();
   });
 
   test("leaving the page mid-drag still saves the last color", async () => {
