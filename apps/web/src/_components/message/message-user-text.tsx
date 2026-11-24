@@ -5,11 +5,14 @@ import { createContext, use, useMemo } from "react";
 import { defaultComponents, defaultRehypePlugins, type Components, type StreamdownProps } from "streamdown";
 
 import { fileChipClassName, FileChipContent, tokenChipClassName } from "../chat-textarea/token-chip";
+import { ImageLightboxProvider, ImageLightboxTrigger, type LightboxImage } from "../image-lightbox";
 
 import { StreamDownWrapper } from "./message-markdown";
 
+import { buildAttachmentUrl, toRawFileUrl } from "@/lib/assets/urls";
 import { FILE_TOKEN_TYPE } from "@/lib/chat/composer-tokens";
 import type { ChatMessage } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const TOKEN_HREF_PREFIX = "#message-token/";
 // The markdown sanitizer prefixes in-page anchors with `user-content-`.
@@ -20,7 +23,21 @@ type MessageAttachments = ReadonlyArray<
   { _id: string } & Pick<Doc<"attachments">, "name" | "type" | "path" | "mimeType">
 >;
 
-const MessageAttachmentsContext = createContext<MessageAttachments>([]);
+type MessageAttachmentsContextValue = {
+  attachments: MessageAttachments;
+  // Lightbox index of each image attachment, by attachment id.
+  imageIndexById: ReadonlyMap<string, number>;
+};
+
+const MessageAttachmentsContext = createContext<MessageAttachmentsContextValue>({
+  attachments: [],
+  imageIndexById: new Map(),
+});
+
+const imageChipClassName = cn(
+  fileChipClassName,
+  "cursor-zoom-in hover:bg-accent hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring",
+);
 
 function escapeLinkText(text: string): string {
   return text.replaceAll(/[\\[\]*_`~<>]/g, "\\$&");
@@ -110,7 +127,7 @@ function createAttachmentNamePlugin(attachments: MessageAttachments): RehypePlug
 const DefaultLink = defaultComponents.a;
 
 const MessageLink: NonNullable<Components["a"]> = function MessageLink({ children, ...props }) {
-  const attachments = use(MessageAttachmentsContext);
+  const { attachments, imageIndexById } = use(MessageAttachmentsContext);
   const token = parseTokenHref(props.href);
 
   if (!token) {
@@ -119,6 +136,23 @@ const MessageLink: NonNullable<Components["a"]> = function MessageLink({ childre
 
   if (token.type === FILE_TOKEN_TYPE) {
     const attachment = attachments.find((item) => item._id === token.value);
+    const imageIndex = imageIndexById.get(token.value);
+
+    if (imageIndex !== undefined) {
+      return (
+        <ImageLightboxTrigger
+          index={imageIndex}
+          data-slot="message-token"
+          data-token-type={token.type}
+          title={token.label}
+          aria-label={`View ${token.label}`}
+          className={imageChipClassName}
+        >
+          <FileChipContent label={token.label} attachment={attachment} />
+        </ImageLightboxTrigger>
+      );
+    }
+
     return (
       <span
         data-slot="message-token"
@@ -149,11 +183,35 @@ export function MessageUserText({ text, attachments }: { text: string; attachmen
     return attachmentNames ? [...Object.values(defaultRehypePlugins), attachmentNames] : undefined;
   }, [text, attachments]);
 
-  return (
-    <MessageAttachmentsContext value={attachments}>
+  const { images, context } = useMemo(() => {
+    const list: LightboxImage[] = [];
+    const imageIndexById = new Map<string, number>();
+    for (const attachment of attachments) {
+      if (attachment.type !== "image") continue;
+      const src = toRawFileUrl(buildAttachmentUrl(attachment.path, attachment.mimeType));
+      imageIndexById.set(attachment._id, list.length);
+      list.push({
+        id: attachment._id,
+        src,
+        downloadSrc: src,
+        alt: attachment.name,
+        name: attachment.name,
+      });
+    }
+    return { images: list, context: { attachments, imageIndexById } };
+  }, [attachments]);
+
+  const content = (
+    <MessageAttachmentsContext value={context}>
       <StreamDownWrapper role={USER_ROLE} components={components} rehypePlugins={rehypePlugins}>
         {markdown}
       </StreamDownWrapper>
     </MessageAttachmentsContext>
+  );
+
+  return images.length > 0 ? (
+    <ImageLightboxProvider images={images}>{content}</ImageLightboxProvider>
+  ) : (
+    content
   );
 }
