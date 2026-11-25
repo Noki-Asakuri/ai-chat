@@ -14,7 +14,8 @@ export type ThreadTitleInput = { kind: "summarize"; text: string } | { kind: "fi
 export function getThreadTitleInput(parts: readonly StoredMessagePart[]): ThreadTitleInput {
   const texts: string[] = [];
   let hasTypedText = false;
-  let fileChipCount = 0;
+  // By attachment id: the composer sends a file once however many times it is referenced.
+  const fileChipIds = new Set<string>();
 
   for (const part of parts) {
     if (part.type !== "text" || !part.text) continue;
@@ -28,7 +29,7 @@ export function getThreadTitleInput(parts: readonly StoredMessagePart[]): Thread
       }
 
       plain += segment.label;
-      if (segment.type === FILE_TOKEN_TYPE) fileChipCount++;
+      if (segment.type === FILE_TOKEN_TYPE) fileChipIds.add(segment.value);
       else if (segment.label.trim()) hasTypedText = true;
     }
 
@@ -40,7 +41,7 @@ export function getThreadTitleInput(parts: readonly StoredMessagePart[]): Thread
   const fileMediaTypes = parts.flatMap((part) =>
     part.type === "file" && part.mediaType !== undefined ? [part.mediaType] : [],
   );
-  return { kind: "fixed", title: getAttachmentOnlyTitle(fileMediaTypes, fileChipCount) };
+  return { kind: "fixed", title: getAttachmentOnlyTitle(fileMediaTypes, fileChipIds.size) };
 }
 
 function getAttachmentOnlyTitle(fileMediaTypes: readonly string[], fileChipCount: number): string {

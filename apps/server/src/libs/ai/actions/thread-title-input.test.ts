@@ -33,6 +33,12 @@ describe("getThreadTitleInput", () => {
     ).toEqual({ kind: "fixed", title: "Shared files" });
   });
 
+  test("counts a file referenced twice once", () => {
+    expect(
+      getThreadTitleInput([{ type: "text", text: "[@photo.png](file:abc) [@photo.png](file:abc)" }, image]),
+    ).toEqual({ kind: "fixed", title: "Shared image" });
+  });
+
   test("counts a chip whose file the model could not read", () => {
     expect(getThreadTitleInput([{ type: "text", text: "[@report.pdf](file:abc)" }])).toEqual({
       kind: "fixed",
