@@ -4,6 +4,7 @@ import { splitMessageTokens } from "@ai-chat/shared/chat/message-content";
 import { toText } from "@ui-sdk/react/token-input";
 
 import { buildAttachmentUrl } from "../assets/urls";
+import { linkAttachmentNames } from "./composer-tokens";
 import { buildUserMessageParts, convertToUIChatMessages, describeAttachments } from "./shared";
 
 const photo = { name: "a.png", size: 2048, mimeType: "image/png", path: "u/t/a.png" };
@@ -123,16 +124,34 @@ describe("buildUserMessageParts", () => {
     ]);
   });
 
-  test("a sent message shows a chip-like file name as text", () => {
+  test("a sent message shows a chip-like file name as text, and reopens for editing unchanged", () => {
     const text = toText(["See \\", { type: "upload", value: "u1", label: "[@draft](file:example).pdf" }]);
     const [part] = buildUserMessageParts(text, []).displayParts;
     if (!part || !("text" in part)) throw new Error("Expected a text part");
 
-    expect(splitMessageTokens(part.text).every((segment) => segment.kind === "text")).toBe(true);
-    expect(splitMessageTokens("[@a.pdf](file:x)")).toEqual([
-      { kind: "token", type: "file", value: "x", label: "a.pdf" },
+    const shown = splitMessageTokens(part.text, { skipEscaped: true });
+    expect(shown.every((segment) => segment.kind === "text")).toBe(true);
+    expect(linkAttachmentNames(part.text, [{ _id: "x", name: "draft.pdf" }])).toBe(part.text);
+  });
+
+  test("an escaped chip opener doesn't hide a real chip after it", () => {
+    const text = toText([
+      { type: "upload", value: "u1", label: "[@draft.pdf" },
+      " ",
+      { type: "file", value: "att1", label: "report.pdf" },
     ]);
-    expect(splitMessageTokens("\\\\[@a.pdf](file:x)").at(-1)).toMatchObject({ kind: "token" });
+    const saved = buildUserMessageParts(text, [
+      { ...photo, name: "report.pdf", attachmentId: attachmentId("att1") },
+    ]);
+    const [part] = saved.displayParts;
+    if (!part || !("text" in part)) throw new Error("Expected a text part");
+
+    expect(
+      splitMessageTokens(part.text, { skipEscaped: true }).filter((segment) => segment.kind === "token"),
+    ).toEqual([{ kind: "token", type: "file", value: "att1", label: "report.pdf" }]);
+    expect(splitMessageTokens("\\\\[@a.pdf](file:x)", { skipEscaped: true }).at(-1)).toMatchObject({
+      kind: "token",
+    });
   });
 
   test("a message of only files has no text part", () => {

@@ -19,18 +19,28 @@ export function hasMessageContent(parts: readonly MessageContentPart[], attachme
 
 // Matches the composer codec's `[@label](type:value)`, where the label escapes `\`, `[` and `]`.
 const MESSAGE_TOKEN_PATTERN = /\[@((?:\\.|[^\\\]])*)\]\(([\w-]+):([^\s)]*)\)/g;
+// The same, except after an odd run of backslashes: the codec's escape for chip-like text that isn't a chip.
+const UNESCAPED_MESSAGE_TOKEN_PATTERN = new RegExp(
+  `(?<=(?:^|[^\\\\])(?:\\\\\\\\)*)${MESSAGE_TOKEN_PATTERN.source}`,
+  "g",
+);
 
 export type MessageTextSegment =
   { kind: "text"; text: string } | { kind: "token"; type: string; value: string; label: string };
 
-export function splitMessageTokens(text: string): MessageTextSegment[] {
+/**
+ * Splits saved message text into text and chips. With `skipEscaped`, chip-like text the codec
+ * escaped, such as a typed literal or a file name, stays text; showing a message needs that.
+ */
+export function splitMessageTokens(
+  text: string,
+  options: { skipEscaped?: boolean } = {},
+): MessageTextSegment[] {
   const segments: MessageTextSegment[] = [];
   let lastIndex = 0;
+  const pattern = options.skipEscaped ? UNESCAPED_MESSAGE_TOKEN_PATTERN : MESSAGE_TOKEN_PATTERN;
 
-  for (const match of text.matchAll(MESSAGE_TOKEN_PATTERN)) {
-    // The codec writes chip-like text the user typed, or a file name, as `\[@…`; that stays text.
-    if (isEscaped(text, match.index)) continue;
-
+  for (const match of text.matchAll(pattern)) {
     const [whole, label = "", type = "", value = ""] = match;
     if (match.index > lastIndex) segments.push({ kind: "text", text: text.slice(lastIndex, match.index) });
     segments.push({ kind: "token", type, value, label: label.replaceAll(/\\(.)/g, "$1") });
@@ -39,13 +49,6 @@ export function splitMessageTokens(text: string): MessageTextSegment[] {
 
   if (lastIndex < text.length) segments.push({ kind: "text", text: text.slice(lastIndex) });
   return segments;
-}
-
-/** Whether the character at `index` follows an odd run of backslashes. */
-function isEscaped(text: string, index: number): boolean {
-  let backslashes = 0;
-  while (index - backslashes > 0 && text[index - backslashes - 1] === "\\") backslashes += 1;
-  return backslashes % 2 === 1;
 }
 
 export function toPlainMessageText(text: string): string {

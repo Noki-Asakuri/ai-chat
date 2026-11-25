@@ -45,7 +45,7 @@ function escapeLinkText(text: string): string {
 
 // Tokens become hash links so the markdown parser keeps them inline; the `a` renderer swaps them for chips.
 function toMarkdownWithTokenLinks(text: string): string {
-  return splitMessageTokens(text)
+  return splitMessageTokens(text, { skipEscaped: true })
     .map((segment) => {
       if (segment.kind === "text") return segment.text;
 
