@@ -175,16 +175,21 @@ export function insertUploadChips(composerId: string, attachments: ReadonlyArray
   const selection = editor?.contains(document.activeElement) ? controller.editor.selection() : null;
   const value: Array<string | Token> = [];
 
-  if (!selection) {
-    const last = controller.getValue().at(-1);
-    if (last !== undefined && (isToken(last) || !/\s$/.test(last))) value.push(" ");
-  }
+  // A chip is a word of its own, so it needs a space from the text before it.
+  const before = selection
+    ? controller.editor.textBefore(1)?.text
+    : toLabelText(controller.getValue().at(-1));
+  if (before && !/\s$/.test(before)) value.push(" ");
 
   for (const attachment of attachments) {
     value.push({ type: UPLOAD_TOKEN_TYPE, value: attachment.id, label: attachment.file.name }, " ");
   }
 
   controller.insert(value, { at: selection ? { start: selection.end, end: selection.end } : "end" });
+}
+
+function toLabelText(segment: string | Token | undefined): string | undefined {
+  return segment !== undefined && isToken(segment) ? segment.label : segment;
 }
 
 /** Removes the chips of this type that point at any of `values`, leaving every other chip alone. */
@@ -229,19 +234,35 @@ export function linkSentFileChips(
 ): string {
   const sent = new Set(sentAttachmentIds);
 
-  return toText(
-    fromText(text).map((segment) => {
-      if (!isToken(segment)) return segment;
+  const value = fromText(text).map((segment) => {
+    if (!isToken(segment)) return segment;
 
-      if (segment.type === UPLOAD_TOKEN_TYPE) {
-        const attachmentId = attachmentIdByUploadId.get(segment.value);
-        return attachmentId && sent.has(attachmentId)
-          ? { type: FILE_TOKEN_TYPE, value: attachmentId, label: segment.label }
-          : segment.label;
-      }
+    if (segment.type === UPLOAD_TOKEN_TYPE) {
+      const attachmentId = attachmentIdByUploadId.get(segment.value);
+      return attachmentId && sent.has(attachmentId)
+        ? { type: FILE_TOKEN_TYPE, value: attachmentId, label: segment.label }
+        : segment.label;
+    }
 
-      if (segment.type === FILE_TOKEN_TYPE && !sent.has(segment.value)) return segment.label;
-      return segment;
-    }),
-  );
+    if (segment.type === FILE_TOKEN_TYPE && !sent.has(segment.value)) return segment.label;
+    return segment;
+  });
+
+  return toText(joinAdjacentText(value));
+}
+
+/**
+ * Joins neighbouring text, so a name that replaced a chip is escaped together with the text around
+ * it. Escaped apart, a backslash before the name could turn chip-like text inside it into a chip.
+ */
+function joinAdjacentText(value: ReadonlyArray<string | Token>): Array<string | Token> {
+  const joined: Array<string | Token> = [];
+
+  for (const segment of value) {
+    const last = joined.at(-1);
+    if (!isToken(segment) && last !== undefined && !isToken(last)) joined[joined.length - 1] = last + segment;
+    else joined.push(segment);
+  }
+
+  return joined;
 }

@@ -15,6 +15,7 @@ import {
 import { focusTextareaByIdAtEnd } from "@/lib/chat/focus-textarea";
 import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
 import { EDIT_COMPOSER_ID } from "@/lib/chat/composer-tokens";
+import { isEditFileAttached } from "@/lib/chat/edit-attachments";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
 const EDITOR_VIEWPORT_MARGIN_PX = 16;
@@ -50,14 +51,6 @@ function syncEditorIntoView(editorElement: HTMLDivElement): void {
   } else {
     updateStickyToBottomFromScroll(scrollArea);
   }
-}
-
-type EditState = NonNullable<ReturnType<typeof useChatStore.getState>["editMessage"]>;
-
-/** One of the message's own files is attached only while it is kept in the tray. */
-function isEditFileAttached(editMessage: EditState, attachmentId: string): boolean {
-  const isOwnFile = editMessage.currentAttachments.some((attachment) => attachment._id === attachmentId);
-  return !isOwnFile || editMessage.keptAttachmentIds.some((id) => id === attachmentId);
 }
 
 export function ChatEditTextarea() {

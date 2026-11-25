@@ -74,6 +74,7 @@ const { ConfigStoreContext } = await import("@/components/provider/config-provid
 const { createConfigStore } = await import("@/lib/store/config-store");
 const { SelectableModelIds, tryGetModelData } = await import("@/lib/chat/models");
 const {
+  EDIT_COMPOSER_ID,
   FILE_TOKEN_TYPE,
   getComposerController,
   insertUploadChips,
@@ -85,6 +86,8 @@ const {
   removeComposerChips,
 } = await import("@/lib/chat/composer-tokens");
 const { chatStoreActions, useChatStore } = await import("@/lib/store/chat-store");
+const { getEditSentAttachments, isEditFileAttached } = await import("@/lib/chat/edit-attachments");
+const { fromText, toText } = await import("@ui-sdk/react/token-input");
 const { useState } = await import("react");
 const { RichComposer } = await import("./rich-composer");
 
@@ -332,9 +335,11 @@ describe("chat store tray", () => {
     editor().focus();
     // The editor reports the selected range; selecting text in this DOM isn't reliable.
     controller.editor.selection = () => ({ start: 0, end: 5 });
+    controller.editor.textBefore = () => ({ text: "o", offset: 4 });
     act(() => chatStoreActions.addAttachments([pdfUpload("u9", "f.pdf", 10)]));
 
-    await waitFor(() => expect(useChatStore.getState().input).toBe("Hello[@f.pdf](upload:u9)  world"));
+    // Spaced from the word before it, so the model doesn't read "Hellof.pdf".
+    await waitFor(() => expect(useChatStore.getState().input).toBe("Hello [@f.pdf](upload:u9)  world"));
   });
 
   test("adding a file puts its chip in the composer and removing it takes the chip out", async () => {
@@ -385,13 +390,80 @@ describe("chat store tray", () => {
   });
 });
 
-function fakeId<TableName extends "messages" | "attachments">(value: string): Id<TableName> {
+function fakeId<TableName extends "messages" | "attachments" | "threads">(value: string): Id<TableName> {
   // SAFETY: The store only compares these ids, so plain strings can stand in for documents.
   // eslint-disable-next-line typescript/no-unsafe-type-assertion
   return value as Id<TableName>;
 }
 
+function EditComposer() {
+  const [queryClient] = useState(() => new QueryClient());
+  const [store] = useState(() => createConfigStore({ model: fileModel, pref: "enter" }));
+  const editMessage = useChatStore((state) => state.editMessage);
+  if (!editMessage) return null;
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ConfigStoreContext.Provider value={store}>
+        <RichComposer
+          id={EDIT_COMPOSER_ID}
+          input={editMessage.input}
+          setInput={(input) => chatStoreActions.updateEditMessage({ input })}
+          model={editMessage.model}
+          uploads={editMessage.attachments}
+          onRemoveChips={chatStoreActions.removeEditChipAttachments}
+          isFileAttached={(attachmentId) => isEditFileAttached(editMessage, attachmentId)}
+          handleAddAttachments={() => {}}
+        />
+      </ConfigStoreContext.Provider>
+    </QueryClientProvider>
+  );
+}
+
 describe("edit tray", () => {
+  test("a file removed from the tray stays out after undo, on screen and when saved", async () => {
+    const ownFile = {
+      _id: fakeId<"attachments">("own_pdf"),
+      _creationTime: 1,
+      id: "own",
+      name: "own.pdf",
+      size: 2048,
+      type: "pdf" as const,
+      source: "user" as const,
+      mimeType: "application/pdf",
+      path: "u/t/own.pdf",
+      userId: "u",
+      threadId: fakeId<"threads">("thread_1"),
+    };
+    chatStoreActions.setEditMessage({
+      _id: fakeId<"messages">("message_2"),
+      input: "Look at [@own.pdf](file:own_pdf)",
+      model: fileModel,
+      currentAttachments: [ownFile],
+      keptAttachmentIds: [ownFile._id],
+      attachments: [],
+      modelParams: {},
+    });
+    render(<EditComposer />);
+    await waitFor(() => expect(fileChips()).toHaveLength(1));
+
+    act(() => chatStoreActions.removeEditExistingAttachment(ownFile._id));
+    await waitFor(() => expect(useChatStore.getState().editMessage?.input).toBe("Look at "));
+
+    act(() => {
+      getComposerController(EDIT_COMPOSER_ID)?.undo();
+    });
+    await waitFor(() => expect(useChatStore.getState().editMessage?.input).toContain("file:own_pdf"));
+    expect(fileChips()).toHaveLength(0);
+    expect(editor().textContent).toContain("own.pdf");
+
+    const edit = useChatStore.getState().editMessage!;
+    const sent = getEditSentAttachments(edit, [ownFile], []);
+    expect(sent).toEqual([]);
+    expect(linkSentFileChips(edit.input, new Map(), [])).toBe("Look at own.pdf");
+    chatStoreActions.setEditMessage(null);
+  });
+
   test("removing chips from the edit box takes their files out of its tray", () => {
     chatStoreActions.setEditMessage({
       _id: fakeId<"messages">("message_1"),
@@ -442,6 +514,13 @@ describe("isChipDeletion", () => {
 });
 
 describe("linkSentFileChips", () => {
+  test("escapes a name that replaced a chip together with the text before it", () => {
+    const text = toText(["See \\", { type: "upload", value: "u1", label: "[@draft](file:example).pdf" }]);
+    const linked = linkSentFileChips(text, new Map(), []);
+
+    expect(fromText(linked)).toEqual(["See \\[@draft](file:example).pdf"]);
+  });
+
   test("points sent files' chips at their saved attachments and turns the rest into names", () => {
     const text = "[@a.pdf](upload:u1) [@b.pdf](upload:u2) [@c.pdf](file:saved) [@d.pdf](file:dropped)";
 

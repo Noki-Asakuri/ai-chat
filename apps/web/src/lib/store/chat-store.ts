@@ -15,7 +15,7 @@ import {
 import { tryGetModelData } from "../chat/models";
 import type { ReasoningEffort, RemoveAllExceptFunctions, UserAttachment } from "../types";
 
-type EditMessage = {
+export type EditMessage = {
   _id: Id<"messages">;
   input: string;
 

@@ -115,6 +115,13 @@ describe("buildUserMessageParts", () => {
     expect(requestParts).toEqual([{ type: "text", text: "Explain [@home](file:example)" }]);
   });
 
+  test("sends a name that replaced a chip as shown, even after a backslash", () => {
+    const text = toText(["See \\", { type: "upload", value: "u1", label: "[@draft](file:example).pdf" }]);
+    expect(buildUserMessageParts(text, []).requestParts).toEqual([
+      { type: "text", text: "See \\[@draft](file:example).pdf" },
+    ]);
+  });
+
   test("a message of only files has no text part", () => {
     const { displayParts, requestParts } = buildUserMessageParts("", [uploadedPhoto]);
     expect(displayParts).toEqual([photoPart]);
