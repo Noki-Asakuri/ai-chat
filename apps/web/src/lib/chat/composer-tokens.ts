@@ -2,7 +2,13 @@ import { api } from "@ai-chat/backend/convex/_generated/api";
 import { findAttachmentNames, splitMessageTokens } from "@ai-chat/shared/chat/message-content";
 import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { fromText, type Token, type TokenInputController, toText } from "@ui-sdk/react/token-input";
+import {
+  fromText,
+  type Token,
+  type TokenInputController,
+  type TokenInputValueChangeDetails,
+  toText,
+} from "@ui-sdk/react/token-input";
 import type { ConvexReactClient } from "convex/react";
 
 import type { UserAttachment } from "../types";
@@ -157,16 +163,19 @@ export function linkAttachmentNames(
   return toText(value.filter((segment) => segment !== ""));
 }
 
-/** Adds a chip for each new file, at the caret when the composer has focus, otherwise at the end. */
+/**
+ * Adds a chip for each new file: after the caret or selection when the composer has focus, so
+ * selected text stays, otherwise at the end.
+ */
 export function insertUploadChips(composerId: string, attachments: ReadonlyArray<UserAttachment>): void {
   const controller = composerControllers.get(composerId);
   if (!controller || attachments.length === 0) return;
 
   const editor = document.getElementById(composerId);
-  const atCaret = editor !== null && editor.contains(document.activeElement);
+  const selection = editor?.contains(document.activeElement) ? controller.editor.selection() : null;
   const value: Array<string | Token> = [];
 
-  if (!atCaret) {
+  if (!selection) {
     const last = controller.getValue().at(-1);
     if (last !== undefined && (isToken(last) || !/\s$/.test(last))) value.push(" ");
   }
@@ -175,7 +184,7 @@ export function insertUploadChips(composerId: string, attachments: ReadonlyArray
     value.push({ type: UPLOAD_TOKEN_TYPE, value: attachment.id, label: attachment.file.name }, " ");
   }
 
-  controller.insert(value, { at: atCaret ? "caret" : "end" });
+  controller.insert(value, { at: selection ? { start: selection.end, end: selection.end } : "end" });
 }
 
 /** Removes the chips of this type that point at any of `values`, leaving every other chip alone. */
@@ -188,6 +197,25 @@ export function removeComposerChips(composerId: string, type: string, values: Re
       controller.removeToken(segment.id);
     }
   }
+}
+
+/**
+ * Whether a change removed chips on purpose: with a chip's remove button, or Backspace or Delete.
+ * Cutting, dragging, typing over a selection and undo don't count.
+ */
+export function isChipDeletion(
+  details: Pick<TokenInputValueChangeDetails, "reason" | "inputType" | "removed">,
+): boolean {
+  if (details.removed.length === 0) return false;
+  if (details.reason === "remove-press") return true;
+
+  const inputType = details.inputType ?? "";
+  return (
+    details.reason === "input-change" &&
+    inputType.startsWith("delete") &&
+    inputType !== "deleteByCut" &&
+    inputType !== "deleteByDrag"
+  );
 }
 
 /**

@@ -6,6 +6,7 @@ import { z } from "zod/v4";
 import { consumeUIMessageStreamResponse } from "./stream-handler";
 
 import { buildAttachmentUrl } from "../assets/urls";
+import { linkSentFileChips, parseComposerInput } from "./composer-tokens";
 import { getConvexReactClient } from "../convex/client";
 import { uploadFileToR2 } from "../convex/upload-files";
 import { messageStoreActions } from "../store/messages-store";
@@ -52,7 +53,7 @@ export class ChatStreamHttpError extends Error {
 
 export type AttachmentDetails = Pick<Doc<"attachments">, "name" | "size" | "mimeType" | "path">;
 
-export type UIConvertibleMessage = Pick<ChatMessage, "messageId" | "role" | "parts" | "metadata"> & {
+type UIConvertibleMessage = Pick<ChatMessage, "messageId" | "role" | "parts" | "metadata"> & {
   /** The files sent with the message; each is matched to its file part by URL. */
   attachments: ReadonlyArray<AttachmentDetails>;
 };
@@ -106,6 +107,52 @@ export function convertToUIChatMessages(messages: UIConvertibleMessage[]): UICha
       metadata: message.metadata,
     };
   });
+}
+
+/** A file a user message is sent with. `uploadId` is its id in the composer's tray, if it was added there. */
+export type SentAttachment = AttachmentDetails & { attachmentId: Id<"attachments">; uploadId?: string };
+
+type UserMessageParts = {
+  /** What the message is saved with, chips included. */
+  displayParts: ChatMessage["parts"];
+  /** What the model reads: plain text, a list of the files, and the files. */
+  requestParts: UIChatMessage["parts"];
+};
+
+/**
+ * The parts a user message is saved with, and the parts the model reads for it. Chips of the
+ * files sent point at their saved attachments; chips of anything else become plain names.
+ */
+export function buildUserMessageParts(
+  displayText: string,
+  attachments: ReadonlyArray<SentAttachment>,
+): UserMessageParts {
+  const attachmentIdByUploadId = new Map(
+    attachments.flatMap((attachment) =>
+      attachment.uploadId ? [[attachment.uploadId, attachment.attachmentId] as const] : [],
+    ),
+  );
+  const text = linkSentFileChips(
+    displayText,
+    attachmentIdByUploadId,
+    attachments.map((attachment) => attachment.attachmentId),
+  );
+  const plainText = parseComposerInput(text).text;
+  const fileParts = attachments.map((attachment) => ({
+    type: "file" as const,
+    url: buildAttachmentUrl(attachment.path, attachment.mimeType),
+    mediaType: attachment.mimeType,
+    filename: attachment.name,
+  }));
+
+  // Providers reject empty text blocks, so a message of only files carries just its files.
+  return {
+    displayParts: [...(text ? [{ type: "text" as const, text, state: "done" as const }] : []), ...fileParts],
+    requestParts: withFileDetails(
+      [...(plainText ? [{ type: "text" as const, text: plainText }] : []), ...fileParts],
+      attachments,
+    ),
+  };
 }
 
 /**
@@ -193,11 +240,7 @@ export async function processStreamResponse(
   }
 }
 
-type UploadedAttachment = AttachmentDetails & {
-  /** The id the file had in the composer's tray. */
-  id: string;
-  attachmentId: Id<"attachments">;
-};
+type UploadedAttachment = SentAttachment & { uploadId: string };
 
 export function uploadUserAttachment(
   attachments: UserAttachment[],
@@ -221,7 +264,7 @@ export function uploadUserAttachment(
 
     const [{ docId }, filePath] = await Promise.all([createAttachmentPromise, uploadFilePromise]);
     return {
-      id: attachment.id,
+      uploadId: attachment.id,
       attachmentId: docId,
       name: attachment.file.name,
       size: attachment.file.size,

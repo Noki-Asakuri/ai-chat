@@ -52,6 +52,14 @@ function syncEditorIntoView(editorElement: HTMLDivElement): void {
   }
 }
 
+type EditState = NonNullable<ReturnType<typeof useChatStore.getState>["editMessage"]>;
+
+/** One of the message's own files is attached only while it is kept in the tray. */
+function isEditFileAttached(editMessage: EditState, attachmentId: string): boolean {
+  const isOwnFile = editMessage.currentAttachments.some((attachment) => attachment._id === attachmentId);
+  return !isOwnFile || editMessage.keptAttachmentIds.some((id) => id === attachmentId);
+}
+
 export function ChatEditTextarea() {
   const editorRef = useRef<HTMLDivElement>(null);
   const editMessage = useChatStore((state) => state.editMessage);
@@ -125,6 +133,7 @@ export function ChatEditTextarea() {
               model={editMessage.model}
               uploads={editMessage.attachments}
               onRemoveChips={chatStoreActions.removeEditChipAttachments}
+              isFileAttached={(attachmentId) => isEditFileAttached(editMessage, attachmentId)}
               handleAddAttachments={handleAddAttachments}
               onConfirm={saveEdits}
               disabled={isSaving}

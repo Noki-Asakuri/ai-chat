@@ -12,15 +12,10 @@ import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import { chatStoreActions } from "@/lib/store/chat-store";
-import type { ChatMessage, ChatRequestBody } from "@/lib/types";
+import type { ChatMessage, ChatRequestBody, UIChatMessage } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
 
-import {
-  type AttachmentDetails,
-  convertToUIChatMessages,
-  processStreamResponse,
-  type UIConvertibleMessage,
-} from "../shared";
+import { convertToUIChatMessages, processStreamResponse } from "../shared";
 import {
   getClientErrorMessage,
   getDeprecatedModelError,
@@ -40,8 +35,8 @@ export type RetryTurnOptions = {
     messageId: Id<"messages">;
     parts: ChatMessage["parts"];
     attachments: Id<"attachments">[];
-    /** The files behind `attachments`, so the model is told their names, types and sizes. */
-    sentAttachments: ReadonlyArray<AttachmentDetails>;
+    /** What the model reads for the message, from `buildUserMessageParts`. */
+    requestParts: UIChatMessage["parts"];
   };
   onPrepared?: () => void;
 };
@@ -122,18 +117,12 @@ export function useRetryTurn() {
       return { status: "failed", phase: "preparation" };
     }
 
-    const historySlice: UIConvertibleMessage[] = messagesHistory.slice(0, userMessageIndex + 1);
+    const allMessages = convertToUIChatMessages(messagesHistory.slice(0, userMessageIndex + 1));
 
     if (options.userMessage) {
-      const message = historySlice[userMessageIndex]!;
-      historySlice[userMessageIndex] = {
-        ...message,
-        parts: options.userMessage.parts,
-        attachments: options.userMessage.sentAttachments,
-      };
+      const message = allMessages[userMessageIndex]!;
+      allMessages[userMessageIndex] = { ...message, parts: options.userMessage.requestParts };
     }
-
-    const allMessages = convertToUIChatMessages(historySlice);
 
     const requestModel = options.modelId ?? assistantMessage?.metadata?.model.request ?? model;
     const mergedModelParams = {

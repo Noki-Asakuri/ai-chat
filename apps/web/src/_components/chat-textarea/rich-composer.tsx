@@ -57,6 +57,7 @@ import {
   type ComposerAttachment,
   FILE_TOKEN_TYPE,
   getCachedComposerAttachment,
+  isChipDeletion,
   PROFILE_TOKEN_TYPE,
   registerComposerController,
   rememberComposerAttachments,
@@ -83,6 +84,8 @@ export type RichComposerProps = {
    * so their files can leave the tray too. Cutting, typing over or undoing a chip leaves its file.
    */
   onRemoveChips?: (tokens: ReadonlyArray<Token>) => void;
+  /** Whether a saved file's chip stands for an attached file. Chips that don't show as just their name. */
+  isFileAttached?: (attachmentId: string) => boolean;
   onConfirm?: () => void;
   disabled?: boolean;
   enableCommands?: boolean;
@@ -98,6 +101,7 @@ export function RichComposer({
   uploads,
   handleAddAttachments,
   onRemoveChips,
+  isFileAttached,
   onConfirm,
   disabled,
   enableCommands = false,
@@ -175,6 +179,9 @@ export function RichComposer({
     }
 
     if (token.type === FILE_TOKEN_TYPE) {
+      if (isFileAttached && !isFileAttached(token.value)) {
+        return <TokenInputToken>{token.label}</TokenInputToken>;
+      }
       return <FileChip label={token.label} attachment={getCachedComposerAttachment(token.value)} />;
     }
 
@@ -224,8 +231,8 @@ export function RichComposer({
           lastEmitted.current = text;
           setInput(text);
 
+          if (!onRemoveChips || !isChipDeletion(details)) return;
           const { removed } = details;
-          if (details.reason !== "remove-press" || removed.length === 0 || !onRemoveChips) return;
           // Once this change has landed, so removing the file finds its chip already gone.
           queueMicrotask(() => onRemoveChips(removed));
         }}
