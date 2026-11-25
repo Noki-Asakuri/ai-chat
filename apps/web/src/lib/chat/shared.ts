@@ -85,9 +85,13 @@ export function convertToUIChatMessages(messages: UIConvertibleMessage[]): UICha
       // User text is stored with composer chips as `[@label](type:value)`; the model reads the labels.
       parts:
         message.role === "user"
-          ? parts.map((part) =>
-              part.type === "text" ? { ...part, text: toPlainMessageText(part.text) } : part,
-            )
+          ? parts.flatMap((part): UIChatMessage["parts"] => {
+              if (part.type !== "text") return [part];
+
+              // Providers reject empty text blocks, e.g. from a message that was only attachments.
+              const text = toPlainMessageText(part.text);
+              return text.trim() ? [{ ...part, text }] : [];
+            })
           : parts,
       metadata: message.metadata,
     };

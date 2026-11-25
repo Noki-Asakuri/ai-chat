@@ -221,12 +221,22 @@ export function RichComposer({
             short: compact && isNarrowScreen,
           })}
           spellCheck
+          // The editor stays empty until an input method commits its text, so mark composition
+          // ourselves to hide the placeholder under text that is still being composed.
+          onCompositionStart={(event) => {
+            event.currentTarget.dataset.composing = "";
+          }}
+          onCompositionEnd={(event) => {
+            delete event.currentTarget.dataset.composing;
+          }}
           className={cn(
-            "w-full overflow-y-auto text-sm leading-normal break-words whitespace-pre-wrap caret-primary outline-none",
+            "relative w-full overflow-y-auto text-sm leading-normal break-words whitespace-pre-wrap caret-primary outline-none",
             // On phones the compact composer starts as one line and grows as you type.
             compact ? "max-h-40 min-h-lh sm:max-h-62.5 sm:min-h-[calc(3lh)]" : "max-h-62.5 min-h-[calc(3lh)]",
             "data-disabled:cursor-not-allowed data-disabled:opacity-50",
             "data-empty:before:pointer-events-none data-empty:before:text-muted-foreground/90 data-empty:before:content-[attr(aria-placeholder)]",
+            // Out of the flow, so the caret and typed text start at the left edge instead of after it.
+            "before:absolute before:inset-x-0 before:top-0 before:truncate data-composing:before:hidden",
             className,
           )}
         />

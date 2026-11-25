@@ -74,7 +74,10 @@ export function useSendChatMessage() {
       if (threadId) void syncThreadModelConfig({ threadId, modelParams: { profile: profileId } });
     }
 
-    if (!input) {
+    // A message can be just attachments, with no text.
+    const hasAttachments = attachments.length > 0 || pastAttachmentIds.length > 0;
+
+    if (!input && !hasAttachments) {
       if (!profileId) return;
 
       chatStoreActions.setInput("");
@@ -114,7 +117,7 @@ export function useSendChatMessage() {
       messageId: crypto.randomUUID(),
       role: "user",
       status: "complete",
-      parts: [{ type: "text", text: displayText, state: "done" }],
+      parts: displayText ? [{ type: "text", text: displayText, state: "done" }] : [],
       attachments: [],
     };
 
@@ -152,8 +155,9 @@ export function useSendChatMessage() {
 
     const messages = convertToUIChatMessages(messagesHistory);
     const uploadedAttachments = await uploadUserAttachment(attachments, threadId);
-    const userMessageRequestParts: UIChatMessage["parts"] = [{ type: "text", text: input }];
-    const userMessageDisplayParts: MessageParts = [{ type: "text", text: displayText }];
+    // Providers reject empty text blocks, so an attachment-only message carries just its files.
+    const userMessageRequestParts: UIChatMessage["parts"] = input ? [{ type: "text", text: input }] : [];
+    const userMessageDisplayParts: MessageParts = displayText ? [{ type: "text", text: displayText }] : [];
 
     messages.push({
       role: "user",
