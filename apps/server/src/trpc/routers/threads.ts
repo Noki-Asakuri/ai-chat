@@ -1,13 +1,11 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { chatModelParamsSchema } from "@ai-chat/shared/chat/request";
-import { toPlainMessageText } from "@ai-chat/shared/chat/message-content";
 
 import { TRPCError } from "@trpc/server";
-import type { FileUIPart, TextPart } from "ai";
 import { z } from "zod/v4";
 
-import { generateNewThreadTitleAndSave } from "../../libs/ai/actions/generate-thread-title";
+import { generateThreadTitleFromPartsAndSave } from "../../libs/ai/actions/generate-thread-title";
 import { createServerConvexClient } from "../../libs/convex";
 
 import { protectedProcedure, router } from "../index";
@@ -73,17 +71,7 @@ export const threadRouter = router({
       throw new TRPCError({ code: "BAD_REQUEST", message: "No user message found" });
     }
 
-    const textParts = firstUser.parts.filter((part): part is TextPart => part.type === "text");
-    const content = textParts.map((part) => toPlainMessageText(part.text)).join("\n\n");
-    // Only the media types matter here; they name a thread whose first message is just files.
-    const fileParts = firstUser.parts
-      .filter((part): part is FileUIPart => part.type === "file")
-      .map((part) => ({ type: "file" as const, data: "", mediaType: part.mediaType }));
-
-    await generateNewThreadTitleAndSave(convexClient, {
-      modelMessages: [{ role: "user", content: [{ type: "text", text: content }, ...fileParts] }],
-      threadId,
-    });
+    await generateThreadTitleFromPartsAndSave(convexClient, { threadId, parts: firstUser.parts });
 
     return { ok: true };
   }),
