@@ -20,6 +20,15 @@ export async function generateNewThreadTitleAndSave(
   logger.debug("[Server] Updating thread title", { threadId: options.threadId });
   const content = extractUserMessage(options.modelMessages[0]);
 
+  // Nothing to summarize when the message is only attachments; name it after them instead.
+  if (content === null) {
+    await convexClient.mutation(api.functions.threads.updateThreadTitle, {
+      threadId: options.threadId,
+      title: getAttachmentOnlyTitle(options.modelMessages[0]),
+    });
+    return;
+  }
+
   const preferences = await convexClient.query(api.functions.users.getCurrentUserPreferences, {});
   let config = preferences.textGeneration ?? DEFAULT_GENERAL_SETTINGS.textGeneration;
   let resolvedModel = resolveModel(config.model);
@@ -68,11 +77,26 @@ export async function generateNewThreadTitleAndSave(
   });
 }
 
-function extractUserMessage(message: ModelMessage) {
-  if (!Array.isArray(message.content)) return message.content;
+function extractUserMessage(message: ModelMessage): string | null {
+  if (!Array.isArray(message.content)) return message.content.trim() || null;
 
-  const textParts = message.content.filter((part) => part.type === "text");
-  if (!textParts.length) return "Empty Message";
+  const text = message.content
+    .filter((part) => part.type === "text")
+    .map((part) => part.text.trim())
+    .filter(Boolean)
+    .join("\n\n");
 
-  return textParts.map((part) => part.text).join("\n\n");
+  return text || null;
+}
+
+function getAttachmentOnlyTitle(message: ModelMessage): string {
+  if (!Array.isArray(message.content)) return "New Chat";
+
+  const isImage = (part: (typeof message.content)[number]) =>
+    part.type === "image" || (part.type === "file" && part.mediaType.startsWith("image/"));
+  const files = message.content.filter((part) => part.type === "image" || part.type === "file");
+
+  if (files.length === 0) return "New Chat";
+  if (files.every(isImage)) return files.length === 1 ? "Shared image" : "Shared images";
+  return files.length === 1 ? "Shared file" : "Shared files";
 }

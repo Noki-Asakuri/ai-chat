@@ -4,7 +4,7 @@ import { chatModelParamsSchema } from "@ai-chat/shared/chat/request";
 import { toPlainMessageText } from "@ai-chat/shared/chat/message-content";
 
 import { TRPCError } from "@trpc/server";
-import type { TextPart } from "ai";
+import type { FileUIPart, TextPart } from "ai";
 import { z } from "zod/v4";
 
 import { generateNewThreadTitleAndSave } from "../../libs/ai/actions/generate-thread-title";
@@ -74,13 +74,14 @@ export const threadRouter = router({
     }
 
     const textParts = firstUser.parts.filter((part): part is TextPart => part.type === "text");
-    const content =
-      textParts.length > 0
-        ? textParts.map((part) => toPlainMessageText(part.text)).join("\n\n")
-        : "Empty Message";
+    const content = textParts.map((part) => toPlainMessageText(part.text)).join("\n\n");
+    // Only the media types matter here; they name a thread whose first message is just files.
+    const fileParts = firstUser.parts
+      .filter((part): part is FileUIPart => part.type === "file")
+      .map((part) => ({ type: "file" as const, data: "", mediaType: part.mediaType }));
 
     await generateNewThreadTitleAndSave(convexClient, {
-      modelMessages: [{ role: "user", content }],
+      modelMessages: [{ role: "user", content: [{ type: "text", text: content }, ...fileParts] }],
       threadId,
     });
 
