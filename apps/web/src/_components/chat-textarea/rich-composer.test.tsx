@@ -6,7 +6,7 @@ import { afterAll, beforeEach, describe, expect, mock, setDefaultTimeout, test }
 setDefaultTimeout(20_000);
 
 await import("@/test/dom");
-const { act, render, screen, waitFor } = await import("@testing-library/react");
+const { act, fireEvent, render, screen, waitFor } = await import("@testing-library/react");
 const { default: userEvent } = await import("@testing-library/user-event");
 
 const profiles = [
@@ -90,6 +90,7 @@ const { getEditSentAttachments, isEditFileAttached } = await import("@/lib/chat/
 const { fromText, toText } = await import("@ui-sdk/react/token-input");
 const { useState } = await import("react");
 const { RichComposer } = await import("./rich-composer");
+const { GlobalDropzone } = await import("../chat/global-dropzone");
 
 afterAll(() => mock.restore());
 
@@ -484,6 +485,51 @@ describe("edit tray", () => {
     const edit = useChatStore.getState().editMessage;
     expect(edit?.attachments.map((item) => item.id)).toEqual(["u8"]);
     expect<string[] | undefined>(edit?.keptAttachmentIds).toEqual(["kept_2"]);
+    chatStoreActions.setEditMessage(null);
+  });
+});
+
+function DropTargets() {
+  const [store] = useState(() => createConfigStore({ model: fileModel, pref: "enter" }));
+  return (
+    <ConfigStoreContext.Provider value={store}>
+      <GlobalDropzone>
+        <div data-slot="chat-textarea" data-testid="main-composer">
+          <div id={MAIN_COMPOSER_ID} />
+        </div>
+        <div data-slot="chat-textarea" data-testid="edit-composer">
+          <div id={EDIT_COMPOSER_ID} />
+        </div>
+      </GlobalDropzone>
+    </ConfigStoreContext.Provider>
+  );
+}
+
+describe("dropping files while a message is being edited", () => {
+  test("a file dropped on the main composer goes to its tray, anywhere else to the edit's", () => {
+    useChatStore.setState({ input: "", attachments: [] });
+    chatStoreActions.setEditMessage({
+      _id: fakeId<"messages">("message_3"),
+      input: "",
+      model: fileModel,
+      currentAttachments: [],
+      keptAttachmentIds: [],
+      attachments: [],
+      modelParams: {},
+    });
+    render(<DropTargets />);
+
+    fireEvent.drop(screen.getByTestId("main-composer"), {
+      dataTransfer: { files: [pdfUpload("d", "drop.pdf", 1).file] },
+    });
+    expect(useChatStore.getState().attachments).toHaveLength(1);
+    expect(useChatStore.getState().editMessage?.attachments).toHaveLength(0);
+
+    fireEvent.drop(screen.getByTestId("edit-composer"), {
+      dataTransfer: { files: [pdfUpload("d", "drop.pdf", 1).file] },
+    });
+    expect(useChatStore.getState().attachments).toHaveLength(1);
+    expect(useChatStore.getState().editMessage?.attachments).toHaveLength(1);
     chatStoreActions.setEditMessage(null);
   });
 });

@@ -4,14 +4,16 @@ import { toast } from "@/components/ui/toast";
 
 import { useConfigStore } from "@/components/provider/config-provider";
 import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
+import { MAIN_COMPOSER_ID } from "@/lib/chat/composer-tokens";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
 export function GlobalDropzone({ children, ...props }: React.ComponentPropsWithoutRef<"main">) {
   const dragCounterRef = useRef<number>(0);
   const model = useConfigStore((state) => state.model);
 
-  function handleAddAttachments(files: Array<File>) {
-    const editMessage = useChatStore.getState().editMessage;
+  function handleAddAttachments(files: Array<File>, target: EventTarget) {
+    // Files dropped on the main composer go to it even while a message is being edited.
+    const editMessage = isInMainComposer(target) ? null : useChatStore.getState().editMessage;
     const modelId = editMessage?.model ?? model;
     const { attachments, rejectedCount } = prepareAttachmentsForModel(files, modelId);
 
@@ -64,7 +66,7 @@ export function GlobalDropzone({ children, ...props }: React.ComponentPropsWitho
         dragCounterRef.current = 0;
         chatStoreActions.setIsDragOver(false);
 
-        if (files.length > 0) handleAddAttachments(files);
+        if (files.length > 0) handleAddAttachments(files, event.target);
       }}
     >
       {children}
@@ -72,6 +74,11 @@ export function GlobalDropzone({ children, ...props }: React.ComponentPropsWitho
       <GlobalDropzoneOverlay />
     </main>
   );
+}
+
+function isInMainComposer(target: EventTarget): boolean {
+  const composer = target instanceof Element ? target.closest('[data-slot="chat-textarea"]') : null;
+  return composer?.querySelector(`#${MAIN_COMPOSER_ID}`) != null;
 }
 
 function GlobalDropzoneOverlay() {

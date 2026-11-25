@@ -28,6 +28,9 @@ export function splitMessageTokens(text: string): MessageTextSegment[] {
   let lastIndex = 0;
 
   for (const match of text.matchAll(MESSAGE_TOKEN_PATTERN)) {
+    // The codec writes chip-like text the user typed, or a file name, as `\[@…`; that stays text.
+    if (isEscaped(text, match.index)) continue;
+
     const [whole, label = "", type = "", value = ""] = match;
     if (match.index > lastIndex) segments.push({ kind: "text", text: text.slice(lastIndex, match.index) });
     segments.push({ kind: "token", type, value, label: label.replaceAll(/\\(.)/g, "$1") });
@@ -36,6 +39,13 @@ export function splitMessageTokens(text: string): MessageTextSegment[] {
 
   if (lastIndex < text.length) segments.push({ kind: "text", text: text.slice(lastIndex) });
   return segments;
+}
+
+/** Whether the character at `index` follows an odd run of backslashes. */
+function isEscaped(text: string, index: number): boolean {
+  let backslashes = 0;
+  while (index - backslashes > 0 && text[index - backslashes - 1] === "\\") backslashes += 1;
+  return backslashes % 2 === 1;
 }
 
 export function toPlainMessageText(text: string): string {

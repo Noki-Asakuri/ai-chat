@@ -1,5 +1,6 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { describe, expect, test } from "bun:test";
+import { splitMessageTokens } from "@ai-chat/shared/chat/message-content";
 import { toText } from "@ui-sdk/react/token-input";
 
 import { buildAttachmentUrl } from "../assets/urls";
@@ -120,6 +121,18 @@ describe("buildUserMessageParts", () => {
     expect(buildUserMessageParts(text, []).requestParts).toEqual([
       { type: "text", text: "See \\[@draft](file:example).pdf" },
     ]);
+  });
+
+  test("a sent message shows a chip-like file name as text", () => {
+    const text = toText(["See \\", { type: "upload", value: "u1", label: "[@draft](file:example).pdf" }]);
+    const [part] = buildUserMessageParts(text, []).displayParts;
+    if (!part || !("text" in part)) throw new Error("Expected a text part");
+
+    expect(splitMessageTokens(part.text).every((segment) => segment.kind === "text")).toBe(true);
+    expect(splitMessageTokens("[@a.pdf](file:x)")).toEqual([
+      { kind: "token", type: "file", value: "x", label: "a.pdf" },
+    ]);
+    expect(splitMessageTokens("\\\\[@a.pdf](file:x)").at(-1)).toMatchObject({ kind: "token" });
   });
 
   test("a message of only files has no text part", () => {
