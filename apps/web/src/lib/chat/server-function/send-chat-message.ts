@@ -10,14 +10,18 @@ import { useShallow } from "zustand/shallow";
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 
 import { buildAttachmentUrl } from "@/lib/assets/urls";
-import { parseComposerInput, resolveComposerAttachments } from "@/lib/chat/composer-tokens";
+import {
+  linkSentFileChips,
+  parseComposerInput,
+  resolveComposerAttachments,
+} from "@/lib/chat/composer-tokens";
 import { tryGetModelData } from "@/lib/chat/models";
 import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import { useThreadStore } from "@/lib/store/thread-store";
-import type { ChatRequestBody, UIChatMessage } from "@/lib/types";
+import type { ChatRequestBody } from "@/lib/types";
 import { fromUUID, toUUID, tryCatch } from "@/lib/utils";
 
 import { convertToUIChatMessages, processStreamResponse, uploadUserAttachment } from "../shared";
@@ -117,7 +121,20 @@ export function useSendChatMessage() {
       messageId: crypto.randomUUID(),
       role: "user",
       status: "complete",
-      parts: displayText ? [{ type: "text", text: displayText, state: "done" }] : [],
+      // Chips of files still uploading are plain names until the files are saved below.
+      parts: displayText
+        ? [
+            {
+              type: "text",
+              text: linkSentFileChips(
+                displayText,
+                new Map(),
+                referencedAttachments.map((attachment) => attachment._id),
+              ),
+              state: "done",
+            },
+          ]
+        : [],
       attachments: [],
     };
 
@@ -153,37 +170,47 @@ export function useSendChatMessage() {
       assistantMessageId,
     });
 
-    const messages = convertToUIChatMessages(messagesHistory);
     const uploadedAttachments = await uploadUserAttachment(attachments, threadId);
-    // Providers reject empty text blocks, so an attachment-only message carries just its files.
-    const userMessageRequestParts: UIChatMessage["parts"] = input ? [{ type: "text", text: input }] : [];
-    const userMessageDisplayParts: MessageParts = displayText ? [{ type: "text", text: displayText }] : [];
-
-    messages.push({
-      role: "user",
-      id: userMessage.messageId,
-      parts: userMessageRequestParts,
-    });
-
     const linkedAttachments = [
-      ...referencedAttachments.map((attachment) => ({
-        attachmentId: attachment._id,
-        path: attachment.path,
-        mediaType: attachment.mimeType,
+      ...referencedAttachments.map(({ _id, name, size, mimeType, path }) => ({
+        attachmentId: _id,
+        name,
+        size,
+        mimeType,
+        path,
       })),
       ...uploadedAttachments,
     ];
+    const attachmentIds = linkedAttachments.map((attachment) => attachment.attachmentId);
+    const text = linkSentFileChips(
+      displayText,
+      new Map(uploadedAttachments.map((attachment) => [attachment.id, attachment.attachmentId])),
+      attachmentIds,
+    );
+
+    // Providers reject empty text blocks, so an attachment-only message carries just its files.
+    const userMessageDisplayParts: MessageParts = text ? [{ type: "text", text, state: "done" }] : [];
+    for (const attachment of linkedAttachments) {
+      userMessageDisplayParts.push({
+        type: "file",
+        url: buildAttachmentUrl(attachment.path, attachment.mimeType),
+        mediaType: attachment.mimeType,
+        filename: attachment.name,
+      });
+    }
+
+    const messages = convertToUIChatMessages([
+      ...messagesHistory,
+      {
+        messageId: userMessage.messageId,
+        role: "user",
+        parts: userMessageDisplayParts,
+        metadata: undefined,
+        attachments: linkedAttachments,
+      },
+    ]);
 
     if (linkedAttachments.length > 0) {
-      const attachmentIds = linkedAttachments.map((a) => a.attachmentId);
-
-      for (const { path, mediaType } of linkedAttachments) {
-        const url = buildAttachmentUrl(path, mediaType);
-
-        messages[messages.length - 1]!.parts.push({ type: "file", url, mediaType });
-        userMessageDisplayParts.push({ type: "file", url, mediaType });
-      }
-
       await convexClient.mutation(api.functions.messages.addAttachmentsToMessage, {
         messageId: userMessage.messageId,
         parts: userMessageDisplayParts,

@@ -1,14 +1,16 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
-import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { toPlainMessageText } from "@ai-chat/shared/chat/message-content";
 import { z } from "zod/v4";
 
 import { consumeUIMessageStreamResponse } from "./stream-handler";
 
+import { buildAttachmentUrl } from "../assets/urls";
 import { getConvexReactClient } from "../convex/client";
 import { uploadFileToR2 } from "../convex/upload-files";
 import { messageStoreActions } from "../store/messages-store";
 import type { ChatMessage, UIChatMessage, UserAttachment } from "../types";
+import { format } from "../utils";
 
 const errorResponseSchema = z
   .object({
@@ -48,7 +50,12 @@ export class ChatStreamHttpError extends Error {
   }
 }
 
-type UIConvertibleMessage = Pick<ChatMessage, "messageId" | "role" | "parts" | "metadata">;
+export type AttachmentDetails = Pick<Doc<"attachments">, "name" | "size" | "mimeType" | "path">;
+
+export type UIConvertibleMessage = Pick<ChatMessage, "messageId" | "role" | "parts" | "metadata"> & {
+  /** The files sent with the message; each is matched to its file part by URL. */
+  attachments: ReadonlyArray<AttachmentDetails>;
+};
 
 export async function readResponseErrorMessage(response: Response): Promise<string> {
   const fallback = getErrorFallbackMessage(response.status);
@@ -79,23 +86,66 @@ export function convertToUIChatMessages(messages: UIConvertibleMessage[]): UICha
     // eslint-disable-next-line typescript/no-unsafe-type-assertion
     const parts = message.parts as UIChatMessage["parts"];
 
+    if (message.role !== "user") {
+      return { id: message.messageId, role: message.role, parts, metadata: message.metadata };
+    }
+
+    // User text is stored with composer chips as `[@label](type:value)`; the model reads the labels.
+    const plainParts = parts.flatMap((part): UIChatMessage["parts"] => {
+      if (part.type !== "text") return [part];
+
+      // Providers reject empty text blocks, e.g. from a message that was only attachments.
+      const text = toPlainMessageText(part.text);
+      return text.trim() ? [{ ...part, text }] : [];
+    });
+
     return {
       id: message.messageId,
       role: message.role,
-      // User text is stored with composer chips as `[@label](type:value)`; the model reads the labels.
-      parts:
-        message.role === "user"
-          ? parts.flatMap((part): UIChatMessage["parts"] => {
-              if (part.type !== "text") return [part];
-
-              // Providers reject empty text blocks, e.g. from a message that was only attachments.
-              const text = toPlainMessageText(part.text);
-              return text.trim() ? [{ ...part, text }] : [];
-            })
-          : parts,
+      parts: withFileDetails(plainParts, message.attachments),
       metadata: message.metadata,
     };
   });
+}
+
+/**
+ * File parts carry only a file's contents, so this names each one and lists every file's name,
+ * type and size in a text part placed just before the files.
+ */
+function withFileDetails(
+  parts: UIChatMessage["parts"],
+  attachments: ReadonlyArray<AttachmentDetails>,
+): UIChatMessage["parts"] {
+  const attachmentByUrl = new Map(
+    attachments.map((attachment) => [buildAttachmentUrl(attachment.path, attachment.mimeType), attachment]),
+  );
+  const described: AttachmentDetails[] = [];
+
+  const named = parts.map((part) => {
+    if (part.type !== "file") return part;
+
+    const attachment = attachmentByUrl.get(part.url);
+    if (!attachment) return part;
+
+    described.push(attachment);
+    return { ...part, filename: part.filename ?? attachment.name };
+  });
+
+  const description = describeAttachments(described);
+  if (!description) return named;
+
+  const firstFileIndex = named.findIndex((part) => part.type === "file");
+  return named.toSpliced(firstFileIndex, 0, { type: "text", text: description });
+}
+
+export function describeAttachments(attachments: ReadonlyArray<AttachmentDetails>): string | null {
+  if (attachments.length === 0) return null;
+
+  const lines = attachments.map(
+    (attachment) =>
+      `- ${attachment.name} (${attachment.mimeType || "unknown type"}, ${format.size(attachment.size)})`,
+  );
+  return `<attached_files>\n${lines.join("\n")}\n</attached_files>`;
 }
 
 export async function processStreamResponse(
@@ -143,10 +193,10 @@ export async function processStreamResponse(
   }
 }
 
-type UploadedAttachment = {
+type UploadedAttachment = AttachmentDetails & {
+  /** The id the file had in the composer's tray. */
+  id: string;
   attachmentId: Id<"attachments">;
-  path: string;
-  mediaType: string;
 };
 
 export function uploadUserAttachment(
@@ -170,7 +220,14 @@ export function uploadUserAttachment(
     const uploadFilePromise = uploadFileToR2(attachment.file, { fileId: attachment.id, threadId });
 
     const [{ docId }, filePath] = await Promise.all([createAttachmentPromise, uploadFilePromise]);
-    return { attachmentId: docId, path: filePath, mediaType: attachment.file.type };
+    return {
+      id: attachment.id,
+      attachmentId: docId,
+      name: attachment.file.name,
+      size: attachment.file.size,
+      mimeType: attachment.file.type,
+      path: filePath,
+    };
   }
 
   for (const attachment of attachments) {

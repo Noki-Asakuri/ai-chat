@@ -1,14 +1,16 @@
 import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { FileIcon, FileTextIcon } from "lucide-react";
+import { useCallback } from "react";
 
 import { buildAttachmentUrl, buildImageThumbnailUrl } from "@/lib/assets/urls";
-import { cn } from "@/lib/utils";
+import type { UserAttachment } from "@/lib/types";
+import { cn, format } from "@/lib/utils";
 
 const CHIP_THUMBNAIL_TRANSFORM = "tr=w-64,h-64,c-at_max,f-auto,q-70";
 
 export const tokenChipClassName = cn(
-  "mx-px inline-flex h-[1.5em] max-w-[24ch] items-center gap-1 rounded-[0.35rem] px-1.5 align-middle text-[0.9em] leading-none font-medium whitespace-nowrap select-none",
+  "mx-px inline-flex h-[1.5em] max-w-[32ch] items-center gap-1 rounded-[0.35rem] px-1.5 align-middle text-[0.9em] leading-none font-medium whitespace-nowrap select-none",
   "ring-1 transition-[box-shadow,background-color] ring-inset data-selected:ring-2 data-pending:animate-pulse",
 );
 
@@ -48,15 +50,66 @@ export function AttachmentGlyph({
   return <FileIcon aria-hidden="true" className={cn("shrink-0", iconClassName)} />;
 }
 
-export function FileChipContent({ label, attachment }: { label: string; attachment?: GlyphAttachment }) {
+const chipGlyphClassName = "size-[1.05em] rounded-[0.2rem]";
+const chipIconClassName = "size-[1em] text-muted-foreground";
+
+function ChipSize({ bytes }: { bytes?: number }) {
+  if (bytes === undefined) return null;
+
+  return (
+    <span className="shrink-0 text-[0.8em] font-normal text-muted-foreground tabular-nums">
+      {format.size(bytes)}
+    </span>
+  );
+}
+
+export function FileChipContent({
+  label,
+  attachment,
+  size,
+}: {
+  label: string;
+  attachment?: GlyphAttachment;
+  size?: number;
+}) {
   return (
     <>
       <AttachmentGlyph
         attachment={attachment}
-        className="size-[1.05em] rounded-[0.2rem]"
-        iconClassName="size-[1em] text-muted-foreground"
+        className={chipGlyphClassName}
+        iconClassName={chipIconClassName}
       />
       <span className="truncate">{label}</span>
+      <ChipSize bytes={size} />
     </>
   );
+}
+
+/** A chip for a file in the composer's tray, not uploaded yet, previewed from the local file. */
+export function UploadChipContent({ label, upload }: { label: string; upload: UserAttachment }) {
+  return (
+    <>
+      {upload.type === "image" ? (
+        <LocalImagePreview file={upload.file} />
+      ) : (
+        <FileTextIcon aria-hidden="true" className={cn("shrink-0", chipIconClassName)} />
+      )}
+      <span className="truncate">{label}</span>
+      <ChipSize bytes={upload.file.size} />
+    </>
+  );
+}
+
+function LocalImagePreview({ file }: { file: File }) {
+  // The preview URL lives exactly as long as this image.
+  const attachPreview = useCallback(
+    (image: HTMLImageElement) => {
+      const url = URL.createObjectURL(file);
+      image.src = url;
+      return () => URL.revokeObjectURL(url);
+    },
+    [file],
+  );
+
+  return <img ref={attachPreview} alt="" className={cn("shrink-0 object-cover", chipGlyphClassName)} />;
 }

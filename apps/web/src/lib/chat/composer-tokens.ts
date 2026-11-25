@@ -5,8 +5,15 @@ import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { fromText, type Token, type TokenInputController, toText } from "@ui-sdk/react/token-input";
 import type { ConvexReactClient } from "convex/react";
 
+import type { UserAttachment } from "../types";
+
 export const PROFILE_TOKEN_TYPE = "profile";
 export const FILE_TOKEN_TYPE = "file";
+/** A file added to the composer's tray and not uploaded yet; the value is its local id. */
+export const UPLOAD_TOKEN_TYPE = "upload";
+
+export const MAIN_COMPOSER_ID = "textarea-chat-input";
+export const EDIT_COMPOSER_ID = "textarea-user-message-edit";
 
 export type ComposerAttachment = Pick<
   Doc<"attachments">,
@@ -148,4 +155,65 @@ export function linkAttachmentNames(
   }
 
   return toText(value.filter((segment) => segment !== ""));
+}
+
+/** Adds a chip for each new file, at the caret when the composer has focus, otherwise at the end. */
+export function insertUploadChips(composerId: string, attachments: ReadonlyArray<UserAttachment>): void {
+  const controller = composerControllers.get(composerId);
+  if (!controller || attachments.length === 0) return;
+
+  const editor = document.getElementById(composerId);
+  const atCaret = editor !== null && editor.contains(document.activeElement);
+  const value: Array<string | Token> = [];
+
+  if (!atCaret) {
+    const last = controller.getValue().at(-1);
+    if (last !== undefined && (isToken(last) || !/\s$/.test(last))) value.push(" ");
+  }
+
+  for (const attachment of attachments) {
+    value.push({ type: UPLOAD_TOKEN_TYPE, value: attachment.id, label: attachment.file.name }, " ");
+  }
+
+  controller.insert(value, { at: atCaret ? "caret" : "end" });
+}
+
+/** Removes the chips of this type that point at any of `values`, leaving every other chip alone. */
+export function removeComposerChips(composerId: string, type: string, values: ReadonlyArray<string>): void {
+  const controller = composerControllers.get(composerId);
+  if (!controller || values.length === 0) return;
+
+  for (const segment of controller.getValue()) {
+    if (isToken(segment) && segment.id && segment.type === type && values.includes(segment.value)) {
+      controller.removeToken(segment.id);
+    }
+  }
+}
+
+/**
+ * Rewrites chips for a message that is being sent: an added file's chip points at its saved
+ * attachment once uploaded, and any file chip whose file isn't sent with the message becomes its name.
+ */
+export function linkSentFileChips(
+  text: string,
+  attachmentIdByUploadId: ReadonlyMap<string, string>,
+  sentAttachmentIds: ReadonlyArray<string>,
+): string {
+  const sent = new Set(sentAttachmentIds);
+
+  return toText(
+    fromText(text).map((segment) => {
+      if (!isToken(segment)) return segment;
+
+      if (segment.type === UPLOAD_TOKEN_TYPE) {
+        const attachmentId = attachmentIdByUploadId.get(segment.value);
+        return attachmentId && sent.has(attachmentId)
+          ? { type: FILE_TOKEN_TYPE, value: attachmentId, label: segment.label }
+          : segment.label;
+      }
+
+      if (segment.type === FILE_TOKEN_TYPE && !sent.has(segment.value)) return segment.label;
+      return segment;
+    }),
+  );
 }

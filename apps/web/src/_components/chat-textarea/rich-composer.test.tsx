@@ -1,3 +1,4 @@
+import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import type { FunctionReference } from "convex/server";
 import { afterAll, beforeEach, describe, expect, mock, setDefaultTimeout, test } from "bun:test";
 
@@ -71,7 +72,18 @@ const { createAgent } = await import("@ui-sdk/react/agent");
 const { ConfigStoreContext } = await import("@/components/provider/config-provider");
 const { createConfigStore } = await import("@/lib/store/config-store");
 const { SelectableModelIds, tryGetModelData } = await import("@/lib/chat/models");
-const { linkAttachmentNames, parseComposerInput } = await import("@/lib/chat/composer-tokens");
+const {
+  FILE_TOKEN_TYPE,
+  getComposerController,
+  insertUploadChips,
+  linkAttachmentNames,
+  linkSentFileChips,
+  MAIN_COMPOSER_ID,
+  parseComposerInput,
+  removeComposerChips,
+} = await import("@/lib/chat/composer-tokens");
+const { chatStoreActions, useChatStore } = await import("@/lib/store/chat-store");
+const { useState } = await import("react");
 const { RichComposer } = await import("./rich-composer");
 
 afterAll(() => mock.restore());
@@ -102,7 +114,15 @@ const otherModel = SelectableModelIds.find(
 if (!otherModel) throw new Error("Expected a second model");
 const otherModelLabel = modelLabel(otherModel);
 
-function renderComposer(options: { pref?: "enter" | "ctrlEnter"; input?: string } = {}) {
+type Upload = { id: string; file: File; type: "image" | "pdf" };
+
+function pdfUpload(id: string, name: string, bytes: number): Upload {
+  return { id, file: new File(["x".repeat(bytes)], name, { type: "application/pdf" }), type: "pdf" };
+}
+
+function renderComposer(
+  options: { pref?: "enter" | "ctrlEnter"; input?: string; uploads?: ReadonlyArray<Upload> } = {},
+) {
   const store = createConfigStore({ model: fileModel, pref: options.pref ?? "enter" });
   const queryClient = new QueryClient();
   const state = { input: options.input ?? "" };
@@ -111,7 +131,7 @@ function renderComposer(options: { pref?: "enter" | "ctrlEnter"; input?: string 
     state.input = next;
   });
 
-  function view(input: string) {
+  function view(input: string, uploads: ReadonlyArray<Upload> = options.uploads ?? []) {
     return (
       <QueryClientProvider client={queryClient}>
         <ConfigStoreContext.Provider value={store}>
@@ -120,6 +140,7 @@ function renderComposer(options: { pref?: "enter" | "ctrlEnter"; input?: string 
             input={input}
             setInput={setInput}
             model={fileModel!}
+            uploads={uploads}
             handleAddAttachments={() => {}}
             onConfirm={onConfirm}
             enableCommands
@@ -130,7 +151,8 @@ function renderComposer(options: { pref?: "enter" | "ctrlEnter"; input?: string 
   }
 
   const result = render(view(state.input));
-  const rerenderWith = (input: string) => result.rerender(view(input));
+  const rerenderWith = (input: string, uploads?: ReadonlyArray<Upload>) =>
+    result.rerender(view(input, uploads));
   return { ...result, store, state, onConfirm, setInput, rerenderWith };
 }
 
@@ -210,6 +232,7 @@ describe("RichComposer", () => {
     await user.keyboard("{Enter}");
 
     await waitFor(() => expect(state.input).toContain("[@report.pdf](file:attachment_report)"));
+    expect(fileChips()[0]?.textContent).toContain("2 kB");
   });
 
   test("an agent can find the composer and write into it", async () => {
@@ -223,6 +246,172 @@ describe("RichComposer", () => {
       agent.act({ steps: [{ ref: "Type your message here...", action: "setValue", args: [["Hi agent"]] }] }),
     );
     await waitFor(() => expect(state.input).toBe("Hi agent"));
+  });
+});
+
+function fileChips() {
+  return [...editor().querySelectorAll('[data-slot="token-input-token"]')].filter((chip) =>
+    chip.className.includes("bg-muted"),
+  );
+}
+
+describe("RichComposer added files", () => {
+  const photo = pdfUpload("u1", "scan.pdf", 2048);
+
+  test("shows a file in the tray as a chip with its size", () => {
+    renderComposer({ input: "Read [@scan.pdf](upload:u1)", uploads: [photo] });
+
+    expect(fileChips()).toHaveLength(1);
+    expect(fileChips()[0]?.textContent).toContain("scan.pdf");
+    expect(fileChips()[0]?.textContent).toContain("2 kB");
+  });
+
+  test("shows a chip whose file isn't in the tray as just its name", () => {
+    const { rerenderWith } = renderComposer({ input: "Read [@scan.pdf](upload:u1)", uploads: [photo] });
+
+    act(() => rerenderWith("Read [@scan.pdf](upload:u1)", []));
+
+    expect(fileChips()).toHaveLength(0);
+    expect(editor().textContent).toContain("scan.pdf");
+    expect(editor().textContent).not.toContain("2 kB");
+  });
+
+  test("adds chips at the end and removes only the chips asked for", async () => {
+    const { state } = renderComposer({ input: "Compare [@report.pdf](file:attachment_report)" });
+    const second = pdfUpload("u2", "notes.pdf", 10);
+
+    act(() => insertUploadChips("composer", [photo, second]));
+    await waitFor(() =>
+      expect(state.input).toBe(
+        "Compare [@report.pdf](file:attachment_report) [@scan.pdf](upload:u1) [@notes.pdf](upload:u2) ",
+      ),
+    );
+
+    act(() => removeComposerChips("composer", "upload", ["u1"]));
+    await waitFor(() =>
+      expect(state.input).toBe("Compare [@report.pdf](file:attachment_report)  [@notes.pdf](upload:u2) "),
+    );
+
+    act(() => removeComposerChips("composer", FILE_TOKEN_TYPE, ["attachment_report"]));
+    await waitFor(() => expect(state.input).toBe("Compare   [@notes.pdf](upload:u2) "));
+  });
+});
+
+function MainComposer() {
+  const [queryClient] = useState(() => new QueryClient());
+  const [store] = useState(() => createConfigStore({ model: fileModel, pref: "enter" }));
+  const input = useChatStore((state) => state.input);
+  const uploads = useChatStore((state) => state.attachments);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ConfigStoreContext.Provider value={store}>
+        <RichComposer
+          id={MAIN_COMPOSER_ID}
+          input={input}
+          setInput={chatStoreActions.setInput}
+          model={fileModel!}
+          uploads={uploads}
+          handleAddAttachments={() => {}}
+          onRemoveChips={chatStoreActions.removeChipAttachments}
+        />
+      </ConfigStoreContext.Provider>
+    </QueryClientProvider>
+  );
+}
+
+describe("chat store tray", () => {
+  test("adding a file puts its chip in the composer and removing it takes the chip out", async () => {
+    useChatStore.setState({ input: "Hello", attachments: [] });
+    render(<MainComposer />);
+
+    act(() => chatStoreActions.addAttachments([pdfUpload("u3", "plan.pdf", 4096)]));
+    await waitFor(() => expect(useChatStore.getState().input).toBe("Hello [@plan.pdf](upload:u3) "));
+    await waitFor(() => expect(fileChips()[0]?.textContent).toContain("4 kB"));
+
+    act(() => chatStoreActions.removeAttachment("u3"));
+    await waitFor(() => expect(useChatStore.getState().input).toBe("Hello  "));
+    expect(useChatStore.getState().attachments).toHaveLength(0);
+  });
+
+  test("a chip's remove button takes its file out of the tray", async () => {
+    const user = userEvent.setup();
+    useChatStore.setState({ input: "", attachments: [] });
+    render(<MainComposer />);
+
+    act(() => chatStoreActions.addAttachments([pdfUpload("u4", "a.pdf", 10), pdfUpload("u5", "b.pdf", 10)]));
+    await waitFor(() => expect(fileChips()).toHaveLength(2));
+
+    const remove = fileChips()[0]?.querySelector('[data-slot="token-input-token-remove"]');
+    if (!remove) throw new Error("Expected a remove button on the chip");
+    await user.click(remove);
+
+    await waitFor(() => expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(["u5"]));
+    expect(useChatStore.getState().input).not.toContain("upload:u4");
+  });
+
+  test("undoing a removal brings the name back without the file", async () => {
+    useChatStore.setState({ input: "", attachments: [] });
+    render(<MainComposer />);
+
+    act(() => chatStoreActions.addAttachments([pdfUpload("u6", "c.pdf", 10)]));
+    await waitFor(() => expect(fileChips()).toHaveLength(1));
+    act(() => chatStoreActions.removeAttachment("u6"));
+    await waitFor(() => expect(fileChips()).toHaveLength(0));
+
+    act(() => {
+      getComposerController(MAIN_COMPOSER_ID)?.undo();
+    });
+    await waitFor(() => expect(useChatStore.getState().input).toContain("upload:u6"));
+    expect(fileChips()).toHaveLength(0);
+    expect(editor().textContent).toContain("c.pdf");
+    expect(useChatStore.getState().attachments).toHaveLength(0);
+  });
+});
+
+function fakeId<TableName extends "messages" | "attachments">(value: string): Id<TableName> {
+  // SAFETY: The store only compares these ids, so plain strings can stand in for documents.
+  // eslint-disable-next-line typescript/no-unsafe-type-assertion
+  return value as Id<TableName>;
+}
+
+describe("edit tray", () => {
+  test("removing chips from the edit box takes their files out of its tray", () => {
+    chatStoreActions.setEditMessage({
+      _id: fakeId<"messages">("message_1"),
+      input: "",
+      model: fileModel,
+      currentAttachments: [],
+      keptAttachmentIds: [fakeId<"attachments">("kept_1"), fakeId<"attachments">("kept_2")],
+      attachments: [pdfUpload("u7", "d.pdf", 10), pdfUpload("u8", "e.pdf", 10)],
+      modelParams: {},
+    });
+
+    chatStoreActions.removeEditChipAttachments([
+      { type: "upload", value: "u7", label: "d.pdf" },
+      { type: FILE_TOKEN_TYPE, value: "kept_1", label: "f.pdf" },
+      { type: FILE_TOKEN_TYPE, value: "elsewhere", label: "g.pdf" },
+    ]);
+
+    const edit = useChatStore.getState().editMessage;
+    expect(edit?.attachments.map((item) => item.id)).toEqual(["u8"]);
+    expect<string[] | undefined>(edit?.keptAttachmentIds).toEqual(["kept_2"]);
+    chatStoreActions.setEditMessage(null);
+  });
+});
+
+describe("linkSentFileChips", () => {
+  test("points sent files' chips at their saved attachments and turns the rest into names", () => {
+    const text = "[@a.pdf](upload:u1) [@b.pdf](upload:u2) [@c.pdf](file:saved) [@d.pdf](file:dropped)";
+
+    expect(linkSentFileChips(text, new Map([["u1", "att1"]]), ["att1", "saved"])).toBe(
+      "[@a.pdf](file:att1) b.pdf [@c.pdf](file:saved) d.pdf",
+    );
+  });
+
+  test("leaves profile chips and plain text alone", () => {
+    const text = "[@Coder](profile:p1) Look at [docs](https://x.dev)";
+    expect(linkSentFileChips(text, new Map(), [])).toBe(text);
   });
 });
 

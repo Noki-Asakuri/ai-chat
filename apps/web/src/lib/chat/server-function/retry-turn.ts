@@ -15,7 +15,12 @@ import { chatStoreActions } from "@/lib/store/chat-store";
 import type { ChatMessage, ChatRequestBody } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
 
-import { convertToUIChatMessages, processStreamResponse } from "../shared";
+import {
+  type AttachmentDetails,
+  convertToUIChatMessages,
+  processStreamResponse,
+  type UIConvertibleMessage,
+} from "../shared";
 import {
   getClientErrorMessage,
   getDeprecatedModelError,
@@ -35,6 +40,8 @@ export type RetryTurnOptions = {
     messageId: Id<"messages">;
     parts: ChatMessage["parts"];
     attachments: Id<"attachments">[];
+    /** The files behind `attachments`, so the model is told their names, types and sizes. */
+    sentAttachments: ReadonlyArray<AttachmentDetails>;
   };
   onPrepared?: () => void;
 };
@@ -115,11 +122,15 @@ export function useRetryTurn() {
       return { status: "failed", phase: "preparation" };
     }
 
-    const historySlice = messagesHistory.slice(0, userMessageIndex + 1);
+    const historySlice: UIConvertibleMessage[] = messagesHistory.slice(0, userMessageIndex + 1);
 
     if (options.userMessage) {
       const message = historySlice[userMessageIndex]!;
-      historySlice[userMessageIndex] = { ...message, parts: options.userMessage.parts };
+      historySlice[userMessageIndex] = {
+        ...message,
+        parts: options.userMessage.parts,
+        attachments: options.userMessage.sentAttachments,
+      };
     }
 
     const allMessages = convertToUIChatMessages(historySlice);
@@ -166,7 +177,11 @@ export function useRetryTurn() {
 
           model: requestModel,
           modelParams: mutationModelParams,
-          userMessage: options.userMessage,
+          userMessage: options.userMessage && {
+            messageId: options.userMessage.messageId,
+            parts: options.userMessage.parts,
+            attachments: options.userMessage.attachments,
+          },
         });
 
         retryAttemptId = initialRetryResult.retryAttemptId;

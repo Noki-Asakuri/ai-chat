@@ -14,6 +14,7 @@ import {
 } from "@/lib/chat/scroll-stickiness";
 import { focusTextareaByIdAtEnd } from "@/lib/chat/focus-textarea";
 import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
+import { EDIT_COMPOSER_ID } from "@/lib/chat/composer-tokens";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 
 const EDITOR_VIEWPORT_MARGIN_PX = 16;
@@ -77,7 +78,7 @@ export function ChatEditTextarea() {
   useLayoutEffect(() => {
     if (!editMessageId) return undefined;
 
-    focusTextareaByIdAtEnd("textarea-user-message-edit");
+    focusTextareaByIdAtEnd(EDIT_COMPOSER_ID);
 
     let firstRafId = 0;
     let secondRafId = 0;
@@ -118,10 +119,12 @@ export function ChatEditTextarea() {
 
           <div>
             <RichComposer
-              id="textarea-user-message-edit"
+              id={EDIT_COMPOSER_ID}
               input={editMessage.input}
               setInput={(input) => chatStoreActions.updateEditMessage({ input })}
               model={editMessage.model}
+              uploads={editMessage.attachments}
+              onRemoveChips={chatStoreActions.removeEditChipAttachments}
               handleAddAttachments={handleAddAttachments}
               onConfirm={saveEdits}
               disabled={isSaving}

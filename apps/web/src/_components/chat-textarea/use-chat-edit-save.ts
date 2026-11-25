@@ -1,15 +1,19 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
-import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
+import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useSessionId } from "convex-helpers/react/sessions";
 import { useConvex, useMutation } from "convex/react";
 import * as React from "react";
 
 import { buildAttachmentUrl } from "@/lib/assets/urls";
-import { parseComposerInput, resolveComposerAttachments } from "@/lib/chat/composer-tokens";
+import {
+  linkSentFileChips,
+  parseComposerInput,
+  resolveComposerAttachments,
+} from "@/lib/chat/composer-tokens";
 import { tryGetModelData } from "@/lib/chat/models";
 import { useRetryTurn } from "@/lib/chat/server-function/retry-turn";
-import { uploadUserAttachment } from "@/lib/chat/shared";
+import { type AttachmentDetails, uploadUserAttachment } from "@/lib/chat/shared";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 import type { ChatMessage } from "@/lib/types";
@@ -48,7 +52,7 @@ export function useChatEditSave() {
       );
       const uploaded = await uploadUserAttachment(editMessage.attachments, threadId);
 
-      const attachmentById = new Map<Id<"attachments">, Pick<Doc<"attachments">, "path" | "mimeType">>();
+      const attachmentById = new Map<Id<"attachments">, AttachmentDetails>();
       for (const attachment of [...editMessage.currentAttachments, ...referenced]) {
         attachmentById.set(attachment._id, attachment);
       }
@@ -72,24 +76,27 @@ export function useChatEditSave() {
         finalAttachmentIds.push(item.attachmentId);
       }
 
-      const fileParts: Array<ChatMessage["parts"][number]> = [];
+      const sentAttachments: AttachmentDetails[] = [];
 
       for (const attachmentId of new Set(keptAttachmentIds)) {
         const attachment = attachmentById.get(attachmentId);
-        if (!attachment) continue;
-
-        const url = buildAttachmentUrl(attachment.path, attachment.mimeType);
-
-        fileParts.push({ type: "file", url, mediaType: attachment.mimeType });
+        if (attachment) sentAttachments.push(attachment);
       }
+      sentAttachments.push(...uploaded);
 
-      for (const item of uploaded) {
-        const url = buildAttachmentUrl(item.path, item.mediaType);
+      const fileParts: Array<ChatMessage["parts"][number]> = sentAttachments.map((attachment) => ({
+        type: "file",
+        url: buildAttachmentUrl(attachment.path, attachment.mimeType),
+        mediaType: attachment.mimeType,
+        filename: attachment.name,
+      }));
 
-        fileParts.push({ type: "file", url, mediaType: item.mediaType });
-      }
-
-      const parts: ChatMessage["parts"] = [{ type: "text", text: displayText, state: "done" }];
+      const text = linkSentFileChips(
+        displayText,
+        new Map(uploaded.map((item) => [item.id, item.attachmentId])),
+        finalAttachmentIds,
+      );
+      const parts: ChatMessage["parts"] = [{ type: "text", text, state: "done" }];
 
       for (const part of fileParts) {
         parts.push(part);
@@ -105,6 +112,7 @@ export function useChatEditSave() {
           messageId: editMessage._id,
           parts,
           attachments: finalAttachmentIds,
+          sentAttachments,
         },
       });
 
