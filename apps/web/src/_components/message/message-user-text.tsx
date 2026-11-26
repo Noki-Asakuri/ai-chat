@@ -46,35 +46,12 @@ function toLinkText(label: string): string {
   return label.replaceAll(/[^\p{L}\p{N} ]/gu, (char) => `&#${char.codePointAt(0)};`);
 }
 
-// Code spans and fenced code, where markdown shows text as is, without escapes or entities. A fence
-// left open runs to the end, as in markdown.
-const MARKDOWN_CODE = /(```[\s\S]*?(?:```|$)|`[^`\n]*`)/;
-// The codec escapes typed chip-like text as `\[@`, after its own backslashes doubled. Only a run's
-// start is checked behind, so long backslash runs stay fast.
-const ESCAPED_CHIP_OPENER = /(?<!\\)((?:\\\\)*)\\\[@/g;
-const BACKSLASHES_BEFORE_CHIP_OPENER = /(?<!\\)\\+(?=\[@)/g;
-
-/**
- * Saved text, outside chips, as markdown. Outside code, markdown reads the codec's escape the same
- * way, but the LaTeX fix reads `\[` as display math, so the bracket goes in as an entity. Inside code
- * nothing is unescaped, so the codec's escape is undone there.
- */
-function toMarkdownText(text: string): string {
-  return text
-    .split(MARKDOWN_CODE)
-    .map((chunk, index) =>
-      index % 2 === 1
-        ? chunk.replaceAll(BACKSLASHES_BEFORE_CHIP_OPENER, (run) => "\\".repeat(Math.floor(run.length / 2)))
-        : chunk.replaceAll(ESCAPED_CHIP_OPENER, "$1&#91;@"),
-    )
-    .join("");
-}
-
 // Tokens become hash links so the markdown parser keeps them inline; the `a` renderer swaps them for chips.
 function toMarkdownWithTokenLinks(text: string): string {
   return splitMessageTokens(text)
     .map((segment) => {
-      if (segment.kind === "text") return toMarkdownText(segment.text);
+      // Saved text keeps the codec's escapes, which markdown reads the same way outside code.
+      if (segment.kind === "text") return segment.text;
 
       return `[${toLinkText(segment.label)}](${toTokenHref(segment.type, segment.value, segment.label)})`;
     })
@@ -114,6 +91,41 @@ type HastNode =
 type RehypePlugin = NonNullable<StreamdownProps["rehypePlugins"]>[number];
 
 const SKIPPED_TAGS = new Set(["a", "code", "pre"]);
+
+const halveBackslashes = (run: string): string => "\\".repeat(Math.floor(run.length / 2));
+// A run of backslashes before `[@`: the codec doubles it, plus one when the bracket is literal.
+const BACKSLASHES_BEFORE_CHIP_OPENER = /(?<!\\)\\+(?=\[@)/g;
+// A chip's token link, after any run of backslashes, which the codec doubles before a chip. Each
+// pattern checks only a run's start behind, so long backslash runs stay fast.
+const CHIP_LINK_IN_CODE = /(?<!\\)(\\*)\[[^\]\n]*\]\((#message-token\/[^)\s]*)\)/g;
+
+function toTypedCodeText(text: string): string {
+  return text
+    .replaceAll(BACKSLASHES_BEFORE_CHIP_OPENER, halveBackslashes)
+    .replaceAll(CHIP_LINK_IN_CODE, (link: string, backslashes: string, href: string) => {
+      const token = parseTokenHref(href);
+      return token ? halveBackslashes(backslashes) + token.label : link;
+    });
+}
+
+/**
+ * Code shows its text as typed. Markdown leaves code untouched, so this undoes the codec's escapes
+ * there and shows a chip as its label. It runs after parsing, so it finds code just as markdown does.
+ */
+function showCodeAsTyped(node: HastNode, inCode: boolean): void {
+  if (!("children" in node) || !node.children) return;
+  const code = inCode || (node.type === "element" && node.tagName === "code");
+
+  for (const child of node.children) {
+    if (child.type === "text") {
+      if (code) child.value = toTypedCodeText(child.value);
+    } else {
+      showCodeAsTyped(child, code);
+    }
+  }
+}
+
+const codeAsTypedPlugin: RehypePlugin = () => (tree: HastNode) => showCodeAsTyped(tree, false);
 
 // Messages sent before file chips were saved hold the attachment's name as plain text. Turn those
 // names into the same token links, after markdown parsing so code spans and links stay untouched.
@@ -221,7 +233,11 @@ export function MessageUserText({ text, attachments }: { text: string; attachmen
   const rehypePlugins = useMemo(() => {
     const hasSavedTokens = splitMessageTokens(text).some((segment) => segment.kind === "token");
     const attachmentNames = hasSavedTokens ? null : createAttachmentNamePlugin(attachments);
-    return attachmentNames ? [...Object.values(defaultRehypePlugins), attachmentNames] : undefined;
+    return [
+      ...Object.values(defaultRehypePlugins),
+      codeAsTypedPlugin,
+      ...(attachmentNames ? [attachmentNames] : []),
+    ];
   }, [text, attachments]);
 
   const { images, context } = useMemo(() => {

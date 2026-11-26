@@ -303,6 +303,34 @@ describe("RichComposer added files", () => {
     expect(controller.editor.selection()).toEqual({ start: 7, end: 7 });
   });
 
+  test("removing a chip before punctuation takes the space before it", async () => {
+    const { state } = renderComposer({
+      input: "Look at [@a.pdf](upload:u1), then [@a.pdf](upload:u1).",
+      uploads: [photo],
+    });
+
+    act(() => removeComposerChips("composer", "upload", ["u1"]));
+    await waitFor(() => expect(state.input).toBe("Look at, then."));
+  });
+
+  test("removing two chips side by side keeps the caret where it was", async () => {
+    const { state } = renderComposer({
+      input: "a [@a.pdf](upload:u1)[@a.pdf](upload:u1)\nb",
+      uploads: [photo],
+    });
+    const controller = getComposerController("composer");
+    if (!controller) throw new Error("Expected the composer to register its controller");
+
+    editor().focus();
+    act(() => {
+      controller.insert("", { at: { start: 2, end: 2 } });
+    });
+    act(() => removeComposerChips("composer", "upload", ["u1"]));
+
+    await waitFor(() => expect(state.input).toBe("a\nb"));
+    expect(controller.editor.selection()).toEqual({ start: 1, end: 1 });
+  });
+
   test("adds chips at the end and removes only the chips asked for", async () => {
     const { state } = renderComposer({ input: "Compare [@report.pdf](file:attachment_report)" });
     const second = pdfUpload("u2", "notes.pdf", 10);

@@ -230,6 +230,8 @@ export function removeComposerChips(composerId: string, type: string, values: Re
   // Offsets, in the old value, of each removed chip and space. A chip counts as one.
   const removedAt: number[] = [];
   let offset = 0;
+  // Where, in the old value, the last text kept in `next` ends, less any spaces trimmed from it.
+  let lastTextEnd = 0;
   let dropLeadingSpace = false;
 
   for (const [index, segment] of value.entries()) {
@@ -241,6 +243,7 @@ export function removeComposerChips(composerId: string, type: string, values: Re
       if (text !== "") next.push(text);
       dropLeadingSpace = false;
       offset += segment.length;
+      lastTextEnd = offset;
       continue;
     }
 
@@ -258,11 +261,19 @@ export function removeComposerChips(composerId: string, type: string, values: Re
     const textAfter = following !== undefined && !isToken(following) ? following : undefined;
     const standsAlone = previous === undefined || /\s$/.test(textBefore ?? "");
 
+    // At the end, or before punctuation or a line break, the space before the chip goes instead. Not
+    // before a word or another chip, which it keeps apart.
+    const endsPhrase =
+      following === undefined || (textAfter !== undefined && !/^[\p{L}\p{N}]/u.test(textAfter));
+
     if (standsAlone && textAfter?.startsWith(" ")) {
       dropLeadingSpace = true;
-    } else if (textBefore?.endsWith(" ") && (following === undefined || /^\s/.test(textAfter ?? ""))) {
-      next[next.length - 1] = textBefore.slice(0, -1);
-      removedAt.push(offset - 1);
+    } else if (textBefore?.endsWith(" ") && endsPhrase) {
+      lastTextEnd -= 1;
+      removedAt.push(lastTextEnd);
+      const trimmed = textBefore.slice(0, -1);
+      if (trimmed === "") next.pop();
+      else next[next.length - 1] = trimmed;
     }
     offset += 1;
   }

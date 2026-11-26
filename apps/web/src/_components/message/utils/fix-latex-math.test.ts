@@ -10,6 +10,12 @@ describe("fixLatexMath", function () {
     expect(fixLatexMath(input)).toBe("Inline $ a+b $ and block $$\nx^2 + y^2\n$$");
   });
 
+  test("leaves the chat composer's escape for typed chip-like text alone", function () {
+    expect(fixLatexMath("Explain \\[@home](file:example) and \\[x\\]")).toBe(
+      "Explain \\[@home](file:example) and $$\nx\n$$",
+    );
+  });
+
   test("preserves fenced code blocks", function () {
     const input = [
       "Before \\(x\\)",
@@ -39,13 +45,9 @@ describe("fixLatexMath", function () {
   });
 
   test("handles mixed prose, inline code, and fenced code", function () {
-    const input = [
-      "Prose \\(a\\) and `\\(b\\)`.",
-      "```plaintext",
-      "\\(c\\)",
-      "```",
-      "Tail \\[d\\]",
-    ].join("\n");
+    const input = ["Prose \\(a\\) and `\\(b\\)`.", "```plaintext", "\\(c\\)", "```", "Tail \\[d\\]"].join(
+      "\n",
+    );
 
     const expected = [
       "Prose $ a $ and `\\(b\\)`.",

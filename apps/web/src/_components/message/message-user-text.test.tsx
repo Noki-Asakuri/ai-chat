@@ -15,6 +15,7 @@ await mock.module("@/lib/assets/urls", () => ({
 const { MessageUserText } = await import("./message-user-text");
 const { ConfigStoreContext } = await import("@/components/provider/config-provider");
 const { createConfigStore } = await import("@/lib/store/config-store");
+const { toText } = await import("@ui-sdk/react/token-input");
 
 afterAll(() => mock.restore());
 
@@ -123,6 +124,75 @@ describe("MessageUserText", () => {
     const { container } = renderText("Plain [link](https://x.dev) text");
     expect(container.querySelector('[data-slot="message-token"]')).toBeNull();
     expect(container.textContent).toContain("Plain link text");
+  });
+});
+
+function codeTexts(container: HTMLElement) {
+  return [...container.querySelectorAll("code")].map((code) => code.textContent);
+}
+
+describe("MessageUserText with code and typed chip-like text", () => {
+  // Code blocks read the config store.
+  const store = createConfigStore({});
+  // What the composer saves for this value, so the escaping is exactly the codec's.
+  function renderTyped(value: Parameters<typeof toText>[0]) {
+    return render(
+      <ConfigStoreContext.Provider value={store}>
+        <MessageUserText text={toText(value)} attachments={attachments} />
+      </ConfigStoreContext.Provider>,
+    );
+  }
+
+  test("an unclosed fence before typed chip-like text doesn't turn it into a link or math", () => {
+    const { container } = renderTyped(["Use ``` to open, and type [@note](a:b) here"]);
+
+    expect(container.querySelector('[data-streamdown="link"], a')).toBeNull();
+    expect(container.textContent).toContain("type [@note](a:b) here");
+  });
+
+  test("typed chip-like text after a code block with a chip stays text", () => {
+    const { container } = renderTyped([
+      "```\n",
+      { type: "file", value: "attachment_cat", label: "cat.webp" },
+      "\n```\nsee [@foo](https://example.com)",
+    ]);
+
+    // Only the bare URL is a link, as markdown makes any; `[@foo]` stays text.
+    const links = [...container.querySelectorAll('[data-streamdown="link"]')];
+    expect(links.map((link) => link.textContent)).toEqual(["https://example.com"]);
+    expect(container.textContent).toContain("see [@foo](https://example.com)");
+  });
+
+  test("typed chip-like text after a code line with backticks in it isn't math", () => {
+    const { container } = renderTyped(["```\nfoo ``` bar\n```\n[@a](b:c)"]);
+
+    expect(container.querySelector(".katex")).toBeNull();
+    expect(container.textContent).toContain("[@a](b:c)");
+  });
+
+  test("every kind of code shows typed chip-like text as typed", () => {
+    for (const value of [
+      "``[@a](b:c)``",
+      "`[@a](b:c)\nnext`",
+      "~~~\n[@a](b:c)\n~~~",
+      "    [@a](b:c)",
+      "````\n[@a](b:c)\n````",
+      "`a\\[@b`",
+    ]) {
+      const { container, unmount } = renderTyped([value]);
+      const shown = codeTexts(container).join("");
+
+      expect(shown).not.toContain("&#91;");
+      expect(shown.includes("[@a](b:c)") || shown.includes("a\\[@b")).toBe(true);
+      expect(shown).not.toContain("\\[@a");
+      unmount();
+    }
+  });
+
+  test("a chip inside a code span shows as its name", () => {
+    const { container } = renderTyped(["Use `", { type: "name", value: "", label: "my (1).txt" }, "` now"]);
+
+    expect(codeTexts(container)).toEqual(["my (1).txt"]);
   });
 });
 

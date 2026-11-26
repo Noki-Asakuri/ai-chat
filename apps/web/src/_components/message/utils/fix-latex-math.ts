@@ -81,11 +81,7 @@ function fixLatexOutsideInlineCode(text: string): string {
     result += fixLatexInProse(text.slice(index, backtickIndex));
 
     const delimiterLength = getBacktickRunLength(text, backtickIndex);
-    const closingIndex = findClosingBacktickRun(
-      text,
-      backtickIndex + delimiterLength,
-      delimiterLength,
-    );
+    const closingIndex = findClosingBacktickRun(text, backtickIndex + delimiterLength, delimiterLength);
 
     if (closingIndex === -1) {
       result += text.slice(backtickIndex);
@@ -101,7 +97,8 @@ function fixLatexOutsideInlineCode(text: string): string {
 
 function fixLatexInProse(text: string): string {
   const fixedDelimiters = text
-    .replace(/(?<!\\)\\(\(|\[)/g, function replaceOpeningDelimiter(_, delimiter: string) {
+    // `\[@` is the chat composer's escape for typed text that looks like a file chip, not math.
+    .replace(/(?<!\\)\\(\(|\[(?!@))/g, function replaceOpeningDelimiter(_, delimiter: string) {
       return delimiter === "(" ? "$ " : "$$\n";
     })
     .replace(/(?<!\\)\\(\)|\])/g, function replaceClosingDelimiter(_, delimiter: string) {
