@@ -354,21 +354,34 @@ export function nameComposerChips(
 }
 
 /**
- * Whether a change removed a chip on purpose: with its remove button, or Backspace or Delete taking
- * out that one chip. Clearing text that holds chips, a word or line delete, cutting, dragging, typing
- * over a selection, undo and redo don't count, so their files stay in the tray.
+ * Whether a change removed a chip on purpose: with its remove button, or a delete key (Backspace,
+ * Delete, or a word delete) taking out that one chip and nothing else. `removedLength` is how much
+ * shorter the value got, a chip counting as one. Clearing text that holds a chip, cutting, dragging,
+ * typing over a selection, undo and redo don't count, so their files stay in the tray.
  */
 export function isChipDeletion(
   details: Pick<TokenInputValueChangeDetails, "reason" | "inputType" | "removed">,
+  removedLength: number,
 ): boolean {
   if (details.removed.length === 0) return false;
   if (details.reason === "remove-press") return true;
 
+  const inputType = details.inputType ?? "";
   return (
     details.reason === "input-change" &&
     details.removed.length === 1 &&
-    (details.inputType === "deleteContentBackward" || details.inputType === "deleteContentForward")
+    removedLength === 1 &&
+    inputType.startsWith("delete") &&
+    inputType !== "deleteByCut" &&
+    inputType !== "deleteByDrag"
   );
+}
+
+/** A value's length as the token input counts it: a chip is one. */
+export function composerValueLength(value: ReadonlyArray<string | Token>): number {
+  let length = 0;
+  for (const segment of value) length += isToken(segment) ? 1 : segment.length;
+  return length;
 }
 
 /**

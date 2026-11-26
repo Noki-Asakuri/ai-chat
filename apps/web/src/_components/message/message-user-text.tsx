@@ -48,8 +48,9 @@ function toLinkText(label: string): string {
   return label.replaceAll(/[^\p{L}\p{N} ]/gu, (char) => `&#${char.codePointAt(0)};`);
 }
 
-// An empty comment: it renders as nothing, and ends a word or bare URL before a chip's link.
-const CHIP_SEPARATOR = "<!-- -->";
+// An empty element: it renders as nothing and ends a word or bare URL before a chip's link. Unlike a
+// comment, it can't close a `<!--` typed earlier in the message.
+const CHIP_SEPARATOR = "<span></span>";
 
 // Tokens become hash links so the markdown parser keeps them inline; the `a` renderer swaps them for chips.
 function toMarkdownWithTokenLinks(text: string): string {
@@ -60,7 +61,7 @@ function toMarkdownWithTokenLinks(text: string): string {
 
       const link = `[${toLinkText(segment.label)}](${toTokenHref(segment.type, segment.value, segment.label)})`;
       const previous = segments[index - 1];
-      // Right after a word, an empty comment ends it, so a bare URL there can't take in the link.
+      // Right after a word, the separator ends it, so a bare URL there can't take in the link.
       return previous?.kind === "text" && !/\s$/.test(previous.text) ? CHIP_SEPARATOR + link : link;
     })
     .join("");
@@ -116,7 +117,7 @@ const BACKSLASHES_BEFORE_CHIP_OPENER = /(?<!\\)\\+(?=\[@)/g;
 // as entities, so a typed `[` before it isn't taken in. Each pattern checks only a run's start
 // behind, so long runs stay fast.
 const CHIP_LINK_IN_CODE = new RegExp(
-  String.raw`(?<!\\)(\\*)(?:<!-- -->)?\[[^[\]\n]*\]\((#message-token-${TOKEN_LINK_KEY}\/[^)\s]*)\)`,
+  String.raw`(?<!\\)(\\*)(?:<span><\/span>)?\[[^[\]\n]*\]\((#message-token-${TOKEN_LINK_KEY}\/[^)\s]*)\)`,
   "g",
 );
 

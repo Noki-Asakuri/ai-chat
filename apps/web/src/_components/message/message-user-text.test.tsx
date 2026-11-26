@@ -232,6 +232,17 @@ describe("MessageUserText with code and typed chip-like text", () => {
     expect(container.textContent).not.toContain("message-token");
   });
 
+  test("a typed comment opener before a chip stays visible", () => {
+    const { container } = renderTyped([
+      "Why does <!-- break my page?\nSee the file:",
+      { type: "name", value: "", label: "a.pdf" },
+      " please",
+    ]);
+
+    expect(container.textContent).toContain("break my page?");
+    expect(container.querySelector('[data-slot="message-token"]')?.textContent).toBe("a.pdf");
+  });
+
   test("a chip right after a word inside code shows as its name", () => {
     const { container } = renderTyped(["Run `cat", { type: "name", value: "", label: "a.pdf" }, "` now"]);
 

@@ -474,6 +474,35 @@ describe("chat store tray", () => {
     expect(useChatStore.getState().input).toContain("upload:u10");
   });
 
+  test("clearing text that holds one chip keeps its file, while a word delete on the chip alone removes it", async () => {
+    useChatStore.setState({ input: "Summarize this ", attachments: [] });
+    render(<MainComposer />);
+    act(() => chatStoreActions.addAttachments([pdfUpload("w1", "w.pdf", 10)]));
+    await waitFor(() => expect(fileChips()).toHaveLength(1));
+    const deleteKey = (inputType: string) =>
+      act(() => {
+        editor().dispatchEvent(new InputEvent("beforeinput", { inputType, bubbles: true, cancelable: true }));
+      });
+
+    editor().focus();
+    document.getSelection()?.selectAllChildren(editor());
+    deleteKey("deleteContentBackward");
+    await waitFor(() => expect(useChatStore.getState().input).toBe(""));
+    await act(async () => {});
+    expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(["w1"]);
+
+    useChatStore.setState({ input: "", attachments: [] });
+    act(() => chatStoreActions.addAttachments([pdfUpload("w2", "x.pdf", 10)]));
+    await waitFor(() => expect(fileChips()).toHaveLength(1));
+    editor().focus();
+    act(() => {
+      getComposerController(MAIN_COMPOSER_ID)?.insert("", { at: { start: 1, end: 1 } });
+    });
+    deleteKey("deleteWordBackward");
+    await waitFor(() => expect(fileChips()).toHaveLength(0));
+    await waitFor(() => expect(useChatStore.getState().attachments).toHaveLength(0));
+  });
+
   test("undoing a removal brings the name back without the file", async () => {
     useChatStore.setState({ input: "", attachments: [] });
     render(<MainComposer />);
@@ -817,33 +846,35 @@ describe("dropping files while a message is being edited", () => {
 
 describe("isChipDeletion", () => {
   const chip = { type: "upload", value: "u1", label: "a.pdf" };
-  const change = (reason: TokenInputValueChangeReason, inputType?: string, removed = [chip]) => ({
-    reason,
-    inputType,
-    removed,
+  const deletion = (
+    reason: TokenInputValueChangeReason,
+    inputType?: string,
+    { removed = [chip], removedLength = 1 } = {},
+  ) => isChipDeletion({ reason, inputType, removed }, removedLength);
+
+  test("counts the remove button, and a delete key taking out just that chip", () => {
+    expect(deletion("remove-press")).toBe(true);
+    expect(deletion("input-change", "deleteContentBackward")).toBe(true);
+    expect(deletion("input-change", "deleteContentForward")).toBe(true);
+    expect(deletion("input-change", "deleteWordBackward")).toBe(true);
   });
 
-  test("counts the remove button and Backspace or Delete on a chip", () => {
-    expect(isChipDeletion(change("remove-press"))).toBe(true);
-    expect(isChipDeletion(change("input-change", "deleteContentBackward"))).toBe(true);
-    expect(isChipDeletion(change("input-change", "deleteContentForward"))).toBe(true);
-  });
-
-  test("leaves out clearing several chips at once and word or line deletes, so their files stay", () => {
+  test("leaves out clearing a chip along with text, or several chips at once", () => {
     const other = { type: "upload", value: "u2", label: "b.pdf" };
-    expect(isChipDeletion(change("input-change", "deleteContentBackward", [chip, other]))).toBe(false);
-    expect(isChipDeletion(change("input-change", "deleteWordBackward"))).toBe(false);
-    expect(isChipDeletion(change("input-change", "deleteSoftLineBackward"))).toBe(false);
+    expect(deletion("input-change", "deleteContentBackward", { removedLength: 17 })).toBe(false);
+    expect(
+      deletion("input-change", "deleteContentBackward", { removed: [chip, other], removedLength: 2 }),
+    ).toBe(false);
   });
 
   test("leaves out cutting, dragging, typing over, undo, redo and changes that remove no chip", () => {
-    expect(isChipDeletion(change("cut"))).toBe(false);
-    expect(isChipDeletion(change("input-change", "deleteByCut"))).toBe(false);
-    expect(isChipDeletion(change("input-change", "deleteByDrag"))).toBe(false);
-    expect(isChipDeletion(change("input-change", "insertText"))).toBe(false);
-    expect(isChipDeletion(change("remove-press", undefined, []))).toBe(false);
-    expect(isChipDeletion(change("undo"))).toBe(false);
-    expect(isChipDeletion(change("redo"))).toBe(false);
+    expect(deletion("cut")).toBe(false);
+    expect(deletion("input-change", "deleteByCut")).toBe(false);
+    expect(deletion("input-change", "deleteByDrag")).toBe(false);
+    expect(deletion("input-change", "insertText")).toBe(false);
+    expect(deletion("remove-press", undefined, { removed: [] })).toBe(false);
+    expect(deletion("undo")).toBe(false);
+    expect(deletion("redo")).toBe(false);
   });
 });
 

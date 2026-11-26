@@ -57,6 +57,7 @@ import {
   type ComposerAttachment,
   FILE_TOKEN_TYPE,
   getCachedComposerAttachment,
+  composerValueLength,
   isChipDeletion,
   NAME_TOKEN_TYPE,
   PROFILE_TOKEN_TYPE,
@@ -233,11 +234,14 @@ export function RichComposer({
         submitShortcut={pref === "ctrlEnter" ? "mod+enter" : "enter"}
         onSubmit={() => onConfirm?.()}
         onValueChange={(value, details) => {
+          const previousText = lastEmitted.current;
           const text = toText(value);
           lastEmitted.current = text;
           setInput(text);
 
-          if (!onRemoveChips || !isChipDeletion(details)) return;
+          if (!onRemoveChips || details.removed.length === 0) return;
+          const removedLength = composerValueLength(fromText(previousText)) - composerValueLength(value);
+          if (!isChipDeletion(details, removedLength)) return;
           const { removed } = details;
           // Once this change has landed, so removing the file finds its chip already gone.
           queueMicrotask(() => onRemoveChips(removed));
