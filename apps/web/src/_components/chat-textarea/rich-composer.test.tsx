@@ -950,6 +950,25 @@ describe("linkAttachmentNames", () => {
     expect(linkAttachmentNames(saved, files)).toBe(saved);
   });
 
+  test("gives back typed chip-like text as it was saved, not as a chip", () => {
+    for (const typed of ["see [@foo](file:x) here", "use [@media] queries", "path\\[@x"]) {
+      const saved = toText([typed]);
+      const editable = linkAttachmentNames(saved, files);
+
+      expect(editable).toBe(saved);
+      expect(fromText(editable)).toEqual([typed]);
+    }
+  });
+
+  test("links an older message's file names next to typed chip-like text", () => {
+    const saved = toText(["see [@foo](file:x) and q3 report.pdf"]);
+
+    expect(fromText(linkAttachmentNames(saved, files))).toMatchObject([
+      "see [@foo](file:x) and ",
+      { type: FILE_TOKEN_TYPE, value: "a2", label: "q3 report.pdf" },
+    ]);
+  });
+
   test("round-trips through the parser used when saving", () => {
     const parsed = parseComposerInput(linkAttachmentNames("Look at q3 report.pdf please", files));
     expect(parsed.text).toBe("Look at q3 report.pdf please");

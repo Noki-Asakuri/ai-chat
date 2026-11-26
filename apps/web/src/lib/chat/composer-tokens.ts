@@ -1,9 +1,10 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
-import { findAttachmentNames, splitMessageTokens } from "@ai-chat/shared/chat/message-content";
+import { findAttachmentNames } from "@ai-chat/shared/chat/message-content";
 import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import {
   fromText,
+  toLabel,
   type Token,
   type TokenInputController,
   type TokenInputValueChangeDetails,
@@ -148,11 +149,15 @@ export function linkAttachmentNames(
   text: string,
   attachments: ReadonlyArray<{ _id: string; name: string }>,
 ): string {
-  if (splitMessageTokens(text).some((segment) => segment.kind === "token")) return text;
+  const parsed = fromText(text);
+  if (parsed.some(isToken)) return text;
 
+  // Work on the text as typed, and escape it once at the end, so text the codec escaped comes back
+  // the same rather than gaining a backslash.
+  const typed = toLabel(parsed);
   const value: Array<string | Token> = [];
 
-  for (const [index, chunk] of text.split(PROTECTED_MARKDOWN).entries()) {
+  for (const [index, chunk] of typed.split(PROTECTED_MARKDOWN).entries()) {
     if (index % 2 === 1) {
       value.push(chunk);
       continue;
@@ -170,7 +175,20 @@ export function linkAttachmentNames(
     value.push(chunk.slice(lastIndex));
   }
 
-  return toText(value.filter((segment) => segment !== ""));
+  return toText(joinAdjacentText(value.filter((segment) => segment !== "")));
+}
+
+/** Joins neighbouring text, which `toText` would otherwise escape piece by piece. */
+function joinAdjacentText(value: ReadonlyArray<string | Token>): Array<string | Token> {
+  const joined: Array<string | Token> = [];
+
+  for (const segment of value) {
+    const last = joined.at(-1);
+    if (!isToken(segment) && last !== undefined && !isToken(last)) joined[joined.length - 1] = last + segment;
+    else joined.push(segment);
+  }
+
+  return joined;
 }
 
 /**
