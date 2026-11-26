@@ -61,15 +61,18 @@ import {
   isChipDeletion,
   NAME_TOKEN_TYPE,
   PROFILE_TOKEN_TYPE,
+  isToken,
   registerComposerController,
   rememberComposerAttachments,
+  resolveComposerAttachments,
+  toAttachmentId,
   UPLOAD_TOKEN_TYPE,
 } from "@/lib/chat/composer-tokens";
 import { tryGetModelData } from "@/lib/chat/models";
 import { useGetSendDescription } from "@/lib/chat/send-preference";
 import type { UserAttachment } from "@/lib/types";
 import { useConfigStore } from "../provider/config-provider";
-import { cn, format } from "@/lib/utils";
+import { cn, format, tryCatch } from "@/lib/utils";
 
 const ATTACHMENT_SUGGESTION_LIMIT = 8;
 
@@ -125,6 +128,34 @@ export function RichComposer({
   const isNarrowScreen = useIsNarrowScreen();
 
   useEffect(() => registerComposerController(id, controller), [id, controller]);
+
+  // A restored draft or an older message can point at past files not looked up yet; look each up
+  // once, so its chip shows whether the model can read it.
+  const lookedUpIds = useRef(new Set<string>());
+  const [, showLookedUp] = useState(0);
+  useEffect(() => {
+    const ids = fromText(input).flatMap((segment) =>
+      isToken(segment) &&
+      segment.type === FILE_TOKEN_TYPE &&
+      !getCachedComposerAttachment(segment.value) &&
+      !lookedUpIds.current.has(segment.value)
+        ? [segment.value]
+        : [],
+    );
+    let active = true;
+    if (ids.length > 0) {
+      for (const attachmentId of ids) lookedUpIds.current.add(attachmentId);
+      void (async () => {
+        const [, error] = await tryCatch(resolveComposerAttachments(convexClient, ids.map(toAttachmentId)));
+        if (error) console.error("[Chat] Failed to look up past files", error);
+        else if (active) showLookedUp((count) => count + 1);
+      })();
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [input, convexClient]);
 
   // The store also changes outside the editor (send resets it, typing elsewhere appends to it).
   useEffect(() => {

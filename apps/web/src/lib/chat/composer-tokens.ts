@@ -114,7 +114,13 @@ export function getCachedComposerAttachment(id: string): ComposerAttachment | un
 export function isPastFileReadableBy(modelId: string, attachmentId: string): boolean {
   const attachment = getCachedComposerAttachment(attachmentId);
   const inputs = tryGetModelData(modelId)?.modalities.input;
-  return !attachment || !inputs || inputs.includes(attachment.type);
+  // Send reads a model without data as taking no files.
+  return !attachment || (inputs?.includes(attachment.type) ?? false);
+}
+
+/** A chip's value as the attachment id it points at. */
+export function toAttachmentId(value: string): Id<"attachments"> {
+  return asDocumentId<"attachments">(value);
 }
 
 export async function resolveComposerAttachments(

@@ -194,7 +194,12 @@ function withFileDetails(
 }
 
 const toListText = (text: string): string =>
-  text.replaceAll(/\s+/g, " ").replaceAll("<", "&lt;").replaceAll(">", "&gt;").trim();
+  text
+    .replaceAll(/[\s\p{Cc}\u2028\u2029]+/gu, " ")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .trim();
 
 export function describeAttachments(attachments: ReadonlyArray<AttachmentDetails>): string | null {
   if (attachments.length === 0) return null;

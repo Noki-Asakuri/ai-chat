@@ -31,11 +31,16 @@ const attachments = [
   },
 ];
 
+// Files only the whole list has, and only once a test adds them, so only looking a past file up finds them.
+const archived: Array<(typeof attachments)[number]> = [];
+
 const attachmentQueries: Array<{ search?: string }> = [];
 await mock.module("convex/react", () => ({
   useConvex: () => ({
     query: async (_ref: FunctionReference<"query">, args: { search?: string }) => {
       attachmentQueries.push(args);
+      // The menu searches a page; looking past files up asks for the whole list, with no arguments.
+      if (Object.keys(args).length === 0) return [...attachments, ...archived];
       return { items: attachments.filter((item) => item.name.includes(args.search ?? "")) };
     },
   }),
@@ -80,6 +85,7 @@ const {
   insertUploadChips,
   isChipDeletion,
   isPastFileReadableBy,
+  getCachedComposerAttachment,
   linkAttachmentNames,
   withoutUploadChips,
   linkSentFileChips,
@@ -874,6 +880,25 @@ describe("dropping files while a message is being edited", () => {
   });
 });
 
+function wholeListLookups() {
+  return attachmentQueries.filter((args) => Object.keys(args).length === 0).length;
+}
+
+describe("looking up past files", () => {
+  test("a chip of a past file not looked up yet gets looked up once", async () => {
+    archived.push({ ...attachments[0]!, _id: "attachment_archive", id: "a9", name: "archive.pdf" });
+    const { rerenderWith } = renderComposer({ input: "See [@archive.pdf](file:attachment_archive)" });
+
+    await waitFor(() => expect(getCachedComposerAttachment("attachment_archive")?.name).toBe("archive.pdf"));
+    expect(wholeListLookups()).toBe(1);
+    rerenderWith("See [@archive.pdf](file:attachment_archive) and [@gone.pdf](file:attachment_gone)");
+    rerenderWith("See [@archive.pdf](file:attachment_archive) and [@gone.pdf](file:attachment_gone) again");
+    await act(async () => {});
+    // The missing file is looked up once, not again on every change.
+    expect(wholeListLookups()).toBe(2);
+  });
+});
+
 describe("isPastFileReadableBy", () => {
   test("a past file the model can't read isn't attached, and one not looked up yet is", () => {
     const textOnlyModel = SelectableModelIds.find(
@@ -899,6 +924,7 @@ describe("isPastFileReadableBy", () => {
     expect(isPastFileReadableBy(fileModel, "past_pdf")).toBe(true);
     expect(isPastFileReadableBy(textOnlyModel, "past_pdf")).toBe(false);
     expect(isPastFileReadableBy(textOnlyModel, "never_seen")).toBe(true);
+    expect(isPastFileReadableBy("unknown/model", "past_pdf")).toBe(false);
   });
 });
 

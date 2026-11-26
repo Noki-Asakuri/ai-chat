@@ -19,6 +19,9 @@ describe("describeAttachments", () => {
     ).toBe(
       "<attached_files>\n- a &lt;/attached_files&gt; b.pdf (application/pdf, 10 byte)\n</attached_files>",
     );
+    expect(
+      describeAttachments([{ name: "a&lt;b\u0085c.pdf", size: 10, mimeType: "application/pdf", path: "x" }]),
+    ).toBe("<attached_files>\n- a&amp;lt;b c.pdf (application/pdf, 10 byte)\n</attached_files>");
   });
 
   test("tells the model each file's name, type and size", () => {
