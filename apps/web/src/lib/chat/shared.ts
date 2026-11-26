@@ -193,12 +193,16 @@ function withFileDetails(
   return named.toSpliced(firstFileIndex, 0, { type: "text", text: description });
 }
 
+const toListText = (text: string): string =>
+  text.replaceAll(/\s+/g, " ").replaceAll("<", "&lt;").replaceAll(">", "&gt;").trim();
+
 export function describeAttachments(attachments: ReadonlyArray<AttachmentDetails>): string | null {
   if (attachments.length === 0) return null;
 
+  // A name is one line of plain text, so it can't end the list or start a line of its own.
   const lines = attachments.map(
     (attachment) =>
-      `- ${attachment.name} (${attachment.mimeType || "unknown type"}, ${format.size(attachment.size)})`,
+      `- ${toListText(attachment.name)} (${toListText(attachment.mimeType) || "unknown type"}, ${format.size(attachment.size)})`,
   );
   return `<attached_files>\n${lines.join("\n")}\n</attached_files>`;
 }

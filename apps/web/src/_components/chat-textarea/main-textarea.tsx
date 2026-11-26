@@ -31,7 +31,7 @@ import { RichComposer } from "./rich-composer";
 import { ChatSendButton } from "./send-button";
 
 import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
-import { MAIN_COMPOSER_ID } from "@/lib/chat/composer-tokens";
+import { isPastFileReadableBy, MAIN_COMPOSER_ID } from "@/lib/chat/composer-tokens";
 import { useSendChatMessage } from "@/lib/chat/server-function/send-chat-message";
 import { useConfigStore } from "../provider/config-provider";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
@@ -247,6 +247,8 @@ function InputChatTextArea() {
       model={model}
       uploads={uploads}
       onRemoveChips={chatStoreActions.removeChipAttachments}
+      // A past file the model can't read isn't sent, so its chip shows as just its name.
+      isFileAttached={(attachmentId) => isPastFileReadableBy(model, attachmentId)}
       handleAddAttachments={handleAddAttachments}
       onConfirm={sendChatRequest}
       enableCommands

@@ -100,13 +100,33 @@ export function UploadChipContent({ label, upload }: { label: string; upload: Us
   );
 }
 
+// One preview URL per file, shared by every chip of it, and revoked once the last one is gone.
+const previewUrls = new WeakMap<File, { url: string; users: number }>();
+
+type SharedPreview = { url: string; release: () => void };
+
+function acquirePreviewUrl(file: File): SharedPreview {
+  const preview = previewUrls.get(file) ?? { url: URL.createObjectURL(file), users: 0 };
+  preview.users += 1;
+  previewUrls.set(file, preview);
+
+  return {
+    url: preview.url,
+    release: () => {
+      preview.users -= 1;
+      if (preview.users > 0) return;
+      URL.revokeObjectURL(preview.url);
+      previewUrls.delete(file);
+    },
+  };
+}
+
 function LocalImagePreview({ file }: { file: File }) {
-  // The preview URL lives exactly as long as this image.
   const attachPreview = useCallback(
     (image: HTMLImageElement) => {
-      const url = URL.createObjectURL(file);
-      image.src = url;
-      return () => URL.revokeObjectURL(url);
+      const preview = acquirePreviewUrl(file);
+      image.src = preview.url;
+      return preview.release;
     },
     [file],
   );

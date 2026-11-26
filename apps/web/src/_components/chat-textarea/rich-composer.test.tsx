@@ -1,7 +1,7 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import type { TokenInputValueChangeReason } from "@ui-sdk/react/token-input";
 import type { FunctionReference } from "convex/server";
-import { afterAll, beforeEach, describe, expect, mock, setDefaultTimeout, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, setDefaultTimeout, spyOn, test } from "bun:test";
 
 setDefaultTimeout(20_000);
 
@@ -79,12 +79,14 @@ const {
   getComposerController,
   insertUploadChips,
   isChipDeletion,
+  isPastFileReadableBy,
   linkAttachmentNames,
   withoutUploadChips,
   linkSentFileChips,
   MAIN_COMPOSER_ID,
   NAME_TOKEN_TYPE,
   parseComposerInput,
+  rememberComposerAttachments,
   removeComposerChips,
 } = await import("@/lib/chat/composer-tokens");
 const { chatStoreActions, useChatStore } = await import("@/lib/store/chat-store");
@@ -503,6 +505,34 @@ describe("chat store tray", () => {
     await waitFor(() => expect(useChatStore.getState().attachments).toHaveLength(0));
   });
 
+  test("two chips of one image share a single preview URL, revoked when both are gone", async () => {
+    const created: string[] = [];
+    const revoked: string[] = [];
+    const createSpy = spyOn(URL, "createObjectURL").mockImplementation(() => {
+      created.push(`blob:${created.length}`);
+      return created.at(-1) ?? "";
+    });
+    const revokeSpy = spyOn(URL, "revokeObjectURL").mockImplementation((url: string) => {
+      revoked.push(url);
+    });
+
+    try {
+      const image = { ...pdfUpload("img1", "p.png", 10), type: "image" as const };
+      useChatStore.setState({ input: "[@p.png](upload:img1) [@p.png](upload:img1) ", attachments: [image] });
+      const { unmount } = render(<MainComposer />);
+      await waitFor(() => expect(fileChips()).toHaveLength(2));
+      const chipUrls = new Set(created);
+
+      unmount();
+      expect(created).toHaveLength(1);
+      expect(revoked.filter((url) => chipUrls.has(url))).toEqual([...chipUrls]);
+    } finally {
+      createSpy.mockRestore();
+      revokeSpy.mockRestore();
+      useChatStore.setState({ input: "", attachments: [] });
+    }
+  });
+
   test("undoing a removal brings the name back without the file", async () => {
     useChatStore.setState({ input: "", attachments: [] });
     render(<MainComposer />);
@@ -841,6 +871,34 @@ describe("dropping files while a message is being edited", () => {
     expect(useChatStore.getState().attachments).toHaveLength(1);
     expect(useChatStore.getState().editMessage?.attachments).toHaveLength(1);
     chatStoreActions.setEditMessage(null);
+  });
+});
+
+describe("isPastFileReadableBy", () => {
+  test("a past file the model can't read isn't attached, and one not looked up yet is", () => {
+    const textOnlyModel = SelectableModelIds.find(
+      (id) => !tryGetModelData(id)?.modalities.input.includes("pdf"),
+    );
+    if (!textOnlyModel || !fileModel) throw new Error("Expected models with and without PDF input");
+    rememberComposerAttachments([
+      {
+        _id: fakeId<"attachments">("past_pdf"),
+        _creationTime: 1,
+        id: "past",
+        name: "past.pdf",
+        size: 10,
+        type: "pdf",
+        source: "user",
+        mimeType: "application/pdf",
+        path: "u/t/past.pdf",
+        threadId: fakeId<"threads">("thread_1"),
+        userId: "u",
+      },
+    ]);
+
+    expect(isPastFileReadableBy(fileModel, "past_pdf")).toBe(true);
+    expect(isPastFileReadableBy(textOnlyModel, "past_pdf")).toBe(false);
+    expect(isPastFileReadableBy(textOnlyModel, "never_seen")).toBe(true);
   });
 });
 

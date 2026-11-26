@@ -12,6 +12,7 @@ import {
 } from "@ui-sdk/react/token-input";
 import type { ConvexReactClient } from "convex/react";
 
+import { tryGetModelData } from "./models";
 import type { UserAttachment } from "../types";
 
 export const PROFILE_TOKEN_TYPE = "profile";
@@ -107,6 +108,13 @@ export function rememberComposerAttachments(attachments: ReadonlyArray<ComposerA
 
 export function getCachedComposerAttachment(id: string): ComposerAttachment | undefined {
   return attachmentCache.get(asDocumentId<"attachments">(id));
+}
+
+/** Whether this model can read a past file a chip points at. A file not looked up yet counts as readable. */
+export function isPastFileReadableBy(modelId: string, attachmentId: string): boolean {
+  const attachment = getCachedComposerAttachment(attachmentId);
+  const inputs = tryGetModelData(modelId)?.modalities.input;
+  return !attachment || !inputs || inputs.includes(attachment.type);
 }
 
 export async function resolveComposerAttachments(
