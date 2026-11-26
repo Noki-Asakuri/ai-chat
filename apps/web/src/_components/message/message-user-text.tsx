@@ -48,14 +48,20 @@ function toLinkText(label: string): string {
   return label.replaceAll(/[^\p{L}\p{N} ]/gu, (char) => `&#${char.codePointAt(0)};`);
 }
 
+// An empty comment: it renders as nothing, and ends a word or bare URL before a chip's link.
+const CHIP_SEPARATOR = "<!-- -->";
+
 // Tokens become hash links so the markdown parser keeps them inline; the `a` renderer swaps them for chips.
 function toMarkdownWithTokenLinks(text: string): string {
   return splitMessageTokens(text)
-    .map((segment) => {
+    .map((segment, index, segments) => {
       // Saved text keeps the codec's escapes, which markdown reads the same way outside code.
       if (segment.kind === "text") return segment.text;
 
-      return `[${toLinkText(segment.label)}](${toTokenHref(segment.type, segment.value, segment.label)})`;
+      const link = `[${toLinkText(segment.label)}](${toTokenHref(segment.type, segment.value, segment.label)})`;
+      const previous = segments[index - 1];
+      // Right after a word, an empty comment ends it, so a bare URL there can't take in the link.
+      return previous?.kind === "text" && !/\s$/.test(previous.text) ? CHIP_SEPARATOR + link : link;
     })
     .join("");
 }
@@ -105,11 +111,12 @@ const SKIPPED_TAGS = new Set(["a", "code", "pre"]);
 const halveBackslashes = (run: string): string => "\\".repeat(Math.floor(run.length / 2));
 // A run of backslashes before `[@`: the codec doubles it, plus one when the bracket is literal.
 const BACKSLASHES_BEFORE_CHIP_OPENER = /(?<!\\)\\+(?=\[@)/g;
-// A chip's token link, after any run of backslashes, which the codec doubles before a chip. Its text
-// never holds a bracket, since `toLinkText` writes those as entities, so a typed `[` before it isn't
-// taken in. Each pattern checks only a run's start behind, so long runs stay fast.
+// A chip's token link, after any run of backslashes, which the codec doubles before a chip, and the
+// separator that can come before it. Its text never holds a bracket, since `toLinkText` writes those
+// as entities, so a typed `[` before it isn't taken in. Each pattern checks only a run's start
+// behind, so long runs stay fast.
 const CHIP_LINK_IN_CODE = new RegExp(
-  String.raw`(?<!\\)(\\*)\[[^[\]\n]*\]\((#message-token-${TOKEN_LINK_KEY}\/[^)\s]*)\)`,
+  String.raw`(?<!\\)(\\*)(?:<!-- -->)?\[[^[\]\n]*\]\((#message-token-${TOKEN_LINK_KEY}\/[^)\s]*)\)`,
   "g",
 );
 

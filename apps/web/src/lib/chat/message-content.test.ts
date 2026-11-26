@@ -91,3 +91,24 @@ describe("splitMessageTokens", function () {
     expect(performance.now() - started).toBeLessThan(500);
   });
 });
+
+describe("the saved message format", function () {
+  // Messages are stored in this format, so a ui-sdk upgrade that changes it must fail here.
+  test("stays the same", function () {
+    const value = [
+      "Typed [@x](file:y) and \\",
+      { type: "file", value: "a(1)", label: "q3 [final].pdf" },
+      " then ",
+      { type: "name", value: "", label: "notes.md" },
+    ];
+    const saved = "Typed \\[@x](file:y) and \\\\[@q3 \\[final\\].pdf](file:a\\(1\\)) then [@notes.md](name:)";
+
+    expect(toText(value)).toBe(saved);
+    expect(splitMessageTokens(saved)).toEqual([
+      { kind: "text", text: "Typed \\[@x](file:y) and \\\\", plain: "Typed [@x](file:y) and \\" },
+      { kind: "token", type: "file", value: "a(1)", label: "q3 [final].pdf" },
+      { kind: "text", text: " then ", plain: " then " },
+      { kind: "token", type: "name", value: "", label: "notes.md" },
+    ]);
+  });
+});

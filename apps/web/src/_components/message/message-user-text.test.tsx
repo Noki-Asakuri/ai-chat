@@ -219,6 +219,25 @@ describe("MessageUserText with code and typed chip-like text", () => {
     expect(container.querySelector('[data-streamdown="strong"]')?.textContent).toBe("bold");
   });
 
+  test("a chip right after a URL stays a chip", () => {
+    const { container } = renderTyped([
+      "See http://x.com/",
+      { type: "name", value: "", label: "a.pdf" },
+      " now",
+    ]);
+
+    expect(container.querySelector('[data-slot="message-token"][data-token-type="name"]')?.textContent).toBe(
+      "a.pdf",
+    );
+    expect(container.textContent).not.toContain("message-token");
+  });
+
+  test("a chip right after a word inside code shows as its name", () => {
+    const { container } = renderTyped(["Run `cat", { type: "name", value: "", label: "a.pdf" }, "` now"]);
+
+    expect(codeTexts(container)).toEqual(["cata.pdf"]);
+  });
+
   test("a chip inside a code span shows as its name", () => {
     const { container } = renderTyped(["Use `", { type: "name", value: "", label: "my (1).txt" }, "` now"]);
 

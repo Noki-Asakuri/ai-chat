@@ -249,8 +249,13 @@ export function hasComposerChip(composerId: string, type: string, value: string)
  * with one; the caret stays where it was in the text.
  */
 export function removeComposerChips(composerId: string, type: string, values: ReadonlyArray<string>): void {
+  if (values.length === 0) return;
+  removeChips(composerId, (segment) => segment.type === type && values.includes(segment.value));
+}
+
+function removeChips(composerId: string, matches: (token: Token) => boolean): void {
   const controller = composerControllers.get(composerId);
-  if (!controller || values.length === 0) return;
+  if (!controller) return;
 
   const value = controller.getValue();
   const next: Array<string | Token> = [];
@@ -276,7 +281,7 @@ export function removeComposerChips(composerId: string, type: string, values: Re
     }
 
     dropLeadingSpace = false;
-    if (segment.type !== type || !values.includes(segment.value)) {
+    if (!matches(segment)) {
       next.push(segment);
       offset += 1;
       continue;
@@ -320,8 +325,8 @@ export function removeComposerChips(composerId: string, type: string, values: Re
 
 /**
  * Turns the chips of these files into name chips, all as one undoable step, so a sentence keeps its
- * words when the files can't go. The caret stays where it was. When those chips are all that's
- * written, they're removed instead, so their names aren't sent as a message of their own.
+ * words when the files can't go. The caret stays where it was. With no typed words around them, the
+ * chips are removed instead, so their names aren't sent as text of their own.
  */
 export function nameComposerChips(
   composerId: string,
@@ -335,8 +340,8 @@ export function nameComposerChips(
   const value = controller.getValue();
   if (!value.some(matches)) return;
 
-  if (value.every((segment) => matches(segment) || (!isToken(segment) && segment.trim() === ""))) {
-    controller.clear();
+  if (value.every((segment) => isToken(segment) || segment.trim() === "")) {
+    removeChips(composerId, matches);
     return;
   }
 
@@ -349,8 +354,9 @@ export function nameComposerChips(
 }
 
 /**
- * Whether a change removed chips on purpose: with a chip's remove button, or Backspace or Delete.
- * Cutting, dragging, typing over a selection, undo and redo don't count.
+ * Whether a change removed a chip on purpose: with its remove button, or Backspace or Delete taking
+ * out that one chip. Clearing text that holds chips, a word or line delete, cutting, dragging, typing
+ * over a selection, undo and redo don't count, so their files stay in the tray.
  */
 export function isChipDeletion(
   details: Pick<TokenInputValueChangeDetails, "reason" | "inputType" | "removed">,
@@ -358,12 +364,10 @@ export function isChipDeletion(
   if (details.removed.length === 0) return false;
   if (details.reason === "remove-press") return true;
 
-  const inputType = details.inputType ?? "";
   return (
     details.reason === "input-change" &&
-    inputType.startsWith("delete") &&
-    inputType !== "deleteByCut" &&
-    inputType !== "deleteByDrag"
+    details.removed.length === 1 &&
+    (details.inputType === "deleteContentBackward" || details.inputType === "deleteContentForward")
   );
 }
 

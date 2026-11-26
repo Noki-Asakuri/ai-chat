@@ -14,7 +14,7 @@
     "./utils/async": "./src/utils/async.ts"
   },
   "dependencies": {
-    "@ui-sdk/core": "0.1.0-beta.13",
+    "@ui-sdk/core": "catalog:shared",
     "ai": "catalog:shared",
     "zod": "catalog:shared"
   },

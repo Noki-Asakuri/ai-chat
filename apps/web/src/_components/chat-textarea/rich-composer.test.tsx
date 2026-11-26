@@ -539,6 +539,23 @@ describe("chat store tray", () => {
     expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(["u14"]);
   });
 
+  test("switching to a model that can't read one of several files, with no words typed, takes out its chip", async () => {
+    const imageOnlyModel = SelectableModelIds.find((id) => {
+      const inputs = tryGetModelData(id)?.modalities.input ?? [];
+      return inputs.includes("image") && !inputs.includes("pdf");
+    });
+    if (!imageOnlyModel) throw new Error("Expected a model that reads images but not PDFs");
+    const image = { ...pdfUpload("i1", "photo.png", 10), type: "image" as const };
+
+    useChatStore.setState({ input: "", attachments: [] });
+    render(<MainComposer />);
+    act(() => chatStoreActions.addAttachments([image, pdfUpload("p1", "report.pdf", 10)]));
+    await waitFor(() => expect(useChatStore.getState().attachments).toHaveLength(2));
+
+    act(() => chatStoreActions.retainCompatibleAttachments(imageOnlyModel));
+    await waitFor(() => expect(useChatStore.getState().input).toBe("[@photo.png](upload:i1) "));
+  });
+
   test("switching to a model that can't read a file empties the composer when the file was all it had", async () => {
     const textOnlyModel = SelectableModelIds.find(
       (id) => !tryGetModelData(id)?.modalities.input.includes("pdf"),
@@ -810,7 +827,13 @@ describe("isChipDeletion", () => {
     expect(isChipDeletion(change("remove-press"))).toBe(true);
     expect(isChipDeletion(change("input-change", "deleteContentBackward"))).toBe(true);
     expect(isChipDeletion(change("input-change", "deleteContentForward"))).toBe(true);
-    expect(isChipDeletion(change("input-change", "deleteWordBackward"))).toBe(true);
+  });
+
+  test("leaves out clearing several chips at once and word or line deletes, so their files stay", () => {
+    const other = { type: "upload", value: "u2", label: "b.pdf" };
+    expect(isChipDeletion(change("input-change", "deleteContentBackward", [chip, other]))).toBe(false);
+    expect(isChipDeletion(change("input-change", "deleteWordBackward"))).toBe(false);
+    expect(isChipDeletion(change("input-change", "deleteSoftLineBackward"))).toBe(false);
   });
 
   test("leaves out cutting, dragging, typing over, undo, redo and changes that remove no chip", () => {
