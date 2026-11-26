@@ -116,8 +116,6 @@ const toTexText = (label: string): string =>
   `\\text{${label.replaceAll(/[\\{}$&#%_^~]/g, (char) => TEX_TEXT_ESCAPES.get(char) ?? char)}}`;
 
 // What GFM leaves out of the end of a bare URL, and the closing paren it leaves out when unmatched.
-// GFM also leaves a trailing entity reference, like `&amp;`, out of a bare URL.
-const TRAILING_ENTITY = /&[a-z\d]+;$/i;
 const URL_TRAIL = /[.,:;!?"'*_~\]]$/;
 
 /**
@@ -137,11 +135,6 @@ function splitAutolink(link: Link): Array<Link | MdastText> {
 
   const head = () => text.value.slice(0, end);
   while (end > 0) {
-    const entity = TRAILING_ENTITY.exec(head());
-    if (entity) {
-      end -= entity[0].length;
-      continue;
-    }
     const unmatchedParen = head().endsWith(")") && head().split(")").length > head().split("(").length;
     if (!URL_TRAIL.test(head()) && !unmatchedParen) break;
     end -= 1;
@@ -228,9 +221,17 @@ function createChipPlugin(
         node.type === "element" &&
         (node.tagName === "a" || node.tagName === "code" || node.tagName === "pre")
       ) {
-        const write = node.tagName === "code" && isMath(node) ? toTexText : undefined;
-        visit(node, "text", (text) => {
-          text.value = withChipNames(text.value, chips, write);
+        // Each `code` inside picks its own writer, as display math sits in a `pre`.
+        visit(node, (inner) => {
+          if (inner.type === "element" && inner.tagName === "code") {
+            const write = isMath(inner) ? toTexText : undefined;
+            visit(inner, "text", (text) => {
+              text.value = withChipNames(text.value, chips, write);
+            });
+            return SKIP;
+          }
+          if (inner.type === "text") inner.value = withChipNames(inner.value, chips);
+          return CONTINUE;
         });
         return SKIP;
       }

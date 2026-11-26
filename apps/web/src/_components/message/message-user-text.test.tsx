@@ -291,6 +291,17 @@ describe("MessageUserText with code and typed chip-like text", () => {
     expect(container.textContent).toContain("see a.pdf");
   });
 
+  test("a chip's name in display math is typeset as text", () => {
+    const { container } = renderTyped([
+      "$$\n",
+      { type: "name", value: "", label: "my_notes\\v2.pdf" },
+      "\n$$",
+    ]);
+
+    expect(container.querySelector(".katex-error")).toBeNull();
+    expect(container.querySelector(".katex-display .katex-html")?.textContent).toContain("my_notes\\v2.pdf");
+  });
+
   test("a chip's name in math is typeset as text", () => {
     const { container } = renderTyped(["$x + ", { type: "name", value: "", label: "a_b%c.pdf" }, "$ ok"]);
 
@@ -321,15 +332,6 @@ describe("MessageUserText with code and typed chip-like text", () => {
       expect(container.querySelector('[data-slot="message-token"]')?.textContent).toBe("a.pdf");
       unmount();
     }
-  });
-
-  test("a bare URL cut at a chip leaves out a trailing entity, as markdown does", () => {
-    const { container } = renderTyped([
-      "see https://x.com/a&amp;",
-      { type: "name", value: "", label: "a.pdf" },
-    ]);
-
-    expect(container.querySelector('[data-streamdown="link"]')?.textContent).toBe("https://x.com/a");
   });
 
   test("a bare URL cut at a chip leaves out a closing bracket, as markdown does", () => {
