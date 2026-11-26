@@ -90,7 +90,12 @@ function withChipNames(
 }
 
 const escapeHtml = (text: string): string =>
-  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 
 // TeX's special characters, as `\text{}` writes them literally.
 const TEX_TEXT_ESCAPES = new Map(
@@ -111,7 +116,7 @@ const toTexText = (label: string): string =>
   `\\text{${label.replaceAll(/[\\{}$&#%_^~]/g, (char) => TEX_TEXT_ESCAPES.get(char) ?? char)}}`;
 
 // What GFM leaves out of the end of a bare URL, and the closing paren it leaves out when unmatched.
-const URL_TRAIL = /[.,:;!?"'*_~]$/;
+const URL_TRAIL = /[.,:;!?"'*_~\]]$/;
 
 /**
  * A bare URL or email that ran into a chip, since markdown reads a placeholder like a letter. It
@@ -147,10 +152,9 @@ function splitAutolink(link: Link): Array<Link | MdastText> {
  * The markdown tree's part, which is where code blocks take their code from. Where markdown keeps text
  * as is (code, raw HTML, a link's address or title, an image's alt text), a chip is its name. A raw
  * HTML block's chips are names too: its HTML is parsed later, past where chips can go in. A bare URL
- * that ran into a chip ends where the chip starts. And in a message saved before chips, each of its
- * files' names outside code and links gets the placeholder of that file's chip.
+ * that ran into a chip ends where the chip starts.
  */
-function createChipNamesPlugin(chips: ReadonlyArray<MessageChip>, legacyChips: ReadonlyArray<LegacyChip>) {
+function createChipNamesPlugin(chips: ReadonlyArray<MessageChip>) {
   return () => (tree: MdastRoot) => {
     visit(tree, (node, index, parent) => {
       if (node.type === "link" && parent && index !== undefined) {
@@ -164,13 +168,6 @@ function createChipNamesPlugin(chips: ReadonlyArray<MessageChip>, legacyChips: R
         if (node.title) node.title = withChipNames(node.title, chips);
       }
       if (node.type === "image" && node.alt) node.alt = withChipNames(node.alt, chips);
-    });
-
-    if (legacyChips.length === 0) return;
-    visit(tree, (node) => {
-      if (node.type === "link" || node.type === "linkReference") return SKIP;
-      if (node.type === "text") node.value = withLegacyPlaceholders(node.value, legacyChips);
-      return CONTINUE;
     });
   };
 }
@@ -211,9 +208,13 @@ function isMath(element: Element): boolean {
 /**
  * The HTML tree's part, after sanitizing: each placeholder left becomes its chip. Inside a link,
  * which a chip can't sit in, and other code, a chip is its name; inside math, which KaTeX typesets
- * next, its name is TeX text.
+ * next, its name is TeX text. In a message saved before chips, its files' names outside links and
+ * code become their chips too, typed HTML's text included.
  */
-function createChipPlugin(chips: ReadonlyArray<MessageChip>): RehypePlugin {
+function createChipPlugin(
+  chips: ReadonlyArray<MessageChip>,
+  legacyChips: ReadonlyArray<LegacyChip>,
+): RehypePlugin {
   return () => (tree: HastRoot) => {
     visit(tree, (node, index, parent) => {
       if (node.type === "element" && (node.tagName === "a" || node.tagName === "code")) {
@@ -225,7 +226,8 @@ function createChipPlugin(chips: ReadonlyArray<MessageChip>): RehypePlugin {
       }
       if (node.type !== "text" || !parent || index === undefined) return CONTINUE;
 
-      const parts = splitByChips(node.value, chips);
+      const value = legacyChips.length > 0 ? withLegacyPlaceholders(node.value, legacyChips) : node.value;
+      const parts = splitByChips(value, chips);
       if (parts.length === 1 && parts[0]?.type === "text") return CONTINUE;
       parent.children.splice(index, 1, ...parts);
       return index + parts.length;
@@ -326,8 +328,8 @@ export function MessageUserText({ text, attachments }: { text: string; attachmen
 
     return {
       ...parsed,
-      remarkPlugins: [createChipNamesPlugin(parsed.chips, legacyChips)],
-      rehypePlugins: [...Object.values(defaultRehypePlugins), createChipPlugin(parsed.chips)],
+      remarkPlugins: [createChipNamesPlugin(parsed.chips)],
+      rehypePlugins: [...Object.values(defaultRehypePlugins), createChipPlugin(parsed.chips, legacyChips)],
     };
   }, [text, attachments]);
 

@@ -323,6 +323,22 @@ describe("MessageUserText with code and typed chip-like text", () => {
     }
   });
 
+  test("a bare URL cut at a chip leaves out a closing bracket, as markdown does", () => {
+    const { container } = renderTyped(["see https://x.com/a]", { type: "name", value: "", label: "a.pdf" }]);
+
+    expect(container.querySelector('[data-streamdown="link"]')?.textContent).toBe("https://x.com/a");
+  });
+
+  test("a chip's name with quotes inside a typed HTML attribute stays inside it", () => {
+    const { container } = renderTyped([
+      'Pic <img src="https://x.dev/i.png" alt="',
+      { type: "name", value: "", label: 'say "hi".pdf' },
+      '"> end',
+    ]);
+
+    expect(container.querySelector("img")?.getAttribute("alt")).toBe('say "hi".pdf');
+  });
+
   test("a link written in full keeps its chips as names, not split", () => {
     const chip = { type: "name", value: "", label: "a.pdf" };
     const { container } = renderTyped(["[a ", chip, "](https://e.com/", chip, ")"]);
@@ -360,6 +376,10 @@ describe("MessageUserText for messages sent before file chips", () => {
     const { container } = render(<MessageUserText text={text} attachments={legacy} />);
     return [...container.querySelectorAll('[data-slot="message-token"]')].map((chip) => chip.textContent);
   }
+
+  test("turns names inside a typed HTML block into chips too", () => {
+    expect(chipsIn("Look:\n\n<p>see q3 report.pdf</p>")).toEqual(["q3 report.pdf"]);
+  });
 
   test("turns attachment names in plain text into chips", () => {
     const text = "538a24bd-51d8-4882-bf21-d5976192d080.webp what is this image";
