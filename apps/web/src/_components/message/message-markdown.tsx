@@ -40,10 +40,10 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
     const normalizedFenceLanguages = normalizeCodeFenceLanguages(fixedFenceLanguages, {
       passthroughLanguages: passthroughCodeFenceLanguages,
     });
-    const fixedMath = fixLatexMath(normalizedFenceLanguages);
+    const fixedMath = fixLatexMath(normalizedFenceLanguages, { composerText: props.role === "user" });
 
     return fixedMath;
-  }, [children]);
+  }, [children, props.role]);
 
   const streamdownProps: StreamdownProps = {
     plugins: {

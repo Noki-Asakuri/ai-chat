@@ -10,10 +10,17 @@ describe("fixLatexMath", function () {
     expect(fixLatexMath(input)).toBe("Inline $ a+b $ and block $$\nx^2 + y^2\n$$");
   });
 
-  test("leaves the chat composer's escape for typed chip-like text alone", function () {
-    expect(fixLatexMath("Explain \\[@home](file:example) and \\[x\\]")).toBe(
+  test("leaves the chat composer's escape and stray closers alone in composer text", function () {
+    const options = { composerText: true };
+
+    expect(fixLatexMath("Explain \\[@home](file:example) and \\[x\\]", options)).toBe(
       "Explain \\[@home](file:example) and $$\nx\n$$",
     );
+    expect(fixLatexMath("Mention \\[@user\\] and \\(a\\)", options)).toBe("Mention \\[@user\\] and $ a $");
+  });
+
+  test("converts display delimiters in other text as before", function () {
+    expect(fixLatexMath("Mention \\[@user\\] here.")).toBe("Mention $$\n@user\n$$ here.");
   });
 
   test("preserves fenced code blocks", function () {

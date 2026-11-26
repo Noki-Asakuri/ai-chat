@@ -189,6 +189,29 @@ describe("MessageUserText with code and typed chip-like text", () => {
     }
   });
 
+  test("chips inside code keep the typed brackets around them", () => {
+    const a = { type: "name", value: "", label: "a.csv" };
+    const b = { type: "name", value: "", label: "b.csv" };
+    const { container } = renderTyped(['`files = ["', a, '", "', b, '"]`\n\n```\nload([', a, "])\n```"]);
+    const shown = codeTexts(container);
+
+    expect(shown[0]).toBe('files = ["a.csv", "b.csv"]');
+    expect(shown.join("")).toContain("load([a.csv])");
+  });
+
+  test("typed text that looks like a broken token link shows as is", () => {
+    const { container } = renderTyped(["`[x](#message-token/a/%E0%A4/b)` and [y](#message-token/c/%E0/d)"]);
+
+    expect(codeTexts(container)).toEqual(["[x](#message-token/a/%E0%A4/b)"]);
+  });
+
+  test("a typed backslash before a closing bracket doesn't turn the rest of the message into math", () => {
+    const { container } = renderTyped(["Mention [@user\\] here.\n\nNext paragraph **bold**."]);
+
+    expect(container.querySelector(".katex")).toBeNull();
+    expect(container.querySelector('[data-streamdown="strong"]')?.textContent).toBe("bold");
+  });
+
   test("a chip inside a code span shows as its name", () => {
     const { container } = renderTyped(["Use `", { type: "name", value: "", label: "my (1).txt" }, "` now"]);
 

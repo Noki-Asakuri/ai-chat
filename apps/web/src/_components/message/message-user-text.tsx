@@ -72,7 +72,15 @@ function parseTokenHref(href: string | undefined) {
   if (href?.startsWith(SANITIZED_TOKEN_HREF_PREFIX)) path = href.slice(SANITIZED_TOKEN_HREF_PREFIX.length);
   if (path === undefined) return null;
 
-  const [type, value, label] = path.split("/").map(decodeURIComponent);
+  let parts: string[];
+  try {
+    parts = path.split("/").map(decodeURIComponent);
+  } catch {
+    // Typed text can look like a token link with a broken escape in it.
+    return null;
+  }
+
+  const [type, value, label] = parts;
   // A name chip has no value.
   if (!type || value === undefined || label === undefined) return null;
 
@@ -95,9 +103,10 @@ const SKIPPED_TAGS = new Set(["a", "code", "pre"]);
 const halveBackslashes = (run: string): string => "\\".repeat(Math.floor(run.length / 2));
 // A run of backslashes before `[@`: the codec doubles it, plus one when the bracket is literal.
 const BACKSLASHES_BEFORE_CHIP_OPENER = /(?<!\\)\\+(?=\[@)/g;
-// A chip's token link, after any run of backslashes, which the codec doubles before a chip. Each
-// pattern checks only a run's start behind, so long backslash runs stay fast.
-const CHIP_LINK_IN_CODE = /(?<!\\)(\\*)\[[^\]\n]*\]\((#message-token\/[^)\s]*)\)/g;
+// A chip's token link, after any run of backslashes, which the codec doubles before a chip. Its text
+// never holds a bracket, since `toLinkText` writes those as entities, so a typed `[` before it isn't
+// taken in. Each pattern checks only a run's start behind, so long runs stay fast.
+const CHIP_LINK_IN_CODE = /(?<!\\)(\\*)\[[^[\]\n]*\]\((#message-token\/[^)\s]*)\)/g;
 
 function toTypedCodeText(text: string): string {
   return text
@@ -111,6 +120,8 @@ function toTypedCodeText(text: string): string {
 /**
  * Code shows its text as typed. Markdown leaves code untouched, so this undoes the codec's escapes
  * there and shows a chip as its label. It runs after parsing, so it finds code just as markdown does.
+ * Messages saved before the composer used the codec weren't escaped, so code in them that has
+ * backslashes right before `[@` shows one fewer; there's no telling those messages apart.
  */
 function showCodeAsTyped(node: HastNode, inCode: boolean): void {
   if (!("children" in node) || !node.children) return;

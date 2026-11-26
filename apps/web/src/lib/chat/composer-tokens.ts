@@ -243,7 +243,8 @@ export function removeComposerChips(composerId: string, type: string, values: Re
       if (text !== "") next.push(text);
       dropLeadingSpace = false;
       offset += segment.length;
-      lastTextEnd = offset;
+      // Text emptied by the dropped space isn't kept, so the last kept text still ends where it did.
+      if (text !== "") lastTextEnd = offset;
       continue;
     }
 

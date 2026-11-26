@@ -313,6 +313,24 @@ describe("RichComposer added files", () => {
     await waitFor(() => expect(state.input).toBe("Look at, then."));
   });
 
+  test("removing chips that leave no text puts the caret at the start", async () => {
+    const { state } = renderComposer({
+      input: " [@a.pdf](upload:u1) [@a.pdf](upload:u1)",
+      uploads: [photo],
+    });
+    const controller = getComposerController("composer");
+    if (!controller) throw new Error("Expected the composer to register its controller");
+
+    editor().focus();
+    act(() => {
+      controller.insert("", { at: { start: 2, end: 2 } });
+    });
+    act(() => removeComposerChips("composer", "upload", ["u1"]));
+
+    await waitFor(() => expect(state.input).toBe(""));
+    expect(controller.editor.selection()).toEqual({ start: 0, end: 0 });
+  });
+
   test("removing two chips side by side keeps the caret where it was", async () => {
     const { state } = renderComposer({
       input: "a [@a.pdf](upload:u1)[@a.pdf](upload:u1)\nb",

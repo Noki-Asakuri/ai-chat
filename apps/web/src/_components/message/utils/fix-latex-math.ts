@@ -5,12 +5,20 @@ type Segment = {
   transform: boolean;
 };
 
-export function fixLatexMath(text: string): string {
+type FixLatexOptions = {
+  /**
+   * The text is from the chat composer, which escapes typed text that looks like a file chip as
+   * `\[@`. That isn't math, and neither is a `\]` that no converted `\[` opened.
+   */
+  composerText?: boolean;
+};
+
+export function fixLatexMath(text: string, options: FixLatexOptions = {}): string {
   const segments = splitByCodeFences(text);
   let result = "";
 
   for (const segment of segments) {
-    result += segment.transform ? fixLatexOutsideInlineCode(segment.text) : segment.text;
+    result += segment.transform ? fixLatexOutsideInlineCode(segment.text, options) : segment.text;
   }
 
   return result;
@@ -66,7 +74,7 @@ function splitByCodeFences(text: string): Array<Segment> {
   return segments;
 }
 
-function fixLatexOutsideInlineCode(text: string): string {
+function fixLatexOutsideInlineCode(text: string, options: FixLatexOptions): string {
   let result = "";
   let index = 0;
 
@@ -74,11 +82,11 @@ function fixLatexOutsideInlineCode(text: string): string {
     const backtickIndex = text.indexOf("`", index);
 
     if (backtickIndex === -1) {
-      result += fixLatexInProse(text.slice(index));
+      result += fixLatexInProse(text.slice(index), options);
       break;
     }
 
-    result += fixLatexInProse(text.slice(index, backtickIndex));
+    result += fixLatexInProse(text.slice(index, backtickIndex), options);
 
     const delimiterLength = getBacktickRunLength(text, backtickIndex);
     const closingIndex = findClosingBacktickRun(text, backtickIndex + delimiterLength, delimiterLength);
@@ -95,20 +103,43 @@ function fixLatexOutsideInlineCode(text: string): string {
   return result;
 }
 
-function fixLatexInProse(text: string): string {
-  const fixedDelimiters = text
-    // `\[@` is the chat composer's escape for typed text that looks like a file chip, not math.
-    .replace(/(?<!\\)\\(\(|\[(?!@))/g, function replaceOpeningDelimiter(_, delimiter: string) {
+function fixLatexInProse(text: string, options: FixLatexOptions): string {
+  const fixedDelimiters = (
+    options.composerText ? replaceComposerDelimiters(text) : replaceDelimiters(text)
+  ).replace(/\$\$[\w].*(\n)[\W\w].*\$\$/g, function collapseDisplayMathLines(match) {
+    return match.replace(/\n/g, " ");
+  });
+
+  return escapeCurrencyDollarSigns(fixedDelimiters);
+}
+
+function replaceDelimiters(text: string): string {
+  return text
+    .replace(/(?<!\\)\\(\(|\[)/g, function replaceOpeningDelimiter(_, delimiter: string) {
       return delimiter === "(" ? "$ " : "$$\n";
     })
     .replace(/(?<!\\)\\(\)|\])/g, function replaceClosingDelimiter(_, delimiter: string) {
       return delimiter === ")" ? " $" : "\n$$";
-    })
-    .replace(/\$\$[\w].*(\n)[\W\w].*\$\$/g, function collapseDisplayMathLines(match) {
-      return match.replace(/\n/g, " ");
     });
+}
 
-  return escapeCurrencyDollarSigns(fixedDelimiters);
+// As `replaceDelimiters`, but `\[@` stays as the composer wrote it, and `\]` closes display math only
+// after a `\[` that was converted, so a stray one can't open math that runs to the end.
+function replaceComposerDelimiters(text: string): string {
+  let displayOpen = false;
+
+  return text.replace(/(?<!\\)\\([()[\]])/g, (delimiter: string, char: string, index: number) => {
+    if (char === "(") return "$ ";
+    if (char === ")") return " $";
+    if (char === "[") {
+      if (text[index + 2] === "@") return delimiter;
+      displayOpen = true;
+      return "$$\n";
+    }
+    if (!displayOpen) return delimiter;
+    displayOpen = false;
+    return "\n$$";
+  });
 }
 
 function escapeCurrencyDollarSigns(text: string): string {
