@@ -120,7 +120,17 @@ export function getComposerAttachmentsVersion(): number {
 }
 
 export function rememberComposerAttachments(attachments: ReadonlyArray<ComposerAttachment>): void {
-  for (const attachment of attachments) attachmentCache.set(attachment._id, attachment);
+  let changed = false;
+  for (const attachment of attachments) {
+    const known = attachmentCache.get(attachment._id);
+    if (known?.type !== attachment.type || known.name !== attachment.name) changed = true;
+    attachmentCache.set(attachment._id, attachment);
+  }
+  // A menu page of files already known redraws nothing.
+  if (changed) notifyComposerAttachments();
+}
+
+function notifyComposerAttachments(): void {
   attachmentCacheVersion += 1;
   for (const listener of attachmentCacheListeners) listener();
 }
@@ -129,8 +139,12 @@ export function getCachedComposerAttachment(id: string): ComposerAttachment | un
   return attachmentCache.get(asDocumentId<"attachments">(id));
 }
 
-/** Whether this model can read a past file a chip points at. A file not looked up yet counts as readable. */
+/**
+ * Whether this model can read a past file a chip points at. A file not looked up yet counts as
+ * readable; one looked up and not found, such as a deleted file, doesn't, since it isn't sent.
+ */
 export function isPastFileReadableBy(modelId: string, attachmentId: string): boolean {
+  if (missingAttachmentIds.has(attachmentId)) return false;
   const attachment = getCachedComposerAttachment(attachmentId);
   const inputs = tryGetModelData(modelId)?.modalities.input;
   // Send reads a model without data as taking no files.
@@ -173,7 +187,10 @@ export async function lookUpComposerChipFiles(convexClient: ConvexReactClient, t
       convexClient,
       ids.map((id) => asDocumentId<"attachments">(id)),
     );
-    for (const id of ids) if (!getCachedComposerAttachment(id)) missingAttachmentIds.add(id);
+    const missing = ids.filter((id) => !getCachedComposerAttachment(id));
+    for (const id of missing) missingAttachmentIds.add(id);
+    // Chips of files not found redraw as names.
+    if (missing.length > 0) notifyComposerAttachments();
   } finally {
     for (const id of ids) pendingAttachmentIds.delete(id);
   }

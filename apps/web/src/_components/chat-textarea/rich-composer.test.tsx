@@ -86,6 +86,7 @@ const {
   isChipDeletion,
   isPastFileReadableBy,
   getCachedComposerAttachment,
+  subscribeToComposerAttachments,
   linkAttachmentNames,
   withoutUploadChips,
   linkSentFileChips,
@@ -665,6 +666,22 @@ describe("chat store tray", () => {
   });
 });
 
+function ownPdf(id: string) {
+  return {
+    _id: fakeId<"attachments">(id),
+    _creationTime: 1,
+    id,
+    name: `${id}.pdf`,
+    size: 10,
+    type: "pdf" as const,
+    source: "user" as const,
+    mimeType: "application/pdf",
+    path: `u/t/${id}.pdf`,
+    threadId: fakeId<"threads">("thread_1"),
+    userId: "u",
+  };
+}
+
 function fakeId<TableName extends "messages" | "attachments" | "threads">(value: string): Id<TableName> {
   // SAFETY: The store only compares these ids, so plain strings can stand in for documents.
   // eslint-disable-next-line typescript/no-unsafe-type-assertion
@@ -825,7 +842,8 @@ describe("edit tray", () => {
       _id: fakeId<"messages">("message_3"),
       input: "[@own.pdf](file:own_pdf) and [@own.pdf](file:own_pdf)",
       model: fileModel,
-      currentAttachments: [],
+      // A kept file is always one of the message's own.
+      currentAttachments: [ownPdf("own_pdf")],
       keptAttachmentIds: [fakeId<"attachments">("own_pdf")],
       attachments: [],
       modelParams: {},
@@ -926,8 +944,24 @@ describe("looking up past files", () => {
     rerenderWith("See [@archive.pdf](file:attachment_archive) and [@gone.pdf](file:attachment_gone)");
     rerenderWith("See [@archive.pdf](file:attachment_archive) and [@gone.pdf](file:attachment_gone) again");
     await act(async () => {});
-    // The missing file is looked up once, not again on every change.
+    // The missing file is looked up once, not again on every change, and isn't taken for attached.
     expect(wholeListLookups()).toBe(2);
+    expect(isPastFileReadableBy(fileModel, "attachment_gone")).toBe(false);
+  });
+
+  test("remembering files already known doesn't redraw composers", () => {
+    const file = ownPdf("attachment_known");
+    let redraws = 0;
+    const unsubscribe = subscribeToComposerAttachments(() => {
+      redraws += 1;
+    });
+
+    rememberComposerAttachments([file]);
+    rememberComposerAttachments([file]);
+    rememberComposerAttachments([{ ...file, name: "renamed.pdf" }]);
+    unsubscribe();
+
+    expect(redraws).toBe(2);
   });
 });
 
