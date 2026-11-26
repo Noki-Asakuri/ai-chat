@@ -61,11 +61,11 @@ import {
   isChipDeletion,
   NAME_TOKEN_TYPE,
   PROFILE_TOKEN_TYPE,
-  isToken,
+  getComposerAttachmentsVersion,
+  lookUpComposerChipFiles,
   registerComposerController,
   rememberComposerAttachments,
-  resolveComposerAttachments,
-  toAttachmentId,
+  subscribeToComposerAttachments,
   UPLOAD_TOKEN_TYPE,
 } from "@/lib/chat/composer-tokens";
 import { tryGetModelData } from "@/lib/chat/models";
@@ -129,32 +129,18 @@ export function RichComposer({
 
   useEffect(() => registerComposerController(id, controller), [id, controller]);
 
-  // A restored draft or an older message can point at past files not looked up yet; look each up
-  // once, so its chip shows whether the model can read it.
-  const lookedUpIds = useRef(new Set<string>());
-  const [, showLookedUp] = useState(0);
+  // A restored draft or an older message can point at past files not looked up yet. Look them up,
+  // and redraw whenever the cache learns a file, so each chip shows whether the model can read it.
+  useSyncExternalStore(
+    subscribeToComposerAttachments,
+    getComposerAttachmentsVersion,
+    getComposerAttachmentsVersion,
+  );
   useEffect(() => {
-    const ids = fromText(input).flatMap((segment) =>
-      isToken(segment) &&
-      segment.type === FILE_TOKEN_TYPE &&
-      !getCachedComposerAttachment(segment.value) &&
-      !lookedUpIds.current.has(segment.value)
-        ? [segment.value]
-        : [],
-    );
-    let active = true;
-    if (ids.length > 0) {
-      for (const attachmentId of ids) lookedUpIds.current.add(attachmentId);
-      void (async () => {
-        const [, error] = await tryCatch(resolveComposerAttachments(convexClient, ids.map(toAttachmentId)));
-        if (error) console.error("[Chat] Failed to look up past files", error);
-        else if (active) showLookedUp((count) => count + 1);
-      })();
-    }
-
-    return () => {
-      active = false;
-    };
+    void (async () => {
+      const [, error] = await tryCatch(lookUpComposerChipFiles(convexClient, input));
+      if (error) console.error("[Chat] Failed to look up past files", error);
+    })();
   }, [input, convexClient]);
 
   // The store also changes outside the editor (send resets it, typing elsewhere appends to it).

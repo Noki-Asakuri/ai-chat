@@ -101,9 +101,28 @@ export function parseComposerInput(input: string): ParsedComposerInput {
 }
 
 const attachmentCache = new Map<Id<"attachments">, ComposerAttachment>();
+// Past files being looked up, and ones looked up but not found, such as deleted files, so neither
+// is looked up again.
+const pendingAttachmentIds = new Set<string>();
+const missingAttachmentIds = new Set<string>();
+
+// Composers subscribe to the cache, so a chip redraws once its file is known, wherever it was looked up.
+let attachmentCacheVersion = 0;
+const attachmentCacheListeners = new Set<() => void>();
+
+export function subscribeToComposerAttachments(listener: () => void): () => void {
+  attachmentCacheListeners.add(listener);
+  return () => attachmentCacheListeners.delete(listener);
+}
+
+export function getComposerAttachmentsVersion(): number {
+  return attachmentCacheVersion;
+}
 
 export function rememberComposerAttachments(attachments: ReadonlyArray<ComposerAttachment>): void {
   for (const attachment of attachments) attachmentCache.set(attachment._id, attachment);
+  attachmentCacheVersion += 1;
+  for (const listener of attachmentCacheListeners) listener();
 }
 
 export function getCachedComposerAttachment(id: string): ComposerAttachment | undefined {
@@ -118,11 +137,6 @@ export function isPastFileReadableBy(modelId: string, attachmentId: string): boo
   return !attachment || (inputs?.includes(attachment.type) ?? false);
 }
 
-/** A chip's value as the attachment id it points at. */
-export function toAttachmentId(value: string): Id<"attachments"> {
-  return asDocumentId<"attachments">(value);
-}
-
 export async function resolveComposerAttachments(
   convexClient: ConvexReactClient,
   ids: ReadonlyArray<Id<"attachments">>,
@@ -135,6 +149,34 @@ export async function resolveComposerAttachments(
     const attachment = attachmentCache.get(id);
     return attachment ? [attachment] : [];
   });
+}
+
+/**
+ * Looks up the past files these chips point at that aren't known yet, each at most once in the app.
+ * Composers redraw through their subscription once it's done.
+ */
+export async function lookUpComposerChipFiles(convexClient: ConvexReactClient, text: string): Promise<void> {
+  const ids = fromText(text).flatMap((segment) =>
+    isToken(segment) &&
+    segment.type === FILE_TOKEN_TYPE &&
+    !getCachedComposerAttachment(segment.value) &&
+    !pendingAttachmentIds.has(segment.value) &&
+    !missingAttachmentIds.has(segment.value)
+      ? [segment.value]
+      : [],
+  );
+  if (ids.length === 0) return;
+
+  for (const id of ids) pendingAttachmentIds.add(id);
+  try {
+    await resolveComposerAttachments(
+      convexClient,
+      ids.map((id) => asDocumentId<"attachments">(id)),
+    );
+    for (const id of ids) if (!getCachedComposerAttachment(id)) missingAttachmentIds.add(id);
+  } finally {
+    for (const id of ids) pendingAttachmentIds.delete(id);
+  }
 }
 
 const composerControllers = new Map<string, TokenInputController>();

@@ -1,15 +1,33 @@
 import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import type { EditMessage } from "../store/chat-store";
+import { isPastFileReadableBy } from "./composer-tokens";
 import type { SentAttachment } from "./shared";
 
 type EditAttachments = Pick<EditMessage, "currentAttachments" | "keptAttachmentIds">;
 type SavedFile = Pick<Doc<"attachments">, "_id" | "name" | "size" | "mimeType" | "path">;
 
-/** One of the message's own files counts as attached only while it is kept in the edit's tray. */
-export function isEditFileAttached(editMessage: EditAttachments, attachmentId: string): boolean {
-  const isOwnFile = editMessage.currentAttachments.some((attachment) => attachment._id === attachmentId);
-  return !isOwnFile || editMessage.keptAttachmentIds.some((id) => id === attachmentId);
+/**
+ * Whether a chip's file goes with the edit: one of the message's own files while it is kept in the
+ * edit's tray, and another past file while the edit's model can read it.
+ */
+export function isEditFileAttached(
+  editMessage: EditAttachments & Pick<EditMessage, "model">,
+  attachmentId: string,
+): boolean {
+  if (!isOwnFile(editMessage, attachmentId)) return isPastFileReadableBy(editMessage.model, attachmentId);
+  return isKeptOrNotOwn(editMessage, attachmentId);
+}
+
+function isOwnFile(editMessage: EditAttachments, attachmentId: string): boolean {
+  return editMessage.currentAttachments.some((attachment) => attachment._id === attachmentId);
+}
+
+// The message's own files go only while kept; any other file isn't held back by the tray.
+function isKeptOrNotOwn(editMessage: EditAttachments, attachmentId: string): boolean {
+  return (
+    !isOwnFile(editMessage, attachmentId) || editMessage.keptAttachmentIds.some((id) => id === attachmentId)
+  );
 }
 
 /**
@@ -29,7 +47,8 @@ export function getEditSentAttachments(
     if (attachment) sentById.set(attachmentId, toSentAttachment(attachment));
   }
   for (const attachment of referenced) {
-    if (isEditFileAttached(editMessage, attachment._id))
+    // Saving already left out files the model can't read.
+    if (isKeptOrNotOwn(editMessage, attachment._id))
       sentById.set(attachment._id, toSentAttachment(attachment));
   }
   for (const item of uploaded) sentById.set(item.attachmentId, item);

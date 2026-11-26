@@ -98,7 +98,7 @@ const {
 const { chatStoreActions, useChatStore } = await import("@/lib/store/chat-store");
 const { getEditSentAttachments, isEditFileAttached } = await import("@/lib/chat/edit-attachments");
 const { fromText, toText } = await import("@ui-sdk/react/token-input");
-const { useState } = await import("react");
+const { StrictMode, useState } = await import("react");
 const { RichComposer } = await import("./rich-composer");
 const { GlobalDropzone } = await import("../chat/global-dropzone");
 
@@ -696,6 +696,38 @@ function EditComposer() {
 }
 
 describe("edit tray", () => {
+  test("a past file the edit's model can't read shows as its name once it's looked up, even in StrictMode", async () => {
+    const textOnlyModel = SelectableModelIds.find(
+      (id) => !tryGetModelData(id)?.modalities.input.includes("pdf"),
+    );
+    if (!textOnlyModel) throw new Error("Expected a model that can't read PDFs");
+    archived.push({ ...attachments[0]!, _id: "attachment_other_thread", id: "a8", name: "other.pdf" });
+
+    chatStoreActions.setEditMessage({
+      _id: fakeId<"messages">("message_5"),
+      input: "See [@other.pdf](file:attachment_other_thread)",
+      model: textOnlyModel,
+      currentAttachments: [],
+      keptAttachmentIds: [],
+      attachments: [],
+      modelParams: {},
+    });
+    render(
+      <StrictMode>
+        <EditComposer />
+      </StrictMode>,
+    );
+
+    await waitFor(() => expect(getCachedComposerAttachment("attachment_other_thread")).toBeDefined());
+    await waitFor(() => expect(fileChips()).toHaveLength(0));
+    expect(editor().textContent).toContain("other.pdf");
+
+    const edit = useChatStore.getState().editMessage!;
+    expect(isEditFileAttached(edit, "attachment_other_thread")).toBe(false);
+    expect(isEditFileAttached({ ...edit, model: fileModel }, "attachment_other_thread")).toBe(true);
+    chatStoreActions.setEditMessage(null);
+  });
+
   test("switching the edit's model takes out its own files and added files in one undo step", async () => {
     const textOnlyModel = SelectableModelIds.find(
       (id) => !tryGetModelData(id)?.modalities.input.includes("pdf"),
