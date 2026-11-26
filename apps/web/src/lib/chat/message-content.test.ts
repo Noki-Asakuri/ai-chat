@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { hasMessageContent, toPlainMessageText } from "@ai-chat/shared/chat/message-content";
+import {
+  hasMessageContent,
+  splitMessageTokens,
+  toPlainMessageText,
+} from "@ai-chat/shared/chat/message-content";
 import { fromText, toLabel, toText } from "@ui-sdk/react/token-input";
+
+import { isToken } from "./composer-tokens";
 
 describe("hasMessageContent", function () {
   test("treats an empty response as having no content", function () {
@@ -42,5 +48,46 @@ describe("toPlainMessageText", function () {
     expect(toPlainMessageText(toText(["Explain [@home](file:example)"]))).toBe(
       "Explain [@home](file:example)",
     );
+  });
+});
+
+describe("splitMessageTokens", function () {
+  test("finds the same chips as the composer's codec, whatever the escaping", function () {
+    const pieces = ["\\", "[@", "]", "(", ")", "](file:x)", "a", " ", "\n"];
+    const tokens = [
+      { type: "file", value: "a(1)", label: "x [y] \\z" },
+      { type: "name", value: "", label: "[@n](file:m)" },
+    ];
+    let seed = 7;
+    const random = (max: number) => {
+      seed = (seed * 48_271) % 2_147_483_647;
+      return seed % max;
+    };
+
+    for (let run = 0; run < 2000; run++) {
+      const value = Array.from({ length: 1 + random(6) }, () =>
+        random(3) === 0
+          ? tokens[random(tokens.length)]!
+          : Array.from({ length: 1 + random(5) }, () => pieces[random(pieces.length)]).join(""),
+      );
+      const text = toText(value);
+      const expected = fromText(text).flatMap((segment) =>
+        isToken(segment) ? [{ type: segment.type, value: segment.value, label: segment.label }] : [],
+      );
+      const found = splitMessageTokens(text).flatMap((segment) =>
+        segment.kind === "token" ? [{ type: segment.type, value: segment.value, label: segment.label }] : [],
+      );
+
+      expect(found).toEqual(expected);
+      expect(toPlainMessageText(text)).toBe(toLabel(fromText(text)));
+    }
+  });
+
+  test("reads a long run of backslashes quickly", function () {
+    const text = `${"\\".repeat(200_000)}[@a.pdf](file:x)`;
+    const started = performance.now();
+
+    expect(splitMessageTokens(text).at(-1)).toMatchObject({ kind: "token", label: "a.pdf" });
+    expect(performance.now() - started).toBeLessThan(500);
   });
 });

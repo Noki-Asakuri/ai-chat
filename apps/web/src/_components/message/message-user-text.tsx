@@ -10,7 +10,7 @@ import { ImageLightboxProvider, ImageLightboxTrigger, type LightboxImage } from 
 import { StreamDownWrapper } from "./message-markdown";
 
 import { buildAttachmentUrl, toRawFileUrl } from "@/lib/assets/urls";
-import { FILE_TOKEN_TYPE } from "@/lib/chat/composer-tokens";
+import { FILE_TOKEN_TYPE, NAME_TOKEN_TYPE } from "@/lib/chat/composer-tokens";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -43,11 +43,16 @@ function escapeLinkText(text: string): string {
   return text.replaceAll(/[\\[\]*_`~<>]/g, "\\$&");
 }
 
+// The codec escapes typed chip-like text as `\[@`, after its own backslashes doubled. Markdown reads
+// that escape the same way, but the LaTeX fix reads `\[` as display math, so the bracket goes in as an
+// entity. Only the run's start is checked behind, so long backslash runs stay fast.
+const ESCAPED_CHIP_OPENER = /(?<!\\)((?:\\\\)*)\\\[@/g;
+
 // Tokens become hash links so the markdown parser keeps them inline; the `a` renderer swaps them for chips.
 function toMarkdownWithTokenLinks(text: string): string {
-  return splitMessageTokens(text, { skipEscaped: true })
+  return splitMessageTokens(text)
     .map((segment) => {
-      if (segment.kind === "text") return segment.text;
+      if (segment.kind === "text") return segment.text.replaceAll(ESCAPED_CHIP_OPENER, "$1&#91;@");
 
       return `[${escapeLinkText(segment.label)}](${toTokenHref(segment.type, segment.value, segment.label)})`;
     })
@@ -65,7 +70,8 @@ function parseTokenHref(href: string | undefined) {
   if (path === undefined) return null;
 
   const [type, value, label] = path.split("/").map(decodeURIComponent);
-  if (!type || !value || label === undefined) return null;
+  // A name chip has no value.
+  if (!type || value === undefined || label === undefined) return null;
 
   return { type, value, label };
 }
@@ -132,6 +138,15 @@ const MessageLink: NonNullable<Components["a"]> = function MessageLink({ childre
 
   if (!token) {
     return DefaultLink ? <DefaultLink {...props}>{children}</DefaultLink> : <a {...props}>{children}</a>;
+  }
+
+  // The name of a file that wasn't sent reads as plain text, taken as is rather than as markdown.
+  if (token.type === NAME_TOKEN_TYPE) {
+    return (
+      <span data-slot="message-token" data-token-type={token.type}>
+        {token.label}
+      </span>
+    );
   }
 
   if (token.type === FILE_TOKEN_TYPE) {

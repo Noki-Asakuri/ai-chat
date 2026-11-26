@@ -39,12 +39,16 @@ export type ChatStore = {
   removeEditExistingAttachment: (id: Id<"attachments">) => void;
   /** Takes the files of chips removed from the edit box out of the edit's tray. */
   removeEditChipAttachments: (chips: ReadonlyArray<Token>) => void;
+  /** Puts back files the user removed from the edit's tray whose chips are among `chips` again. */
+  restoreEditChipAttachments: (chips: ReadonlyArray<Token>) => void;
 
   attachments: UserAttachment[];
   addAttachments: (attachments: UserAttachment[]) => void;
   removeAttachment: (id: string) => void;
   /** Takes the files of chips removed from the composer out of the tray. */
   removeChipAttachments: (chips: ReadonlyArray<Token>) => void;
+  /** Puts back files the user removed from the tray whose chips are among `chips` again. */
+  restoreChipAttachments: (chips: ReadonlyArray<Token>) => void;
   clearAttachments: () => void;
   retainCompatibleAttachments: (modelId: string) => void;
   retainCompatibleEditAttachments: (modelId: string) => void;
@@ -65,7 +69,11 @@ export const useChatStore = create<ChatStore>()(
       setInput: (content) => set({ input: content }),
 
       editMessage: null,
-      setEditMessage: (message) => set({ editMessage: message }),
+      setEditMessage: (message) => {
+        removedEditUploads.clear();
+        removedEditFileIds.clear();
+        set({ editMessage: message });
+      },
       updateEditMessage: (message) => {
         const { editMessage } = get();
         if (!editMessage) return;
@@ -84,6 +92,8 @@ export const useChatStore = create<ChatStore>()(
         const { editMessage } = get();
         if (!editMessage) return;
 
+        const removed = editMessage.attachments.find((attachment) => attachment.id === id);
+        if (removed) removedEditUploads.set(id, removed);
         set({
           editMessage: {
             ...editMessage,
@@ -96,6 +106,7 @@ export const useChatStore = create<ChatStore>()(
         const { editMessage } = get();
         if (!editMessage) return;
 
+        if (editMessage.keptAttachmentIds.includes(id)) removedEditFileIds.add(id);
         set({
           editMessage: {
             ...editMessage,
@@ -118,6 +129,28 @@ export const useChatStore = create<ChatStore>()(
           if (chip.type === FILE_TOKEN_TYPE && kept) removeEditExistingAttachment(kept);
         }
       },
+      restoreEditChipAttachments: (chips) => {
+        const { editMessage } = get();
+        if (!editMessage) return;
+
+        const uploads = restorable(chips, UPLOAD_TOKEN_TYPE, removedEditUploads);
+        const ownFileIds = editMessage.currentAttachments.flatMap((attachment) =>
+          removedEditFileIds.has(attachment._id) &&
+          chips.some((chip) => chip.type === FILE_TOKEN_TYPE && chip.value === attachment._id)
+            ? [attachment._id]
+            : [],
+        );
+        if (uploads.length === 0 && ownFileIds.length === 0) return;
+
+        for (const id of ownFileIds) removedEditFileIds.delete(id);
+        set({
+          editMessage: {
+            ...editMessage,
+            attachments: [...editMessage.attachments, ...withoutKnown(editMessage.attachments, uploads)],
+            keptAttachmentIds: [...new Set([...editMessage.keptAttachmentIds, ...ownFileIds])],
+          },
+        });
+      },
 
       attachments: [],
       addAttachments: (attachments) => {
@@ -126,6 +159,8 @@ export const useChatStore = create<ChatStore>()(
         insertUploadChips(MAIN_COMPOSER_ID, added);
       },
       removeAttachment: (id) => {
+        const removed = get().attachments.find((attachment) => attachment.id === id);
+        if (removed) removedUploads.set(id, removed);
         set((state) => ({ attachments: state.attachments.filter((a) => a.id !== id) }));
         removeComposerChips(MAIN_COMPOSER_ID, UPLOAD_TOKEN_TYPE, [id]);
       },
@@ -137,8 +172,21 @@ export const useChatStore = create<ChatStore>()(
           get().removeAttachment(chip.value);
         }
       },
-      clearAttachments: () => set({ attachments: [] }),
+      restoreChipAttachments: (chips) => {
+        const uploads = restorable(chips, UPLOAD_TOKEN_TYPE, removedUploads);
+        if (uploads.length === 0) return;
+
+        set((state) => ({
+          attachments: [...state.attachments, ...withoutKnown(state.attachments, uploads)],
+        }));
+      },
+      clearAttachments: () => {
+        removedUploads.clear();
+        set({ attachments: [] });
+      },
       retainCompatibleAttachments: (modelId) => {
+        // Files removed before a model switch might not suit the new model, so undo can't bring them back.
+        removedUploads.clear();
         const model = tryGetModelData(modelId);
         const { attachments } = get();
         const kept = model
@@ -153,6 +201,8 @@ export const useChatStore = create<ChatStore>()(
         const editMessage = get().editMessage;
         if (!editMessage) return;
 
+        removedEditUploads.clear();
+        removedEditFileIds.clear();
         const model = tryGetModelData(modelId);
         const attachments = model
           ? editMessage.attachments.filter((attachment) => model.modalities.input.includes(attachment.type))
@@ -179,7 +229,10 @@ export const useChatStore = create<ChatStore>()(
         );
       },
 
-      resetInput: () => set({ input: "", attachments: [] }),
+      resetInput: () => {
+        removedUploads.clear();
+        set({ input: "", attachments: [] });
+      },
 
       // Default: 147px + 8px (positon bottom) + 16px (padding above)
       textareaHeight: 147 + 8 + 16,
@@ -196,6 +249,28 @@ export const useChatStore = create<ChatStore>()(
     },
   ),
 );
+
+// Files the user removed, by local id, and own files they took out of an edit. Undo or redo can
+// bring their chips back, and then the files come back too. They're forgotten on send and on a model
+// switch, and files dropped for not suiting the model are never kept, so those chips come back as names.
+const removedUploads = new Map<string, UserAttachment>();
+const removedEditUploads = new Map<string, UserAttachment>();
+const removedEditFileIds = new Set<string>();
+
+/** The removed files that have a chip of this type among `chips`; each is forgotten once returned. */
+function restorable(
+  chips: ReadonlyArray<Token>,
+  type: string,
+  removed: Map<string, UserAttachment>,
+): UserAttachment[] {
+  return chips.flatMap((chip) => {
+    const attachment = chip.type === type ? removed.get(chip.value) : undefined;
+    if (!attachment) return [];
+
+    removed.delete(chip.value);
+    return [attachment];
+  });
+}
 
 /** The files in `incoming` that aren't in `current` yet. */
 function withoutKnown(current: ReadonlyArray<UserAttachment>, incoming: ReadonlyArray<UserAttachment>) {

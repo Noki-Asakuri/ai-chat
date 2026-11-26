@@ -17,6 +17,11 @@ export const PROFILE_TOKEN_TYPE = "profile";
 export const FILE_TOKEN_TYPE = "file";
 /** A file added to the composer's tray and not uploaded yet; the value is its local id. */
 export const UPLOAD_TOKEN_TYPE = "upload";
+/**
+ * The name of a file that wasn't sent with its message, saved in place of the file's chip. It has no
+ * value, the transcript shows it as plain text, and the model reads it as the name.
+ */
+export const NAME_TOKEN_TYPE = "name";
 
 export const MAIN_COMPOSER_ID = "textarea-chat-input";
 export const EDIT_COMPOSER_ID = "textarea-user-message-edit";
@@ -44,7 +49,7 @@ export type ParsedComposerInput = {
   attachmentIds: Array<Id<"attachments">>;
 };
 
-function isToken(segment: string | Token): segment is Token {
+export function isToken(segment: string | Token): segment is Token {
   return segment instanceof Object;
 }
 
@@ -134,11 +139,20 @@ export function getComposerController(id: string): TokenInputController | undefi
 // Code and markdown links stay as typed; only plain text gets chips.
 const PROTECTED_MARKDOWN = /(```[\s\S]*?```|`[^`\n]*`|\[[^\]\n]*\]\([^)\n]*\))/;
 
+/**
+ * A saved message's text, ready for the edit box. Names saved in place of a chip go back to plain
+ * text. A message saved before file chips gets a chip wherever it names one of its own files.
+ */
 export function linkAttachmentNames(
   text: string,
   attachments: ReadonlyArray<{ _id: string; name: string }>,
 ): string {
-  if (splitMessageTokens(text).some((segment) => segment.kind === "token")) return text;
+  if (splitMessageTokens(text).some((segment) => segment.kind === "token")) {
+    const value = fromText(text).map((segment) =>
+      isToken(segment) && segment.type === NAME_TOKEN_TYPE ? segment.label : segment,
+    );
+    return toText(joinAdjacentText(value));
+  }
 
   const value: Array<string | Token> = [];
 
@@ -202,27 +216,54 @@ export function hasComposerChip(composerId: string, type: string, value: string)
     .some((segment) => isToken(segment) && segment.type === type && segment.value === value);
 }
 
-/** Removes the chips of this type that point at any of `values`, leaving every other chip alone. */
+/**
+ * Removes the chips of this type that point at any of `values`, leaving every other chip alone, as
+ * one undoable step. Each takes a space next to it along, since a chip is added with one.
+ */
 export function removeComposerChips(composerId: string, type: string, values: ReadonlyArray<string>): void {
   const controller = composerControllers.get(composerId);
   if (!controller || values.length === 0) return;
 
-  for (const segment of controller.getValue()) {
-    if (isToken(segment) && segment.id && segment.type === type && values.includes(segment.value)) {
-      controller.removeToken(segment.id);
+  const value = controller.getValue();
+  const next: Array<string | Token> = [];
+  let removedAny = false;
+  let dropLeadingSpace = false;
+
+  for (const [index, segment] of value.entries()) {
+    if (!isToken(segment)) {
+      next.push(dropLeadingSpace && segment.startsWith(" ") ? segment.slice(1) : segment);
+      dropLeadingSpace = false;
+      continue;
     }
+
+    if (segment.type !== type || !values.includes(segment.value)) {
+      next.push(segment);
+      dropLeadingSpace = false;
+      continue;
+    }
+
+    removedAny = true;
+    const following = value[index + 1];
+    const previous = next.at(-1);
+    if (following !== undefined && !isToken(following) && following.startsWith(" ")) dropLeadingSpace = true;
+    else if (previous !== undefined && !isToken(previous) && previous.endsWith(" "))
+      next[next.length - 1] = previous.slice(0, -1);
   }
+
+  if (removedAny) controller.setValue(next.filter((segment) => segment !== ""));
 }
 
 /**
- * Whether a change removed chips on purpose: with a chip's remove button, or Backspace or Delete.
- * Cutting, dragging, typing over a selection and undo don't count.
+ * Whether a change removed chips on purpose: with a chip's remove button, Backspace or Delete, or by
+ * undo or redo, which keep files in step with their chips. Cutting, dragging and typing over a
+ * selection don't count.
  */
 export function isChipDeletion(
   details: Pick<TokenInputValueChangeDetails, "reason" | "inputType" | "removed">,
 ): boolean {
   if (details.removed.length === 0) return false;
-  if (details.reason === "remove-press") return true;
+  if (details.reason === "remove-press" || details.reason === "undo" || details.reason === "redo")
+    return true;
 
   const inputType = details.inputType ?? "";
   return (
@@ -235,7 +276,8 @@ export function isChipDeletion(
 
 /**
  * Rewrites chips for a message that is being sent: an added file's chip points at its saved
- * attachment once uploaded, and any file chip whose file isn't sent with the message becomes its name.
+ * attachment once uploaded, and any file chip whose file isn't sent with the message becomes a
+ * name chip, so the transcript shows the name as typed rather than reading it as markdown.
  */
 export function linkSentFileChips(
   text: string,
@@ -251,14 +293,18 @@ export function linkSentFileChips(
       const attachmentId = attachmentIdByUploadId.get(segment.value);
       return attachmentId && sent.has(attachmentId)
         ? { type: FILE_TOKEN_TYPE, value: attachmentId, label: segment.label }
-        : segment.label;
+        : toNameToken(segment.label);
     }
 
-    if (segment.type === FILE_TOKEN_TYPE && !sent.has(segment.value)) return segment.label;
+    if (segment.type === FILE_TOKEN_TYPE && !sent.has(segment.value)) return toNameToken(segment.label);
     return segment;
   });
 
-  return toText(joinAdjacentText(value));
+  return toText(value);
+}
+
+function toNameToken(label: string): Token {
+  return { type: NAME_TOKEN_TYPE, value: "", label };
 }
 
 /**

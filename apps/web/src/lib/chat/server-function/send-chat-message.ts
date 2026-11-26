@@ -100,9 +100,9 @@ export function useSendChatMessage() {
       console.error("[Chat] Failed to resolve referenced attachments", pastAttachmentsError);
       toast.error("Couldn't attach referenced files", { description: pastAttachmentsError.message });
     }
-    const referencedAttachments = (pastAttachments ?? []).filter((attachment) =>
-      acceptedInputs.includes(attachment.type),
-    );
+    const referencedAttachments: SentAttachment[] = (pastAttachments ?? [])
+      .filter((attachment) => acceptedInputs.includes(attachment.type))
+      .map(({ _id, name, size, mimeType, path }) => ({ attachmentId: _id, name, size, mimeType, path }));
 
     if (!threadId) {
       threadId = await convexClient.mutation(api.functions.threads.createThread, {
@@ -121,9 +121,10 @@ export function useSendChatMessage() {
       messageId: crypto.randomUUID(),
       role: "user",
       status: "complete",
-      // Chips are plain names until the files are saved with the message below.
-      parts: buildUserMessageParts(displayText, []).displayParts,
-      attachments: [],
+      // Past files are saved with the message now. Added files show as their names until they're
+      // uploaded and saved with it below.
+      parts: buildUserMessageParts(displayText, referencedAttachments).displayParts,
+      attachments: referencedAttachments.map((attachment) => attachment.attachmentId),
     };
 
     const assistantMessage: CreateMessage = {
@@ -159,13 +160,7 @@ export function useSendChatMessage() {
     });
 
     const sentAttachments: SentAttachment[] = [
-      ...referencedAttachments.map(({ _id, name, size, mimeType, path }) => ({
-        attachmentId: _id,
-        name,
-        size,
-        mimeType,
-        path,
-      })),
+      ...referencedAttachments,
       ...(await uploadUserAttachment(attachments, threadId)),
     ];
     const { displayParts, requestParts } = buildUserMessageParts(displayText, sentAttachments);

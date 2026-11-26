@@ -247,6 +247,7 @@ function InputChatTextArea() {
       model={model}
       uploads={uploads}
       onRemoveChips={chatStoreActions.removeChipAttachments}
+      onRestoreChips={chatStoreActions.restoreChipAttachments}
       handleAddAttachments={handleAddAttachments}
       onConfirm={sendChatRequest}
       enableCommands

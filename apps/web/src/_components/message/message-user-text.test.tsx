@@ -73,6 +73,23 @@ describe("MessageUserText", () => {
     expect(container.querySelector('[data-slot="message-token"]')?.textContent).toBe("q3/final 100%.pdf");
   });
 
+  test("shows the name of a file that wasn't sent as it is, not as markdown", () => {
+    const { container } = renderText("See [@__init__.py](name:) and [@*notes*.md](name:)");
+    const names = container.querySelectorAll('[data-slot="message-token"][data-token-type="name"]');
+
+    expect([...names].map((name) => name.textContent)).toEqual(["__init__.py", "*notes*.md"]);
+    expect(container.querySelector("strong, em")).toBeNull();
+    expect(container.textContent).toBe("See __init__.py and *notes*.md");
+  });
+
+  test("shows text the composer escaped as typed, not as a chip", () => {
+    const { container } = renderText("Explain \\[@home](file:example)");
+
+    expect(container.querySelector('[data-slot="message-token"]')).toBeNull();
+    expect(container.textContent).toBe("Explain [@home](file:example)");
+    expect(renderText("Path a\\\\\\[@b").container.textContent).toContain("Path a\\[@b");
+  });
+
   test("leaves messages without tokens unchanged", () => {
     const { container } = renderText("Plain [link](https://x.dev) text");
     expect(container.querySelector('[data-slot="message-token"]')).toBeNull();

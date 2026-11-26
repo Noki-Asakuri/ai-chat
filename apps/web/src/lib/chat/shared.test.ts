@@ -1,7 +1,7 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { describe, expect, test } from "bun:test";
 import { splitMessageTokens } from "@ai-chat/shared/chat/message-content";
-import { toText } from "@ui-sdk/react/token-input";
+import { fromText, toText } from "@ui-sdk/react/token-input";
 
 import { buildAttachmentUrl } from "../assets/urls";
 import { linkAttachmentNames } from "./composer-tokens";
@@ -106,7 +106,7 @@ describe("buildUserMessageParts", () => {
     );
 
     expect(displayParts).toEqual([
-      { type: "text", text: "See [@a.png](file:att1), b.pdf and c.pdf", state: "done" },
+      { type: "text", text: "See [@a.png](file:att1), [@b.pdf](name:) and [@c.pdf](name:)", state: "done" },
       photoPart,
     ]);
     expect(requestParts).toEqual([
@@ -122,9 +122,9 @@ describe("buildUserMessageParts", () => {
     expect(displayParts[0]).toEqual({ type: "text", text: "Again [@a.png](file:old)", state: "done" });
   });
 
-  test("saves only names while the files are still uploading", () => {
+  test("saves name chips for files that are still uploading", () => {
     const { displayParts } = buildUserMessageParts("See [@a.png](upload:u1)", []);
-    expect(displayParts).toEqual([{ type: "text", text: "See a.png", state: "done" }]);
+    expect(displayParts).toEqual([{ type: "text", text: "See [@a.png](name:)", state: "done" }]);
   });
 
   test("sends literal text that looks like a chip as typed", () => {
@@ -142,14 +142,16 @@ describe("buildUserMessageParts", () => {
     ]);
   });
 
-  test("a sent message shows a chip-like file name as text, and reopens for editing unchanged", () => {
+  test("a sent message keeps a chip-like file name whole, and reopens for editing with it as text", () => {
     const text = toText(["See \\", { type: "upload", value: "u1", label: "[@draft](file:example).pdf" }]);
     const [part] = buildUserMessageParts(text, []).displayParts;
     if (!part || !("text" in part)) throw new Error("Expected a text part");
 
-    const shown = splitMessageTokens(part.text, { skipEscaped: true });
-    expect(shown.every((segment) => segment.kind === "text")).toBe(true);
-    expect(linkAttachmentNames(part.text, [{ _id: "x", name: "draft.pdf" }])).toBe(part.text);
+    expect(splitMessageTokens(part.text).filter((segment) => segment.kind === "token")).toEqual([
+      { kind: "token", type: "name", value: "", label: "[@draft](file:example).pdf" },
+    ]);
+    const editable = linkAttachmentNames(part.text, [{ _id: "x", name: "draft.pdf" }]);
+    expect(fromText(editable)).toEqual(["See \\[@draft](file:example).pdf"]);
   });
 
   test("an escaped chip opener doesn't hide a real chip after it", () => {
@@ -164,10 +166,11 @@ describe("buildUserMessageParts", () => {
     const [part] = saved.displayParts;
     if (!part || !("text" in part)) throw new Error("Expected a text part");
 
-    expect(
-      splitMessageTokens(part.text, { skipEscaped: true }).filter((segment) => segment.kind === "token"),
-    ).toEqual([{ kind: "token", type: "file", value: "att1", label: "report.pdf" }]);
-    expect(splitMessageTokens("\\\\[@a.pdf](file:x)", { skipEscaped: true }).at(-1)).toMatchObject({
+    expect(splitMessageTokens(part.text).filter((segment) => segment.kind === "token")).toEqual([
+      { kind: "token", type: "name", value: "", label: "[@draft.pdf" },
+      { kind: "token", type: "file", value: "att1", label: "report.pdf" },
+    ]);
+    expect(splitMessageTokens("\\\\[@a.pdf](file:x)").at(-1)).toMatchObject({
       kind: "token",
     });
   });

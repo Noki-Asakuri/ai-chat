@@ -58,6 +58,7 @@ import {
   FILE_TOKEN_TYPE,
   getCachedComposerAttachment,
   isChipDeletion,
+  isToken,
   PROFILE_TOKEN_TYPE,
   registerComposerController,
   rememberComposerAttachments,
@@ -80,10 +81,12 @@ export type RichComposerProps = {
   uploads: ReadonlyArray<UserAttachment>;
   handleAddAttachments: (data: { files: File[] }) => void;
   /**
-   * Runs when someone removes chips on purpose, with a chip's remove button or Backspace or Delete,
-   * so their files can leave the tray too. Cutting, typing over or undoing a chip leaves its file.
+   * Runs when someone removes chips on purpose, with a chip's remove button, Backspace or Delete, or
+   * undo or redo, so their files can leave the tray too. Cutting or typing over a chip leaves its file.
    */
   onRemoveChips?: (tokens: ReadonlyArray<Token>) => void;
+  /** Runs after undo or redo with the chips now in the composer, so files removed with them come back. */
+  onRestoreChips?: (tokens: ReadonlyArray<Token>) => void;
   /** Whether a saved file's chip stands for an attached file. Chips that don't show as just their name. */
   isFileAttached?: (attachmentId: string) => boolean;
   onConfirm?: () => void;
@@ -101,6 +104,7 @@ export function RichComposer({
   uploads,
   handleAddAttachments,
   onRemoveChips,
+  onRestoreChips,
   isFileAttached,
   onConfirm,
   disabled,
@@ -231,10 +235,17 @@ export function RichComposer({
           lastEmitted.current = text;
           setInput(text);
 
-          if (!onRemoveChips || !isChipDeletion(details)) return;
+          const deleted = isChipDeletion(details);
+          const fromHistory = details.reason === "undo" || details.reason === "redo";
+          if (!deleted && !fromHistory) return;
+
           const { removed } = details;
+          const chips = value.filter(isToken);
           // Once this change has landed, so removing the file finds its chip already gone.
-          queueMicrotask(() => onRemoveChips(removed));
+          queueMicrotask(() => {
+            if (deleted) onRemoveChips?.(removed);
+            if (fromHistory) onRestoreChips?.(chips);
+          });
         }}
         getTokenDescription={(token) => {
           if (token.type === PROFILE_TOKEN_TYPE) return "profile";
