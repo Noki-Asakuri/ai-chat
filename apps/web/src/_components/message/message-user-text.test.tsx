@@ -298,6 +298,39 @@ describe("MessageUserText with code and typed chip-like text", () => {
     expect(container.querySelector(".katex-html")?.textContent).toContain("a_b%c.pdf");
   });
 
+  test("a chip in typed HTML code is its plain name, not TeX", () => {
+    const { container } = renderTyped([
+      "see <code>",
+      { type: "name", value: "", label: "a.pdf" },
+      "</code> ok",
+    ]);
+
+    expect(codeTexts(container)).toEqual(["a.pdf"]);
+  });
+
+  test("a bare URL cut at a chip leaves out the punctuation markdown would", () => {
+    const chip = { type: "name", value: "", label: "a.pdf" };
+    for (const [typed, url] of [
+      ["see https://x.com.", "https://x.com"],
+      ["(see https://x.com/a)", "https://x.com/a"],
+    ] as const) {
+      const { container, unmount } = renderTyped([typed, chip]);
+      const links = [...container.querySelectorAll('[data-streamdown="link"]')];
+
+      expect(links.map((link) => link.textContent)).toEqual([url]);
+      expect(container.querySelector('[data-slot="message-token"]')?.textContent).toBe("a.pdf");
+      unmount();
+    }
+  });
+
+  test("a link written in full keeps its chips as names, not split", () => {
+    const chip = { type: "name", value: "", label: "a.pdf" };
+    const { container } = renderTyped(["[a ", chip, "](https://e.com/", chip, ")"]);
+    const links = [...container.querySelectorAll('[data-streamdown="link"]')];
+
+    expect(links.map((link) => link.textContent)).toEqual(["a a.pdf"]);
+  });
+
   test("a chip inside a code span shows as its name", () => {
     const { container } = renderTyped(["Use `", { type: "name", value: "", label: "my (1).txt" }, "` now"]);
 

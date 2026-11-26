@@ -1,8 +1,11 @@
 import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
 import { findAttachmentNames, splitMessageTokens } from "@ai-chat/shared/chat/message-content";
 
+import type { Element, Root as HastRoot, Text as HastText } from "hast";
+import type { Link, Root as MdastRoot, Text as MdastText } from "mdast";
 import { createContext, use, useMemo } from "react";
 import { defaultRehypePlugins, type Components, type StreamdownProps } from "streamdown";
+import { CONTINUE, SKIP, visit } from "unist-util-visit";
 
 import { fileChipClassName, FileChipContent, tokenChipClassName } from "../chat-textarea/token-chip";
 import { ImageLightboxProvider, ImageLightboxTrigger, type LightboxImage } from "../image-lightbox";
@@ -72,82 +75,24 @@ function chipAt(chips: ReadonlyArray<MessageChip>, placeholder: string): number 
   return chips[index] ? index : undefined;
 }
 
-type MdastNode = {
-  type: string;
-  value?: string;
-  url?: string;
-  title?: string | null;
-  alt?: string | null;
-  children?: MdastNode[];
-};
+const placeholderFor = (index: number): string => String.fromCodePoint(FIRST_CHIP_CODE_POINT + index);
+
+/** The text with each chip's placeholder replaced by its name, written by `write`. */
+function withChipNames(
+  text: string,
+  chips: ReadonlyArray<MessageChip>,
+  write: (label: string) => string = (label) => label,
+): string {
+  return text.replaceAll(CHIP_PLACEHOLDER, (placeholder) => {
+    const index = chipAt(chips, placeholder);
+    return index === undefined ? placeholder : write(chips[index]?.label ?? "");
+  });
+}
 
 const escapeHtml = (text: string): string =>
   text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
-// A bare URL or email that ran into a chip, since markdown reads a placeholder like a letter, ends
-// where the chip starts.
-function splitAutolink(link: MdastNode): MdastNode[] {
-  const [text] = link.children ?? [];
-  if (link.children?.length !== 1 || text?.type !== "text" || !text.value || !link.url) return [link];
-
-  const at = text.value.search(CHIP_PLACEHOLDER);
-  const cut = at > 0 ? link.url.indexOf(String.fromCodePoint(text.value.codePointAt(at) ?? 0)) : -1;
-  if (cut === -1) return [link];
-
-  return [
-    { ...link, url: link.url.slice(0, cut), children: [{ ...text, value: text.value.slice(0, at) }] },
-    { type: "text", value: text.value.slice(at) },
-  ];
-}
-
-/**
- * Works on the markdown tree, which is where code blocks take their code from. Where markdown keeps
- * text as is (code, raw HTML, a link's address or title, an image's alt text), a chip is its name. A
- * raw HTML block's chips are names too: its HTML is parsed later, past where chips can go in. And a
- * bare URL or email that ran into a chip, since markdown reads a placeholder like a letter, ends
- * where the chip starts.
- */
-function createChipNamesPlugin(chips: ReadonlyArray<MessageChip>) {
-  const toNames = (value: string, escape: (label: string) => string = (label) => label) =>
-    value.replaceAll(CHIP_PLACEHOLDER, (placeholder) => {
-      const index = chipAt(chips, placeholder);
-      return index === undefined ? placeholder : escape(chips[index]?.label ?? "");
-    });
-
-  function visit(node: MdastNode): void {
-    if (node.type === "code" || node.type === "inlineCode") node.value = toNames(node.value ?? "");
-    if (node.type === "html") node.value = toNames(node.value ?? "", escapeHtml);
-    if (node.url) node.url = toNames(node.url);
-    if (node.title) node.title = toNames(node.title);
-    if (node.alt) node.alt = toNames(node.alt);
-
-    if (!node.children) return;
-    node.children = node.children.flatMap((child) =>
-      child.type === "link" ? splitAutolink(child) : [child],
-    );
-    node.children.forEach(visit);
-  }
-
-  return () => (tree: MdastNode) => visit(tree);
-}
-
-type HastText = { type: "text"; value: string };
-type HastElement = {
-  type: "element";
-  tagName: string;
-  properties: Record<string, boolean | number | string | Array<number | string> | null | undefined>;
-  children: HastNode[];
-};
-type HastNode =
-  HastText | HastElement | { type: "root" | "comment" | "doctype" | "raw"; children?: HastNode[] };
-type RehypePlugin = NonNullable<StreamdownProps["rehypePlugins"]>[number];
-
-// The element a chip renders from. It's added after sanitizing, so typed HTML can't make one.
-function chipElement(index: number): HastElement {
-  return { type: "element", tagName: "span", properties: { dataMessageChip: index }, children: [] };
-}
-
-// TeX's special characters, as `\\text{}` writes them literally.
+// TeX's special characters, as `\text{}` writes them literally.
 const TEX_TEXT_ESCAPES = new Map(
   Object.entries({
     "\\": "\\textbackslash{}",
@@ -165,105 +110,143 @@ const TEX_TEXT_ESCAPES = new Map(
 const toTexText = (label: string): string =>
   `\\text{${label.replaceAll(/[\\{}$&#%_^~]/g, (char) => TEX_TEXT_ESCAPES.get(char) ?? char)}}`;
 
+// What GFM leaves out of the end of a bare URL, and the closing paren it leaves out when unmatched.
+const URL_TRAIL = /[.,:;!?"'*_~]$/;
+
 /**
- * Puts each chip in where its placeholder is. Inside a link, which a chip can't sit in, and inside
- * math, which KaTeX typesets next, a chip is its name. Other code was handled on the markdown tree.
+ * A bare URL or email that ran into a chip, since markdown reads a placeholder like a letter. It
+ * ends where the chip starts, less the punctuation markdown would have left out of its end. Links
+ * written in full, whose text isn't their address, are left alone.
  */
-function createChipPlugin(chips: ReadonlyArray<MessageChip>): RehypePlugin {
-  function nameText(node: HastText, escape: (label: string) => string): HastText {
-    const value = node.value.replaceAll(CHIP_PLACEHOLDER, (placeholder) => {
-      const index = chipAt(chips, placeholder);
-      return index === undefined ? placeholder : escape(chips[index]?.label ?? "");
-    });
-    return { ...node, value };
+function splitAutolink(link: Link): Array<Link | MdastText> {
+  const [text] = link.children;
+  if (link.children.length !== 1 || text?.type !== "text") return [link];
+
+  const shown = link.url.replace(/^mailto:/, "");
+  if (text.value !== shown && `http://${text.value}` !== link.url) return [link];
+
+  let end = text.value.search(CHIP_PLACEHOLDER);
+  if (end <= 0) return [link];
+
+  const head = () => text.value.slice(0, end);
+  while (end > 0) {
+    const unmatchedParen = head().endsWith(")") && head().split(")").length > head().split("(").length;
+    if (!URL_TRAIL.test(head()) && !unmatchedParen) break;
+    end -= 1;
   }
+  if (end === 0) return [link];
 
-  function splitText(node: HastText): HastNode[] {
-    const nodes: HastNode[] = [];
-    let lastIndex = 0;
-
-    for (const match of node.value.matchAll(CHIP_PLACEHOLDER)) {
-      const index = chipAt(chips, match[0]);
-      if (index === undefined) continue;
-
-      if (match.index > lastIndex) {
-        nodes.push({ type: "text", value: node.value.slice(lastIndex, match.index) });
-      }
-      nodes.push(chipElement(index));
-      lastIndex = match.index + match[0].length;
-    }
-
-    if (lastIndex === 0) return [node];
-    if (lastIndex < node.value.length) nodes.push({ type: "text", value: node.value.slice(lastIndex) });
-    return nodes;
-  }
-
-  type Context = "text" | "link" | "math";
-
-  function contextOf(node: HastNode, parent: Context): Context {
-    if (parent !== "text" || node.type !== "element") return parent;
-    if (node.tagName === "a") return "link";
-    return node.tagName === "code" ? "math" : "text";
-  }
-
-  function visit(node: HastNode, context: Context): void {
-    if (!("children" in node) || !node.children) return;
-    const here = contextOf(node, context);
-
-    node.children = node.children.flatMap((child) => {
-      if (child.type !== "text") {
-        visit(child, here);
-        return [child];
-      }
-      if (here === "text") return splitText(child);
-      return [nameText(child, here === "math" ? toTexText : (label) => label)];
-    });
-  }
-
-  return () => (tree: HastNode) => visit(tree, "text");
+  const cut = text.value.length - end;
+  return [
+    { ...link, url: link.url.slice(0, link.url.length - cut), children: [{ ...text, value: head() }] },
+    { type: "text", value: text.value.slice(end) },
+  ];
 }
 
-const SKIPPED_TAGS = new Set(["a", "code", "pre"]);
-
-// Messages sent before file chips were saved hold the attachment's name as plain text. Turn those
-// names into chips, after markdown parsing so code spans and links stay untouched. Each attachment's
-// chip is already in the message's chips, at `chipIndexById`.
-function createAttachmentNamePlugin(
-  attachments: MessageAttachments,
-  chipIndexById: ReadonlyMap<string, number>,
-): RehypePlugin | null {
-  if (!attachments.some((attachment) => attachment.name.trim().length > 0)) return null;
-
-  function splitText(node: HastText): HastNode[] {
-    const nodes: HastNode[] = [];
-    let lastIndex = 0;
-
-    for (const match of findAttachmentNames(node.value, attachments)) {
-      if (match.index > lastIndex) {
-        nodes.push({ type: "text", value: node.value.slice(lastIndex, match.index) });
+/**
+ * The markdown tree's part, which is where code blocks take their code from. Where markdown keeps text
+ * as is (code, raw HTML, a link's address or title, an image's alt text), a chip is its name. A raw
+ * HTML block's chips are names too: its HTML is parsed later, past where chips can go in. A bare URL
+ * that ran into a chip ends where the chip starts. And in a message saved before chips, each of its
+ * files' names outside code and links gets the placeholder of that file's chip.
+ */
+function createChipNamesPlugin(chips: ReadonlyArray<MessageChip>, legacyChips: ReadonlyArray<LegacyChip>) {
+  return () => (tree: MdastRoot) => {
+    visit(tree, (node, index, parent) => {
+      if (node.type === "link" && parent && index !== undefined) {
+        const parts = splitAutolink(node);
+        if (parts.length > 1) parent.children.splice(index, 1, ...parts);
       }
-      const index = chipIndexById.get(match.id);
-      nodes.push(index === undefined ? { type: "text", value: match.name } : chipElement(index));
-      lastIndex = match.index + match.name.length;
-    }
-
-    if (lastIndex === 0) return [node];
-    if (lastIndex < node.value.length) nodes.push({ type: "text", value: node.value.slice(lastIndex) });
-    return nodes;
-  }
-
-  function visit(node: HastNode): void {
-    if (!("children" in node) || !node.children) return;
-    if (node.type === "element" && SKIPPED_TAGS.has(node.tagName)) return;
-
-    node.children = node.children.flatMap((child) => {
-      if (child.type === "text") return splitText(child);
-      visit(child);
-      return [child];
+      if (node.type === "code" || node.type === "inlineCode") node.value = withChipNames(node.value, chips);
+      if (node.type === "html") node.value = withChipNames(node.value, chips, escapeHtml);
+      if (node.type === "link" || node.type === "image" || node.type === "definition") {
+        node.url = withChipNames(node.url, chips);
+        if (node.title) node.title = withChipNames(node.title, chips);
+      }
+      if (node.type === "image" && node.alt) node.alt = withChipNames(node.alt, chips);
     });
+
+    if (legacyChips.length === 0) return;
+    visit(tree, (node) => {
+      if (node.type === "link" || node.type === "linkReference") return SKIP;
+      if (node.type === "text") node.value = withLegacyPlaceholders(node.value, legacyChips);
+      return CONTINUE;
+    });
+  };
+}
+
+type LegacyChip = { attachment: { _id: string; name: string }; index: number };
+
+function withLegacyPlaceholders(text: string, legacyChips: ReadonlyArray<LegacyChip>): string {
+  const attachments = legacyChips.map((chip) => chip.attachment);
+  const indexById = new Map(legacyChips.map((chip) => [chip.attachment._id, chip.index]));
+  let result = "";
+  let lastIndex = 0;
+
+  for (const match of findAttachmentNames(text, attachments)) {
+    const index = indexById.get(match.id);
+    if (index === undefined) continue;
+    result += text.slice(lastIndex, match.index) + placeholderFor(index);
+    lastIndex = match.index + match.name.length;
   }
 
-  return () => (tree: HastNode) => visit(tree);
+  return result + text.slice(lastIndex);
+}
+
+type RehypePlugin = NonNullable<StreamdownProps["rehypePlugins"]>[number];
+
+// The element a chip renders from. It's added after sanitizing, so typed HTML can't make one.
+function chipElement(index: number): Element {
+  return { type: "element", tagName: "span", properties: { dataMessageChip: index }, children: [] };
+}
+
+function isMath(element: Element): boolean {
+  const className = element.properties.className;
+  return (
+    Array.isArray(className) &&
+    className.some((name) => name === "language-math" || String(name).startsWith("math-"))
+  );
+}
+
+/**
+ * The HTML tree's part, after sanitizing: each placeholder left becomes its chip. Inside a link,
+ * which a chip can't sit in, and other code, a chip is its name; inside math, which KaTeX typesets
+ * next, its name is TeX text.
+ */
+function createChipPlugin(chips: ReadonlyArray<MessageChip>): RehypePlugin {
+  return () => (tree: HastRoot) => {
+    visit(tree, (node, index, parent) => {
+      if (node.type === "element" && (node.tagName === "a" || node.tagName === "code")) {
+        const write = node.tagName === "code" && isMath(node) ? toTexText : undefined;
+        visit(node, "text", (text) => {
+          text.value = withChipNames(text.value, chips, write);
+        });
+        return SKIP;
+      }
+      if (node.type !== "text" || !parent || index === undefined) return CONTINUE;
+
+      const parts = splitByChips(node.value, chips);
+      if (parts.length === 1 && parts[0]?.type === "text") return CONTINUE;
+      parent.children.splice(index, 1, ...parts);
+      return index + parts.length;
+    });
+  };
+}
+
+function splitByChips(text: string, chips: ReadonlyArray<MessageChip>): Array<HastText | Element> {
+  const parts: Array<HastText | Element> = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(CHIP_PLACEHOLDER)) {
+    const index = chipAt(chips, match[0]);
+    if (index === undefined) continue;
+    if (match.index > lastIndex) parts.push({ type: "text", value: text.slice(lastIndex, match.index) });
+    parts.push(chipElement(index));
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) parts.push({ type: "text", value: text.slice(lastIndex) });
+  return parts;
 }
 
 function ChipView({ chip }: { chip: MessageChip }) {
@@ -330,20 +313,22 @@ const components: Components = { span: MessageSpan };
 export function MessageUserText({ text, attachments }: { text: string; attachments: MessageAttachments }) {
   const { markdown, chips, remarkPlugins, rehypePlugins } = useMemo(() => {
     const parsed = toMarkdownWithChips(text);
-    const plugins: RehypePlugin[] = [...Object.values(defaultRehypePlugins), createChipPlugin(parsed.chips)];
 
     // Older messages without saved chips get one for each of their files' names in the text.
+    const legacyChips: LegacyChip[] = [];
     if (parsed.chips.length === 0) {
-      const chipIndexById = new Map<string, number>();
       for (const attachment of attachments) {
-        chipIndexById.set(attachment._id, parsed.chips.length);
+        if (!attachment.name.trim()) continue;
+        legacyChips.push({ attachment, index: parsed.chips.length });
         parsed.chips.push({ type: FILE_TOKEN_TYPE, value: attachment._id, label: attachment.name });
       }
-      const attachmentNames = createAttachmentNamePlugin(attachments, chipIndexById);
-      if (attachmentNames) plugins.push(attachmentNames);
     }
 
-    return { ...parsed, remarkPlugins: [createChipNamesPlugin(parsed.chips)], rehypePlugins: plugins };
+    return {
+      ...parsed,
+      remarkPlugins: [createChipNamesPlugin(parsed.chips, legacyChips)],
+      rehypePlugins: [...Object.values(defaultRehypePlugins), createChipPlugin(parsed.chips)],
+    };
   }, [text, attachments]);
 
   const { images, context } = useMemo(() => {
