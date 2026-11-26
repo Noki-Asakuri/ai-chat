@@ -126,7 +126,6 @@ export function ChatEditTextarea() {
               model={editMessage.model}
               uploads={editMessage.attachments}
               onRemoveChips={chatStoreActions.removeEditChipAttachments}
-              onRestoreChips={chatStoreActions.restoreEditChipAttachments}
               isFileAttached={(attachmentId) => isEditFileAttached(editMessage, attachmentId)}
               handleAddAttachments={handleAddAttachments}
               onConfirm={saveEdits}

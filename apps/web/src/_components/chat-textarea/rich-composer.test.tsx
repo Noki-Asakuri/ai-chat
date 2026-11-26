@@ -388,7 +388,6 @@ function MainComposer() {
           uploads={uploads}
           handleAddAttachments={() => {}}
           onRemoveChips={chatStoreActions.removeChipAttachments}
-          onRestoreChips={chatStoreActions.restoreChipAttachments}
         />
       </ConfigStoreContext.Provider>
     </QueryClientProvider>
@@ -475,7 +474,7 @@ describe("chat store tray", () => {
     expect(useChatStore.getState().input).toContain("upload:u10");
   });
 
-  test("undo brings a removed file back with its chip, and redo takes both out again", async () => {
+  test("undoing a removal brings the name back without the file", async () => {
     useChatStore.setState({ input: "", attachments: [] });
     render(<MainComposer />);
 
@@ -487,31 +486,10 @@ describe("chat store tray", () => {
     act(() => {
       getComposerController(MAIN_COMPOSER_ID)?.undo();
     });
-    await waitFor(() => expect(fileChips()).toHaveLength(1));
-    expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(["u6"]);
-
-    act(() => {
-      getComposerController(MAIN_COMPOSER_ID)?.redo();
-    });
-    await waitFor(() => expect(useChatStore.getState().attachments).toHaveLength(0));
-    expect(useChatStore.getState().input).not.toContain("upload:u6");
-  });
-
-  test("a file removed before a model switch doesn't come back with undo", async () => {
-    useChatStore.setState({ input: "", attachments: [] });
-    render(<MainComposer />);
-    act(() => chatStoreActions.addAttachments([pdfUpload("u12", "h.pdf", 10)]));
-    await waitFor(() => expect(fileChips()).toHaveLength(1));
-
-    act(() => chatStoreActions.removeAttachment("u12"));
-    await waitFor(() => expect(fileChips()).toHaveLength(0));
-    act(() => chatStoreActions.retainCompatibleAttachments(fileModel));
-
-    act(() => {
-      getComposerController(MAIN_COMPOSER_ID)?.undo();
-    });
-    await waitFor(() => expect(useChatStore.getState().input).toContain("upload:u12"));
+    await waitFor(() => expect(useChatStore.getState().input).toContain("upload:u6"));
     await act(async () => {});
+    expect(fileChips()).toHaveLength(0);
+    expect(editor().textContent).toContain("c.pdf");
     expect(useChatStore.getState().attachments).toHaveLength(0);
   });
 
@@ -540,7 +518,7 @@ describe("chat store tray", () => {
     expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(["u13"]);
   });
 
-  test("redoing typing over a chip keeps its file, while redoing its removal takes the file out", async () => {
+  test("undoing and redoing typing over a chip keeps its file", async () => {
     useChatStore.setState({ input: "", attachments: [] });
     render(<MainComposer />);
     act(() => chatStoreActions.addAttachments([pdfUpload("u14", "m.pdf", 10)]));
@@ -559,24 +537,21 @@ describe("chat store tray", () => {
       controller.redo();
     });
     expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(["u14"]);
+  });
 
-    act(() => {
-      controller.undo();
-    });
+  test("switching to a model that can't read a file empties the composer when the file was all it had", async () => {
+    const textOnlyModel = SelectableModelIds.find(
+      (id) => !tryGetModelData(id)?.modalities.input.includes("pdf"),
+    );
+    if (!textOnlyModel) throw new Error("Expected a model that can't read PDFs");
+
+    useChatStore.setState({ input: "", attachments: [] });
+    render(<MainComposer />);
+    act(() => chatStoreActions.addAttachments([pdfUpload("u16", "only.pdf", 10)]));
     await waitFor(() => expect(fileChips()).toHaveLength(1));
-    const remove = fileChips()[0]?.querySelector('[data-slot="token-input-token-remove"]');
-    if (!remove) throw new Error("Expected a remove button on the chip");
-    await userEvent.setup().click(remove);
-    await waitFor(() => expect(useChatStore.getState().attachments).toHaveLength(0));
 
-    act(() => {
-      controller.undo();
-    });
-    await waitFor(() => expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(["u14"]));
-    act(() => {
-      controller.redo();
-    });
-    await waitFor(() => expect(useChatStore.getState().attachments).toHaveLength(0));
+    act(() => chatStoreActions.retainCompatibleAttachments(textOnlyModel));
+    await waitFor(() => expect(useChatStore.getState().input).toBe(""));
   });
 
   test("switching to a model that can't read a file keeps its name in the sentence, and undo doesn't bring the file back", async () => {
@@ -606,20 +581,6 @@ describe("chat store tray", () => {
     expect(fileChips()).toHaveLength(0);
     expect(useChatStore.getState().attachments).toHaveLength(0);
   });
-
-  test("undo keeps only the latest removed files", () => {
-    const uploads = Array.from({ length: 12 }, (_, index) => pdfUpload(`cap${index}`, `f${index}.pdf`, 10));
-    useChatStore.setState({ input: "", attachments: uploads });
-    for (const upload of uploads) chatStoreActions.removeAttachment(upload.id);
-
-    chatStoreActions.restoreChipAttachments(
-      uploads.map((upload) => ({ type: "upload", value: upload.id, label: upload.file.name })),
-    );
-    expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(
-      uploads.slice(2).map((upload) => upload.id),
-    );
-    useChatStore.setState({ input: "", attachments: [] });
-  });
 });
 
 function fakeId<TableName extends "messages" | "attachments" | "threads">(value: string): Id<TableName> {
@@ -644,7 +605,6 @@ function EditComposer() {
           model={editMessage.model}
           uploads={editMessage.attachments}
           onRemoveChips={chatStoreActions.removeEditChipAttachments}
-          onRestoreChips={chatStoreActions.restoreEditChipAttachments}
           isFileAttached={(attachmentId) => isEditFileAttached(editMessage, attachmentId)}
           handleAddAttachments={() => {}}
         />
@@ -654,7 +614,55 @@ function EditComposer() {
 }
 
 describe("edit tray", () => {
-  test("an own file removed from the tray comes back with undo, on screen and when saved", async () => {
+  test("switching the edit's model takes out its own files and added files in one undo step", async () => {
+    const textOnlyModel = SelectableModelIds.find(
+      (id) => !tryGetModelData(id)?.modalities.input.includes("pdf"),
+    );
+    if (!textOnlyModel) throw new Error("Expected a model that can't read PDFs");
+    const ownFile = {
+      _id: fakeId<"attachments">("own_pdf_2"),
+      _creationTime: 1,
+      id: "own2",
+      name: "own.pdf",
+      size: 2048,
+      type: "pdf" as const,
+      source: "user" as const,
+      mimeType: "application/pdf",
+      path: "u/t/own2.pdf",
+      userId: "u",
+      threadId: fakeId<"threads">("thread_1"),
+    };
+    chatStoreActions.setEditMessage({
+      _id: fakeId<"messages">("message_4"),
+      input: "Compare [@own.pdf](file:own_pdf_2) with [@new.pdf](upload:u17) please",
+      model: fileModel,
+      currentAttachments: [ownFile],
+      keptAttachmentIds: [ownFile._id],
+      attachments: [pdfUpload("u17", "new.pdf", 10)],
+      modelParams: {},
+    });
+    render(<EditComposer />);
+    await waitFor(() => expect(fileChips()).toHaveLength(2));
+
+    act(() => chatStoreActions.retainCompatibleEditAttachments(textOnlyModel));
+    await waitFor(() =>
+      expect(useChatStore.getState().editMessage?.input).toBe(
+        "Compare [@own.pdf](name:) with [@new.pdf](name:) please",
+      ),
+    );
+
+    act(() => {
+      getComposerController(EDIT_COMPOSER_ID)?.undo();
+    });
+    await waitFor(() =>
+      expect(useChatStore.getState().editMessage?.input).toBe(
+        "Compare [@own.pdf](file:own_pdf_2) with [@new.pdf](upload:u17) please",
+      ),
+    );
+    chatStoreActions.setEditMessage(null);
+  });
+
+  test("a file removed from the tray stays out after undo, on screen and when saved", async () => {
     const ownFile = {
       _id: fakeId<"attachments">("own_pdf"),
       _creationTime: 1,
@@ -682,19 +690,18 @@ describe("edit tray", () => {
 
     act(() => chatStoreActions.removeEditExistingAttachment(ownFile._id));
     await waitFor(() => expect(useChatStore.getState().editMessage?.input).toBe("Look at"));
-    expect(getEditSentAttachments(useChatStore.getState().editMessage!, [ownFile], [])).toEqual([]);
 
     act(() => {
       getComposerController(EDIT_COMPOSER_ID)?.undo();
     });
-    await waitFor(() => expect(fileChips()).toHaveLength(1));
+    await waitFor(() => expect(useChatStore.getState().editMessage?.input).toContain("file:own_pdf"));
+    await act(async () => {});
+    expect(fileChips()).toHaveLength(0);
+    expect(editor().textContent).toContain("own.pdf");
 
     const edit = useChatStore.getState().editMessage!;
-    expect(edit.input).toBe("Look at [@own.pdf](file:own_pdf)");
-    expect(getEditSentAttachments(edit, [ownFile], []).map((item) => item.attachmentId)).toEqual([
-      ownFile._id,
-    ]);
-    expect(linkSentFileChips(edit.input, new Map(), [ownFile._id])).toBe("Look at [@own.pdf](file:own_pdf)");
+    expect(getEditSentAttachments(edit, [ownFile], [])).toEqual([]);
+    expect(linkSentFileChips(edit.input, new Map(), [])).toBe("Look at [@own.pdf](name:)");
     chatStoreActions.setEditMessage(null);
   });
 

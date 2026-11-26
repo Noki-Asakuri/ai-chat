@@ -126,13 +126,17 @@ export function MessageActionButtons({ isFinished, message }: MessageActionButto
 
   if (import.meta.env.PROD && !isFinished) return null;
 
-  const content = message.parts
+  const textContent = message.parts
     .reduce<Array<string>>((textParts, part) => {
       if (isTextPart(part))
         textParts.push(message.role === "user" ? toPlainMessageText(part.text) : part.text);
       return textParts;
     }, [])
     .join("\n\n");
+  // A message sent with only files has no text, so copying it gives the files' names.
+  const content =
+    textContent ||
+    (message.role === "user" ? message.attachments.map((attachment) => attachment.name).join("\n") : "");
 
   return (
     <>

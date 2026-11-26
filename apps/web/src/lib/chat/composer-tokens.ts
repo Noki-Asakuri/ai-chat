@@ -245,8 +245,8 @@ export function hasComposerChip(composerId: string, type: string, value: string)
 
 /**
  * Removes the chips of this type that point at any of `values`, leaving every other chip alone, as
- * one undoable step that counts as removing them on purpose. A chip standing on its own takes a space
- * next to it along, since it was added with one; the caret stays where it was in the text.
+ * one undoable step. A chip standing on its own takes a space next to it along, since it was added
+ * with one; the caret stays where it was in the text.
  */
 export function removeComposerChips(composerId: string, type: string, values: ReadonlyArray<string>): void {
   const controller = composerControllers.get(composerId);
@@ -309,8 +309,7 @@ export function removeComposerChips(composerId: string, type: string, values: Re
   if (removedAt.length === 0) return;
 
   const selection = controller.editor.selection();
-  // The remove button's reason, so the composer counts this as removing the chips on purpose.
-  if (!controller.setValue(next, { reason: "remove-press" })) return;
+  if (!controller.setValue(next)) return;
   if (!selection) return;
 
   // `setValue` puts the caret at the end. Inserting nothing at an offset changes nothing and moves the
@@ -320,17 +319,26 @@ export function removeComposerChips(composerId: string, type: string, values: Re
 }
 
 /**
- * Turns the chips of this type that point at any of `values` into name chips, as one undoable step,
- * so a sentence keeps its words when their files can't go. The caret stays where it was.
+ * Turns the chips of these files into name chips, all as one undoable step, so a sentence keeps its
+ * words when the files can't go. The caret stays where it was. When those chips are all that's
+ * written, they're removed instead, so their names aren't sent as a message of their own.
  */
-export function nameComposerChips(composerId: string, type: string, values: ReadonlyArray<string>): void {
+export function nameComposerChips(
+  composerId: string,
+  files: ReadonlyArray<Pick<Token, "type" | "value">>,
+): void {
   const controller = composerControllers.get(composerId);
-  if (!controller || values.length === 0) return;
+  if (!controller || files.length === 0) return;
 
   const matches = (segment: string | Token): segment is Token =>
-    isToken(segment) && segment.type === type && values.includes(segment.value);
+    isToken(segment) && files.some((file) => file.type === segment.type && file.value === segment.value);
   const value = controller.getValue();
   if (!value.some(matches)) return;
+
+  if (value.every((segment) => matches(segment) || (!isToken(segment) && segment.trim() === ""))) {
+    controller.clear();
+    return;
+  }
 
   const selection = controller.editor.selection();
   const next = value.map((segment) => (matches(segment) ? toNameToken(segment.label) : segment));

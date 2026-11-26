@@ -1,3 +1,5 @@
+import { defaultCodec, fromText, type Token } from "@ui-sdk/core/token-input";
+
 type MessageContentPart = {
   type: string;
   text?: string;
@@ -17,12 +19,6 @@ export function hasMessageContent(parts: readonly MessageContentPart[], attachme
   });
 }
 
-// The composer codec's chip, `[@label](type:value)`: the label escapes `\`, `[` and `]`, and the
-// value escapes `\`, `(` and `)`. Sticky, so it only matches where the parser points it.
-const CHIP_PATTERN = /\[@((?:\\[\s\S]|[^\\\]])*)\]\(([\w-]+):((?:\\[\s\S]|[^\\()])*)\)/y;
-
-const unescapeChipPart = (text: string): string => text.replaceAll(/\\([\s\S])/g, "$1");
-
 export type MessageTextSegment =
   | {
       kind: "text";
@@ -34,43 +30,26 @@ export type MessageTextSegment =
   | { kind: "token"; type: string; value: string; label: string };
 
 /**
- * Splits saved message text into text and chips, reading it back the way the composer's codec does
- * (`fromText` in @ui-sdk/core's token input). So chip-like text the codec escaped, such as a typed
- * literal or a file name, stays text. A run of backslashes is counted once, so long runs stay fast.
+ * Splits saved message text into text and chips with the composer's own codec, so chip-like text
+ * the codec escaped, such as a typed literal or a file name, stays text.
  */
 export function splitMessageTokens(text: string): MessageTextSegment[] {
-  const segments: MessageTextSegment[] = [];
-  // Where the current text segment starts, how far the scan has read, and that text as typed so far.
-  let start = 0;
-  let index = 0;
-  let plain = "";
+  const value = fromText(text);
 
-  for (let bracket = text.indexOf("[@"); bracket !== -1; bracket = text.indexOf("[@", index)) {
-    let slashes = 0;
-    while (bracket - slashes - 1 >= index && text[bracket - slashes - 1] === "\\") slashes++;
-
-    // The codec doubles backslashes before `[@`, and adds one more when the bracket is literal.
-    plain += text.slice(index, bracket - slashes) + "\\".repeat(Math.floor(slashes / 2));
-    index = bracket + 2;
-
-    CHIP_PATTERN.lastIndex = bracket;
-    const chip = slashes % 2 === 0 ? CHIP_PATTERN.exec(text) : null;
-    if (!chip) {
-      plain += "[@";
-      continue;
+  return value.flatMap((segment, index): MessageTextSegment[] => {
+    if (isToken(segment)) {
+      return [{ kind: "token", type: segment.type, value: segment.value, label: segment.label }];
     }
+    if (segment === "") return [];
 
-    const [whole, label = "", type = "", value = ""] = chip;
-    if (bracket > start) segments.push({ kind: "text", text: text.slice(start, bracket), plain });
-    segments.push({ kind: "token", type, value: unescapeChipPart(value), label: unescapeChipPart(label) });
-    start = index = bracket + whole.length;
-    plain = "";
-  }
+    const next = value[index + 1];
+    const saved = defaultCodec.escape?.(segment, next !== undefined && isToken(next) ? next : undefined);
+    return [{ kind: "text", text: saved ?? segment, plain: segment }];
+  });
+}
 
-  if (start < text.length) {
-    segments.push({ kind: "text", text: text.slice(start), plain: plain + text.slice(index) });
-  }
-  return segments;
+function isToken(segment: string | Token): segment is Token {
+  return segment instanceof Object;
 }
 
 /** Saved message text as the model reads it: chips become their labels and text reads as typed. */

@@ -58,7 +58,6 @@ import {
   FILE_TOKEN_TYPE,
   getCachedComposerAttachment,
   isChipDeletion,
-  isToken,
   NAME_TOKEN_TYPE,
   PROFILE_TOKEN_TYPE,
   registerComposerController,
@@ -82,15 +81,10 @@ export type RichComposerProps = {
   uploads: ReadonlyArray<UserAttachment>;
   handleAddAttachments: (data: { files: File[] }) => void;
   /**
-   * Runs when someone removes chips on purpose, with a chip's remove button or Backspace or Delete, or
-   * redoes that, so their files can leave the tray too. Cutting or typing over a chip leaves its file.
+   * Runs when someone removes chips on purpose, with a chip's remove button or Backspace or Delete,
+   * so their files can leave the tray too. Cutting, typing over, undo and redo leave the files be.
    */
   onRemoveChips?: (tokens: ReadonlyArray<Token>) => void;
-  /**
-   * Runs after undo, redo, paste or drop with the chips now in the composer, so files removed with
-   * them can come back.
-   */
-  onRestoreChips?: (tokens: ReadonlyArray<Token>) => void;
   /** Whether a saved file's chip stands for an attached file. Chips that don't show as just their name. */
   isFileAttached?: (attachmentId: string) => boolean;
   onConfirm?: () => void;
@@ -108,7 +102,6 @@ export function RichComposer({
   uploads,
   handleAddAttachments,
   onRemoveChips,
-  onRestoreChips,
   isFileAttached,
   onConfirm,
   disabled,
@@ -121,8 +114,6 @@ export function RichComposer({
   const [controller] = useState(createTokenInputController);
   const [initialValue] = useState(() => fromText(input));
   const lastEmitted = useRef(input);
-  // Ids of chips removed on purpose. The token input gives each chip its own id, and undo keeps it.
-  const deletedChipIds = useRef(new Set<string>());
 
   const profilesQuery = useQuery({
     ...convexQuery(api.functions.profiles.listProfiles, {}),
@@ -246,26 +237,10 @@ export function RichComposer({
           lastEmitted.current = text;
           setInput(text);
 
-          const { reason, removed } = details;
-          const deleted = isChipDeletion(details);
-          if (deleted) for (const token of removed) if (token.id) deletedChipIds.current.add(token.id);
-
-          // Undo and redo keep a chip's id, so a redo removes a file only when it repeats a deletion.
-          const removedOnPurpose = deleted
-            ? removed
-            : reason === "redo"
-              ? removed.filter((token) => token.id && deletedChipIds.current.has(token.id))
-              : [];
-          const mayRestore =
-            reason === "undo" || reason === "redo" || reason === "paste" || reason === "drop";
-          if (removedOnPurpose.length === 0 && !mayRestore) return;
-
-          const chips = value.filter(isToken);
+          if (!onRemoveChips || !isChipDeletion(details)) return;
+          const { removed } = details;
           // Once this change has landed, so removing the file finds its chip already gone.
-          queueMicrotask(() => {
-            if (removedOnPurpose.length > 0) onRemoveChips?.(removedOnPurpose);
-            if (mayRestore) onRestoreChips?.(chips);
-          });
+          queueMicrotask(() => onRemoveChips(removed));
         }}
         getTokenDescription={(token) => {
           if (token.type === PROFILE_TOKEN_TYPE) return "profile";
