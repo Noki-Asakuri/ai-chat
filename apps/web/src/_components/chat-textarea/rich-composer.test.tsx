@@ -372,6 +372,26 @@ describe("chat store tray", () => {
     expect(useChatStore.getState().input).not.toContain("upload:u4");
   });
 
+  test("removing one of two chips of a file keeps the file and the other chip", async () => {
+    const user = userEvent.setup();
+    const upload = pdfUpload("u10", "scan.pdf", 10);
+    useChatStore.setState({
+      input: "[@scan.pdf](upload:u10) and [@scan.pdf](upload:u10) ",
+      attachments: [upload],
+    });
+    render(<MainComposer />);
+    await waitFor(() => expect(fileChips()).toHaveLength(2));
+
+    const remove = fileChips()[0]?.querySelector('[data-slot="token-input-token-remove"]');
+    if (!remove) throw new Error("Expected a remove button on the chip");
+    await user.click(remove);
+
+    await waitFor(() => expect(fileChips()).toHaveLength(1));
+    await act(async () => {});
+    expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(["u10"]);
+    expect(useChatStore.getState().input).toContain("upload:u10");
+  });
+
   test("undoing a removal brings the name back without the file", async () => {
     useChatStore.setState({ input: "", attachments: [] });
     render(<MainComposer />);
@@ -462,6 +482,30 @@ describe("edit tray", () => {
     const sent = getEditSentAttachments(edit, [ownFile], []);
     expect(sent).toEqual([]);
     expect(linkSentFileChips(edit.input, new Map(), [])).toBe("Look at own.pdf");
+    chatStoreActions.setEditMessage(null);
+  });
+
+  test("removing one of two chips of a kept file in the edit box keeps the file", async () => {
+    const user = userEvent.setup();
+    chatStoreActions.setEditMessage({
+      _id: fakeId<"messages">("message_3"),
+      input: "[@own.pdf](file:own_pdf) and [@own.pdf](file:own_pdf)",
+      model: fileModel,
+      currentAttachments: [],
+      keptAttachmentIds: [fakeId<"attachments">("own_pdf")],
+      attachments: [],
+      modelParams: {},
+    });
+    render(<EditComposer />);
+    await waitFor(() => expect(editor().querySelectorAll('[data-slot="token-input-token"]')).toHaveLength(2));
+
+    const remove = editor().querySelector('[data-slot="token-input-token-remove"]');
+    if (!remove) throw new Error("Expected a remove button on the chip");
+    await user.click(remove);
+
+    await waitFor(() => expect(editor().querySelectorAll('[data-slot="token-input-token"]')).toHaveLength(1));
+    await act(async () => {});
+    expect<string[] | undefined>(useChatStore.getState().editMessage?.keptAttachmentIds).toEqual(["own_pdf"]);
     chatStoreActions.setEditMessage(null);
   });
 

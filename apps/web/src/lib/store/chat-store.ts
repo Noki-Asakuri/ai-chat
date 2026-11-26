@@ -7,6 +7,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import {
   EDIT_COMPOSER_ID,
   FILE_TOKEN_TYPE,
+  hasComposerChip,
   insertUploadChips,
   MAIN_COMPOSER_ID,
   removeComposerChips,
@@ -109,6 +110,8 @@ export const useChatStore = create<ChatStore>()(
         if (!editMessage) return;
 
         for (const chip of chips) {
+          // The file stays while another chip of it, such as a pasted copy, is still in the composer.
+          if (hasComposerChip(EDIT_COMPOSER_ID, chip.type, chip.value)) continue;
           if (chip.type === UPLOAD_TOKEN_TYPE) removeEditAttachment(chip.value);
 
           const kept = editMessage.keptAttachmentIds.find((id) => id === chip.value);
@@ -128,7 +131,10 @@ export const useChatStore = create<ChatStore>()(
       },
       removeChipAttachments: (chips) => {
         for (const chip of chips) {
-          if (chip.type === UPLOAD_TOKEN_TYPE) get().removeAttachment(chip.value);
+          // The file stays while another chip of it, such as a pasted copy, is still in the composer.
+          if (chip.type !== UPLOAD_TOKEN_TYPE || hasComposerChip(MAIN_COMPOSER_ID, chip.type, chip.value))
+            continue;
+          get().removeAttachment(chip.value);
         }
       },
       clearAttachments: () => set({ attachments: [] }),

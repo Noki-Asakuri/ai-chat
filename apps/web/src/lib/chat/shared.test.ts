@@ -20,6 +20,24 @@ describe("describeAttachments", () => {
 });
 
 describe("convertToUIChatMessages", () => {
+  test("gives the model the same text on later turns as when the message was sent", () => {
+    const texts = [
+      toText(["Explain [@home](file:example)"]),
+      toText(["See \\", { type: "upload", value: "u1", label: "[@draft](file:example).pdf" }]),
+    ];
+
+    for (const text of texts) {
+      const { displayParts, requestParts } = buildUserMessageParts(text, []);
+      const [message] = convertToUIChatMessages([
+        { messageId: "m1", role: "user", metadata: undefined, parts: displayParts, attachments: [] },
+      ]);
+      // Saved parts also carry their stream state, which the model doesn't read.
+      expect(message?.parts.map((part) => ("text" in part ? part.text : part.type))).toEqual(
+        requestParts.map((part) => ("text" in part ? part.text : part.type)),
+      );
+    }
+  });
+
   test("names a user message's files and lists them before the file parts", () => {
     const [message] = convertToUIChatMessages([
       {

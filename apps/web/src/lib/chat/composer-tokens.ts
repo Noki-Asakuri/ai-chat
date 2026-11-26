@@ -192,6 +192,16 @@ function toLabelText(segment: string | Token | undefined): string | undefined {
   return segment !== undefined && isToken(segment) ? segment.label : segment;
 }
 
+/** Whether the composer still has a chip of this type pointing at `value`, such as a pasted copy. */
+export function hasComposerChip(composerId: string, type: string, value: string): boolean {
+  const controller = composerControllers.get(composerId);
+  if (!controller) return false;
+
+  return controller
+    .getValue()
+    .some((segment) => isToken(segment) && segment.type === type && segment.value === value);
+}
+
 /** Removes the chips of this type that point at any of `values`, leaving every other chip alone. */
 export function removeComposerChips(composerId: string, type: string, values: ReadonlyArray<string>): void {
   const controller = composerControllers.get(composerId);

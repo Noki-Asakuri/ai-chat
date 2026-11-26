@@ -51,10 +51,28 @@ export function splitMessageTokens(
   return segments;
 }
 
+/** Saved message text as the model reads it: chips become their labels and escaped text reads as typed. */
 export function toPlainMessageText(text: string): string {
-  return splitMessageTokens(text)
-    .map((segment) => (segment.kind === "text" ? segment.text : segment.label))
+  const segments = splitMessageTokens(text, { skipEscaped: true });
+
+  return segments
+    .map((segment, index) => {
+      if (segment.kind === "token") return segment.label;
+      return unescapeMessageText(segment.text, segments[index + 1]?.kind === "token");
+    })
     .join("");
+}
+
+// Halves a run of backslashes, undoing the codec's doubling.
+const halveBackslashes = (run: string): string => "\\".repeat(Math.floor(run.length / 2));
+
+/**
+ * Undoes the composer codec's escaping of plain text. It doubles a run of backslashes before `[@`,
+ * plus one more when the bracket is literal, and doubles a run at the end of text before a chip.
+ */
+function unescapeMessageText(text: string, beforeToken: boolean): string {
+  const unescaped = text.replaceAll(/\\+(?=\[@)/g, halveBackslashes);
+  return beforeToken ? unescaped.replace(/\\+$/, halveBackslashes) : unescaped;
 }
 
 export type AttachmentNameMatch = { index: number; name: string; id: string };
