@@ -14,9 +14,11 @@ import { FILE_TOKEN_TYPE, NAME_TOKEN_TYPE } from "@/lib/chat/composer-tokens";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const TOKEN_HREF_PREFIX = "#message-token/";
+// A key new on each page load, so typed text that looks like a token link isn't taken for one.
+const TOKEN_LINK_KEY = Math.random().toString(36).slice(2, 10);
+const TOKEN_HREF_PREFIX = `#message-token-${TOKEN_LINK_KEY}/`;
 // The markdown sanitizer prefixes in-page anchors with `user-content-`.
-const SANITIZED_TOKEN_HREF_PREFIX = "#user-content-message-token/";
+const SANITIZED_TOKEN_HREF_PREFIX = `#user-content-message-token-${TOKEN_LINK_KEY}/`;
 const USER_ROLE: ChatMessage["role"] = "user";
 
 type MessageAttachments = ReadonlyArray<
@@ -106,7 +108,10 @@ const BACKSLASHES_BEFORE_CHIP_OPENER = /(?<!\\)\\+(?=\[@)/g;
 // A chip's token link, after any run of backslashes, which the codec doubles before a chip. Its text
 // never holds a bracket, since `toLinkText` writes those as entities, so a typed `[` before it isn't
 // taken in. Each pattern checks only a run's start behind, so long runs stay fast.
-const CHIP_LINK_IN_CODE = /(?<!\\)(\\*)\[[^[\]\n]*\]\((#message-token\/[^)\s]*)\)/g;
+const CHIP_LINK_IN_CODE = new RegExp(
+  String.raw`(?<!\\)(\\*)\[[^[\]\n]*\]\((#message-token-${TOKEN_LINK_KEY}\/[^)\s]*)\)`,
+  "g",
+);
 
 function toTypedCodeText(text: string): string {
   return text

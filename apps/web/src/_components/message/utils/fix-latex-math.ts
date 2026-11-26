@@ -13,7 +13,7 @@ type FixLatexOptions = {
   composerText?: boolean;
 };
 
-// Whether display math is open carries across code spans, which can sit inside it.
+// Whether display math is open carries across inline code spans, which can sit inside it.
 type FixLatexContext = FixLatexOptions & { displayOpen: boolean };
 
 export function fixLatexMath(text: string, options: FixLatexOptions = {}): string {
@@ -22,6 +22,8 @@ export function fixLatexMath(text: string, options: FixLatexOptions = {}): strin
   let result = "";
 
   for (const segment of segments) {
+    // Display math doesn't run across a fenced code block.
+    if (!segment.transform) context.displayOpen = false;
     result += segment.transform ? fixLatexOutsideInlineCode(segment.text, context) : segment.text;
   }
 

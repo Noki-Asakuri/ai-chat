@@ -64,6 +64,9 @@ export type ChatStore = {
   setIsDragOver: (isDragOver: boolean) => void;
 };
 
+// Above the store: with localStorage, `persist` restores the draft while the store is being created.
+const persistedDraftSchema = z.object({ input: z.string() });
+
 export const useChatStore = create<ChatStore>()(
   persist(
     (set, get) => ({
@@ -256,8 +259,6 @@ export const useChatStore = create<ChatStore>()(
     },
   ),
 );
-
-const persistedDraftSchema = z.object({ input: z.string() });
 
 // Files the user removed, by local id, and own files they took out of an edit. Undo or redo can
 // bring their chips back, and then the files come back too. They're forgotten on send and on a model

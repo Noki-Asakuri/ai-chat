@@ -199,6 +199,13 @@ describe("MessageUserText with code and typed chip-like text", () => {
     expect(shown.join("")).toContain("load([a.csv])");
   });
 
+  test("typed text shaped like a token link stays text, in code and out of it", () => {
+    const { container } = renderTyped(["`[x](#message-token/name//foo)` and [y](#message-token/name//bar)"]);
+
+    expect(codeTexts(container)).toEqual(["[x](#message-token/name//foo)"]);
+    expect(container.querySelector('[data-slot="message-token"]')).toBeNull();
+  });
+
   test("typed text that looks like a broken token link shows as is", () => {
     const { container } = renderTyped(["`[x](#message-token/a/%E0%A4/b)` and [y](#message-token/c/%E0/d)"]);
 

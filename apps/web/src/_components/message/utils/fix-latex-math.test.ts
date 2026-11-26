@@ -26,6 +26,12 @@ describe("fixLatexMath", function () {
     expect(fixLatexMath(input, { composerText: true })).toBe("See $$\n a `c` b \n$$ done");
   });
 
+  test("display math in composer text doesn't pair across a fenced code block", function () {
+    const output = fixLatexMath("Cost \\[ x\n```\ncode\n```\nthen y \\] end", { composerText: true });
+
+    expect(output).toContain("```\ncode\n```\nthen y \\] end");
+  });
+
   test("converts display delimiters in other text as before", function () {
     expect(fixLatexMath("Mention \\[@user\\] here.")).toBe("Mention $$\n@user\n$$ here.");
   });
