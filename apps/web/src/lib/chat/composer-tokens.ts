@@ -218,7 +218,8 @@ export function hasComposerChip(composerId: string, type: string, value: string)
 
 /**
  * Removes the chips of this type that point at any of `values`, leaving every other chip alone, as
- * one undoable step. Each takes a space next to it along, since a chip is added with one.
+ * one undoable step that counts as removing them on purpose. A chip standing on its own takes a space
+ * next to it along, since it was added with one; the caret stays where it was in the text.
  */
 export function removeComposerChips(composerId: string, type: string, values: ReadonlyArray<string>): void {
   const controller = composerControllers.get(composerId);
@@ -226,44 +227,68 @@ export function removeComposerChips(composerId: string, type: string, values: Re
 
   const value = controller.getValue();
   const next: Array<string | Token> = [];
-  let removedAny = false;
+  // Offsets, in the old value, of each removed chip and space. A chip counts as one.
+  const removedAt: number[] = [];
+  let offset = 0;
   let dropLeadingSpace = false;
 
   for (const [index, segment] of value.entries()) {
     if (!isToken(segment)) {
-      next.push(dropLeadingSpace && segment.startsWith(" ") ? segment.slice(1) : segment);
+      const drop = dropLeadingSpace && segment.startsWith(" ");
+      if (drop) removedAt.push(offset);
+      // Empty text is left out, so a later chip sees the text truly before it.
+      const text = drop ? segment.slice(1) : segment;
+      if (text !== "") next.push(text);
       dropLeadingSpace = false;
+      offset += segment.length;
       continue;
     }
 
+    dropLeadingSpace = false;
     if (segment.type !== type || !values.includes(segment.value)) {
       next.push(segment);
-      dropLeadingSpace = false;
+      offset += 1;
       continue;
     }
 
-    removedAny = true;
-    const following = value[index + 1];
+    removedAt.push(offset);
     const previous = next.at(-1);
-    if (following !== undefined && !isToken(following) && following.startsWith(" ")) dropLeadingSpace = true;
-    else if (previous !== undefined && !isToken(previous) && previous.endsWith(" "))
-      next[next.length - 1] = previous.slice(0, -1);
+    const following = value[index + 1];
+    const textBefore = previous !== undefined && !isToken(previous) ? previous : undefined;
+    const textAfter = following !== undefined && !isToken(following) ? following : undefined;
+    const standsAlone = previous === undefined || /\s$/.test(textBefore ?? "");
+
+    if (standsAlone && textAfter?.startsWith(" ")) {
+      dropLeadingSpace = true;
+    } else if (textBefore?.endsWith(" ") && (following === undefined || /^\s/.test(textAfter ?? ""))) {
+      next[next.length - 1] = textBefore.slice(0, -1);
+      removedAt.push(offset - 1);
+    }
+    offset += 1;
   }
 
-  if (removedAny) controller.setValue(next.filter((segment) => segment !== ""));
+  if (removedAt.length === 0) return;
+
+  const selection = controller.editor.selection();
+  // The remove button's reason, so the composer counts this as removing the chips on purpose.
+  if (!controller.setValue(next, { reason: "remove-press" })) return;
+  if (!selection) return;
+
+  // `setValue` puts the caret at the end. Inserting nothing at an offset changes nothing and moves the
+  // caret there, so it goes back to where it was, less what was removed before it.
+  const caret = selection.end - removedAt.filter((at) => at < selection.end).length;
+  controller.insert("", { at: { start: caret, end: caret } });
 }
 
 /**
- * Whether a change removed chips on purpose: with a chip's remove button, Backspace or Delete, or by
- * undo or redo, which keep files in step with their chips. Cutting, dragging and typing over a
- * selection don't count.
+ * Whether a change removed chips on purpose: with a chip's remove button, or Backspace or Delete.
+ * Cutting, dragging, typing over a selection, undo and redo don't count.
  */
 export function isChipDeletion(
   details: Pick<TokenInputValueChangeDetails, "reason" | "inputType" | "removed">,
 ): boolean {
   if (details.removed.length === 0) return false;
-  if (details.reason === "remove-press" || details.reason === "undo" || details.reason === "redo")
-    return true;
+  if (details.reason === "remove-press") return true;
 
   const inputType = details.inputType ?? "";
   return (

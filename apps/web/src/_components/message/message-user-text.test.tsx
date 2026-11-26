@@ -13,6 +13,8 @@ await mock.module("@/lib/assets/urls", () => ({
 }));
 
 const { MessageUserText } = await import("./message-user-text");
+const { ConfigStoreContext } = await import("@/components/provider/config-provider");
+const { createConfigStore } = await import("@/lib/store/config-store");
 
 afterAll(() => mock.restore());
 
@@ -80,6 +82,33 @@ describe("MessageUserText", () => {
     expect([...names].map((name) => name.textContent)).toEqual(["__init__.py", "*notes*.md"]);
     expect(container.querySelector("strong, em")).toBeNull();
     expect(container.textContent).toBe("See __init__.py and *notes*.md");
+  });
+
+  test("shows file names with brackets, parentheses and dollars whole, with the text after them", () => {
+    const { container } = renderText(
+      "Compare [@photo \\[1\\].jpg](file:attachment_cat), [@a).pdf](name:) and [@$2 \\[x\\] (y).pdf](name:) please",
+    );
+    const chips = container.querySelectorAll('[data-slot="message-token"]');
+
+    expect([...chips].map((chip) => chip.textContent)).toEqual(["photo [1].jpg", "a).pdf", "$2 [x] (y).pdf"]);
+    expect(container.textContent).toBe("Compare photo [1].jpg, a).pdf and $2 [x] (y).pdf please");
+  });
+
+  test("shows typed chip-like text inside code as typed", () => {
+    // Code blocks read the config store.
+    const store = createConfigStore({});
+    const { container } = render(
+      <ConfigStoreContext.Provider value={store}>
+        <MessageUserText
+          text={"Use `\\[@foo` here\n\n```\nNSArray *a = \\[@\\[@1, @2] mutableCopy];\n```"}
+          attachments={attachments}
+        />
+      </ConfigStoreContext.Provider>,
+    );
+
+    expect(container.querySelector("code")?.textContent).toBe("[@foo");
+    expect(container.textContent).toContain("NSArray *a = [@[@1, @2] mutableCopy];");
+    expect(container.textContent).not.toContain("&#91;");
   });
 
   test("shows text the composer escaped as typed, not as a chip", () => {

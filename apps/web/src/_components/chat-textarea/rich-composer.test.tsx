@@ -283,6 +283,26 @@ describe("RichComposer added files", () => {
     expect(editor().textContent).not.toContain("2 kB");
   });
 
+  test("removing a chip keeps the caret in place and doesn't join the words around it", async () => {
+    const { state } = renderComposer({
+      input: "See[@a.pdf](upload:u1) now and [@a.pdf](upload:u1)",
+      uploads: [photo],
+    });
+    const controller = getComposerController("composer");
+    if (!controller) throw new Error("Expected the composer to register its controller");
+
+    editor().focus();
+    // Inserting nothing moves the caret; it goes after "See", the chip and " now" (offset 8).
+    act(() => {
+      controller.insert("", { at: { start: 8, end: 8 } });
+    });
+    expect(controller.editor.selection()).toEqual({ start: 8, end: 8 });
+
+    act(() => removeComposerChips("composer", "upload", ["u1"]));
+    await waitFor(() => expect(state.input).toBe("See now and"));
+    expect(controller.editor.selection()).toEqual({ start: 7, end: 7 });
+  });
+
   test("adds chips at the end and removes only the chips asked for", async () => {
     const { state } = renderComposer({ input: "Compare [@report.pdf](file:attachment_report)" });
     const second = pdfUpload("u2", "notes.pdf", 10);
@@ -432,6 +452,70 @@ describe("chat store tray", () => {
     await waitFor(() => expect(useChatStore.getState().input).toContain("upload:u12"));
     await act(async () => {});
     expect(useChatStore.getState().attachments).toHaveLength(0);
+  });
+
+  test("a chip cut, pasted, and pasted again after undoing the paste keeps its file", async () => {
+    useChatStore.setState({ input: "", attachments: [] });
+    render(<MainComposer />);
+    act(() => chatStoreActions.addAttachments([pdfUpload("u13", "k.pdf", 10)]));
+    await waitFor(() => expect(fileChips()).toHaveLength(1));
+    const controller = getComposerController(MAIN_COMPOSER_ID);
+    if (!controller) throw new Error("Expected the composer to register its controller");
+    const chip = { type: "upload", value: "u13", label: "k.pdf" };
+
+    // Each step is its own event, so the work a change queues runs before the next one.
+    const step = async (change: () => void) => {
+      await act(async () => {
+        change();
+      });
+    };
+    await step(() => controller.setValue([" "], { reason: "cut" }));
+    await step(() => controller.setValue([chip, " "], { reason: "paste" }));
+    await step(() => controller.undo());
+    await step(() => controller.setValue([chip, " "], { reason: "paste" }));
+
+    await waitFor(() => expect(fileChips()).toHaveLength(1));
+    await act(async () => {});
+    expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(["u13"]);
+  });
+
+  test("redoing typing over a chip keeps its file, while redoing its removal takes the file out", async () => {
+    useChatStore.setState({ input: "", attachments: [] });
+    render(<MainComposer />);
+    act(() => chatStoreActions.addAttachments([pdfUpload("u14", "m.pdf", 10)]));
+    await waitFor(() => expect(fileChips()).toHaveLength(1));
+    const controller = getComposerController(MAIN_COMPOSER_ID);
+    if (!controller) throw new Error("Expected the composer to register its controller");
+
+    // Each step is its own event, so the work a change queues runs before the next one.
+    await act(async () => {
+      controller.setValue(["typed over"], { reason: "input-change" });
+    });
+    await act(async () => {
+      controller.undo();
+    });
+    await act(async () => {
+      controller.redo();
+    });
+    expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(["u14"]);
+
+    act(() => {
+      controller.undo();
+    });
+    await waitFor(() => expect(fileChips()).toHaveLength(1));
+    const remove = fileChips()[0]?.querySelector('[data-slot="token-input-token-remove"]');
+    if (!remove) throw new Error("Expected a remove button on the chip");
+    await userEvent.setup().click(remove);
+    await waitFor(() => expect(useChatStore.getState().attachments).toHaveLength(0));
+
+    act(() => {
+      controller.undo();
+    });
+    await waitFor(() => expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(["u14"]));
+    act(() => {
+      controller.redo();
+    });
+    await waitFor(() => expect(useChatStore.getState().attachments).toHaveLength(0));
   });
 
   test("switching to a model that can't read a file takes out its chip, and undo doesn't bring the file back", async () => {
@@ -643,13 +727,14 @@ describe("isChipDeletion", () => {
     expect(isChipDeletion(change("input-change", "deleteWordBackward"))).toBe(true);
   });
 
-  test("leaves out cutting, dragging, typing over and changes that remove no chip", () => {
+  test("leaves out cutting, dragging, typing over, undo, redo and changes that remove no chip", () => {
     expect(isChipDeletion(change("cut"))).toBe(false);
     expect(isChipDeletion(change("input-change", "deleteByCut"))).toBe(false);
     expect(isChipDeletion(change("input-change", "deleteByDrag"))).toBe(false);
     expect(isChipDeletion(change("input-change", "insertText"))).toBe(false);
     expect(isChipDeletion(change("remove-press", undefined, []))).toBe(false);
-    expect(isChipDeletion(change("undo", undefined, []))).toBe(false);
+    expect(isChipDeletion(change("undo"))).toBe(false);
+    expect(isChipDeletion(change("redo"))).toBe(false);
   });
 });
 

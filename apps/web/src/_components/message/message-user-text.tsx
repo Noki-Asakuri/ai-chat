@@ -39,28 +39,54 @@ const imageChipClassName = cn(
   "cursor-zoom-in hover:bg-accent hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring",
 );
 
-function escapeLinkText(text: string): string {
-  return text.replaceAll(/[\\[\]*_`~<>]/g, "\\$&");
+// A chip's link text, with every character but letters, digits and spaces as an HTML entity. Backslash
+// escapes would do for markdown, but the LaTeX fix reads `\[` and `\(` as math. The chip itself
+// shows the label from the link's address, so this only has to keep the link whole.
+function toLinkText(label: string): string {
+  return label.replaceAll(/[^\p{L}\p{N} ]/gu, (char) => `&#${char.codePointAt(0)};`);
 }
 
-// The codec escapes typed chip-like text as `\[@`, after its own backslashes doubled. Markdown reads
-// that escape the same way, but the LaTeX fix reads `\[` as display math, so the bracket goes in as an
-// entity. Only the run's start is checked behind, so long backslash runs stay fast.
+// Code spans and fenced code, where markdown shows text as is, without escapes or entities. A fence
+// left open runs to the end, as in markdown.
+const MARKDOWN_CODE = /(```[\s\S]*?(?:```|$)|`[^`\n]*`)/;
+// The codec escapes typed chip-like text as `\[@`, after its own backslashes doubled. Only a run's
+// start is checked behind, so long backslash runs stay fast.
 const ESCAPED_CHIP_OPENER = /(?<!\\)((?:\\\\)*)\\\[@/g;
+const BACKSLASHES_BEFORE_CHIP_OPENER = /(?<!\\)\\+(?=\[@)/g;
+
+/**
+ * Saved text, outside chips, as markdown. Outside code, markdown reads the codec's escape the same
+ * way, but the LaTeX fix reads `\[` as display math, so the bracket goes in as an entity. Inside code
+ * nothing is unescaped, so the codec's escape is undone there.
+ */
+function toMarkdownText(text: string): string {
+  return text
+    .split(MARKDOWN_CODE)
+    .map((chunk, index) =>
+      index % 2 === 1
+        ? chunk.replaceAll(BACKSLASHES_BEFORE_CHIP_OPENER, (run) => "\\".repeat(Math.floor(run.length / 2)))
+        : chunk.replaceAll(ESCAPED_CHIP_OPENER, "$1&#91;@"),
+    )
+    .join("");
+}
 
 // Tokens become hash links so the markdown parser keeps them inline; the `a` renderer swaps them for chips.
 function toMarkdownWithTokenLinks(text: string): string {
   return splitMessageTokens(text)
     .map((segment) => {
-      if (segment.kind === "text") return segment.text.replaceAll(ESCAPED_CHIP_OPENER, "$1&#91;@");
+      if (segment.kind === "text") return toMarkdownText(segment.text);
 
-      return `[${escapeLinkText(segment.label)}](${toTokenHref(segment.type, segment.value, segment.label)})`;
+      return `[${toLinkText(segment.label)}](${toTokenHref(segment.type, segment.value, segment.label)})`;
     })
     .join("");
 }
 
+// Parentheses are encoded too, since a `)` would end the link's address.
 function toTokenHref(type: string, value: string, label: string): string {
-  return `${TOKEN_HREF_PREFIX}${[type, value, label].map(encodeURIComponent).join("/")}`;
+  const parts = [type, value, label].map((part) =>
+    encodeURIComponent(part).replaceAll("(", "%28").replaceAll(")", "%29"),
+  );
+  return `${TOKEN_HREF_PREFIX}${parts.join("/")}`;
 }
 
 function parseTokenHref(href: string | undefined) {
