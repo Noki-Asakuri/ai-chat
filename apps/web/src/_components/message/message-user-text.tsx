@@ -116,6 +116,8 @@ const toTexText = (label: string): string =>
   `\\text{${label.replaceAll(/[\\{}$&#%_^~]/g, (char) => TEX_TEXT_ESCAPES.get(char) ?? char)}}`;
 
 // What GFM leaves out of the end of a bare URL, and the closing paren it leaves out when unmatched.
+// GFM also leaves a trailing entity reference, like `&amp;`, out of a bare URL.
+const TRAILING_ENTITY = /&[a-z\d]+;$/i;
 const URL_TRAIL = /[.,:;!?"'*_~\]]$/;
 
 /**
@@ -135,6 +137,11 @@ function splitAutolink(link: Link): Array<Link | MdastText> {
 
   const head = () => text.value.slice(0, end);
   while (end > 0) {
+    const entity = TRAILING_ENTITY.exec(head());
+    if (entity) {
+      end -= entity[0].length;
+      continue;
+    }
     const unmatchedParen = head().endsWith(")") && head().split(")").length > head().split("(").length;
     if (!URL_TRAIL.test(head()) && !unmatchedParen) break;
     end -= 1;
@@ -207,9 +214,9 @@ function isMath(element: Element): boolean {
 
 /**
  * The HTML tree's part, after sanitizing: each placeholder left becomes its chip. Inside a link,
- * which a chip can't sit in, and other code, a chip is its name; inside math, which KaTeX typesets
- * next, its name is TeX text. In a message saved before chips, its files' names outside links and
- * code become their chips too, typed HTML's text included.
+ * which a chip can't sit in, and inside code or `pre`, a chip is its name; inside math, which KaTeX
+ * typesets next, its name is TeX text. In a message saved before chips, its files' names outside
+ * links and code become their chips too, typed HTML's text included.
  */
 function createChipPlugin(
   chips: ReadonlyArray<MessageChip>,
@@ -217,7 +224,10 @@ function createChipPlugin(
 ): RehypePlugin {
   return () => (tree: HastRoot) => {
     visit(tree, (node, index, parent) => {
-      if (node.type === "element" && (node.tagName === "a" || node.tagName === "code")) {
+      if (
+        node.type === "element" &&
+        (node.tagName === "a" || node.tagName === "code" || node.tagName === "pre")
+      ) {
         const write = node.tagName === "code" && isMath(node) ? toTexText : undefined;
         visit(node, "text", (text) => {
           text.value = withChipNames(text.value, chips, write);

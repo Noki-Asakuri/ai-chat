@@ -323,6 +323,15 @@ describe("MessageUserText with code and typed chip-like text", () => {
     }
   });
 
+  test("a bare URL cut at a chip leaves out a trailing entity, as markdown does", () => {
+    const { container } = renderTyped([
+      "see https://x.com/a&amp;",
+      { type: "name", value: "", label: "a.pdf" },
+    ]);
+
+    expect(container.querySelector('[data-streamdown="link"]')?.textContent).toBe("https://x.com/a");
+  });
+
   test("a bare URL cut at a chip leaves out a closing bracket, as markdown does", () => {
     const { container } = renderTyped(["see https://x.com/a]", { type: "name", value: "", label: "a.pdf" }]);
 
@@ -376,6 +385,10 @@ describe("MessageUserText for messages sent before file chips", () => {
     const { container } = render(<MessageUserText text={text} attachments={legacy} />);
     return [...container.querySelectorAll('[data-slot="message-token"]')].map((chip) => chip.textContent);
   }
+
+  test("leaves names inside typed pre HTML as text", () => {
+    expect(chipsIn("Look:\n\n<pre>q3 report.pdf</pre>")).toEqual([]);
+  });
 
   test("turns names inside a typed HTML block into chips too", () => {
     expect(chipsIn("Look:\n\n<p>see q3 report.pdf</p>")).toEqual(["q3 report.pdf"]);
