@@ -19,6 +19,13 @@ describe("fixLatexMath", function () {
     expect(fixLatexMath("Mention \\[@user\\] and \\(a\\)", options)).toBe("Mention \\[@user\\] and $ a $");
   });
 
+  test("display math with inline code in it still closes in composer text", function () {
+    const input = "See \\[ a `c` b \\] done";
+
+    expect(fixLatexMath(input, { composerText: true })).toBe(fixLatexMath(input));
+    expect(fixLatexMath(input, { composerText: true })).toBe("See $$\n a `c` b \n$$ done");
+  });
+
   test("converts display delimiters in other text as before", function () {
     expect(fixLatexMath("Mention \\[@user\\] here.")).toBe("Mention $$\n@user\n$$ here.");
   });

@@ -140,19 +140,15 @@ export function getComposerController(id: string): TokenInputController | undefi
 const PROTECTED_MARKDOWN = /(```[\s\S]*?```|`[^`\n]*`|\[[^\]\n]*\]\([^)\n]*\))/;
 
 /**
- * A saved message's text, ready for the edit box. Names saved in place of a chip go back to plain
- * text. A message saved before file chips gets a chip wherever it names one of its own files.
+ * A saved message's text, ready for the edit box. Its chips, name chips too, stay as they are, so
+ * saving it unchanged saves the same text. A message saved before file chips gets a chip wherever it
+ * names one of its own files.
  */
 export function linkAttachmentNames(
   text: string,
   attachments: ReadonlyArray<{ _id: string; name: string }>,
 ): string {
-  if (splitMessageTokens(text).some((segment) => segment.kind === "token")) {
-    const value = fromText(text).map((segment) =>
-      isToken(segment) && segment.type === NAME_TOKEN_TYPE ? segment.label : segment,
-    );
-    return toText(joinAdjacentText(value));
-  }
+  if (splitMessageTokens(text).some((segment) => segment.kind === "token")) return text;
 
   const value: Array<string | Token> = [];
 
@@ -198,8 +194,21 @@ export function insertUploadChips(composerId: string, attachments: ReadonlyArray
   for (const attachment of attachments) {
     value.push({ type: UPLOAD_TOKEN_TYPE, value: attachment.id, label: attachment.file.name }, " ");
   }
+  // And a space from the text after it, unless that already starts with one.
+  if (selection && /^\s/.test(textAt(controller.getValue(), selection.end))) value.pop();
 
   controller.insert(value, { at: selection ? { start: selection.end, end: selection.end } : "end" });
+}
+
+/** The text from `offset` on, up to the next chip. A chip counts as one, as in the token input. */
+function textAt(value: ReadonlyArray<string | Token>, offset: number): string {
+  let start = 0;
+  for (const segment of value) {
+    const length = isToken(segment) ? 1 : segment.length;
+    if (offset < start + length) return isToken(segment) ? "" : segment.slice(offset - start);
+    start += length;
+  }
+  return "";
 }
 
 function toLabelText(segment: string | Token | undefined): string | undefined {
@@ -340,22 +349,21 @@ export function linkSentFileChips(
   return toText(value);
 }
 
-function toNameToken(label: string): Token {
-  return { type: NAME_TOKEN_TYPE, value: "", label };
+/**
+ * A draft restored without its tray: the chips of files that were added to it become name chips,
+ * since those files are gone.
+ */
+export function withoutUploadChips(text: string): string {
+  const value = fromText(text);
+  if (!value.some((segment) => isToken(segment) && segment.type === UPLOAD_TOKEN_TYPE)) return text;
+
+  return toText(
+    value.map((segment) =>
+      isToken(segment) && segment.type === UPLOAD_TOKEN_TYPE ? toNameToken(segment.label) : segment,
+    ),
+  );
 }
 
-/**
- * Joins neighbouring text, so a name that replaced a chip is escaped together with the text around
- * it. Escaped apart, a backslash before the name could turn chip-like text inside it into a chip.
- */
-function joinAdjacentText(value: ReadonlyArray<string | Token>): Array<string | Token> {
-  const joined: Array<string | Token> = [];
-
-  for (const segment of value) {
-    const last = joined.at(-1);
-    if (!isToken(segment) && last !== undefined && !isToken(last)) joined[joined.length - 1] = last + segment;
-    else joined.push(segment);
-  }
-
-  return joined;
+function toNameToken(label: string): Token {
+  return { type: NAME_TOKEN_TYPE, value: "", label };
 }

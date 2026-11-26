@@ -1,10 +1,10 @@
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { describe, expect, test } from "bun:test";
 import { splitMessageTokens } from "@ai-chat/shared/chat/message-content";
-import { fromText, toText } from "@ui-sdk/react/token-input";
+import { toText } from "@ui-sdk/react/token-input";
 
 import { buildAttachmentUrl } from "../assets/urls";
-import { linkAttachmentNames } from "./composer-tokens";
+import { linkAttachmentNames, parseComposerInput } from "./composer-tokens";
 import { buildUserMessageParts, convertToUIChatMessages, describeAttachments } from "./shared";
 
 const photo = { name: "a.png", size: 2048, mimeType: "image/png", path: "u/t/a.png" };
@@ -142,7 +142,7 @@ describe("buildUserMessageParts", () => {
     ]);
   });
 
-  test("a sent message keeps a chip-like file name whole, and reopens for editing with it as text", () => {
+  test("a sent message keeps a chip-like file name whole, and editing and saving it keeps it so", () => {
     const text = toText(["See \\", { type: "upload", value: "u1", label: "[@draft](file:example).pdf" }]);
     const [part] = buildUserMessageParts(text, []).displayParts;
     if (!part || !("text" in part)) throw new Error("Expected a text part");
@@ -151,7 +151,18 @@ describe("buildUserMessageParts", () => {
       { kind: "token", type: "name", value: "", label: "[@draft](file:example).pdf" },
     ]);
     const editable = linkAttachmentNames(part.text, [{ _id: "x", name: "draft.pdf" }]);
-    expect(fromText(editable)).toEqual(["See \\[@draft](file:example).pdf"]);
+    expect(editable).toBe(part.text);
+
+    const resaved = buildUserMessageParts(parseComposerInput(editable).displayText, []).displayParts[0];
+    expect(resaved).toEqual(part);
+  });
+
+  test("editing and saving keeps an unsent file's name a name chip, not markdown", () => {
+    const saved = "Fix [@__init__.py](name:) please";
+    const editable = linkAttachmentNames(saved, [{ _id: "x", name: "__init__.py" }]);
+    const resaved = buildUserMessageParts(parseComposerInput(editable).displayText, []).displayParts;
+
+    expect(resaved).toEqual([{ type: "text", text: saved, state: "done" }]);
   });
 
   test("an escaped chip opener doesn't hide a real chip after it", () => {

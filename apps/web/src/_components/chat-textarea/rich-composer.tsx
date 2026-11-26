@@ -59,6 +59,7 @@ import {
   getCachedComposerAttachment,
   isChipDeletion,
   isToken,
+  NAME_TOKEN_TYPE,
   PROFILE_TOKEN_TYPE,
   registerComposerController,
   rememberComposerAttachments,
@@ -203,6 +204,11 @@ export function RichComposer({
       return <UploadChip label={token.label} upload={upload} />;
     }
 
+    // The name of a file a sent message didn't carry, back in the edit box: only its name.
+    if (token.type === NAME_TOKEN_TYPE) {
+      return <TokenInputToken>{token.label}</TokenInputToken>;
+    }
+
     return <TokenInputToken className={tokenChipClassName}>{token.label}</TokenInputToken>;
   }
 
@@ -265,6 +271,7 @@ export function RichComposer({
           if (token.type === PROFILE_TOKEN_TYPE) return "profile";
           if (token.type === FILE_TOKEN_TYPE) return "past file";
           if (token.type === UPLOAD_TOKEN_TYPE) return "attached file";
+          if (token.type === NAME_TOKEN_TYPE) return "file name";
           return token.type;
         }}
         renderToken={renderToken}

@@ -80,6 +80,7 @@ const {
   insertUploadChips,
   isChipDeletion,
   linkAttachmentNames,
+  withoutUploadChips,
   linkSentFileChips,
   MAIN_COMPOSER_ID,
   NAME_TOKEN_TYPE,
@@ -395,6 +396,20 @@ function MainComposer() {
 }
 
 describe("chat store tray", () => {
+  test("a file added right before a word is spaced from it", async () => {
+    useChatStore.setState({ input: "Helloworld", attachments: [] });
+    render(<MainComposer />);
+    const controller = getComposerController(MAIN_COMPOSER_ID);
+    if (!controller) throw new Error("Expected the composer to register its controller");
+
+    editor().focus();
+    controller.editor.selection = () => ({ start: 5, end: 5 });
+    controller.editor.textBefore = () => ({ text: "o", offset: 4 });
+    act(() => chatStoreActions.addAttachments([pdfUpload("u15", "g.pdf", 10)]));
+
+    await waitFor(() => expect(useChatStore.getState().input).toBe("Hello [@g.pdf](upload:u15) world"));
+  });
+
   test("a file added while text is selected goes after the selection and keeps the text", async () => {
     useChatStore.setState({ input: "Hello world", attachments: [] });
     render(<MainComposer />);
@@ -408,7 +423,7 @@ describe("chat store tray", () => {
     act(() => chatStoreActions.addAttachments([pdfUpload("u9", "f.pdf", 10)]));
 
     // Spaced from the word before it, so the model doesn't read "Hellof.pdf".
-    await waitFor(() => expect(useChatStore.getState().input).toBe("Hello [@f.pdf](upload:u9)  world"));
+    await waitFor(() => expect(useChatStore.getState().input).toBe("Hello [@f.pdf](upload:u9) world"));
   });
 
   test("adding a file puts its chip in the composer and removing it takes the chip out", async () => {
@@ -885,6 +900,27 @@ describe("parseComposerInput", () => {
     expect<string | null>(parsed.profileId).toBe("profile_coder");
     expect(parsed.profileLabel).toBe("Coder");
     expect<string[]>(parsed.attachmentIds).toEqual(["a1"]);
+  });
+});
+
+describe("withoutUploadChips", () => {
+  test("turns a restored draft's chips of added files into name chips, and leaves the rest", () => {
+    expect(withoutUploadChips("See [@a.pdf](upload:u1) and [@b.pdf](file:att1)")).toBe(
+      "See [@a.pdf](name:) and [@b.pdf](file:att1)",
+    );
+    expect(withoutUploadChips("Plain \\[@x](upload:y)")).toBe("Plain \\[@x](upload:y)");
+  });
+
+  test("a draft restored from storage keeps its added files' names but not their chips", async () => {
+    localStorage.setItem(
+      "local-chat-store",
+      JSON.stringify({ state: { input: "See [@a.pdf](upload:u1)" }, version: 0 }),
+    );
+    await useChatStore.persist.rehydrate();
+
+    expect(useChatStore.getState().input).toBe("See [@a.pdf](name:)");
+    localStorage.removeItem("local-chat-store");
+    useChatStore.setState({ input: "", attachments: [] });
   });
 });
 

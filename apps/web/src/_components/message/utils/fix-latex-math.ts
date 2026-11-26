@@ -13,12 +13,16 @@ type FixLatexOptions = {
   composerText?: boolean;
 };
 
+// Whether display math is open carries across code spans, which can sit inside it.
+type FixLatexContext = FixLatexOptions & { displayOpen: boolean };
+
 export function fixLatexMath(text: string, options: FixLatexOptions = {}): string {
   const segments = splitByCodeFences(text);
+  const context: FixLatexContext = { ...options, displayOpen: false };
   let result = "";
 
   for (const segment of segments) {
-    result += segment.transform ? fixLatexOutsideInlineCode(segment.text, options) : segment.text;
+    result += segment.transform ? fixLatexOutsideInlineCode(segment.text, context) : segment.text;
   }
 
   return result;
@@ -74,7 +78,7 @@ function splitByCodeFences(text: string): Array<Segment> {
   return segments;
 }
 
-function fixLatexOutsideInlineCode(text: string, options: FixLatexOptions): string {
+function fixLatexOutsideInlineCode(text: string, context: FixLatexContext): string {
   let result = "";
   let index = 0;
 
@@ -82,11 +86,11 @@ function fixLatexOutsideInlineCode(text: string, options: FixLatexOptions): stri
     const backtickIndex = text.indexOf("`", index);
 
     if (backtickIndex === -1) {
-      result += fixLatexInProse(text.slice(index), options);
+      result += fixLatexInProse(text.slice(index), context);
       break;
     }
 
-    result += fixLatexInProse(text.slice(index, backtickIndex), options);
+    result += fixLatexInProse(text.slice(index, backtickIndex), context);
 
     const delimiterLength = getBacktickRunLength(text, backtickIndex);
     const closingIndex = findClosingBacktickRun(text, backtickIndex + delimiterLength, delimiterLength);
@@ -103,9 +107,9 @@ function fixLatexOutsideInlineCode(text: string, options: FixLatexOptions): stri
   return result;
 }
 
-function fixLatexInProse(text: string, options: FixLatexOptions): string {
+function fixLatexInProse(text: string, context: FixLatexContext): string {
   const fixedDelimiters = (
-    options.composerText ? replaceComposerDelimiters(text) : replaceDelimiters(text)
+    context.composerText ? replaceComposerDelimiters(text, context) : replaceDelimiters(text)
   ).replace(/\$\$[\w].*(\n)[\W\w].*\$\$/g, function collapseDisplayMathLines(match) {
     return match.replace(/\n/g, " ");
   });
@@ -125,19 +129,17 @@ function replaceDelimiters(text: string): string {
 
 // As `replaceDelimiters`, but `\[@` stays as the composer wrote it, and `\]` closes display math only
 // after a `\[` that was converted, so a stray one can't open math that runs to the end.
-function replaceComposerDelimiters(text: string): string {
-  let displayOpen = false;
-
+function replaceComposerDelimiters(text: string, context: FixLatexContext): string {
   return text.replace(/(?<!\\)\\([()[\]])/g, (delimiter: string, char: string, index: number) => {
     if (char === "(") return "$ ";
     if (char === ")") return " $";
     if (char === "[") {
       if (text[index + 2] === "@") return delimiter;
-      displayOpen = true;
+      context.displayOpen = true;
       return "$$\n";
     }
-    if (!displayOpen) return delimiter;
-    displayOpen = false;
+    if (!context.displayOpen) return delimiter;
+    context.displayOpen = false;
     return "\n$$";
   });
 }

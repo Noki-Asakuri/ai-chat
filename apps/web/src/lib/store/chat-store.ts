@@ -3,6 +3,7 @@ import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import type { Token } from "@ui-sdk/react/token-input";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { z } from "zod/v4";
 
 import {
   EDIT_COMPOSER_ID,
@@ -12,6 +13,7 @@ import {
   MAIN_COMPOSER_ID,
   removeComposerChips,
   UPLOAD_TOKEN_TYPE,
+  withoutUploadChips,
 } from "../chat/composer-tokens";
 import { tryGetModelData } from "../chat/models";
 import type { ReasoningEffort, RemoveAllExceptFunctions, UserAttachment } from "../types";
@@ -246,9 +248,16 @@ export const useChatStore = create<ChatStore>()(
       storage: createJSONStorage(() => localStorage),
 
       partialize: (state) => ({ input: state.input }),
+      // The tray isn't saved, so a restored draft's chips of added files can only be their names.
+      merge: (persisted, current) => {
+        const draft = persistedDraftSchema.safeParse(persisted);
+        return draft.success ? { ...current, input: withoutUploadChips(draft.data.input) } : current;
+      },
     },
   ),
 );
+
+const persistedDraftSchema = z.object({ input: z.string() });
 
 // Files the user removed, by local id, and own files they took out of an edit. Undo or redo can
 // bring their chips back, and then the files come back too. They're forgotten on send and on a model
