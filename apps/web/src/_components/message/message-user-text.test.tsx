@@ -112,12 +112,11 @@ describe("MessageUserText", () => {
     expect(container.textContent).not.toContain("&#91;");
   });
 
-  test("shows text the composer escaped as typed, not as a chip", () => {
-    const { container } = renderText("Explain \\[@home](file:example)");
+  test("typed chip-like text reads as the markdown it is, never as a chip", () => {
+    const { container } = renderText("Explain \\[@home](file:example) here");
 
     expect(container.querySelector('[data-slot="message-token"]')).toBeNull();
-    expect(container.textContent).toBe("Explain [@home](file:example)");
-    expect(renderText("Path a\\\\\\[@b").container.textContent).toContain("Path a\\[@b");
+    expect(container.textContent).toContain("Explain @home");
   });
 
   test("leaves messages without tokens unchanged", () => {
@@ -143,31 +142,30 @@ describe("MessageUserText with code and typed chip-like text", () => {
     );
   }
 
-  test("an unclosed fence before typed chip-like text doesn't turn it into a link or math", () => {
+  test("an unclosed fence before typed chip-like text makes no chip or math", () => {
     const { container } = renderTyped(["Use ``` to open, and type [@note](a:b) here"]);
 
-    expect(container.querySelector('[data-streamdown="link"], a')).toBeNull();
-    expect(container.textContent).toContain("type [@note](a:b) here");
+    expect(container.querySelector('[data-slot="message-token"], .katex')).toBeNull();
+    expect(container.textContent).toContain("type @note");
   });
 
-  test("typed chip-like text after a code block with a chip stays text", () => {
+  test("typed chip-like text after a code block with a chip makes no chip", () => {
     const { container } = renderTyped([
       "```\n",
       { type: "file", value: "attachment_cat", label: "cat.webp" },
       "\n```\nsee [@foo](https://example.com)",
     ]);
 
-    // Only the bare URL is a link, as markdown makes any; `[@foo]` stays text.
-    const links = [...container.querySelectorAll('[data-streamdown="link"]')];
-    expect(links.map((link) => link.textContent)).toEqual(["https://example.com"]);
-    expect(container.textContent).toContain("see [@foo](https://example.com)");
+    expect(codeTexts(container).join("")).toContain("cat.webp");
+    expect(container.querySelector('[data-slot="message-token"]')).toBeNull();
+    expect(container.textContent).toContain("see @foo");
   });
 
   test("typed chip-like text after a code line with backticks in it isn't math", () => {
     const { container } = renderTyped(["```\nfoo ``` bar\n```\n[@a](b:c)"]);
 
     expect(container.querySelector(".katex")).toBeNull();
-    expect(container.textContent).toContain("[@a](b:c)");
+    expect(container.textContent).toContain("@a");
   });
 
   test("every kind of code shows typed chip-like text as typed", () => {
@@ -212,13 +210,6 @@ describe("MessageUserText with code and typed chip-like text", () => {
     expect(codeTexts(container)).toEqual(["[x](#message-token/a/%E0%A4/b)"]);
   });
 
-  test("a typed backslash before a closing bracket doesn't turn the rest of the message into math", () => {
-    const { container } = renderTyped(["Mention [@user\\] here.\n\nNext paragraph **bold**."]);
-
-    expect(container.querySelector(".katex")).toBeNull();
-    expect(container.querySelector('[data-streamdown="strong"]')?.textContent).toBe("bold");
-  });
-
   test("a chip right after a URL stays a chip", () => {
     const { container } = renderTyped([
       "See http://x.com/",
@@ -247,6 +238,27 @@ describe("MessageUserText with code and typed chip-like text", () => {
     const { container } = renderTyped(["Run `cat", { type: "name", value: "", label: "a.pdf" }, "` now"]);
 
     expect(codeTexts(container)).toEqual(["cata.pdf"]);
+  });
+
+  test("a chip inside bold or math keeps the markdown around it", () => {
+    const chip = { type: "name", value: "", label: "a.pdf" };
+    const { container } = renderTyped(["See **", chip, "** and $x + ", chip, "$ ok"]);
+
+    expect(
+      container.querySelector('[data-streamdown="strong"] [data-slot="message-token"]')?.textContent,
+    ).toBe("a.pdf");
+    expect(container.querySelector(".katex")?.textContent).toContain("a.pdf");
+  });
+
+  test("typed HTML can't make a chip, and a URL before a chip ends where the chip starts", () => {
+    const { container } = renderTyped([
+      '<span data-message-chip="0">x</span> http://x.com/',
+      { type: "name", value: "", label: "a.pdf" },
+    ]);
+
+    expect(container.querySelectorAll('[data-slot="message-token"]')).toHaveLength(1);
+    const link = container.querySelector('[data-streamdown="link"]');
+    expect(link?.textContent).toBe("http://x.com/");
   });
 
   test("a chip inside a code span shows as its name", () => {

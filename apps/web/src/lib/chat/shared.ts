@@ -139,7 +139,7 @@ export function buildUserMessageParts(
   );
   // Text that is only chips of files sent with the message adds nothing to the files themselves.
   const onlySentFiles = splitMessageTokens(text).every((segment) =>
-    segment.kind === "token" ? segment.type === FILE_TOKEN_TYPE : segment.plain.trim() === "",
+    segment.kind === "token" ? segment.type === FILE_TOKEN_TYPE : segment.text.trim() === "",
   );
   const savedText = onlySentFiles ? "" : text;
   const plainText = onlySentFiles ? "" : parseComposerInput(text).text;

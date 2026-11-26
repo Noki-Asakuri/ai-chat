@@ -5,26 +5,12 @@ type Segment = {
   transform: boolean;
 };
 
-type FixLatexOptions = {
-  /**
-   * The text is from the chat composer, which escapes typed text that looks like a file chip as
-   * `\[@`. That isn't math, and neither is a `\]` that no converted `\[` opened.
-   */
-  composerText?: boolean;
-};
-
-// Whether display math is open carries across inline code spans, which can sit inside it.
-type FixLatexContext = FixLatexOptions & { displayOpen: boolean };
-
-export function fixLatexMath(text: string, options: FixLatexOptions = {}): string {
+export function fixLatexMath(text: string): string {
   const segments = splitByCodeFences(text);
-  const context: FixLatexContext = { ...options, displayOpen: false };
   let result = "";
 
   for (const segment of segments) {
-    // Display math doesn't run across a fenced code block.
-    if (!segment.transform) context.displayOpen = false;
-    result += segment.transform ? fixLatexOutsideInlineCode(segment.text, context) : segment.text;
+    result += segment.transform ? fixLatexOutsideInlineCode(segment.text) : segment.text;
   }
 
   return result;
@@ -80,7 +66,7 @@ function splitByCodeFences(text: string): Array<Segment> {
   return segments;
 }
 
-function fixLatexOutsideInlineCode(text: string, context: FixLatexContext): string {
+function fixLatexOutsideInlineCode(text: string): string {
   let result = "";
   let index = 0;
 
@@ -88,14 +74,18 @@ function fixLatexOutsideInlineCode(text: string, context: FixLatexContext): stri
     const backtickIndex = text.indexOf("`", index);
 
     if (backtickIndex === -1) {
-      result += fixLatexInProse(text.slice(index), context);
+      result += fixLatexInProse(text.slice(index));
       break;
     }
 
-    result += fixLatexInProse(text.slice(index, backtickIndex), context);
+    result += fixLatexInProse(text.slice(index, backtickIndex));
 
     const delimiterLength = getBacktickRunLength(text, backtickIndex);
-    const closingIndex = findClosingBacktickRun(text, backtickIndex + delimiterLength, delimiterLength);
+    const closingIndex = findClosingBacktickRun(
+      text,
+      backtickIndex + delimiterLength,
+      delimiterLength,
+    );
 
     if (closingIndex === -1) {
       result += text.slice(backtickIndex);
@@ -109,41 +99,19 @@ function fixLatexOutsideInlineCode(text: string, context: FixLatexContext): stri
   return result;
 }
 
-function fixLatexInProse(text: string, context: FixLatexContext): string {
-  const fixedDelimiters = (
-    context.composerText ? replaceComposerDelimiters(text, context) : replaceDelimiters(text)
-  ).replace(/\$\$[\w].*(\n)[\W\w].*\$\$/g, function collapseDisplayMathLines(match) {
-    return match.replace(/\n/g, " ");
-  });
-
-  return escapeCurrencyDollarSigns(fixedDelimiters);
-}
-
-function replaceDelimiters(text: string): string {
-  return text
+function fixLatexInProse(text: string): string {
+  const fixedDelimiters = text
     .replace(/(?<!\\)\\(\(|\[)/g, function replaceOpeningDelimiter(_, delimiter: string) {
       return delimiter === "(" ? "$ " : "$$\n";
     })
     .replace(/(?<!\\)\\(\)|\])/g, function replaceClosingDelimiter(_, delimiter: string) {
       return delimiter === ")" ? " $" : "\n$$";
+    })
+    .replace(/\$\$[\w].*(\n)[\W\w].*\$\$/g, function collapseDisplayMathLines(match) {
+      return match.replace(/\n/g, " ");
     });
-}
 
-// As `replaceDelimiters`, but `\[@` stays as the composer wrote it, and `\]` closes display math only
-// after a `\[` that was converted, so a stray one can't open math that runs to the end.
-function replaceComposerDelimiters(text: string, context: FixLatexContext): string {
-  return text.replace(/(?<!\\)\\([()[\]])/g, (delimiter: string, char: string, index: number) => {
-    if (char === "(") return "$ ";
-    if (char === ")") return " $";
-    if (char === "[") {
-      if (text[index + 2] === "@") return delimiter;
-      context.displayOpen = true;
-      return "$$\n";
-    }
-    if (!context.displayOpen) return delimiter;
-    context.displayOpen = false;
-    return "\n$$";
-  });
+  return escapeCurrencyDollarSigns(fixedDelimiters);
 }
 
 function escapeCurrencyDollarSigns(text: string): string {

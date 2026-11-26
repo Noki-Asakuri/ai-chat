@@ -21,6 +21,8 @@ import { cn } from "@/lib/utils";
 type MarkdownProps = React.ComponentProps<typeof Streamdown> & {
   role: ChatMessage["role"];
   children: string;
+  /** Remark plugins to run after the defaults. */
+  extraRemarkPlugins?: NonNullable<StreamdownProps["remarkPlugins"]>;
 };
 
 const mermaid = createMermaidPlugin();
@@ -32,6 +34,7 @@ const MERMAID_FENCE = /(`{3,}|~{3,})\s*mermaid\b/i;
 export const StreamDownWrapper = memo(function StreamDownWrapper({
   children,
   className,
+  extraRemarkPlugins,
   ...props
 }: MarkdownProps) {
   const resolvedTheme = useResolvedTheme();
@@ -40,10 +43,10 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
     const normalizedFenceLanguages = normalizeCodeFenceLanguages(fixedFenceLanguages, {
       passthroughLanguages: passthroughCodeFenceLanguages,
     });
-    const fixedMath = fixLatexMath(normalizedFenceLanguages, { composerText: props.role === "user" });
+    const fixedMath = fixLatexMath(normalizedFenceLanguages);
 
     return fixedMath;
-  }, [children, props.role]);
+  }, [children]);
 
   const streamdownProps: StreamdownProps = {
     plugins: {
@@ -67,7 +70,7 @@ export const StreamDownWrapper = memo(function StreamDownWrapper({
         "[&_[data-streamdown=link]]:cursor-pointer [&_[data-streamdown=link]]:no-underline [&_[data-streamdown=link]]:underline-offset-2 [&_[data-streamdown=link]:hover]:underline",
       className,
     ),
-    remarkPlugins: [...Object.values(defaultRemarkPlugins), remarkBreaks],
+    remarkPlugins: [...Object.values(defaultRemarkPlugins), remarkBreaks, ...(extraRemarkPlugins ?? [])],
     ...props,
   };
 

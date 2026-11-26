@@ -105,9 +105,9 @@ describe("the saved message format", function () {
 
     expect(toText(value)).toBe(saved);
     expect(splitMessageTokens(saved)).toEqual([
-      { kind: "text", text: "Typed \\[@x](file:y) and \\\\", plain: "Typed [@x](file:y) and \\" },
+      { kind: "text", text: "Typed [@x](file:y) and \\" },
       { kind: "token", type: "file", value: "a(1)", label: "q3 [final].pdf" },
-      { kind: "text", text: " then ", plain: " then " },
+      { kind: "text", text: " then " },
       { kind: "token", type: "name", value: "", label: "notes.md" },
     ]);
   });

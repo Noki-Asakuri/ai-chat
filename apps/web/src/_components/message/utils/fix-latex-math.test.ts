@@ -10,32 +10,6 @@ describe("fixLatexMath", function () {
     expect(fixLatexMath(input)).toBe("Inline $ a+b $ and block $$\nx^2 + y^2\n$$");
   });
 
-  test("leaves the chat composer's escape and stray closers alone in composer text", function () {
-    const options = { composerText: true };
-
-    expect(fixLatexMath("Explain \\[@home](file:example) and \\[x\\]", options)).toBe(
-      "Explain \\[@home](file:example) and $$\nx\n$$",
-    );
-    expect(fixLatexMath("Mention \\[@user\\] and \\(a\\)", options)).toBe("Mention \\[@user\\] and $ a $");
-  });
-
-  test("display math with inline code in it still closes in composer text", function () {
-    const input = "See \\[ a `c` b \\] done";
-
-    expect(fixLatexMath(input, { composerText: true })).toBe(fixLatexMath(input));
-    expect(fixLatexMath(input, { composerText: true })).toBe("See $$\n a `c` b \n$$ done");
-  });
-
-  test("display math in composer text doesn't pair across a fenced code block", function () {
-    const output = fixLatexMath("Cost \\[ x\n```\ncode\n```\nthen y \\] end", { composerText: true });
-
-    expect(output).toContain("```\ncode\n```\nthen y \\] end");
-  });
-
-  test("converts display delimiters in other text as before", function () {
-    expect(fixLatexMath("Mention \\[@user\\] here.")).toBe("Mention $$\n@user\n$$ here.");
-  });
-
   test("preserves fenced code blocks", function () {
     const input = [
       "Before \\(x\\)",
@@ -65,9 +39,13 @@ describe("fixLatexMath", function () {
   });
 
   test("handles mixed prose, inline code, and fenced code", function () {
-    const input = ["Prose \\(a\\) and `\\(b\\)`.", "```plaintext", "\\(c\\)", "```", "Tail \\[d\\]"].join(
-      "\n",
-    );
+    const input = [
+      "Prose \\(a\\) and `\\(b\\)`.",
+      "```plaintext",
+      "\\(c\\)",
+      "```",
+      "Tail \\[d\\]",
+    ].join("\n");
 
     const expected = [
       "Prose $ a $ and `\\(b\\)`.",

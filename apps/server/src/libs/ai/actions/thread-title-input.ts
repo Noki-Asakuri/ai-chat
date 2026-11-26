@@ -23,8 +23,8 @@ export function getThreadTitleInput(parts: readonly StoredMessagePart[]): Thread
     let plain = "";
     for (const segment of splitMessageTokens(part.text)) {
       if (segment.kind === "text") {
-        plain += segment.plain;
-        if (segment.plain.trim()) hasTypedText = true;
+        plain += segment.text;
+        if (segment.text.trim()) hasTypedText = true;
         continue;
       }
 

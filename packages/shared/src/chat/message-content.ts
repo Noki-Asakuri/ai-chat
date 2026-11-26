@@ -1,4 +1,4 @@
-import { defaultCodec, fromText, type Token } from "@ui-sdk/core/token-input";
+import { fromText, type Token } from "@ui-sdk/core/token-input";
 
 type MessageContentPart = {
   type: string;
@@ -22,10 +22,8 @@ export function hasMessageContent(parts: readonly MessageContentPart[], attachme
 export type MessageTextSegment =
   | {
       kind: "text";
-      /** The text as saved, with the codec's escapes. Markdown reads those escapes the same way. */
+      /** The text as typed, the codec's escapes undone. */
       text: string;
-      /** The text as typed. */
-      plain: string;
     }
   | { kind: "token"; type: string; value: string; label: string };
 
@@ -34,17 +32,11 @@ export type MessageTextSegment =
  * the codec escaped, such as a typed literal or a file name, stays text.
  */
 export function splitMessageTokens(text: string): MessageTextSegment[] {
-  const value = fromText(text);
-
-  return value.flatMap((segment, index): MessageTextSegment[] => {
+  return fromText(text).flatMap((segment): MessageTextSegment[] => {
     if (isToken(segment)) {
       return [{ kind: "token", type: segment.type, value: segment.value, label: segment.label }];
     }
-    if (segment === "") return [];
-
-    const next = value[index + 1];
-    const saved = defaultCodec.escape?.(segment, next !== undefined && isToken(next) ? next : undefined);
-    return [{ kind: "text", text: saved ?? segment, plain: segment }];
+    return segment === "" ? [] : [{ kind: "text", text: segment }];
   });
 }
 
@@ -55,7 +47,7 @@ function isToken(segment: string | Token): segment is Token {
 /** Saved message text as the model reads it: chips become their labels and text reads as typed. */
 export function toPlainMessageText(text: string): string {
   return splitMessageTokens(text)
-    .map((segment) => (segment.kind === "text" ? segment.plain : segment.label))
+    .map((segment) => (segment.kind === "text" ? segment.text : segment.label))
     .join("");
 }
 

@@ -2,7 +2,7 @@ import type { Doc } from "@ai-chat/backend/convex/_generated/dataModel";
 import { findAttachmentNames, splitMessageTokens } from "@ai-chat/shared/chat/message-content";
 
 import { createContext, use, useMemo } from "react";
-import { defaultComponents, defaultRehypePlugins, type Components, type StreamdownProps } from "streamdown";
+import { defaultRehypePlugins, type Components, type StreamdownProps } from "streamdown";
 
 import { fileChipClassName, FileChipContent, tokenChipClassName } from "../chat-textarea/token-chip";
 import { ImageLightboxProvider, ImageLightboxTrigger, type LightboxImage } from "../image-lightbox";
@@ -14,26 +14,26 @@ import { FILE_TOKEN_TYPE, NAME_TOKEN_TYPE } from "@/lib/chat/composer-tokens";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-// A key new on each page load, so typed text that looks like a token link isn't taken for one.
-const TOKEN_LINK_KEY = Math.random().toString(36).slice(2, 10);
-const TOKEN_HREF_PREFIX = `#message-token-${TOKEN_LINK_KEY}/`;
-// The markdown sanitizer prefixes in-page anchors with `user-content-`.
-const SANITIZED_TOKEN_HREF_PREFIX = `#user-content-message-token-${TOKEN_LINK_KEY}/`;
 const USER_ROLE: ChatMessage["role"] = "user";
 
 type MessageAttachments = ReadonlyArray<
   { _id: string } & Pick<Doc<"attachments">, "name" | "type" | "path" | "mimeType">
 >;
 
+type MessageChip = { type: string; value: string; label: string };
+
 type MessageAttachmentsContextValue = {
   attachments: MessageAttachments;
   // Lightbox index of each image attachment, by attachment id.
   imageIndexById: ReadonlyMap<string, number>;
+  // The message's chips, by the index their elements carry.
+  chips: ReadonlyArray<MessageChip>;
 };
 
 const MessageAttachmentsContext = createContext<MessageAttachmentsContextValue>({
   attachments: [],
   imageIndexById: new Map(),
+  chips: [],
 });
 
 const imageChipClassName = cn(
@@ -41,59 +41,63 @@ const imageChipClassName = cn(
   "cursor-zoom-in hover:bg-accent hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring",
 );
 
-// A chip's link text, with every character but letters, digits and spaces as an HTML entity. Backslash
-// escapes would do for markdown, but the LaTeX fix reads `\[` and `\(` as math. The chip itself
-// shows the label from the link's address, so this only has to keep the link whole.
-function toLinkText(label: string): string {
-  return label.replaceAll(/[^\p{L}\p{N} ]/gu, (char) => `&#${char.codePointAt(0)};`);
-}
+// Where a chip goes in the markdown: a character from the supplementary private-use area, one per
+// chip by index, which people don't type. Markdown reads it like a letter, so it doesn't break
+// emphasis or a word around it.
+const FIRST_CHIP_CODE_POINT = 0xf0000;
+const CHIP_PLACEHOLDER = /[\u{F0000}-\u{FFFFD}]/gu;
 
-// An empty element: it renders as nothing and ends a word or bare URL before a chip's link. Unlike a
-// comment, it can't close a `<!--` typed earlier in the message.
-const CHIP_SEPARATOR = "<span></span>";
+/**
+ * A message's text as the markdown it was typed as, with a placeholder where each chip goes, and
+ * its chips. Markdown then reads the text like any other, and the chip plugins put the chips in.
+ */
+type MarkdownWithChips = { markdown: string; chips: MessageChip[] };
 
-// Tokens become hash links so the markdown parser keeps them inline; the `a` renderer swaps them for chips.
-function toMarkdownWithTokenLinks(text: string): string {
-  return splitMessageTokens(text)
-    .map((segment, index, segments) => {
-      // Saved text keeps the codec's escapes, which markdown reads the same way outside code.
+function toMarkdownWithChips(text: string): MarkdownWithChips {
+  const chips: MessageChip[] = [];
+  const markdown = splitMessageTokens(text)
+    .map((segment) => {
       if (segment.kind === "text") return segment.text;
 
-      const link = `[${toLinkText(segment.label)}](${toTokenHref(segment.type, segment.value, segment.label)})`;
-      const previous = segments[index - 1];
-      // Right after a word, the separator ends it, so a bare URL there can't take in the link.
-      return previous?.kind === "text" && !/\s$/.test(previous.text) ? CHIP_SEPARATOR + link : link;
+      chips.push({ type: segment.type, value: segment.value, label: segment.label });
+      return String.fromCodePoint(FIRST_CHIP_CODE_POINT + chips.length - 1);
     })
     .join("");
+
+  return { markdown, chips };
 }
 
-// Parentheses are encoded too, since a `)` would end the link's address.
-function toTokenHref(type: string, value: string, label: string): string {
-  const parts = [type, value, label].map((part) =>
-    encodeURIComponent(part).replaceAll("(", "%28").replaceAll(")", "%29"),
-  );
-  return `${TOKEN_HREF_PREFIX}${parts.join("/")}`;
+function chipAt(chips: ReadonlyArray<MessageChip>, placeholder: string): number | undefined {
+  const index = (placeholder.codePointAt(0) ?? 0) - FIRST_CHIP_CODE_POINT;
+  return chips[index] ? index : undefined;
 }
 
-function parseTokenHref(href: string | undefined) {
-  let path: string | undefined;
-  if (href?.startsWith(TOKEN_HREF_PREFIX)) path = href.slice(TOKEN_HREF_PREFIX.length);
-  if (href?.startsWith(SANITIZED_TOKEN_HREF_PREFIX)) path = href.slice(SANITIZED_TOKEN_HREF_PREFIX.length);
-  if (path === undefined) return null;
+type MdastNode = { type: string; value?: string; children?: MdastNode[] };
 
-  let parts: string[];
-  try {
-    parts = path.split("/").map(decodeURIComponent);
-  } catch {
-    // Typed text can look like a token link with a broken escape in it.
-    return null;
+const escapeHtml = (text: string): string =>
+  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
+/**
+ * Where markdown shows text as is (code and raw HTML), a chip is its name. This runs on the markdown
+ * tree, which is where code blocks take their code from.
+ */
+function createChipNamesPlugin(chips: ReadonlyArray<MessageChip>) {
+  const toNames = (value: string, escape: (label: string) => string) =>
+    value.replaceAll(CHIP_PLACEHOLDER, (placeholder) => {
+      const index = chipAt(chips, placeholder);
+      return index === undefined ? placeholder : escape(chips[index]?.label ?? "");
+    });
+
+  function visit(node: MdastNode): void {
+    if (node.value !== undefined && (node.type === "code" || node.type === "inlineCode")) {
+      node.value = toNames(node.value, (label) => label);
+    } else if (node.value !== undefined && node.type === "html") {
+      node.value = toNames(node.value, escapeHtml);
+    }
+    node.children?.forEach(visit);
   }
 
-  const [type, value, label] = parts;
-  // A name chip has no value.
-  if (!type || value === undefined || label === undefined) return null;
-
-  return { type, value, label };
+  return () => (tree: MdastNode) => visit(tree);
 }
 
 type HastText = { type: "text"; value: string };
@@ -107,53 +111,98 @@ type HastNode =
   HastText | HastElement | { type: "root" | "comment" | "doctype" | "raw"; children?: HastNode[] };
 type RehypePlugin = NonNullable<StreamdownProps["rehypePlugins"]>[number];
 
-const SKIPPED_TAGS = new Set(["a", "code", "pre"]);
-
-const halveBackslashes = (run: string): string => "\\".repeat(Math.floor(run.length / 2));
-// A run of backslashes before `[@`: the codec doubles it, plus one when the bracket is literal.
-const BACKSLASHES_BEFORE_CHIP_OPENER = /(?<!\\)\\+(?=\[@)/g;
-// A chip's token link, after any run of backslashes, which the codec doubles before a chip, and the
-// separator that can come before it. Its text never holds a bracket, since `toLinkText` writes those
-// as entities, so a typed `[` before it isn't taken in. Each pattern checks only a run's start
-// behind, so long runs stay fast.
-const CHIP_LINK_IN_CODE = new RegExp(
-  String.raw`(?<!\\)(\\*)(?:<span><\/span>)?\[[^[\]\n]*\]\((#message-token-${TOKEN_LINK_KEY}\/[^)\s]*)\)`,
-  "g",
-);
-
-function toTypedCodeText(text: string): string {
-  return text
-    .replaceAll(BACKSLASHES_BEFORE_CHIP_OPENER, halveBackslashes)
-    .replaceAll(CHIP_LINK_IN_CODE, (link: string, backslashes: string, href: string) => {
-      const token = parseTokenHref(href);
-      return token ? halveBackslashes(backslashes) + token.label : link;
-    });
+// The element a chip renders from. It's added after sanitizing, so typed HTML can't make one.
+function chipElement(index: number): HastElement {
+  return { type: "element", tagName: "span", properties: { dataMessageChip: index }, children: [] };
 }
 
 /**
- * Code shows its text as typed. Markdown leaves code untouched, so this undoes the codec's escapes
- * there and shows a chip as its label. It runs after parsing, so it finds code just as markdown does.
- * Messages saved before the composer used the codec weren't escaped, so code in them that has
- * backslashes right before `[@` shows one fewer; there's no telling those messages apart.
+ * A bare URL or email right before a chip runs into its placeholder, since markdown reads that
+ * like a letter. The link then ends where the chip starts, and the rest comes after it.
  */
-function showCodeAsTyped(node: HastNode, inCode: boolean): void {
-  if (!("children" in node) || !node.children) return;
-  const code = inCode || (node.type === "element" && node.tagName === "code");
-
-  for (const child of node.children) {
-    if (child.type === "text") {
-      if (code) child.value = toTypedCodeText(child.value);
-    } else {
-      showCodeAsTyped(child, code);
-    }
+function splitAutolink(link: HastElement): HastNode[] {
+  const [first] = link.children;
+  const { href } = link.properties;
+  if (link.children.length !== 1 || first?.type !== "text" || href === undefined || href === null) {
+    return [link];
   }
+
+  const at = first.value.search(CHIP_PLACEHOLDER);
+  if (at <= 0) return [link];
+
+  const placeholder = encodeURIComponent(String.fromCodePoint(first.value.codePointAt(at) ?? 0));
+  const cut = String(href).indexOf(placeholder);
+  if (cut === -1) return [link];
+
+  return [
+    {
+      ...link,
+      properties: { ...link.properties, href: String(href).slice(0, cut) },
+      children: [{ ...first, value: first.value.slice(0, at) }],
+    },
+    { type: "text", value: first.value.slice(at) },
+  ];
 }
 
-const codeAsTypedPlugin: RehypePlugin = () => (tree: HastNode) => showCodeAsTyped(tree, false);
+/**
+ * Puts each chip in where its placeholder is. Inside a `code` element, which here is math about to
+ * be typeset, a chip is its name.
+ */
+function createChipPlugin(chips: ReadonlyArray<MessageChip>): RehypePlugin {
+  function nameText(node: HastText): HastText {
+    const value = node.value.replaceAll(CHIP_PLACEHOLDER, (placeholder) => {
+      const index = chipAt(chips, placeholder);
+      return index === undefined ? placeholder : (chips[index]?.label ?? "");
+    });
+    return { ...node, value };
+  }
+
+  function splitText(node: HastText): HastNode[] {
+    const nodes: HastNode[] = [];
+    let lastIndex = 0;
+
+    for (const match of node.value.matchAll(CHIP_PLACEHOLDER)) {
+      const index = chipAt(chips, match[0]);
+      if (index === undefined) continue;
+
+      if (match.index > lastIndex)
+        nodes.push({ type: "text", value: node.value.slice(lastIndex, match.index) });
+      nodes.push(chipElement(index));
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex === 0) return [node];
+    if (lastIndex < node.value.length) nodes.push({ type: "text", value: node.value.slice(lastIndex) });
+    return nodes;
+  }
+
+  function visit(node: HastNode, inCode: boolean): void {
+    if (!("children" in node) || !node.children) return;
+    const code = inCode || (node.type === "element" && node.tagName === "code");
+
+    node.children = node.children
+      .flatMap((child) =>
+        !code && child.type === "element" && child.tagName === "a" ? splitAutolink(child) : [child],
+      )
+      .flatMap((child) => {
+        if (child.type === "text") return code ? [nameText(child)] : splitText(child);
+        visit(child, code);
+        return [child];
+      });
+  }
+
+  return () => (tree: HastNode) => visit(tree, false);
+}
+
+const SKIPPED_TAGS = new Set(["a", "code", "pre"]);
 
 // Messages sent before file chips were saved hold the attachment's name as plain text. Turn those
-// names into the same token links, after markdown parsing so code spans and links stay untouched.
-function createAttachmentNamePlugin(attachments: MessageAttachments): RehypePlugin | null {
+// names into chips, after markdown parsing so code spans and links stay untouched. Each attachment's
+// chip is already in the message's chips, at `chipIndexById`.
+function createAttachmentNamePlugin(
+  attachments: MessageAttachments,
+  chipIndexById: ReadonlyMap<string, number>,
+): RehypePlugin | null {
   if (!attachments.some((attachment) => attachment.name.trim().length > 0)) return null;
 
   function splitText(node: HastText): HastNode[] {
@@ -164,12 +213,8 @@ function createAttachmentNamePlugin(attachments: MessageAttachments): RehypePlug
       if (match.index > lastIndex) {
         nodes.push({ type: "text", value: node.value.slice(lastIndex, match.index) });
       }
-      nodes.push({
-        type: "element",
-        tagName: "a",
-        properties: { href: toTokenHref(FILE_TOKEN_TYPE, match.id, match.name) },
-        children: [{ type: "text", value: match.name }],
-      });
+      const index = chipIndexById.get(match.id);
+      nodes.push(index === undefined ? { type: "text", value: match.name } : chipElement(index));
       lastIndex = match.index + match.name.length;
     }
 
@@ -192,40 +237,33 @@ function createAttachmentNamePlugin(attachments: MessageAttachments): RehypePlug
   return () => (tree: HastNode) => visit(tree);
 }
 
-const DefaultLink = defaultComponents.a;
-
-const MessageLink: NonNullable<Components["a"]> = function MessageLink({ children, ...props }) {
+function ChipView({ chip }: { chip: MessageChip }) {
   const { attachments, imageIndexById } = use(MessageAttachmentsContext);
-  const token = parseTokenHref(props.href);
 
-  if (!token) {
-    return DefaultLink ? <DefaultLink {...props}>{children}</DefaultLink> : <a {...props}>{children}</a>;
-  }
-
-  // The name of a file that wasn't sent reads as plain text, taken as is rather than as markdown.
-  if (token.type === NAME_TOKEN_TYPE) {
+  // The name of a file that wasn't sent reads as plain text.
+  if (chip.type === NAME_TOKEN_TYPE) {
     return (
-      <span data-slot="message-token" data-token-type={token.type}>
-        {token.label}
+      <span data-slot="message-token" data-token-type={chip.type}>
+        {chip.label}
       </span>
     );
   }
 
-  if (token.type === FILE_TOKEN_TYPE) {
-    const attachment = attachments.find((item) => item._id === token.value);
-    const imageIndex = imageIndexById.get(token.value);
+  if (chip.type === FILE_TOKEN_TYPE) {
+    const attachment = attachments.find((item) => item._id === chip.value);
+    const imageIndex = imageIndexById.get(chip.value);
 
     if (imageIndex !== undefined) {
       return (
         <ImageLightboxTrigger
           index={imageIndex}
           data-slot="message-token"
-          data-token-type={token.type}
-          title={token.label}
-          aria-label={`View ${token.label}`}
+          data-token-type={chip.type}
+          title={chip.label}
+          aria-label={`View ${chip.label}`}
           className={imageChipClassName}
         >
-          <FileChipContent label={token.label} attachment={attachment} />
+          <FileChipContent label={chip.label} attachment={attachment} />
         </ImageLightboxTrigger>
       );
     }
@@ -233,35 +271,50 @@ const MessageLink: NonNullable<Components["a"]> = function MessageLink({ childre
     return (
       <span
         data-slot="message-token"
-        data-token-type={token.type}
-        title={token.label}
+        data-token-type={chip.type}
+        title={chip.label}
         className={fileChipClassName}
       >
-        <FileChipContent label={token.label} attachment={attachment} />
+        <FileChipContent label={chip.label} attachment={attachment} />
       </span>
     );
   }
 
   return (
-    <span data-slot="message-token" data-token-type={token.type} className={tokenChipClassName}>
-      {token.label}
+    <span data-slot="message-token" data-token-type={chip.type} className={tokenChipClassName}>
+      {chip.label}
     </span>
   );
+}
+
+const MessageSpan: NonNullable<Components["span"]> = function MessageSpan(props) {
+  const { chips } = use(MessageAttachmentsContext);
+  const { node, ...rest } = props;
+  const index = Number(node?.properties?.dataMessageChip);
+  const chip = Number.isInteger(index) ? chips[index] : undefined;
+
+  return chip ? <ChipView chip={chip} /> : <span {...rest} />;
 };
 
-const components: Components = { a: MessageLink };
+const components: Components = { span: MessageSpan };
 
 export function MessageUserText({ text, attachments }: { text: string; attachments: MessageAttachments }) {
-  const markdown = useMemo(() => toMarkdownWithTokenLinks(text), [text]);
+  const { markdown, chips, remarkPlugins, rehypePlugins } = useMemo(() => {
+    const parsed = toMarkdownWithChips(text);
+    const plugins: RehypePlugin[] = [...Object.values(defaultRehypePlugins), createChipPlugin(parsed.chips)];
 
-  const rehypePlugins = useMemo(() => {
-    const hasSavedTokens = splitMessageTokens(text).some((segment) => segment.kind === "token");
-    const attachmentNames = hasSavedTokens ? null : createAttachmentNamePlugin(attachments);
-    return [
-      ...Object.values(defaultRehypePlugins),
-      codeAsTypedPlugin,
-      ...(attachmentNames ? [attachmentNames] : []),
-    ];
+    // Older messages without saved chips get one for each of their files' names in the text.
+    if (parsed.chips.length === 0) {
+      const chipIndexById = new Map<string, number>();
+      for (const attachment of attachments) {
+        chipIndexById.set(attachment._id, parsed.chips.length);
+        parsed.chips.push({ type: FILE_TOKEN_TYPE, value: attachment._id, label: attachment.name });
+      }
+      const attachmentNames = createAttachmentNamePlugin(attachments, chipIndexById);
+      if (attachmentNames) plugins.push(attachmentNames);
+    }
+
+    return { ...parsed, remarkPlugins: [createChipNamesPlugin(parsed.chips)], rehypePlugins: plugins };
   }, [text, attachments]);
 
   const { images, context } = useMemo(() => {
@@ -279,12 +332,17 @@ export function MessageUserText({ text, attachments }: { text: string; attachmen
         name: attachment.name,
       });
     }
-    return { images: list, context: { attachments, imageIndexById } };
-  }, [attachments]);
+    return { images: list, context: { attachments, imageIndexById, chips } };
+  }, [attachments, chips]);
 
   const content = (
     <MessageAttachmentsContext value={context}>
-      <StreamDownWrapper role={USER_ROLE} components={components} rehypePlugins={rehypePlugins}>
+      <StreamDownWrapper
+        role={USER_ROLE}
+        components={components}
+        extraRemarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
+      >
         {markdown}
       </StreamDownWrapper>
     </MessageAttachmentsContext>
