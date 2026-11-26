@@ -1,12 +1,12 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
-import { toPlainMessageText } from "@ai-chat/shared/chat/message-content";
+import { splitMessageTokens, toPlainMessageText } from "@ai-chat/shared/chat/message-content";
 import { z } from "zod/v4";
 
 import { consumeUIMessageStreamResponse } from "./stream-handler";
 
 import { buildAttachmentUrl } from "../assets/urls";
-import { linkSentFileChips, parseComposerInput } from "./composer-tokens";
+import { FILE_TOKEN_TYPE, linkSentFileChips, parseComposerInput } from "./composer-tokens";
 import { getConvexReactClient } from "../convex/client";
 import { uploadFileToR2 } from "../convex/upload-files";
 import { messageStoreActions } from "../store/messages-store";
@@ -137,7 +137,12 @@ export function buildUserMessageParts(
     attachmentIdByUploadId,
     attachments.map((attachment) => attachment.attachmentId),
   );
-  const plainText = parseComposerInput(text).text;
+  // Text that is only chips of files sent with the message adds nothing to the files themselves.
+  const onlySentFiles = splitMessageTokens(text).every((segment) =>
+    segment.kind === "token" ? segment.type === FILE_TOKEN_TYPE : segment.plain.trim() === "",
+  );
+  const savedText = onlySentFiles ? "" : text;
+  const plainText = onlySentFiles ? "" : parseComposerInput(text).text;
   const fileParts = attachments.map((attachment) => ({
     type: "file" as const,
     url: buildAttachmentUrl(attachment.path, attachment.mimeType),
@@ -147,7 +152,10 @@ export function buildUserMessageParts(
 
   // Providers reject empty text blocks, so a message of only files carries just its files.
   return {
-    displayParts: [...(text ? [{ type: "text" as const, text, state: "done" as const }] : []), ...fileParts],
+    displayParts: [
+      ...(savedText ? [{ type: "text" as const, text: savedText, state: "done" as const }] : []),
+      ...fileParts,
+    ],
     requestParts: withFileDetails(
       [...(plainText ? [{ type: "text" as const, text: plainText }] : []), ...fileParts],
       attachments,

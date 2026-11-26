@@ -11,6 +11,7 @@ import {
   hasComposerChip,
   insertUploadChips,
   MAIN_COMPOSER_ID,
+  nameComposerChips,
   removeComposerChips,
   UPLOAD_TOKEN_TYPE,
   withoutUploadChips,
@@ -98,7 +99,7 @@ export const useChatStore = create<ChatStore>()(
         if (!editMessage) return;
 
         const removed = editMessage.attachments.find((attachment) => attachment.id === id);
-        if (removed) removedEditUploads.set(id, removed);
+        if (removed) keepRemoved(removedEditUploads, removed);
         set({
           editMessage: {
             ...editMessage,
@@ -165,7 +166,7 @@ export const useChatStore = create<ChatStore>()(
       },
       removeAttachment: (id) => {
         const removed = get().attachments.find((attachment) => attachment.id === id);
-        if (removed) removedUploads.set(id, removed);
+        if (removed) keepRemoved(removedUploads, removed);
         set((state) => ({ attachments: state.attachments.filter((a) => a.id !== id) }));
         removeComposerChips(MAIN_COMPOSER_ID, UPLOAD_TOKEN_TYPE, [id]);
       },
@@ -200,7 +201,7 @@ export const useChatStore = create<ChatStore>()(
         if (kept.length === attachments.length) return;
 
         set({ attachments: kept });
-        removeComposerChips(MAIN_COMPOSER_ID, UPLOAD_TOKEN_TYPE, droppedIds(attachments, kept));
+        nameComposerChips(MAIN_COMPOSER_ID, UPLOAD_TOKEN_TYPE, droppedIds(attachments, kept));
       },
       retainCompatibleEditAttachments: (modelId) => {
         const editMessage = get().editMessage;
@@ -222,12 +223,12 @@ export const useChatStore = create<ChatStore>()(
           : [];
 
         set({ editMessage: { ...editMessage, attachments, keptAttachmentIds } });
-        removeComposerChips(
+        nameComposerChips(
           EDIT_COMPOSER_ID,
           UPLOAD_TOKEN_TYPE,
           droppedIds(editMessage.attachments, attachments),
         );
-        removeComposerChips(
+        nameComposerChips(
           EDIT_COMPOSER_ID,
           FILE_TOKEN_TYPE,
           editMessage.keptAttachmentIds.filter((id) => !keptAttachmentIds.includes(id)),
@@ -266,6 +267,17 @@ export const useChatStore = create<ChatStore>()(
 const removedUploads = new Map<string, UserAttachment>();
 const removedEditUploads = new Map<string, UserAttachment>();
 const removedEditFileIds = new Set<string>();
+
+// Files can be large, so only the latest removals are kept for undo.
+const MAX_KEPT_REMOVALS = 10;
+
+function keepRemoved(removed: Map<string, UserAttachment>, attachment: UserAttachment): void {
+  removed.delete(attachment.id);
+  removed.set(attachment.id, attachment);
+
+  const oldest = removed.keys().next();
+  if (removed.size > MAX_KEPT_REMOVALS && !oldest.done) removed.delete(oldest.value);
+}
 
 /** The removed files that have a chip of this type among `chips`; each is forgotten once returned. */
 function restorable(

@@ -579,20 +579,24 @@ describe("chat store tray", () => {
     await waitFor(() => expect(useChatStore.getState().attachments).toHaveLength(0));
   });
 
-  test("switching to a model that can't read a file takes out its chip, and undo doesn't bring the file back", async () => {
+  test("switching to a model that can't read a file keeps its name in the sentence, and undo doesn't bring the file back", async () => {
     const textOnlyModel = SelectableModelIds.find(
       (id) => !tryGetModelData(id)?.modalities.input.includes("pdf"),
     );
     if (!textOnlyModel) throw new Error("Expected a model that can't read PDFs");
 
-    useChatStore.setState({ input: "", attachments: [] });
+    useChatStore.setState({ input: "Compare ", attachments: [] });
     render(<MainComposer />);
     act(() => chatStoreActions.addAttachments([pdfUpload("u11", "g.pdf", 10)]));
     await waitFor(() => expect(fileChips()).toHaveLength(1));
+    act(() => {
+      getComposerController(MAIN_COMPOSER_ID)?.insert("please", { at: "end" });
+    });
 
     act(() => chatStoreActions.retainCompatibleAttachments(textOnlyModel));
-    await waitFor(() => expect(useChatStore.getState().input).not.toContain("upload:u11"));
+    await waitFor(() => expect(useChatStore.getState().input).toBe("Compare [@g.pdf](name:) please"));
     expect(useChatStore.getState().attachments).toHaveLength(0);
+    expect(editor().textContent).toContain("g.pdf");
 
     act(() => {
       getComposerController(MAIN_COMPOSER_ID)?.undo();
@@ -601,6 +605,20 @@ describe("chat store tray", () => {
     await act(async () => {});
     expect(fileChips()).toHaveLength(0);
     expect(useChatStore.getState().attachments).toHaveLength(0);
+  });
+
+  test("undo keeps only the latest removed files", () => {
+    const uploads = Array.from({ length: 12 }, (_, index) => pdfUpload(`cap${index}`, `f${index}.pdf`, 10));
+    useChatStore.setState({ input: "", attachments: uploads });
+    for (const upload of uploads) chatStoreActions.removeAttachment(upload.id);
+
+    chatStoreActions.restoreChipAttachments(
+      uploads.map((upload) => ({ type: "upload", value: upload.id, label: upload.file.name })),
+    );
+    expect(useChatStore.getState().attachments.map((item) => item.id)).toEqual(
+      uploads.slice(2).map((upload) => upload.id),
+    );
+    useChatStore.setState({ input: "", attachments: [] });
   });
 });
 

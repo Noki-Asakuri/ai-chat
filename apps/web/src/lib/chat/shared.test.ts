@@ -186,6 +186,22 @@ describe("buildUserMessageParts", () => {
     });
   });
 
+  test("a message whose text is only its sent files' chips has no text part", () => {
+    const { displayParts, requestParts } = buildUserMessageParts(" [@a.png](upload:u1) \n", [uploadedPhoto]);
+
+    expect(displayParts).toEqual([photoPart]);
+    expect(requestParts.map((part) => part.type)).toEqual(["text", "file"]);
+    expect(buildUserMessageParts("Look at [@a.png](upload:u1)", [uploadedPhoto]).displayParts).toHaveLength(
+      2,
+    );
+  });
+
+  test("a message whose only chip is an unsent file's name keeps it as text", () => {
+    expect(buildUserMessageParts("[@b.pdf](upload:u2)", []).displayParts).toEqual([
+      { type: "text", text: "[@b.pdf](name:)", state: "done" },
+    ]);
+  });
+
   test("a message of only files has no text part", () => {
     const { displayParts, requestParts } = buildUserMessageParts("", [uploadedPhoto]);
     expect(displayParts).toEqual([photoPart]);

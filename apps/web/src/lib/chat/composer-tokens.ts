@@ -320,6 +320,27 @@ export function removeComposerChips(composerId: string, type: string, values: Re
 }
 
 /**
+ * Turns the chips of this type that point at any of `values` into name chips, as one undoable step,
+ * so a sentence keeps its words when their files can't go. The caret stays where it was.
+ */
+export function nameComposerChips(composerId: string, type: string, values: ReadonlyArray<string>): void {
+  const controller = composerControllers.get(composerId);
+  if (!controller || values.length === 0) return;
+
+  const matches = (segment: string | Token): segment is Token =>
+    isToken(segment) && segment.type === type && values.includes(segment.value);
+  const value = controller.getValue();
+  if (!value.some(matches)) return;
+
+  const selection = controller.editor.selection();
+  const next = value.map((segment) => (matches(segment) ? toNameToken(segment.label) : segment));
+  if (!controller.setValue(next) || !selection) return;
+
+  // A chip and a name chip are the same length, so the caret's offset still holds.
+  controller.insert("", { at: { start: selection.end, end: selection.end } });
+}
+
+/**
  * Whether a change removed chips on purpose: with a chip's remove button, or Backspace or Delete.
  * Cutting, dragging, typing over a selection, undo and redo don't count.
  */
