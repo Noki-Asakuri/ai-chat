@@ -261,6 +261,43 @@ describe("MessageUserText with code and typed chip-like text", () => {
     expect(link?.textContent).toBe("http://x.com/");
   });
 
+  test("a URL with no path, or a www link, right before a chip ends where the chip starts", () => {
+    const chip = { type: "name", value: "", label: "a.pdf" };
+    for (const url of ["https://x.com", "www.x.com"]) {
+      const { container, unmount } = renderTyped(["see ", url, chip, ". now"]);
+      const links = [...container.querySelectorAll('[data-streamdown="link"]')];
+
+      expect(links.map((link) => link.textContent)).toEqual([url]);
+      expect(container.querySelectorAll('[data-slot="message-token"]')).toHaveLength(1);
+      expect(container.textContent).not.toContain("blocked");
+      unmount();
+    }
+  });
+
+  test("a chip in a link's address, an image's alt text or a link's text is its name", () => {
+    const chip = { type: "name", value: "", label: "a.pdf" };
+    const { container } = renderTyped([
+      "[x](https://x.dev/",
+      chip,
+      ") ![",
+      chip,
+      "](https://x.dev/i.png) [see ",
+      chip,
+      "](https://x.dev)",
+    ]);
+
+    expect(container.innerHTML).not.toMatch(/[\u{F0000}-\u{FFFFD}]/u);
+    expect(container.querySelector('[data-slot="message-token"]')).toBeNull();
+    expect(container.textContent).toContain("see a.pdf");
+  });
+
+  test("a chip's name in math is typeset as text", () => {
+    const { container } = renderTyped(["$x + ", { type: "name", value: "", label: "a_b%c.pdf" }, "$ ok"]);
+
+    expect(container.querySelector(".katex-error")).toBeNull();
+    expect(container.querySelector(".katex-html")?.textContent).toContain("a_b%c.pdf");
+  });
+
   test("a chip inside a code span shows as its name", () => {
     const { container } = renderTyped(["Use `", { type: "name", value: "", label: "my (1).txt" }, "` now"]);
 
