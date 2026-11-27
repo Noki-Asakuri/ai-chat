@@ -947,6 +947,10 @@ describe("looking up past files", () => {
     // The missing file is looked up once, not again on every change, and isn't taken for attached.
     expect(wholeListLookups()).toBe(2);
     expect(isPastFileReadableBy(fileModel, "attachment_gone")).toBe(false);
+
+    // A file not found at first that turns up later, such as one made in another tab, is attached again.
+    rememberComposerAttachments([ownPdf("attachment_gone")]);
+    expect(isPastFileReadableBy(fileModel, "attachment_gone")).toBe(true);
   });
 
   test("remembering files already known doesn't redraw composers", () => {

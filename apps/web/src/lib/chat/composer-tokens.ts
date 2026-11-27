@@ -124,6 +124,8 @@ export function rememberComposerAttachments(attachments: ReadonlyArray<ComposerA
   for (const attachment of attachments) {
     const known = attachmentCache.get(attachment._id);
     if (known?.type !== attachment.type || known.name !== attachment.name) changed = true;
+    // A file once looked up and not found can turn up later, such as one made in another tab.
+    if (missingAttachmentIds.delete(attachment._id)) changed = true;
     attachmentCache.set(attachment._id, attachment);
   }
   // A menu page of files already known redraws nothing.
@@ -170,6 +172,8 @@ export async function resolveComposerAttachments(
  * Composers redraw through their subscription once it's done.
  */
 export async function lookUpComposerChipFiles(convexClient: ConvexReactClient, text: string): Promise<void> {
+  // Most drafts have no past-file chips, so they aren't parsed on every keystroke.
+  if (!text.includes(`](${FILE_TOKEN_TYPE}:`)) return;
   const ids = fromText(text).flatMap((segment) =>
     isToken(segment) &&
     segment.type === FILE_TOKEN_TYPE &&

@@ -167,6 +167,15 @@ export function buildUserMessageParts(
  * File parts carry only a file's contents, so this names each one and lists every file's name,
  * type and size in a text part placed just before the files.
  */
+function urlPath(url: string): string {
+  const path = url.split(/[?#]/, 1)[0] ?? url;
+  try {
+    return decodeURI(path);
+  } catch {
+    return path;
+  }
+}
+
 function withFileDetails(
   parts: UIChatMessage["parts"],
   attachments: ReadonlyArray<AttachmentDetails>,
@@ -174,12 +183,17 @@ function withFileDetails(
   const attachmentByUrl = new Map(
     attachments.map((attachment) => [buildAttachmentUrl(attachment.path, attachment.mimeType), attachment]),
   );
+  // A saved file part keeps the URL it was sent with, so if URLs are built differently later, it
+  // still matches its attachment by the path at the URL's end.
+  const attachmentFor = (url: string) =>
+    attachmentByUrl.get(url) ??
+    attachments.find((attachment) => urlPath(url).endsWith(`/${attachment.path}`));
   const described: AttachmentDetails[] = [];
 
   const named = parts.map((part) => {
     if (part.type !== "file") return part;
 
-    const attachment = attachmentByUrl.get(part.url);
+    const attachment = attachmentFor(part.url);
     if (!attachment) return part;
 
     described.push(attachment);

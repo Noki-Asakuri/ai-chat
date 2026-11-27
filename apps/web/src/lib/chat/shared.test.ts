@@ -33,6 +33,21 @@ describe("describeAttachments", () => {
 });
 
 describe("convertToUIChatMessages", () => {
+  test("describes a saved file whose URL was built another way, by its path", () => {
+    const [message] = convertToUIChatMessages([
+      {
+        messageId: "m1",
+        role: "user",
+        metadata: undefined,
+        parts: [{ type: "file", url: `https://old-host.test/${photo.path}?v=1`, mediaType: "image/png" }],
+        attachments: [photo],
+      },
+    ]);
+
+    expect(message?.parts.map((part) => part.type)).toEqual(["text", "file"]);
+    expect(message?.parts[1]).toMatchObject({ filename: "a.png" });
+  });
+
   test("gives the model the same text on later turns as when the message was sent", () => {
     const texts = [
       toText(["Explain [@home](file:example)"]),
