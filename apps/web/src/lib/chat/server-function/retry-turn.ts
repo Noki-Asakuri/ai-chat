@@ -12,7 +12,7 @@ import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import { chatStoreActions } from "@/lib/store/chat-store";
-import type { ChatMessage, ChatRequestBody } from "@/lib/types";
+import type { ChatMessage, ChatRequestBody, UIChatMessage } from "@/lib/types";
 import { tryCatch } from "@/lib/utils";
 
 import { convertToUIChatMessages, processStreamResponse } from "../shared";
@@ -35,6 +35,8 @@ export type RetryTurnOptions = {
     messageId: Id<"messages">;
     parts: ChatMessage["parts"];
     attachments: Id<"attachments">[];
+    /** What the model reads for the message, from `buildUserMessageParts`. */
+    requestParts: UIChatMessage["parts"];
   };
   onPrepared?: () => void;
 };
@@ -115,14 +117,12 @@ export function useRetryTurn() {
       return { status: "failed", phase: "preparation" };
     }
 
-    const historySlice = messagesHistory.slice(0, userMessageIndex + 1);
+    const allMessages = convertToUIChatMessages(messagesHistory.slice(0, userMessageIndex + 1));
 
     if (options.userMessage) {
-      const message = historySlice[userMessageIndex]!;
-      historySlice[userMessageIndex] = { ...message, parts: options.userMessage.parts };
+      const message = allMessages[userMessageIndex]!;
+      allMessages[userMessageIndex] = { ...message, parts: options.userMessage.requestParts };
     }
-
-    const allMessages = convertToUIChatMessages(historySlice);
 
     const requestModel = options.modelId ?? assistantMessage?.metadata?.model.request ?? model;
     const mergedModelParams = {
@@ -166,7 +166,11 @@ export function useRetryTurn() {
 
           model: requestModel,
           modelParams: mutationModelParams,
-          userMessage: options.userMessage,
+          userMessage: options.userMessage && {
+            messageId: options.userMessage.messageId,
+            parts: options.userMessage.parts,
+            attachments: options.userMessage.attachments,
+          },
         });
 
         retryAttemptId = initialRetryResult.retryAttemptId;

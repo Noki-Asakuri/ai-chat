@@ -1,3 +1,5 @@
+import { fromText, type Token } from "@ui-sdk/core/token-input";
+
 type MessageContentPart = {
   type: string;
   text?: string;
@@ -17,27 +19,32 @@ export function hasMessageContent(parts: readonly MessageContentPart[], attachme
   });
 }
 
-// Matches the composer codec's `[@label](type:value)`, where the label escapes `\`, `[` and `]`.
-const MESSAGE_TOKEN_PATTERN = /\[@((?:\\.|[^\\\]])*)\]\(([\w-]+):([^\s)]*)\)/g;
-
 export type MessageTextSegment =
-  { kind: "text"; text: string } | { kind: "token"; type: string; value: string; label: string };
+  | {
+      kind: "text";
+      /** The text as typed, the codec's escapes undone. */
+      text: string;
+    }
+  | { kind: "token"; type: string; value: string; label: string };
 
+/**
+ * Splits saved message text into text and chips with the composer's own codec, so chip-like text
+ * the codec escaped, such as a typed literal or a file name, stays text.
+ */
 export function splitMessageTokens(text: string): MessageTextSegment[] {
-  const segments: MessageTextSegment[] = [];
-  let lastIndex = 0;
-
-  for (const match of text.matchAll(MESSAGE_TOKEN_PATTERN)) {
-    const [whole, label = "", type = "", value = ""] = match;
-    if (match.index > lastIndex) segments.push({ kind: "text", text: text.slice(lastIndex, match.index) });
-    segments.push({ kind: "token", type, value, label: label.replaceAll(/\\(.)/g, "$1") });
-    lastIndex = match.index + whole.length;
-  }
-
-  if (lastIndex < text.length) segments.push({ kind: "text", text: text.slice(lastIndex) });
-  return segments;
+  return fromText(text).flatMap((segment): MessageTextSegment[] => {
+    if (isToken(segment)) {
+      return [{ kind: "token", type: segment.type, value: segment.value, label: segment.label }];
+    }
+    return segment === "" ? [] : [{ kind: "text", text: segment }];
+  });
 }
 
+function isToken(segment: string | Token): segment is Token {
+  return segment instanceof Object;
+}
+
+/** Saved message text as the model reads it: chips become their labels and text reads as typed. */
 export function toPlainMessageText(text: string): string {
   return splitMessageTokens(text)
     .map((segment) => (segment.kind === "text" ? segment.text : segment.label))

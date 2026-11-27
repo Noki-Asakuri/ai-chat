@@ -46,6 +46,17 @@ describe("getThreadTitleInput", () => {
     });
   });
 
+  test("reads escaped chip-like text and the names of unsent files as typed text", () => {
+    expect(getThreadTitleInput([{ type: "text", text: "Explain \\[@home](file:example)" }])).toEqual({
+      kind: "summarize",
+      text: "Explain [@home](file:example)",
+    });
+    expect(getThreadTitleInput([{ type: "text", text: "[@notes.pdf](name:)" }])).toEqual({
+      kind: "summarize",
+      text: "notes.pdf",
+    });
+  });
+
   test("falls back to the default title when there is nothing at all", () => {
     expect(getThreadTitleInput([])).toEqual({ kind: "fixed", title: "New Chat" });
   });

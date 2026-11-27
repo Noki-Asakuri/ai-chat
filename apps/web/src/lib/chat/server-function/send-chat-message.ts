@@ -9,7 +9,6 @@ import { useShallow } from "zustand/shallow";
 
 import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
 
-import { buildAttachmentUrl } from "@/lib/assets/urls";
 import { parseComposerInput, resolveComposerAttachments } from "@/lib/chat/composer-tokens";
 import { tryGetModelData } from "@/lib/chat/models";
 import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
@@ -17,10 +16,16 @@ import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
 import { useThreadStore } from "@/lib/store/thread-store";
-import type { ChatRequestBody, UIChatMessage } from "@/lib/types";
+import type { ChatRequestBody } from "@/lib/types";
 import { fromUUID, toUUID, tryCatch } from "@/lib/utils";
 
-import { convertToUIChatMessages, processStreamResponse, uploadUserAttachment } from "../shared";
+import {
+  buildUserMessageParts,
+  convertToUIChatMessages,
+  processStreamResponse,
+  type SentAttachment,
+  uploadUserAttachment,
+} from "../shared";
 import {
   getClientErrorMessage,
   getDeprecatedModelError,
@@ -30,7 +35,6 @@ import {
 import { useSyncThreadModelConfig } from "./sync-thread-model-config";
 
 type CreateMessage = (typeof api.functions.messages.addMessagesToThread)["_args"]["messages"][number];
-type MessageParts = CreateMessage["parts"];
 
 export function useSendChatMessage() {
   const navigate = useNavigate();
@@ -96,9 +100,9 @@ export function useSendChatMessage() {
       console.error("[Chat] Failed to resolve referenced attachments", pastAttachmentsError);
       toast.error("Couldn't attach referenced files", { description: pastAttachmentsError.message });
     }
-    const referencedAttachments = (pastAttachments ?? []).filter((attachment) =>
-      acceptedInputs.includes(attachment.type),
-    );
+    const referencedAttachments: SentAttachment[] = (pastAttachments ?? [])
+      .filter((attachment) => acceptedInputs.includes(attachment.type))
+      .map(({ _id, name, size, mimeType, path }) => ({ attachmentId: _id, name, size, mimeType, path }));
 
     if (!threadId) {
       threadId = await convexClient.mutation(api.functions.threads.createThread, {
@@ -117,8 +121,10 @@ export function useSendChatMessage() {
       messageId: crypto.randomUUID(),
       role: "user",
       status: "complete",
-      parts: displayText ? [{ type: "text", text: displayText, state: "done" }] : [],
-      attachments: [],
+      // Past files are saved with the message now. Added files show as their names until they're
+      // uploaded and saved with it below.
+      parts: buildUserMessageParts(displayText, referencedAttachments).displayParts,
+      attachments: referencedAttachments.map((attachment) => attachment.attachmentId),
     };
 
     const assistantMessage: CreateMessage = {
@@ -153,41 +159,20 @@ export function useSendChatMessage() {
       assistantMessageId,
     });
 
-    const messages = convertToUIChatMessages(messagesHistory);
-    const uploadedAttachments = await uploadUserAttachment(attachments, threadId);
-    // Providers reject empty text blocks, so an attachment-only message carries just its files.
-    const userMessageRequestParts: UIChatMessage["parts"] = input ? [{ type: "text", text: input }] : [];
-    const userMessageDisplayParts: MessageParts = displayText ? [{ type: "text", text: displayText }] : [];
-
-    messages.push({
-      role: "user",
-      id: userMessage.messageId,
-      parts: userMessageRequestParts,
-    });
-
-    const linkedAttachments = [
-      ...referencedAttachments.map((attachment) => ({
-        attachmentId: attachment._id,
-        path: attachment.path,
-        mediaType: attachment.mimeType,
-      })),
-      ...uploadedAttachments,
+    const sentAttachments: SentAttachment[] = [
+      ...referencedAttachments,
+      ...(await uploadUserAttachment(attachments, threadId)),
     ];
+    const { displayParts, requestParts } = buildUserMessageParts(displayText, sentAttachments);
 
-    if (linkedAttachments.length > 0) {
-      const attachmentIds = linkedAttachments.map((a) => a.attachmentId);
+    const messages = convertToUIChatMessages(messagesHistory);
+    messages.push({ role: "user", id: userMessage.messageId, parts: requestParts });
 
-      for (const { path, mediaType } of linkedAttachments) {
-        const url = buildAttachmentUrl(path, mediaType);
-
-        messages[messages.length - 1]!.parts.push({ type: "file", url, mediaType });
-        userMessageDisplayParts.push({ type: "file", url, mediaType });
-      }
-
+    if (sentAttachments.length > 0) {
       await convexClient.mutation(api.functions.messages.addAttachmentsToMessage, {
         messageId: userMessage.messageId,
-        parts: userMessageDisplayParts,
-        attachmentIds,
+        parts: displayParts,
+        attachmentIds: sentAttachments.map((attachment) => attachment.attachmentId),
       });
     }
 

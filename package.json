@@ -23,6 +23,8 @@
       "@axiomhq/logging": "^0.4.1",
       "better-result": "^3.0.1",
       "@t3-oss/env-core": "^0.13.11",
+      "@ui-sdk/core": "0.1.0-beta.13",
+      "@ui-sdk/react": "0.1.0-beta.13",
       "@workos/authkit-session": "^0.9.1",
       "@workos-inc/node": "^11.0.0",
       "ai": "7.0.177",

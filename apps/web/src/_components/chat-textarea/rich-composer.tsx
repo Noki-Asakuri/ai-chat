@@ -49,6 +49,7 @@ import {
   fileChipClassName,
   profileChipClassName,
   tokenChipClassName,
+  UploadChipContent,
 } from "./token-chip";
 
 import { buildImageAssetUrl } from "@/lib/assets/urls";
@@ -56,14 +57,22 @@ import {
   type ComposerAttachment,
   FILE_TOKEN_TYPE,
   getCachedComposerAttachment,
+  composerValueLength,
+  isChipDeletion,
+  NAME_TOKEN_TYPE,
   PROFILE_TOKEN_TYPE,
+  getComposerAttachmentsVersion,
+  lookUpComposerChipFiles,
   registerComposerController,
   rememberComposerAttachments,
+  subscribeToComposerAttachments,
+  UPLOAD_TOKEN_TYPE,
 } from "@/lib/chat/composer-tokens";
 import { tryGetModelData } from "@/lib/chat/models";
 import { useGetSendDescription } from "@/lib/chat/send-preference";
+import type { UserAttachment } from "@/lib/types";
 import { useConfigStore } from "../provider/config-provider";
-import { cn, format } from "@/lib/utils";
+import { cn, format, tryCatch } from "@/lib/utils";
 
 const ATTACHMENT_SUGGESTION_LIMIT = 8;
 
@@ -72,7 +81,16 @@ export type RichComposerProps = {
   input: string;
   setInput: (content: string) => void;
   model: string;
+  /** The files in this composer's tray. Their chips show as chips only while they're here. */
+  uploads: ReadonlyArray<UserAttachment>;
   handleAddAttachments: (data: { files: File[] }) => void;
+  /**
+   * Runs when someone removes chips on purpose, with a chip's remove button or Backspace or Delete,
+   * so their files can leave the tray too. Cutting, typing over, undo and redo leave the files be.
+   */
+  onRemoveChips?: (tokens: ReadonlyArray<Token>) => void;
+  /** Whether a saved file's chip stands for an attached file. Chips that don't show as just their name. */
+  isFileAttached?: (attachmentId: string) => boolean;
   onConfirm?: () => void;
   disabled?: boolean;
   enableCommands?: boolean;
@@ -85,7 +103,10 @@ export function RichComposer({
   input,
   setInput,
   model,
+  uploads,
   handleAddAttachments,
+  onRemoveChips,
+  isFileAttached,
   onConfirm,
   disabled,
   enableCommands = false,
@@ -107,6 +128,20 @@ export function RichComposer({
   const isNarrowScreen = useIsNarrowScreen();
 
   useEffect(() => registerComposerController(id, controller), [id, controller]);
+
+  // A restored draft or an older message can point at past files not looked up yet. Look them up,
+  // and redraw whenever the cache learns a file, so each chip shows whether the model can read it.
+  useSyncExternalStore(
+    subscribeToComposerAttachments,
+    getComposerAttachmentsVersion,
+    getComposerAttachmentsVersion,
+  );
+  useEffect(() => {
+    void (async () => {
+      const [, error] = await tryCatch(lookUpComposerChipFiles(convexClient, input));
+      if (error) console.error("[Chat] Failed to look up past files", error);
+    })();
+  }, [input, convexClient]);
 
   // The store also changes outside the editor (send resets it, typing elsewhere appends to it).
   useEffect(() => {
@@ -163,7 +198,24 @@ export function RichComposer({
     }
 
     if (token.type === FILE_TOKEN_TYPE) {
+      if (isFileAttached && !isFileAttached(token.value)) {
+        return <TokenInputToken>{token.label}</TokenInputToken>;
+      }
       return <FileChip label={token.label} attachment={getCachedComposerAttachment(token.value)} />;
+    }
+
+    if (token.type === UPLOAD_TOKEN_TYPE) {
+      const upload = uploads.find((attachment) => attachment.id === token.value);
+      // A chip whose file left the tray, or was copied from another composer, is only its name.
+      if (!upload) {
+        return <TokenInputToken>{token.label}</TokenInputToken>;
+      }
+      return <UploadChip label={token.label} upload={upload} />;
+    }
+
+    // The name of a file a sent message didn't carry, back in the edit box: only its name.
+    if (token.type === NAME_TOKEN_TYPE) {
+      return <TokenInputToken>{token.label}</TokenInputToken>;
     }
 
     return <TokenInputToken className={tokenChipClassName}>{token.label}</TokenInputToken>;
@@ -198,14 +250,24 @@ export function RichComposer({
         disabled={disabled}
         submitShortcut={pref === "ctrlEnter" ? "mod+enter" : "enter"}
         onSubmit={() => onConfirm?.()}
-        onValueChange={(value) => {
+        onValueChange={(value, details) => {
+          const previousText = lastEmitted.current;
           const text = toText(value);
           lastEmitted.current = text;
           setInput(text);
+
+          if (!onRemoveChips || details.removed.length === 0) return;
+          const removedLength = composerValueLength(fromText(previousText)) - composerValueLength(value);
+          if (!isChipDeletion(details, removedLength)) return;
+          const { removed } = details;
+          // Once this change has landed, so removing the file finds its chip already gone.
+          queueMicrotask(() => onRemoveChips(removed));
         }}
         getTokenDescription={(token) => {
           if (token.type === PROFILE_TOKEN_TYPE) return "profile";
           if (token.type === FILE_TOKEN_TYPE) return "past file";
+          if (token.type === UPLOAD_TOKEN_TYPE) return "attached file";
+          if (token.type === NAME_TOKEN_TYPE) return "file name";
           return token.type;
         }}
         renderToken={renderToken}
@@ -481,7 +543,16 @@ function ProfileChip({ label, imageKey }: { label: string; imageKey?: string }) 
 function FileChip({ label, attachment }: { label: string; attachment?: ComposerAttachment }) {
   return (
     <TokenInputToken className={fileChipClassName}>
-      <FileChipContent label={label} attachment={attachment} />
+      <FileChipContent label={label} attachment={attachment} size={attachment?.size} />
+      <ChipRemove />
+    </TokenInputToken>
+  );
+}
+
+function UploadChip({ label, upload }: { label: string; upload: UserAttachment }) {
+  return (
+    <TokenInputToken className={fileChipClassName}>
+      <UploadChipContent label={label} upload={upload} />
       <ChipRemove />
     </TokenInputToken>
   );
