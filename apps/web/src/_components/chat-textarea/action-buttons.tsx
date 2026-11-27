@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { BaseChatAttachmentsButton, ChatAttachmentsButton } from "./attachments-display";
 import { ChatModelSelector, ModelSelector } from "./model-selector";
+import { keepComposerFocus } from "./keep-composer-focus";
 import { ChatReasoningPicker, ReasoningPicker } from "./reasoning-picker";
 
 import { getDefaultReasoning, getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
@@ -144,7 +145,8 @@ export function BaseWebSearchButton({
       hidden={!canDoWebSearch}
       data-active={webSearch}
       className="surface-edge size-9 cursor-pointer border border-border px-2 py-1.5 text-xs data-[active=true]:border-primary"
-      onMouseDown={() => setWebSearch(!webSearch)}
+      onMouseDown={keepComposerFocus}
+      onClick={() => setWebSearch(!webSearch)}
       title={webSearch ? "Disable Web Search" : "Enable Web Search"}
     >
       <GlobeIcon className={cn("transition-colors", { "stroke-primary": webSearch })} />

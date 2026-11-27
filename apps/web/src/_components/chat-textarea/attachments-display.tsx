@@ -7,8 +7,9 @@ import { ButtonWithTip } from "@/components/ui/button";
 
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import type { UserAttachment } from "@/lib/types";
-import { format } from "@/lib/utils";
+import { cn, format } from "@/lib/utils";
 
+import { keepComposerFocus } from "./keep-composer-focus";
 import { useChatAttachmentInput } from "./use-chat-attachment-input";
 
 type BaseChatAttachmentsButtonProps = React.ComponentPropsWithoutRef<typeof ButtonWithTip> & {
@@ -19,6 +20,7 @@ type BaseChatAttachmentsButtonProps = React.ComponentPropsWithoutRef<typeof Butt
 export function BaseChatAttachmentsButton({
   model,
   handleAddAttachments,
+  className,
   ...props
 }: BaseChatAttachmentsButtonProps) {
   const { accept, handleChange, inputId, supportsAttachments } = useChatAttachmentInput({
@@ -31,10 +33,11 @@ export function BaseChatAttachmentsButton({
   return (
     <>
       <ButtonWithTip
+        onMouseDown={keepComposerFocus}
         {...props}
         variant="ghost"
         title="Upload attachment"
-        className="size-9 border border-border p-0! px-2 py-1.5 text-xs"
+        className={cn("size-9 border border-border p-0! px-2 py-1.5 text-xs", className)}
       >
         <label htmlFor={inputId} className="flex size-full cursor-pointer items-center justify-center">
           <PaperclipIcon />
@@ -47,10 +50,16 @@ export function BaseChatAttachmentsButton({
   );
 }
 
-export function ChatAttachmentsButton() {
+export function ChatAttachmentsButton({ className }: { className?: string }) {
   const model = useConfigStore((state) => state.model);
 
-  return <BaseChatAttachmentsButton model={model} handleAddAttachments={chatStoreActions.addAttachments} />;
+  return (
+    <BaseChatAttachmentsButton
+      model={model}
+      handleAddAttachments={chatStoreActions.addAttachments}
+      className={className}
+    />
+  );
 }
 
 type Preview = { id: string; type: "image" | "pdf"; file: File; url: string };

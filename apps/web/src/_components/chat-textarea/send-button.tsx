@@ -23,6 +23,8 @@ import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { chatStoreActions } from "@/lib/store/chat-store";
 import { useMessageStore } from "@/lib/store/messages-store";
 
+import { keepComposerFocus } from "./keep-composer-focus";
+
 function useHandleSendPreferenceSelection() {
   const updateSendPreference = useUpdateSendPreference();
 
@@ -86,6 +88,7 @@ export function ChatSendButton() {
           variant="none"
           title={isInFlight ? "Abort Request" : "Send Message"}
           className="flex h-full flex-1 cursor-pointer items-center gap-2 p-0"
+          onMouseDown={keepComposerFocus}
           onClick={handleSend}
         >
           {isInFlight ? (
