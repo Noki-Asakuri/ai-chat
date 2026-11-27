@@ -4,31 +4,18 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import { CircleCheckIcon } from "lucide-react";
-import {
-  useEffect,
-  useEffectEvent,
-  useLayoutEffect,
-  useRef,
-  useState,
-  useTransition,
-  type FocusEvent,
-} from "react";
+import { useEffect, useEffectEvent, useRef, useTransition } from "react";
 import { toast } from "@/components/ui/toast";
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
 import { Button } from "../ui/button";
 
 import { ChatActionButtons } from "./action-buttons";
-import { ChatAttachmentsDisplay } from "./attachments-display";
-import {
-  animateComposerFrom,
-  measureComposer,
-  prefersReducedMotion,
-  type ComposerSnapshot,
-} from "./composer-flip";
+import { ChatAttachmentsButton, ChatAttachmentsDisplay } from "./attachments-display";
 import { MobileChatToolsMenu } from "./mobile-chat-tools-menu";
 import { RichComposer } from "./rich-composer";
 import { ChatSendButton } from "./send-button";
+import { useComposerExpanded } from "./use-composer-expanded";
 
 import { getAttachmentRejectionMessage, prepareAttachmentsForModel } from "@/lib/chat/attachments";
 import { isPastFileReadableBy, MAIN_COMPOSER_ID } from "@/lib/chat/composer-tokens";
@@ -74,9 +61,10 @@ export function ChatTextarea() {
 
           {/*
            * On phones the composer has two states. Collapsed (empty, not focused) it is one row:
-           * tools, a one-line input and send. Expanded, the input takes the full width and the
+           * attach, a one-line input and send. Expanded, the input takes the full width and attach,
            * tools, model picker and send move to a row below. Only the flex order changes, so the
-           * input is never remounted and keeps focus. Wider screens always use the expanded layout.
+           * input is never remounted and keeps focus. Wider screens always use the expanded layout,
+           * with attach among the action buttons.
            */}
           <div
             ref={composerRef}
@@ -90,13 +78,15 @@ export function ChatTextarea() {
               <InputChatTextArea />
             </div>
 
-            <MobileChatToolsMenu className="order-2 group-data-[expanded=false]/composer:max-sm:order-1" />
+            <ChatAttachmentsButton className="surface-edge order-2 shrink-0 group-data-[expanded=false]/composer:max-sm:order-1 sm:hidden" />
 
-            <div className="order-3 flex min-w-0 flex-1 group-data-[expanded=false]/composer:max-sm:hidden">
+            <MobileChatToolsMenu className="order-3 group-data-[expanded=false]/composer:max-sm:hidden" />
+
+            <div className="order-4 flex min-w-0 flex-1 group-data-[expanded=false]/composer:max-sm:hidden">
               <ChatActionButtons />
             </div>
 
-            <div className="order-4 group-data-[expanded=false]/composer:max-sm:order-3">
+            <div className="order-5 group-data-[expanded=false]/composer:max-sm:order-3">
               <ChatSendButton />
             </div>
           </div>
@@ -104,79 +94,6 @@ export function ChatTextarea() {
       </form>
     </div>
   );
-}
-
-const EDITOR_SELECTOR = "[data-composer]";
-const OPEN_POPUP_SELECTOR = '[aria-expanded="true"], [data-popup-open]';
-
-/**
- * Tracks whether the phone composer is expanded. It expands when the input gets focus or holds
- * text or attachments, and collapses once focus leaves the composer while it is empty. Focus on
- * the tools button alone does not expand it, so its menu opens from the collapsed row.
- *
- * The layout is measured right before each switch and animated from there after React renders
- * the new one. On wider screens the layout does not change, so nothing animates.
- */
-function useComposerExpanded() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isFocusedRef = useRef(false);
-  // Only the first value matters; later changes go through update() so the layout is measured first.
-  const initialExpanded = useChatStore(hasComposerContent);
-  const expandedRef = useRef(initialExpanded);
-  const snapshotRef = useRef<ComposerSnapshot | null>(null);
-  const [expanded, setExpanded] = useState(initialExpanded);
-
-  function update() {
-    const next = isFocusedRef.current || hasComposerContent(useChatStore.getState());
-    if (next === expandedRef.current) return;
-
-    if (ref.current && !prefersReducedMotion()) {
-      snapshotRef.current = measureComposer(ref.current);
-    }
-
-    expandedRef.current = next;
-    setExpanded(next);
-  }
-
-  const onStoreChange = useEffectEvent(update);
-  useEffect(() => useChatStore.subscribe(() => onStoreChange()), []);
-
-  // Runs after every render, but only animates when update() left a snapshot for this switch.
-  useLayoutEffect(() => {
-    const snapshot = snapshotRef.current;
-    if (!snapshot || !ref.current) return;
-
-    snapshotRef.current = null;
-    animateComposerFrom(ref.current, snapshot);
-  });
-
-  function onFocusCapture(event: FocusEvent<HTMLDivElement>) {
-    if (event.target instanceof Element && event.target.closest(EDITOR_SELECTOR)) {
-      isFocusedRef.current = true;
-      update();
-    }
-  }
-
-  function onBlurCapture(event: FocusEvent<HTMLDivElement>) {
-    const container = ref.current;
-    const next = event.relatedTarget;
-    if (!container || (next instanceof Node && container.contains(next))) return;
-
-    // Focus moves to menus rendered in a portal; wait a frame and keep the layout while one is open,
-    // so the model picker does not jump away from its anchor.
-    requestAnimationFrame(() => {
-      if (container.contains(document.activeElement)) return;
-      if (container.querySelector(OPEN_POPUP_SELECTOR)) return;
-      isFocusedRef.current = false;
-      update();
-    });
-  }
-
-  return { ref, expanded, onFocusCapture, onBlurCapture };
-}
-
-function hasComposerContent(state: { input: string; attachments: readonly unknown[] }): boolean {
-  return state.input.trim().length > 0 || state.attachments.length > 0;
 }
 
 function SettledThreadNotice() {
