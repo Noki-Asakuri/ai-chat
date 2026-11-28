@@ -5,9 +5,9 @@ import { hasMessageContent } from "@ai-chat/shared/chat/message-content";
 
 import { api, internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
+import { internalMutation } from "../triggers";
 import {
   action,
-  internalMutation,
   internalQuery,
   type MutationCtx,
   type QueryCtx,

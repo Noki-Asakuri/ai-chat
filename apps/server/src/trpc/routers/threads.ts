@@ -53,11 +53,6 @@ export const threadRouter = router({
       throw new TRPCError({ code: "NOT_FOUND", message: "Thread not found" });
     }
 
-    await convexClient.mutation(api.functions.threads.updateThreadTitle, {
-      threadId: threadId,
-      title: "Regenerating...",
-    });
-
     const messages = await convexClient.query(api.functions.messages.getAllMessagesWithoutAttachments, {
       threadId,
     });
@@ -71,7 +66,18 @@ export const threadRouter = router({
       throw new TRPCError({ code: "BAD_REQUEST", message: "No user message found" });
     }
 
-    await generateThreadTitleFromPartsAndSave(convexClient, { threadId, parts: firstUser.parts });
+    // Only once there is something to summarize, so a failed check leaves the old title in place.
+    await convexClient.mutation(api.functions.threads.updateThreadTitle, {
+      threadId: threadId,
+      title: "Regenerating...",
+    });
+
+    try {
+      await generateThreadTitleFromPartsAndSave(convexClient, { threadId, parts: firstUser.parts });
+    } catch (error) {
+      await convexClient.mutation(api.functions.threads.updateThreadTitle, { threadId, title });
+      throw error;
+    }
 
     return { ok: true };
   }),

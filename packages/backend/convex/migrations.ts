@@ -3,6 +3,7 @@ import { Migrations } from "@convex-dev/migrations";
 
 import { components, internal } from "./_generated/api";
 import type { DataModel, Doc } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 
 import { DEFAULT_THREAD_MODEL, mergeUserPreferences } from "./functions/users";
 import { backfillModelTokens, isHistoricalBranchCopy, recordStatisticsMessage, recordStatisticsThread } from "./functions/statistics";
@@ -496,4 +497,28 @@ export const runBackfillMessageGraphs = migrations.runner([
   internal.migrations.repairMessageGraphActiveAssistants,
   internal.migrations.certifyMessageGraphs,
   internal.migrations.markMigratedMessageGraphs,
+]);
+
+// Stores each thread's message count; the messages trigger in `triggers.ts` keeps it current after that.
+export async function backfillThreadMessageCount(ctx: MutationCtx, thread: Doc<"threads">): Promise<void> {
+  if (thread.messageCount !== undefined) return;
+
+  const messages = await ctx.db
+    .query("messages")
+    .withIndex("by_threadId", (q) => q.eq("threadId", thread._id))
+    .collect();
+
+  await ctx.db.patch(thread._id, { messageCount: messages.length });
+}
+
+export const backfillThreadMessageCounts = migrations.define({
+  table: "threads",
+  // One thread per batch: a thread's messages are read in full, and several long threads together
+  // could pass the transaction read limit.
+  batchSize: 1,
+  migrateOne: backfillThreadMessageCount,
+});
+
+export const runBackfillThreadMessageCounts = migrations.runner([
+  internal.migrations.backfillThreadMessageCounts,
 ]);

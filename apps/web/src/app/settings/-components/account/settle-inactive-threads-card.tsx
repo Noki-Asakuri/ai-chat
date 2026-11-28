@@ -2,6 +2,7 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 
 import { useMutation } from "convex/react";
+import { BrushCleaningIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "@/components/ui/toast";
 
@@ -16,7 +17,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { SettingsSection } from "@/components/settings/settings-section";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -56,17 +56,29 @@ export function SettleInactiveThreadsCard() {
 
   return (
     <>
-      <SettingsSection
-        id="thread-cleanup"
-        title="Thread cleanup"
-        description="Settle completed or failed threads that have not been updated in the last 3 days."
+      <section
+        aria-labelledby="thread-cleanup-heading"
+        className="flex flex-col gap-4 rounded-lg border bg-card p-4"
       >
-        <div className="flex justify-end py-1">
-          <Button type="button" variant="outline" onClick={() => setDialogOpen(true)}>
+        <div className="flex items-start gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-amber-500/14 text-amber-600 dark:text-amber-400">
+            <BrushCleaningIcon aria-hidden="true" className="size-4.5" />
+          </span>
+          <div className="flex min-w-0 flex-col gap-1">
+            <h3 id="thread-cleanup-heading" className="text-sm font-medium">
+              Clean up now
+            </h3>
+            <p className="text-xs/relaxed text-muted-foreground">
+              Settle every completed or failed thread that hasn't been updated in the last 3 days.
+            </p>
+          </div>
+        </div>
+        <div className="pl-12">
+          <Button type="button" variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
             Settle inactive threads
           </Button>
         </div>
-      </SettingsSection>
+      </section>
 
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogContent>

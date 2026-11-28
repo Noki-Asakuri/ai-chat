@@ -24,6 +24,7 @@ import type * as functions_userStats from "../functions/userStats.js";
 import type * as functions_users from "../functions/users.js";
 import type * as http from "../http.js";
 import type * as migrations from "../migrations.js";
+import type * as triggers from "../triggers.js";
 
 import type {
   ApiFromModules,
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   "functions/users": typeof functions_users;
   http: typeof http;
   migrations: typeof migrations;
+  triggers: typeof triggers;
 }>;
 
 /**
