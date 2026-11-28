@@ -225,9 +225,7 @@ export function RichComposer({
     <div
       className={cn(
         "flex grow flex-row items-start",
-        compact
-          ? "px-1 pt-2.5 pb-1 group-data-[expanded=false]/composer:max-sm:py-1.5 sm:px-0 sm:pt-2.5"
-          : "p-2.5",
+        compact ? "pt-3.5 pb-1.5 group-data-[expanded=false]/composer:max-sm:py-1.5" : "p-2.5",
       )}
       onPasteCapture={(event) => {
         const files = Array.from(event.clipboardData.items).flatMap((item) => {
@@ -292,7 +290,7 @@ export function RichComposer({
             delete event.currentTarget.dataset.composing;
           }}
           className={cn(
-            "relative w-full overflow-y-auto text-sm leading-normal break-words whitespace-pre-wrap caret-primary outline-none",
+            "relative w-full overflow-y-auto text-[15px] leading-normal break-words whitespace-pre-wrap caret-primary outline-none",
             // On phones the compact composer starts as one line and grows as you type.
             compact ? "max-h-40 min-h-lh sm:max-h-62.5 sm:min-h-[calc(3lh)]" : "max-h-62.5 min-h-[calc(3lh)]",
             "data-disabled:cursor-not-allowed data-disabled:opacity-50",

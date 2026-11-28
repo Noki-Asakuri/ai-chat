@@ -1,6 +1,6 @@
 import type { Doc, Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { FileTextIcon, TrashIcon } from "lucide-react";
+import { FileTextIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ImageLightboxProvider, ImageLightboxTrigger } from "@/components/image-lightbox";
@@ -105,7 +105,7 @@ function ChatEditAttachmentPreviews({
   return (
     <div
       data-slot="attachment-display"
-      className="flex items-center justify-start gap-2 overflow-x-auto border-b p-2.5"
+      className="flex items-center justify-start gap-2 overflow-x-auto px-3 pt-3"
     >
       <ImageLightboxProvider images={imageList}>
         {existingPreview.map((attachment) => {
@@ -157,13 +157,13 @@ type AttachmentPillProps = {
 
 function AttachmentPill({ name, size, url, isImage, imageIndex, onRemove }: AttachmentPillProps) {
   return (
-    <div className="group relative flex justify-center gap-2 rounded-md border border-border bg-background/50 p-2 transition-colors hover:bg-foreground/10">
+    <div className="group relative flex shrink-0 items-center gap-2.5 rounded-xl bg-foreground/5 py-1.5 pr-3 pl-1.5 transition-colors hover:bg-foreground/8">
       {isImage && imageIndex >= 0 ? (
-        <ImageLightboxTrigger index={imageIndex} type="button" className="overflow-hidden rounded-md">
-          <img src={url} alt={name} className="aspect-square size-15 object-cover object-center" />
+        <ImageLightboxTrigger index={imageIndex} type="button" className="overflow-hidden rounded-lg">
+          <img src={url} alt={name} className="aspect-square size-10 object-cover object-center" />
         </ImageLightboxTrigger>
       ) : (
-        <div className="flex aspect-square size-15 items-center justify-center overflow-hidden rounded-md border bg-card">
+        <div className="flex aspect-square size-10 items-center justify-center overflow-hidden rounded-lg bg-foreground/6">
           <FileTextIcon className="size-4" />
         </div>
       )}
@@ -171,16 +171,16 @@ function AttachmentPill({ name, size, url, isImage, imageIndex, onRemove }: Atta
       <button
         type="button"
         title={`Remove ${name}`}
-        className="absolute -top-2 -right-2 isolate rounded-md border bg-background p-1 text-destructive transition-colors hover:bg-foreground/20"
+        className="absolute -top-1.5 -right-1.5 isolate grid size-5 cursor-pointer place-items-center rounded-full border border-border bg-popover text-muted-foreground transition-colors hover:bg-destructive hover:text-white"
         onClick={onRemove}
       >
-        <TrashIcon size={16} />
+        <XIcon size={12} />
         <span className="sr-only">Remove {name}</span>
       </button>
 
-      <div className="self-center">
-        <p className={cn("max-w-[15ch] truncate text-sm")}>{name}</p>
-        <p className="text-xs text-muted-foreground">{format.size(size)}</p>
+      <div className="min-w-0">
+        <p className={cn("max-w-[18ch] truncate text-xs leading-tight")}>{name}</p>
+        <p className="text-2xs text-muted-foreground">{format.size(size)}</p>
       </div>
     </div>
   );

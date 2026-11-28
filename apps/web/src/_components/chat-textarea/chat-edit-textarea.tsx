@@ -3,6 +3,7 @@ import { toast } from "@/components/ui/toast";
 
 import { ChatEditActionButtons } from "./action-buttons";
 import { ChatEditAttachmentsDisplay } from "./chat-edit-attachments-display";
+import { composerSurfaceClassName } from "./composer-control";
 import { RichComposer } from "./rich-composer";
 import { ChatEditSendButton } from "./send-button";
 import { useChatEditSave } from "./use-chat-edit-save";
@@ -115,10 +116,10 @@ export function ChatEditTextarea() {
   return (
     <div ref={editorRef} data-slot="chat-textarea" className="pointer-events-none">
       <form className="mx-auto space-y-2">
-        <div className="surface-edge pointer-events-auto relative mx-auto max-w-4xl space-y-2 rounded-md border bg-background/80 backdrop-blur-md backdrop-saturate-150">
+        <div className={composerSurfaceClassName}>
           <ChatEditAttachmentsDisplay />
 
-          <div>
+          <div className="px-2 pb-2">
             <RichComposer
               id={EDIT_COMPOSER_ID}
               input={editMessage.input}
@@ -132,7 +133,7 @@ export function ChatEditTextarea() {
               disabled={isSaving}
             />
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t px-2.5 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-1">
               <ChatEditActionButtons />
               <ChatEditSendButton isSaving={isSaving} onSave={saveEdits} />
             </div>
