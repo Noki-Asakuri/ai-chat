@@ -168,10 +168,19 @@ export const getStatistics = authenticatedQuery({
   args: { year: v.optional(v.number()) },
   returns: v.object({
     totals: totalsValidator,
-    activity: v.array(v.object({ period: v.string(), ...totalsValidator.fields })),
+    activity: v.array(
+      v.object({
+        period: v.string(),
+        ...totalsValidator.fields,
+        models: v.array(v.object({ id: v.string(), count: v.number(), tokens: v.number() })),
+        profiles: v.array(v.object({ id: v.string(), count: v.number() })),
+      }),
+    ),
+    // Same span of the previous year (Jan through the current month for this year); null for all time
+    // or when that span has no recorded usage.
+    previousTotals: v.union(totalsValidator, v.null()),
     dailyActivity: v.array(v.object({ day: v.string(), value: v.number() })),
     years: v.array(v.number()),
-    modelRank: v.array(v.object({ id: v.string(), name: v.string(), value: v.number(), tokens: v.number() })),
     aiProfileRank: v.array(v.object({ id: v.string(), name: v.string(), value: v.number() })),
     historyReady: v.boolean(),
   }),
@@ -204,35 +213,56 @@ export const getStatistics = authenticatedQuery({
       dailyCounts.set(day, (dailyCounts.get(day) ?? 0) + value);
     }
     const totals = { ...emptyTotals };
-    const activity = new Map<string, typeof emptyTotals>();
-    const models = new Map<string, number>();
-    const modelTokens = new Map<string, number>();
+    type Point = typeof emptyTotals & {
+      models: Map<string, { count: number; tokens: number }>;
+      profiles: Map<string, number>;
+    };
+    const emptyPoint = (): Point => ({ ...emptyTotals, models: new Map(), profiles: new Map() });
+    const activity = new Map<string, Point>();
+    const previousTotals = { ...emptyTotals };
+    let hasPrevious = false;
+    // The selected year's last month so far; the previous year is compared over the same months.
+    const lastMonth = args.year === currentYear ? new Date().getUTCMonth() + 1 : 12;
     const profiles = new Map<string, number>();
     for (const month of months) years.add(Number(month.month.slice(0, 4)));
     if (args.year !== undefined) {
-      const lastMonth = args.year === currentYear ? new Date().getUTCMonth() + 1 : 12;
       for (let month = 1; month <= lastMonth; month++) {
-        activity.set(`${args.year}-${String(month).padStart(2, "0")}`, { ...emptyTotals });
+        activity.set(`${args.year}-${String(month).padStart(2, "0")}`, emptyPoint());
       }
     } else {
       const firstYear = Math.min(...years);
-      for (let year = firstYear; year <= currentYear; year++) activity.set(String(year), { ...emptyTotals });
+      for (let year = firstYear; year <= currentYear; year++) activity.set(String(year), emptyPoint());
     }
     for (const month of months) {
-      if (args.year !== undefined && Number(month.month.slice(0, 4)) !== args.year) continue;
+      const monthYear = Number(month.month.slice(0, 4));
+      if (
+        args.year !== undefined &&
+        monthYear === args.year - 1 &&
+        Number(month.month.slice(5, 7)) <= lastMonth
+      ) {
+        hasPrevious = true;
+        for (const key of totalKeys) previousTotals[key] += month[key];
+      }
+      if (args.year !== undefined && monthYear !== args.year) continue;
       const period = args.year === undefined ? month.month.slice(0, 4) : month.month;
-      const point = activity.get(period) ?? { ...emptyTotals };
+      const point = activity.get(period) ?? emptyPoint();
       for (const key of totalKeys) {
         totals[key] += month[key];
         point[key] += month[key];
       }
       activity.set(period, point);
-      for (const [id, count] of Object.entries(month.modelCounts))
-        models.set(id, (models.get(id) ?? 0) + count);
-      for (const [id, count] of Object.entries(month.modelTokenCounts ?? {}))
-        modelTokens.set(id, (modelTokens.get(id) ?? 0) + count);
-      for (const [id, count] of Object.entries(month.profileCounts))
+      for (const [id, count] of Object.entries(month.modelCounts)) {
+        const model = point.models.get(id) ?? { count: 0, tokens: 0 };
+        point.models.set(id, { ...model, count: model.count + count });
+      }
+      for (const [id, count] of Object.entries(month.modelTokenCounts ?? {})) {
+        const model = point.models.get(id) ?? { count: 0, tokens: 0 };
+        point.models.set(id, { ...model, tokens: model.tokens + count });
+      }
+      for (const [id, count] of Object.entries(month.profileCounts)) {
         profiles.set(id, (profiles.get(id) ?? 0) + count);
+        point.profiles.set(id, (point.profiles.get(id) ?? 0) + count);
+      }
     }
     const aiProfileRank = [];
     for (const [id, value] of profiles) {
@@ -247,16 +277,14 @@ export const getStatistics = authenticatedQuery({
       dailyActivity: Array.from(dailyCounts, ([day, value]) => ({ day, value })).toSorted((a, b) =>
         a.day.localeCompare(b.day),
       ),
-      activity: Array.from(activity, ([period, point]) => ({ period, ...point })).toSorted((a, b) =>
-        a.period.localeCompare(b.period),
-      ),
+      activity: Array.from(activity, ([period, point]) => ({
+        period,
+        ...point,
+        models: Array.from(point.models, ([id, model]) => ({ id, ...model })),
+        profiles: Array.from(point.profiles, ([id, count]) => ({ id, count })),
+      })).toSorted((a, b) => a.period.localeCompare(b.period)),
+      previousTotals: hasPrevious ? previousTotals : null,
       years: Array.from(years).toSorted((a, b) => b - a),
-      modelRank: Array.from(models, ([id, value]) => ({
-        id,
-        name: tryGetModelData(id)?.display.name ?? id,
-        value,
-        tokens: modelTokens.get(id) ?? 0,
-      })).toSorted((a, b) => b.value - a.value),
       aiProfileRank: aiProfileRank.toSorted((a, b) => b.value - a.value),
       historyReady: ctx.user.statisticsHistoryReady ?? false,
     };

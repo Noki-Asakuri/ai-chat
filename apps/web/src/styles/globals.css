@@ -338,6 +338,14 @@
   --chart-4: var(--color-neutral-400);
   --chart-5: var(--color-neutral-300);
 
+  /* Categorical series in fixed order (validated for CVD separation); "other" stays neutral. */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-other: var(--color-neutral-500);
+
   --sidebar: var(--card);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
@@ -392,6 +400,13 @@
   --chart-3: var(--color-neutral-400);
   --chart-4: var(--color-neutral-500);
   --chart-5: var(--color-neutral-600);
+
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-other: var(--color-neutral-400);
 
   --shadow-2xs: 0px 1px 2px 0px rgb(0 0 0 / 0.04);
   --shadow-xs: 0px 1px 2px 0px rgb(0 0 0 / 0.05);
