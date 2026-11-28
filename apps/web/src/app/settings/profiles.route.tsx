@@ -39,6 +39,8 @@ export const Route = createFileRoute("/settings/profiles")({
     await context.queryClient.prefetchQuery(profileLibraryQuery);
   },
   component: AiProfilesPage,
+  // The loader waits for the profiles, so a slow first load shows this instead of nothing.
+  pendingComponent: LoadingProfilesSkeleton,
   head: () => ({ meta: [{ title: "AI Profiles - AI Chat" }] }),
 });
 
@@ -62,12 +64,13 @@ function sortProfiles(profiles: LibraryProfile[], sort: SortOption): LibraryProf
 }
 
 function filterProfiles(profiles: LibraryProfile[], search: string): LibraryProfile[] {
-  const term = search.trim().toLocaleLowerCase();
+  // A fixed locale, so the server and the browser match the same profiles.
+  const term = search.trim().toLocaleLowerCase("en");
   if (!term) return profiles;
   return profiles.filter(
     (profile) =>
-      profile.name.toLocaleLowerCase().includes(term) ||
-      profile.systemPrompt.toLocaleLowerCase().includes(term),
+      profile.name.toLocaleLowerCase("en").includes(term) ||
+      profile.systemPrompt.toLocaleLowerCase("en").includes(term),
   );
 }
 

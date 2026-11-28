@@ -33,8 +33,9 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
   });
 
   const threadData = params?.threadId && data ? data : null;
-  const groupId = threadData?.groupId ?? activeGroupId;
-  const groupTitle = threadData?.groupTitle ?? activeGroup?.title ?? "Ungrouped";
+  // A thread's own group (null is Ungrouped), not whichever group the sidebar is showing.
+  const groupId = threadData ? threadData.groupId : activeGroupId;
+  const groupTitle = threadData ? (threadData.groupTitle ?? "Ungrouped") : (activeGroup?.title ?? "Ungrouped");
 
   function toggleThreadPin() {
     if (!threadId || !threadData) return;
