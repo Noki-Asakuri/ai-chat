@@ -1,8 +1,19 @@
 import { CheckIcon, MonitorIcon, MoonIcon, PipetteIcon, SunIcon } from "lucide-react";
-import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
+import {
+  ColorPicker,
+  ColorPickerArea,
+  ColorPickerAreaThumb,
+  ColorPickerEyeDropper,
+  ColorPickerInput,
+  ColorPickerSlider,
+  ColorPickerSliderThumb,
+  ColorPickerSwatch,
+} from "@ui-sdk/react/color-picker";
+import { useEffect, useEffectEvent, useRef, type ReactNode } from "react";
 
 import { SettingsSection } from "@/components/settings/settings-section";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -23,6 +34,10 @@ const THEME_OPTIONS = [
 ] as const satisfies ReadonlyArray<{ value: ThemeMode; label: string; icon: typeof SunIcon }>;
 
 const DEFAULT_CUSTOM_ACCENT = "#8b7cf6";
+const RAINBOW = "conic-gradient(from 0deg, #f87171, #fbbf24, #34d399, #22d3ee, #818cf8, #e879f9, #f87171)";
+
+const THUMB_CLASS =
+  "size-4 -translate-1/2 rounded-full border-2 border-white bg-(--color-picker-color) shadow-sm ring-1 ring-black/25 outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export type ThemeCardProps = {
   disabled: boolean;
@@ -51,76 +66,6 @@ function SettingRow(props: { id: string; title: string; description: string; chi
 export function ThemeCard(props: ThemeCardProps) {
   const isPresetAccent = ACCENT_PRESETS.some((preset) => preset.value === props.accent);
   const customAccent = !isPresetAccent && props.accent ? props.accent : null;
-
-  /**
-   * The native picker fires on every drag movement. Each step previews the accent across the app
-   * without React: at most once per frame it writes the swatch, hex label and <html> accent
-   * variables, with transitions off. The form, autosave and React state take the color once, when
-   * the picker commits (closes).
-   */
-  const draftRef = useRef<string | null>(null);
-  const frameRef = useRef<number | null>(null);
-  const swatchRef = useRef<HTMLLabelElement>(null);
-  const hexRef = useRef<HTMLSpanElement>(null);
-  // Remounts the picker to drop a previewed-but-uncommitted color from the DOM.
-  const [pickerKey, setPickerKey] = useState(0);
-
-  function paintDraftAccent() {
-    frameRef.current = null;
-    const accent = draftRef.current;
-    if (!accent) return;
-    previewAccent(document.documentElement, accent);
-    if (swatchRef.current) swatchRef.current.style.background = accent;
-    if (hexRef.current) {
-      hexRef.current.textContent = accent;
-      hexRef.current.hidden = false;
-    }
-  }
-
-  function previewDraftAccent(accent: string) {
-    draftRef.current = accent;
-    frameRef.current ??= requestAnimationFrame(paintDraftAccent);
-  }
-
-  function cancelDraftFrame() {
-    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
-    frameRef.current = null;
-  }
-
-  function commitDraftAccent() {
-    const pending = draftRef.current;
-    if (!pending) return;
-    cancelDraftFrame();
-    paintDraftAccent();
-    draftRef.current = null;
-    endAccentPreview(document.documentElement);
-    // Remount so the swatch and hex label drop the direct DOM writes and match React again
-    // (e.g. a dragged color that equals a preset leaves the custom swatch's props unchanged).
-    setPickerKey((key) => key + 1);
-    props.onAccentChange(pending);
-  }
-
-  // The uncontrolled picker's React onChange is the native `input` event (every movement);
-  // the native `change` event fires once, on commit.
-  function attachPicker(picker: HTMLInputElement) {
-    picker.addEventListener("change", commitDraftAccent);
-    return () => picker.removeEventListener("change", commitDraftAccent);
-  }
-
-  const onPickerCommit = useEffectEvent(commitDraftAccent);
-  // Leaving the page with the picker still open keeps the last color.
-  useEffect(() => () => onPickerCommit(), []);
-
-  function selectPresetAccent(accent: string | null) {
-    if (draftRef.current) {
-      cancelDraftFrame();
-      draftRef.current = null;
-      // Put the chosen accent back on <html> in case the saved value doesn't change.
-      endAccentPreview(document.documentElement, { accent });
-      setPickerKey((key) => key + 1);
-    }
-    props.onAccentChange(accent);
-  }
 
   return (
     <div>
@@ -171,53 +116,40 @@ export function ThemeCard(props: ThemeCardProps) {
                     color={preset.swatch}
                     selected={selected}
                     disabled={props.disabled}
-                    onSelect={() => selectPresetAccent(preset.value)}
+                    onSelect={() => props.onAccentChange(preset.value)}
                   />
                 );
               })}
             </div>
 
-            <span key={pickerKey} className="contents">
-              <label
-                ref={swatchRef}
+            <Popover>
+              <PopoverTrigger
+                disabled={props.disabled}
+                aria-label="Custom accent color"
+                title="Custom color"
                 className={cn(
-                  "relative flex size-8 cursor-pointer items-center justify-center rounded-full ring-1 ring-foreground/15 ring-offset-2 ring-offset-background focus-within:ring-2 focus-within:ring-ring has-disabled:cursor-not-allowed has-disabled:opacity-50",
+                  "relative flex size-8 cursor-pointer items-center justify-center rounded-full ring-1 ring-foreground/15 ring-offset-2 ring-offset-background outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
                   customAccent && "ring-2 ring-foreground",
                 )}
-                style={{
-                  background:
-                    customAccent ??
-                    "conic-gradient(from 0deg, #f87171, #fbbf24, #34d399, #22d3ee, #818cf8, #e879f9, #f87171)",
-                }}
-                title="Custom color"
+                style={{ background: customAccent ?? RAINBOW }}
               >
-                <span className="sr-only">Custom accent color</span>
-                <input
-                  ref={attachPicker}
-                  type="color"
-                  className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
-                  disabled={props.disabled}
-                  defaultValue={customAccent ?? DEFAULT_CUSTOM_ACCENT}
-                  onChange={(event) => {
-                    const value = event.target.value.toLowerCase();
-                    if (isHexColor(value)) previewDraftAccent(value);
-                  }}
-                />
                 {customAccent ? (
                   <CheckIcon aria-hidden className="size-4 text-white mix-blend-difference" />
                 ) : (
                   <PipetteIcon aria-hidden className="size-3.5 text-white drop-shadow" />
                 )}
-              </label>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-60 gap-3 p-3">
+                <CustomAccentPicker
+                  initialColor={props.accent ?? DEFAULT_CUSTOM_ACCENT}
+                  onAccentChange={props.onAccentChange}
+                />
+              </PopoverContent>
+            </Popover>
 
-              <span
-                ref={hexRef}
-                hidden={!customAccent}
-                className="font-mono text-xs text-muted-foreground tabular-nums"
-              >
-                {customAccent ?? ""}
-              </span>
-            </span>
+            {customAccent && (
+              <span className="font-mono text-xs text-muted-foreground tabular-nums">{customAccent}</span>
+            )}
           </div>
         </SettingRow>
 
@@ -280,12 +212,81 @@ function AccentSwatch(props: {
         aria-label={props.label}
         checked={props.selected}
         disabled={props.disabled}
-        // `click` fires even on the already-checked radio (and for keyboard selection), so choosing
-        // the active preset still discards an uncommitted custom color; `change` would not.
-        onClick={props.onSelect}
-        readOnly
+        onChange={props.onSelect}
       />
       {props.selected && <CheckIcon aria-hidden className="size-4 text-white mix-blend-difference" />}
     </label>
+  );
+}
+
+/**
+ * Drag steps preview the accent across the app at most once per frame, without React state, the
+ * form or autosave; the color is saved once per interaction, when the picker commits it. Mounted
+ * only while the popover is open, so each open starts from the current accent.
+ */
+function CustomAccentPicker(props: { initialColor: string; onAccentChange: (accent: string) => void }) {
+  const draftRef = useRef<string | null>(null);
+  const frameRef = useRef<number | null>(null);
+
+  function paintDraft() {
+    frameRef.current = null;
+    if (draftRef.current) previewAccent(document.documentElement, draftRef.current);
+  }
+
+  function preview(value: string) {
+    if (!isHexColor(value)) return;
+    draftRef.current = value.toLowerCase();
+    frameRef.current ??= requestAnimationFrame(paintDraft);
+  }
+
+  function commit(value?: string) {
+    if (value && isHexColor(value)) draftRef.current = value.toLowerCase();
+    const pending = draftRef.current;
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    frameRef.current = null;
+    draftRef.current = null;
+    if (!pending) return;
+    endAccentPreview(document.documentElement, { accent: pending });
+    props.onAccentChange(pending);
+  }
+
+  const commitOnUnmount = useEffectEvent(() => commit());
+  // Closing the popover or leaving the page mid-drag keeps the last color.
+  useEffect(() => () => commitOnUnmount(), []);
+
+  return (
+    <ColorPicker
+      aria-label="Custom accent color"
+      format="hex"
+      defaultValue={props.initialColor}
+      onValueChange={preview}
+      onValueCommit={commit}
+      className="flex flex-col gap-3"
+    >
+      <ColorPickerArea className="relative h-36 w-full touch-none rounded-md [background:var(--color-area-background)]">
+        <ColorPickerAreaThumb className={THUMB_CLASS} />
+      </ColorPickerArea>
+      <ColorPickerSlider
+        channel="hue"
+        className="relative h-3 w-full touch-none rounded-full [background:var(--color-slider-background)]"
+      >
+        <ColorPickerSliderThumb className={cn(THUMB_CLASS, "top-1/2")} />
+      </ColorPickerSlider>
+      <div className="flex items-center gap-2">
+        <ColorPickerSwatch className="size-8 shrink-0 rounded-md bg-(--color-picker-color) ring-1 ring-foreground/15" />
+        <ColorPickerInput
+          aria-label="Hex color"
+          spellCheck={false}
+          autoComplete="off"
+          className="h-8 w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 font-mono text-xs tabular-nums outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 dark:bg-input/30"
+        />
+        <ColorPickerEyeDropper
+          aria-label="Pick a color from the screen"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring data-unsupported:hidden"
+        >
+          <PipetteIcon aria-hidden className="size-4" />
+        </ColorPickerEyeDropper>
+      </div>
+    </ColorPicker>
   );
 }

@@ -4,7 +4,6 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 await import("@/test/dom");
 const { act, fireEvent, render, screen } = await import("@testing-library/react");
 
-// Run interactions in an async act so any follow-up updates from Base UI settle inside it.
 async function interact(run: () => void) {
   await act(async () => {
     run();
@@ -23,111 +22,106 @@ afterEach(() => {
   delete root.dataset.accentPreview;
 });
 
-function renderCard() {
+async function openPicker(accent: string | null = null) {
   const onAccentChange = mock((_accent: string | null) => {});
   const view = render(
     <ThemeCard
       disabled={false}
       theme="dark"
-      accent={null}
+      accent={accent}
       tint={0}
       onThemeChange={() => {}}
       onAccentChange={onAccentChange}
       onTintChange={() => {}}
     />,
   );
-  const picker = view.container.querySelector<HTMLInputElement>('input[type="color"]')!;
-  return { onAccentChange, picker, view };
+  await interact(() => fireEvent.click(screen.getByRole("button", { name: "Custom accent color" })));
+  const hex = await screen.findByRole<HTMLInputElement>("textbox", { name: "Hex color" });
+  return { onAccentChange, hex, view };
+}
+
+function stubArea() {
+  const area = document.querySelector<HTMLElement>('[data-slot="color-picker-area"]')!;
+  area.getBoundingClientRect = () => new DOMRect(0, 0, 100, 100);
+  return area;
 }
 
 describe("ThemeCard custom accent", () => {
-  test("dragging previews live with transitions off and commits once when the picker closes", async () => {
-    const { onAccentChange, picker } = renderCard();
-    const swatch = picker.closest("label")!;
+  test("the picker opens on the current accent", async () => {
+    const { hex } = await openPicker("#10b981");
+    expect(hex.value).toBe("#10b981");
+  });
+
+  test("the picker starts from the default custom color when the accent is built in", async () => {
+    const { hex } = await openPicker();
+    expect(hex.value).toBe("#8b7cf6");
+  });
+
+  test("a typed hex color is saved once", async () => {
+    const { onAccentChange, hex } = await openPicker();
+
+    await interact(() => fireEvent.change(hex, { target: { value: "#FF0000" } }));
+    await interact(() => fireEvent.keyDown(hex, { key: "Enter" }));
+
+    expect(onAccentChange.mock.calls).toEqual([["#ff0000"]]);
+    expect(root.style.getPropertyValue("--custom-primary")).toBe("#ff0000");
+    expect(root.dataset.accentPreview).toBeUndefined();
+  });
+
+  test("a hue key step saves the new color", async () => {
+    const { onAccentChange } = await openPicker("#ff0000");
+    const hue = screen
+      .getAllByRole("slider")
+      .find((thumb) => thumb.closest('[data-slot="color-picker-slider"]'))!;
+
+    await interact(() => fireEvent.keyDown(hue, { key: "ArrowRight" }));
+
+    expect(onAccentChange).toHaveBeenCalledTimes(1);
+    const saved = onAccentChange.mock.calls[0]![0]!;
+    expect(saved).toMatch(/^#[0-9a-f]{6}$/);
+    expect(saved).not.toBe("#ff0000");
+  });
+
+  test("dragging previews live with transitions off and saves once on release", async () => {
+    const { onAccentChange } = await openPicker("#ff0000");
+    const area = stubArea();
 
     await interact(() => {
-      for (let step = 0; step < 30; step++) {
-        const channel = (16 + step).toString(16).padStart(2, "0");
-        fireEvent.input(picker, { target: { value: `#${channel}0000` } });
+      fireEvent.pointerDown(area, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+      for (let step = 0; step < 20; step++) {
+        fireEvent.pointerMove(area, { pointerId: 1, clientX: 10 + step * 4, clientY: 10 + step });
       }
     });
 
-    // The app previews the latest color without going through React or the form.
-    expect(root.style.getPropertyValue("--custom-primary")).toBe("#2d0000");
-    expect(root.style.getPropertyValue("--custom-primary-foreground")).toBe("#ffffff");
+    const previewed = root.style.getPropertyValue("--custom-primary");
+    expect(previewed).toMatch(/^#[0-9a-f]{6}$/);
     expect(root.dataset.accentPreview).toBe("");
-    expect(swatch.style.background).toBe("#2d0000");
-    expect(screen.getByText("#2d0000")).toBeTruthy();
     expect(onAccentChange).not.toHaveBeenCalled();
 
-    await interact(() => fireEvent.change(picker));
-    expect(onAccentChange.mock.calls).toEqual([["#2d0000"]]);
+    await interact(() => fireEvent.pointerUp(area, { pointerId: 1, clientX: 86, clientY: 29 }));
+    expect(onAccentChange).toHaveBeenCalledTimes(1);
+    expect(root.style.getPropertyValue("--custom-primary")).toBe(onAccentChange.mock.calls[0]![0]!);
     expect(root.dataset.accentPreview).toBeUndefined();
-  });
-
-  test("choosing a preset drops an uncommitted custom color", async () => {
-    const { onAccentChange, picker } = renderCard();
-
-    await interact(() => fireEvent.input(picker, { target: { value: "#ff0000" } }));
-    // A real click moves focus off the picker before the preset's handler runs.
-    await interact(() => {
-      fireEvent.blur(picker);
-      fireEvent.click(screen.getByRole("radio", { name: "Emerald" }));
-    });
-
-    expect(onAccentChange.mock.calls).toEqual([["#10b981"]]);
-    // The previewed color is dropped from the swatch and <html>.
-    expect(screen.queryByText("#ff0000")).toBeNull();
-    expect(root.style.getPropertyValue("--custom-primary")).toBe("#10b981");
-    expect(root.dataset.accentPreview).toBeUndefined();
-  });
-
-  test("choosing the already-selected preset also drops an uncommitted custom color", async () => {
-    const { onAccentChange, picker, view } = renderCard();
-
-    // Violet (accent null) is selected; its radio stays checked during the drag.
-    await interact(() => fireEvent.input(picker, { target: { value: "#ff0000" } }));
-    await interact(() => {
-      fireEvent.blur(picker);
-      fireEvent.click(screen.getByRole("radio", { name: "Violet" }));
-    });
-
-    expect(onAccentChange.mock.calls).toEqual([[null]]);
-    expect(screen.queryByText("#ff0000")).toBeNull();
-    expect(root.style.getPropertyValue("--custom-primary")).toBe("");
-    expect(root.dataset.accentPreview).toBeUndefined();
-
-    // Nothing is left to save when the page is left.
-    view.unmount();
-    expect(onAccentChange.mock.calls).toEqual([[null]]);
-  });
-
-  test("committing a color that equals a preset clears the custom swatch preview", async () => {
-    const { onAccentChange, picker } = renderCard();
-
-    await interact(() => fireEvent.input(picker, { target: { value: "#10b981" } }));
-    expect(screen.getByText("#10b981")).toBeTruthy();
-
-    await interact(() => fireEvent.change(picker));
-    expect(onAccentChange.mock.calls).toEqual([["#10b981"]]);
-
-    // The parent keeps accent=null here, so React's custom swatch props never changed; the
-    // remount must still drop the previewed hex label and background.
-    const freshPicker = document.querySelector<HTMLInputElement>('input[type="color"]')!;
-    expect(screen.queryByText("#10b981")).toBeNull();
-    expect(freshPicker.closest("label")!.style.background).toContain("conic-gradient");
   });
 
   test("leaving the page mid-drag still saves the last color", async () => {
-    const { onAccentChange, picker, view } = renderCard();
+    const { onAccentChange, view } = await openPicker("#ff0000");
+    const area = stubArea();
 
     await interact(() => {
-      fireEvent.input(picker, { target: { value: "#ff0000" } });
-      fireEvent.input(picker, { target: { value: "#0000ff" } });
+      fireEvent.pointerDown(area, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+      fireEvent.pointerMove(area, { pointerId: 1, clientX: 60, clientY: 40 });
     });
+    const previewed = root.style.getPropertyValue("--custom-primary");
     view.unmount();
 
-    expect(onAccentChange.mock.calls).toEqual([["#0000ff"]]);
+    expect(onAccentChange.mock.calls).toEqual([[previewed]]);
     expect(root.dataset.accentPreview).toBeUndefined();
+  });
+
+  test("presets save their color", async () => {
+    const { onAccentChange } = await openPicker();
+    await interact(() => fireEvent.click(screen.getByRole("radio", { name: "Emerald" })));
+    expect(onAccentChange.mock.calls).toEqual([["#10b981"]]);
   });
 });
