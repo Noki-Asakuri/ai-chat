@@ -1,3 +1,5 @@
+import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
+
 import { useShallow } from "zustand/shallow";
 
 import { useConfigStore } from "@/components/provider/config-provider";
@@ -51,5 +53,16 @@ export function useSetChatEffort() {
   return function setChatEffort(effort: ReasoningEffort): void {
     setModelParams({ effort });
     void syncThreadModelConfig({ model, modelParams: { effort } });
+  };
+}
+
+/** Choose the profile for this chat (null for none); a thread saves it so it sticks. */
+export function useSetChatProfile() {
+  const { syncThreadModelConfig } = useSyncThreadModelConfig();
+  const chooseProfile = useConfigStore((state) => state.chooseProfile);
+
+  return function setChatProfile(profile: Id<"profiles"> | null): void {
+    chooseProfile(profile);
+    void syncThreadModelConfig({ modelParams: { profile } });
   };
 }

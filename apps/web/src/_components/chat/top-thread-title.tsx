@@ -55,8 +55,10 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
             to="/"
             title={`New chat in ${groupTitle}`}
             className="flex max-w-48 min-w-0 shrink-0 items-center gap-2 rounded-md text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
-            onClick={() => {
-              threadStoreActions.setActiveGroupId(groupId);
+            onClick={(event) => {
+              // A modified or middle click opens another tab; this one keeps its chat as it is.
+              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              threadStoreActions.startNewChat(groupId);
             }}
           >
             <FolderIcon className="size-4 shrink-0" />

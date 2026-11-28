@@ -17,6 +17,11 @@ export type ThreadStore = {
   activeGroupId: Id<"groups"> | null;
   setActiveGroupId: (groupId: Id<"groups"> | null) => void;
 
+  /** Bumped by every "new chat", so the composer starts over with the group's defaults. */
+  newChatKey: number;
+  /** Make `groupId` active and start a fresh chat in it, even if one is already open. */
+  startNewChat: (groupId: Id<"groups"> | null) => void;
+
   threadCommandOpen: boolean;
   setThreadCommandOpen: (open: boolean | ((open: boolean) => boolean)) => void;
 };
@@ -26,6 +31,9 @@ export const useThreadStore = create<ThreadStore>()(
     (set) => ({
       activeGroupId: null,
       setActiveGroupId: (activeGroupId) => set({ activeGroupId }),
+
+      newChatKey: 0,
+      startNewChat: (activeGroupId) => set((state) => ({ activeGroupId, newChatKey: state.newChatKey + 1 })),
 
       threadCommandOpen: false,
       setThreadCommandOpen: (open) =>

@@ -34,7 +34,7 @@ export function NewChatButton({ groups }: NewChatButtonProps) {
   const [query, setQuery] = useState("");
 
   async function createNewChat(groupId: Id<"groups"> | null): Promise<void> {
-    threadStoreActions.setActiveGroupId(groupId);
+    threadStoreActions.startNewChat(groupId);
     setNewChatOpen(false);
     await navigate({ to: "/" });
   }

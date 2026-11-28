@@ -15,13 +15,16 @@ import { GlobalDropzone } from "@/components/chat/global-dropzone";
 import { RegisterEventHandlers } from "@/components/chat/register-event-handlers";
 import { ThreadTitle } from "@/components/chat/top-thread-title";
 import { ConfigStoreProvider } from "@/components/provider/config-provider";
-import { ThreadProfileSidebar } from "@/components/threads/profile/profile-sidebar";
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 
 import { normalizeAppearance } from "@/lib/appearance/theme";
 import { buildImageAssetUrl } from "@/lib/assets/urls";
 import { resolveReasoning, tryGetModelData } from "@/lib/chat/models";
+import { profileLibraryQuery } from "@/lib/profiles/profile-library";
+import { NewChatProfileDefault, ThreadProfileDefault } from "@/components/profiles/new-chat-profile-default";
+import type { ConfigServerState } from "@/lib/store/config-store";
+import { useThreadStore } from "@/lib/store/thread-store";
 import { cn, fromUUID } from "@/lib/utils";
 
 const getDefaultOpenSidebar = createIsomorphicFn()
@@ -50,6 +53,9 @@ export const Route = createFileRoute("/_chat")({
     const [{ defaultOpenSidebar }] = await Promise.all([
       getDefaultOpenSidebar(),
       context.queryClient.query(convexQuery(api.functions.users.getChatShell)),
+      // So a new chat already has its group's profile when the composer appears. The picker
+      // only hides without it, so a failure here must not take the chat down.
+      context.queryClient.query(profileLibraryQuery).catch(() => null),
     ]);
     return { user: context.user, defaultOpenSidebar };
   },
@@ -118,22 +124,26 @@ function ChatLayoutConfig() {
   const { data: threadMeta } = useQuery(
     convexQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
   );
+  const newChatKey = useThreadStore((state) => state.newChatKey);
 
   const selectedModel = threadMeta?.latestModel ?? chatShell.preferences.models.defaultModel;
   const storedModelParams = threadMeta?.latestModelParams ?? chatShell.preferences.models.modelParams;
   const selectedModelData = tryGetModelData(selectedModel);
-  const selectedModelParams = {
-    ...storedModelParams,
+  const selectedModelParams: NonNullable<ConfigServerState["modelParams"]> = {
+    webSearch: storedModelParams.webSearch,
     effort: selectedModelData
       ? resolveReasoning(selectedModelData, storedModelParams.effort)
       : storedModelParams.effort,
-    profile:
-      threadMeta?.latestModelParams.profile ?? chatShell.preferences.models.modelParams.profile ?? null,
   };
+  // A thread's saved profile (including none) comes from the server like its other settings.
+  // Otherwise the profile is left out, so a refresh can't undo a hand-picked one, and
+  // NewChatProfileDefault or ThreadProfileDefault fills in the group's default.
+  const threadProfileId = threadMeta?.latestModelParams.profile;
+  if (threadId && threadProfileId !== undefined) selectedModelParams.profile = threadProfileId;
 
   return (
     <ConfigStoreProvider
-      key={threadId ?? "welcome"}
+      key={threadId ?? `welcome-${newChatKey}`}
       initialState={{
         hiddenModels: chatShell.preferences.models.hidden,
         favoriteModels: chatShell.preferences.models.favorite,
@@ -167,7 +177,10 @@ function ChatLayoutConfig() {
         </div>
 
         <ChatTextarea key="main-chat-textarea" />
-        <ThreadProfileSidebar />
+        {!threadId && <NewChatProfileDefault />}
+        {threadId && threadMeta && threadProfileId === undefined && (
+          <ThreadProfileDefault groupId={threadMeta.groupId} />
+        )}
       </GlobalDropzone>
 
       <RegisterEventHandlers />

@@ -386,6 +386,8 @@ export default defineSchema(
     groups: defineTable({
       title: v.string(),
       userId: v.string(),
+      // The profile a new chat in this group starts with.
+      profileId: v.optional(v.id("profiles")),
     }).index("by_userId", ["userId"]),
 
     threads: defineTable({

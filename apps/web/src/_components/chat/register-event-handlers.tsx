@@ -220,6 +220,8 @@ export function RegisterEventHandlers() {
         staleTime: "static",
       });
 
+      // Start over even when a new chat in this group is already open.
+      threadStoreActions.startNewChat(useThreadStore.getState().activeGroupId);
       await navigate({ to: "/" });
       return;
     }

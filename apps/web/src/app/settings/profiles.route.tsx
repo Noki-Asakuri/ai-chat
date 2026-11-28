@@ -1,14 +1,8 @@
-import { api } from "@ai-chat/backend/convex/_generated/api";
-import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
-
-import { useMutation } from "convex/react";
-import { PlusIcon, SearchIcon } from "lucide-react";
-import { useRef } from "react";
-import { z } from "zod";
-
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useDebouncedValue } from "@tanstack/react-pacer";
+import { PlusIcon, SearchIcon, TriangleAlertIcon, UserRoundPlusIcon, XIcon } from "lucide-react";
+import { useDeferredValue, useState } from "react";
+import { z } from "zod";
 
 import { SettingsSection } from "@/components/settings/settings-section";
 import { Button } from "@/components/ui/button";
@@ -20,233 +14,243 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/toast";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
+import { Separator } from "@/components/ui/separator";
 
-import { convexQuery } from "@convex-dev/react-query";
-
-import { ProfileCard, type ProfileListItem } from "./profiles/-components/profile-card";
 import {
-  ProfilesDialogController,
-  type ProfileEditSeed,
-  type ProfilesDialogControllerHandle,
-} from "./profiles/-components/profiles-dialog-controller";
+  getProfileDefaultPlaces,
+  profileLibraryQuery,
+  type LibraryProfile,
+  type ProfileLibrary,
+} from "@/lib/profiles/profile-library";
+
+import { GroupDefaults } from "./profiles/-components/group-defaults";
+import { ProfileCard } from "./profiles/-components/profile-card";
+import { ProfileEditorDialog } from "./profiles/-components/profile-editor-dialog";
 import { SortSelect, type SortOption } from "./profiles/-components/sort-select";
-import { LoadingProfilesListSkeleton } from "./profiles/-pending";
+import { LoadingProfilesSkeleton } from "./profiles/-pending";
 
 export const Route = createFileRoute("/settings/profiles")({
   validateSearch: z.object({
     q: z.string().optional(),
     sort: z.enum(["az", "za", "newest", "oldest", "recently-updated"]).optional(),
   }),
+  loader: async ({ context }) => {
+    await context.queryClient.prefetchQuery(profileLibraryQuery);
+  },
   component: AiProfilesPage,
   head: () => ({ meta: [{ title: "AI Profiles - AI Chat" }] }),
 });
 
-function ProfilesHeader({
-  search,
-  onSearchChange,
-  sort,
-  onSortChange,
-  onCreate,
-}: {
-  search: string;
-  onSearchChange: (value: string) => void;
-  sort: SortOption;
-  onSortChange: (value: SortOption) => void;
-  onCreate: () => void;
-}) {
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="relative w-full sm:max-w-md">
-        <SearchIcon className="absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search profiles…"
-          className="pl-8"
-        />
-      </div>
+const byName = (a: LibraryProfile, b: LibraryProfile) =>
+  // A fixed locale, so the server and the browser put the cards in the same order.
+  a.name.localeCompare(b.name, "en", { sensitivity: "base" });
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-        <SortSelect value={sort} onValueChange={onSortChange} className="w-full sm:w-48" />
-
-        <Button type="button" onClick={onCreate} className="h-9 w-full shadow-xs sm:w-auto">
-          <PlusIcon className="size-4" /> Create profile
-        </Button>
-      </div>
-    </div>
-  );
+function sortProfiles(profiles: LibraryProfile[], sort: SortOption): LibraryProfile[] {
+  switch (sort) {
+    case "az":
+      return profiles.toSorted(byName);
+    case "za":
+      return profiles.toSorted((a, b) => byName(b, a));
+    case "newest":
+      return profiles.toSorted((a, b) => b.createdAt - a.createdAt);
+    case "oldest":
+      return profiles.toSorted((a, b) => a.createdAt - b.createdAt);
+    default:
+      return profiles.toSorted((a, b) => b.updatedAt - a.updatedAt);
+  }
 }
 
-function ProfilesList({
-  profiles,
-  isLoading,
-  search,
-  onClearSearch,
-  onCreate,
-  onEdit,
-  onDelete,
-}: {
-  profiles: Array<ProfileListItem>;
-  isLoading: boolean;
-  search: string;
-  onClearSearch: () => void;
-  onCreate: () => void;
-  onEdit: (seed: ProfileEditSeed) => void;
-  onDelete: (id: Id<"profiles">) => void;
-}) {
-  const hasSearch = search.trim().length > 0;
-
-  if (isLoading) {
-    return <LoadingProfilesListSkeleton />;
-  }
-
-  if (profiles.length === 0) {
-    if (hasSearch) {
-      return (
-        <Empty className="rounded-md">
-          <EmptyHeader>
-            <EmptyTitle>No matches</EmptyTitle>
-            <EmptyDescription>
-              No profiles match <span className="font-medium text-foreground">“{search}”</span>.
-            </EmptyDescription>
-          </EmptyHeader>
-
-          <EmptyContent>
-            <Button variant="secondary" onClick={onClearSearch} className="h-9">
-              Clear search
-            </Button>
-          </EmptyContent>
-        </Empty>
-      );
-    }
-
-    return (
-      <Empty className="rounded-md bg-card ring-1 ring-foreground/10">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <PlusIcon className="size-4" />
-          </EmptyMedia>
-          <EmptyTitle>Create your first AI profile</EmptyTitle>
-          <EmptyDescription>
-            Profiles are reusable personas. Give it a name, a system prompt, and an optional image.
-          </EmptyDescription>
-        </EmptyHeader>
-
-        <EmptyContent>
-          <Button onClick={onCreate} className="h-9 shadow-xs">
-            <PlusIcon className="size-4" /> Create profile
-          </Button>
-        </EmptyContent>
-      </Empty>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-      {profiles.map((p) => (
-        <ProfileCard key={p._id} profile={p} onEdit={onEdit} onDelete={onDelete} />
-      ))}
-    </div>
+function filterProfiles(profiles: LibraryProfile[], search: string): LibraryProfile[] {
+  const term = search.trim().toLocaleLowerCase();
+  if (!term) return profiles;
+  return profiles.filter(
+    (profile) =>
+      profile.name.toLocaleLowerCase().includes(term) ||
+      profile.systemPrompt.toLocaleLowerCase().includes(term),
   );
 }
 
 function AiProfilesPage() {
   const searchParams = Route.useSearch();
   const navigate = Route.useNavigate();
+  const { data: library, isError, error, refetch, isRefetching } = useQuery(profileLibraryQuery);
 
   const search = searchParams.q ?? "";
-  const [debouncedSearch] = useDebouncedValue(search, { wait: 300 });
-  const sort = searchParams.sort ?? ("recently-updated" satisfies SortOption);
+  const deferredSearch = useDeferredValue(search);
+  const sort = searchParams.sort ?? "recently-updated";
 
-  const { data, isPending } = useQuery({
-    ...convexQuery(api.functions.profiles.listProfilesWithQuery, {
-      search: debouncedSearch,
-      sort,
-    }),
-    placeholderData: keepPreviousData,
+  // The editor stays mounted while it closes, so it keeps showing the profile it had open.
+  const [editor, setEditor] = useState<{ open: boolean; profile: LibraryProfile | null; session: number }>({
+    open: false,
+    profile: null,
+    session: 0,
   });
-  const profiles: Array<ProfileListItem> = data ?? [];
 
-  const createProfile = useMutation(api.functions.profiles.createProfile);
-  const updateProfile = useMutation(api.functions.profiles.updateProfile);
-  const deleteProfile = useMutation(api.functions.profiles.deleteProfile);
-
-  const dialogRef = useRef<ProfilesDialogControllerHandle | null>(null);
+  function openEditor(profile: LibraryProfile | null) {
+    setEditor((current) => ({ open: true, profile, session: current.session + 1 }));
+  }
 
   function onSearchChange(value: string) {
     void navigate({
       replace: true,
-      search: (previous) => ({
-        ...previous,
-        q: value.trim().length === 0 ? undefined : value,
-      }),
+      search: (previous) => ({ ...previous, q: value.length === 0 ? undefined : value }),
     });
   }
 
-  function onSortChange(value: SortOption) {
-    void navigate({
-      replace: true,
-      search: (previous) => ({ ...previous, sort: value }),
-    });
+  if (!library) {
+    if (!isError) return <LoadingProfilesSkeleton />;
+    return (
+      <Empty className="rounded-lg border border-dashed py-14">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <TriangleAlertIcon />
+          </EmptyMedia>
+          <EmptyTitle>Couldn't load your profiles</EmptyTitle>
+          <EmptyDescription>{error.message}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button variant="secondary" disabled={isRefetching} onClick={() => void refetch()}>
+            {isRefetching ? "Trying again…" : "Try again"}
+          </Button>
+        </EmptyContent>
+      </Empty>
+    );
   }
 
-  function onClearSearch() {
-    onSearchChange("");
-  }
-
-  function onCreate() {
-    dialogRef.current?.openCreate();
-  }
-
-  function onEdit(seed: ProfileEditSeed) {
-    dialogRef.current?.openEdit(seed);
-  }
-
-  async function onDelete(id: Id<"profiles">) {
-    try {
-      await deleteProfile({ profileId: id });
-    } catch (error) {
-      toast.error("Failed to delete profile", {
-        description: error instanceof Error ? error.message : undefined,
-      });
-    }
-  }
+  const visible = sortProfiles(filterProfiles(library.profiles, deferredSearch), sort);
+  const hasProfiles = library.profiles.length > 0;
 
   return (
-    <main>
+    <main className="flex flex-col gap-10">
       <SettingsSection
         id="profile-library"
-        title="Profile library"
-        description="Search, sort, and manage the personas available in your chats."
+        title="Your profiles"
+        description="Pick one from the profile button in the composer, or type / in a message."
+        actions={
+          hasProfiles && (
+            <Button type="button" onClick={() => openEditor(null)} className="w-full sm:w-auto">
+              <PlusIcon /> New profile
+            </Button>
+          )
+        }
       >
-        <div className="flex flex-col gap-4">
-          <ProfilesHeader
-            search={search}
-            onSearchChange={onSearchChange}
-            sort={sort}
-            onSortChange={onSortChange}
-            onCreate={onCreate}
-          />
+        {hasProfiles ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <InputGroup className="h-9 sm:max-w-sm">
+                <InputGroupAddon>
+                  <SearchIcon />
+                </InputGroupAddon>
+                <InputGroupInput
+                  value={search}
+                  onChange={(event) => onSearchChange(event.target.value)}
+                  placeholder="Search names and instructions…"
+                  aria-label="Search profiles"
+                />
+                {search && (
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton
+                      size="icon-xs"
+                      aria-label="Clear search"
+                      onClick={() => onSearchChange("")}
+                    >
+                      <XIcon />
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                )}
+              </InputGroup>
 
-          <ProfilesList
-            profiles={profiles}
-            isLoading={isPending}
-            search={debouncedSearch}
-            onClearSearch={onClearSearch}
-            onCreate={onCreate}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        </div>
+              <SortSelect
+                value={sort}
+                onValueChange={(value) =>
+                  void navigate({ replace: true, search: (previous) => ({ ...previous, sort: value }) })
+                }
+                className="w-full sm:w-auto sm:min-w-48"
+              />
+
+              <p className="text-xs text-muted-foreground tabular-nums sm:ml-auto" aria-live="polite">
+                {visible.length === library.profiles.length
+                  ? `${library.profiles.length} ${library.profiles.length === 1 ? "profile" : "profiles"}`
+                  : `${visible.length} of ${library.profiles.length}`}
+              </p>
+            </div>
+
+            {visible.length > 0 ? (
+              <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {visible.map((profile) => (
+                  <ProfileCard
+                    key={profile._id}
+                    profile={profile}
+                    defaultPlaces={getProfileDefaultPlaces(library, profile._id)}
+                    onEdit={openEditor}
+                  />
+                ))}
+              </ul>
+            ) : (
+              <Empty className="rounded-lg border border-dashed">
+                <EmptyHeader>
+                  <EmptyTitle>No matches</EmptyTitle>
+                  <EmptyDescription>
+                    No profile name or instruction contains{" "}
+                    <span className="font-medium text-foreground">“{deferredSearch}”</span>.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button variant="secondary" onClick={() => onSearchChange("")}>
+                    Clear search
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            )}
+          </div>
+        ) : (
+          <Empty className="rounded-lg border border-dashed py-14">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <UserRoundPlusIcon />
+              </EmptyMedia>
+              <EmptyTitle>Create your first profile</EmptyTitle>
+              <EmptyDescription>
+                A profile is a reusable persona, like a code reviewer or a writing coach. Make one the
+                default for a group and every new chat there starts with it.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button onClick={() => openEditor(null)}>
+                <PlusIcon /> New profile
+              </Button>
+            </EmptyContent>
+          </Empty>
+        )}
       </SettingsSection>
 
-      <ProfilesDialogController
-        ref={dialogRef}
-        createProfile={createProfile}
-        updateProfile={updateProfile}
+      {hasProfiles && (
+        <>
+          <Separator />
+          <GroupDefaultsSection library={library} />
+        </>
+      )}
+
+      <ProfileEditorDialog
+        open={editor.open}
+        onOpenChange={(open) => setEditor((current) => ({ ...current, open }))}
+        profile={editor.profile}
+        library={library}
+        session={editor.session}
       />
     </main>
+  );
+}
+
+function GroupDefaultsSection({ library }: { library: ProfileLibrary }) {
+  return (
+    <SettingsSection
+      id="group-defaults"
+      title="Group defaults"
+      description="New chats in a group start with its profile. Changing the profile inside a chat only affects that chat."
+    >
+      <GroupDefaults library={library} />
+    </SettingsSection>
   );
 }

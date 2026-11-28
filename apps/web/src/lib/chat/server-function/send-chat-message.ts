@@ -4,10 +4,11 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 import { useConvex } from "convex/react";
 import { toast } from "@/components/ui/toast";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
+import { useConfigStore, useConfigStoreApi, useConfigStoreState } from "@/components/provider/config-provider";
 
 import { parseComposerInput, resolveComposerAttachments } from "@/lib/chat/composer-tokens";
 import { tryGetModelData } from "@/lib/chat/models";
@@ -15,6 +16,7 @@ import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
+import { getGroupDefaultProfileId, profileLibraryQuery } from "@/lib/profiles/profile-library";
 import { useThreadStore } from "@/lib/store/thread-store";
 import type { ChatRequestBody } from "@/lib/types";
 import { fromUUID, toUUID, tryCatch } from "@/lib/utils";
@@ -39,6 +41,8 @@ type CreateMessage = (typeof api.functions.messages.addMessagesToThread)["_args"
 export function useSendChatMessage() {
   const navigate = useNavigate();
   const configStore = useConfigStoreState();
+  const configStoreApi = useConfigStoreApi();
+  const queryClient = useQueryClient();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
   const convexClient = useConvex();
@@ -74,7 +78,7 @@ export function useSendChatMessage() {
     if (lastMessage?.status === "pending" || lastMessage?.status === "streaming") return;
 
     if (profileId && profileId !== modelParams.profile) {
-      configStore.setModelParams({ profile: profileId });
+      configStore.chooseProfile(profileId);
       if (threadId) void syncThreadModelConfig({ threadId, modelParams: { profile: profileId } });
     }
 
@@ -91,7 +95,19 @@ export function useSendChatMessage() {
 
     chatStoreActions.resetInput();
 
-    const requestModelParams = { ...modelParams, profile: profileId ?? modelParams.profile };
+    // A new chat's group is read once, here, so the thread and its profile can't come from
+    // different groups if the sidebar switches while the steps below wait.
+    const groupId = useThreadStore.getState().activeGroupId;
+    let profile = profileId ?? modelParams.profile;
+    if (!threadId && !profileId && !configStoreApi.getState().profileChosen) {
+      // Nothing picked by hand: use this group's default, loading the profiles now if the
+      // composer appeared before they did.
+      const [library, libraryError] = await tryCatch(queryClient.query(profileLibraryQuery));
+      if (libraryError) console.error("[Chat] Failed to load profiles for the new chat", libraryError);
+      else profile = getGroupDefaultProfileId(library, groupId);
+    }
+
+    const requestModelParams = { ...modelParams, profile };
     const acceptedInputs = tryGetModelData(model)?.modalities.input ?? [];
     const [pastAttachments, pastAttachmentsError] = await tryCatch(
       resolveComposerAttachments(convexClient, pastAttachmentIds),
@@ -106,7 +122,7 @@ export function useSendChatMessage() {
 
     if (!threadId) {
       threadId = await convexClient.mutation(api.functions.threads.createThread, {
-        groupId: useThreadStore.getState().activeGroupId,
+        groupId,
         latestModel: model,
         latestModelParams: requestModelParams,
       });
