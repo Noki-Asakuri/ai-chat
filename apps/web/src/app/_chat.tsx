@@ -1,27 +1,35 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, redirect, useParams } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie } from "@tanstack/react-start/server";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { getAuth } from "@workos/authkit-tanstack-react-start";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { GlobalDropzone } from "@/components/chat/global-dropzone";
 import { RegisterEventHandlers } from "@/components/chat/register-event-handlers";
 import { ThreadTitle } from "@/components/chat/top-thread-title";
 import { ConfigStoreProvider } from "@/components/provider/config-provider";
-import { ThreadProfileSidebar } from "@/components/threads/profile/profile-sidebar";
 import { ThreadSidebar } from "@/components/threads/thread-sidebar";
 import { SIDEBAR_COOKIE_NAME, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 
 import { normalizeAppearance } from "@/lib/appearance/theme";
 import { buildImageAssetUrl } from "@/lib/assets/urls";
 import { resolveReasoning, tryGetModelData } from "@/lib/chat/models";
+import { getNewChatInitialProfile, type InitialChatProfile } from "@/lib/profiles/chat-profile";
+import {
+  getGroupDefaultProfileId,
+  profileLibraryQuery,
+  type ProfileLibrary,
+} from "@/lib/profiles/profile-library";
+import { NewChatProfileDefault, ThreadProfileDefault } from "@/components/profiles/new-chat-profile-default";
+import type { ConfigServerState } from "@/lib/store/config-store";
+import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import { cn, fromUUID } from "@/lib/utils";
 
 const getDefaultOpenSidebar = createIsomorphicFn()
@@ -50,6 +58,9 @@ export const Route = createFileRoute("/_chat")({
     const [{ defaultOpenSidebar }] = await Promise.all([
       getDefaultOpenSidebar(),
       context.queryClient.query(convexQuery(api.functions.users.getChatShell)),
+      // So the chat store starts with the group's profile instead of switching to it a frame later.
+      // The picker only hides without it, and sending loads it again, so a failure is not fatal.
+      context.queryClient.query(profileLibraryQuery).catch(() => null),
     ]);
     return { user: context.user, defaultOpenSidebar };
   },
@@ -118,22 +129,50 @@ function ChatLayoutConfig() {
   const { data: threadMeta } = useQuery(
     convexQuery(api.functions.threads.getThreadPageMeta, threadId ? { threadId } : "skip"),
   );
+  const newChatKey = useThreadStore((state) => state.newChatKey);
+  const queryClient = useQueryClient();
+
+  // Opening a thread ends a hand pick on the new chat; coming back starts from the group's default.
+  useEffect(() => {
+    if (threadId) threadStoreActions.forgetNewChatProfile();
+  }, [threadId]);
+
+  // Read from the cache once, when the store is made, rather than subscribing: library updates
+  // must never re-apply this layout's other settings (ChatProfileDefault follows them instead).
+  function getInitialProfile(): InitialChatProfile | undefined {
+    const library = queryClient.getQueryData<ProfileLibrary>(profileLibraryQuery.queryKey);
+    if (!threadId) {
+      const state = useThreadStore.getState();
+      return getNewChatInitialProfile({
+        library,
+        groupId: state.activeGroupId,
+        newChatKey: state.newChatKey,
+        remembered: state.newChatProfile,
+      });
+    }
+    if (!library || !threadMeta || threadMeta.latestModelParams.profile !== undefined) return undefined;
+    return { profile: getGroupDefaultProfileId(library, threadMeta.groupId), chosen: false };
+  }
 
   const selectedModel = threadMeta?.latestModel ?? chatShell.preferences.models.defaultModel;
   const storedModelParams = threadMeta?.latestModelParams ?? chatShell.preferences.models.modelParams;
   const selectedModelData = tryGetModelData(selectedModel);
-  const selectedModelParams = {
-    ...storedModelParams,
+  const selectedModelParams: NonNullable<ConfigServerState["modelParams"]> = {
+    webSearch: storedModelParams.webSearch,
     effort: selectedModelData
       ? resolveReasoning(selectedModelData, storedModelParams.effort)
       : storedModelParams.effort,
-    profile:
-      threadMeta?.latestModelParams.profile ?? chatShell.preferences.models.modelParams.profile ?? null,
   };
+  // A thread's saved profile (including none) comes from the server like its other settings.
+  // Otherwise the profile is left out, so a refresh can't undo a hand-picked one, and
+  // NewChatProfileDefault or ThreadProfileDefault fills in the group's default.
+  const threadProfileId = threadMeta?.latestModelParams.profile;
+  if (threadId && threadProfileId !== undefined) selectedModelParams.profile = threadProfileId;
 
   return (
     <ConfigStoreProvider
-      key={threadId ?? "welcome"}
+      key={threadId ?? `welcome-${newChatKey}`}
+      getInitialProfile={getInitialProfile}
       initialState={{
         hiddenModels: chatShell.preferences.models.hidden,
         favoriteModels: chatShell.preferences.models.favorite,
@@ -167,7 +206,10 @@ function ChatLayoutConfig() {
         </div>
 
         <ChatTextarea key="main-chat-textarea" />
-        <ThreadProfileSidebar />
+        {!threadId && <NewChatProfileDefault />}
+        {threadId && threadMeta && threadProfileId === undefined && (
+          <ThreadProfileDefault groupId={threadMeta.groupId} />
+        )}
       </GlobalDropzone>
 
       <RegisterEventHandlers />

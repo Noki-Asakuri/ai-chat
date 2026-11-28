@@ -1,17 +1,30 @@
 import { createContext, use, useEffect, useState } from "react";
 import { useStore } from "zustand";
 
-import { createConfigStore, type ConfigStore, type ConfigStoreData } from "@/lib/store/config-store";
+import type { InitialChatProfile } from "@/lib/profiles/chat-profile";
+import { createConfigStore, type ConfigServerState, type ConfigStore } from "@/lib/store/config-store";
 
 export const ConfigStoreContext = createContext<ReturnType<typeof createConfigStore> | null>(null);
 
 type ConfigStoreProviderProps = {
   children: React.ReactNode;
-  initialState: Partial<ConfigStoreData>;
+  initialState: ConfigServerState;
+  /** Read once when the store is made, so the chat shows its profile from the first paint. */
+  getInitialProfile?: () => InitialChatProfile | undefined;
 };
 
 export function ConfigStoreProvider(props: ConfigStoreProviderProps) {
-  const [store] = useState(() => createConfigStore(props.initialState));
+  // Part of the store's first state, not set afterwards: server rendering and hydration read
+  // that first snapshot, so the profile shows from the very first paint.
+  const [store] = useState(() => {
+    const initialProfile = props.getInitialProfile?.();
+    if (!initialProfile) return createConfigStore(props.initialState);
+    return createConfigStore({
+      ...props.initialState,
+      profileChosen: initialProfile.chosen,
+      modelParams: { ...props.initialState.modelParams, profile: initialProfile.profile },
+    });
+  });
 
   useEffect(() => {
     store.getState().setServerState(props.initialState);

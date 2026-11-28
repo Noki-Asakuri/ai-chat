@@ -53,6 +53,14 @@ export async function uploadAiProfileImage(file: File) {
 
   if (error) throw error;
 
-  await convexClient.mutation(api.functions.files.syncMetadata, { key });
+  // The file is stored now; if recording it fails, remove it so nothing is left behind.
+  const [, syncError] = await tryCatch(convexClient.mutation(api.functions.files.syncMetadata, { key }));
+  if (syncError) {
+    const [, discardError] = await tryCatch(
+      convexClient.mutation(api.functions.profiles.discardProfileImage, { imageKey: key }),
+    );
+    if (discardError) console.error("[Profiles] Failed to discard an unsaved image", discardError);
+    throw syncError;
+  }
   return key;
 }

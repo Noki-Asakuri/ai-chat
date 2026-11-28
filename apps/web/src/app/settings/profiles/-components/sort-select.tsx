@@ -52,7 +52,7 @@ export function SortSelect({
       }}
     >
       <SelectTrigger className={cn("h-9 text-xs", className)}>
-        <div className="flex flex-1 items-center gap-2 text-left">
+        <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
           <span className="text-muted-foreground">Sort</span>
           <span className="truncate">{sortOptions[value].label}</span>
         </div>

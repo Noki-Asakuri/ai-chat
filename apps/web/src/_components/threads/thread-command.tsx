@@ -138,7 +138,7 @@ export function ThreadCommandDialog() {
     : visibleThreads.toSorted((a, b) => b.updatedAt - a.updatedAt).slice(0, 5);
 
   async function createNewThread(groupId: Id<"groups"> | null) {
-    threadStoreActions.setActiveGroupId(groupId);
+    threadStoreActions.startNewChat(groupId);
     await navigate({ to: "/" });
     closeThreadCommand();
   }

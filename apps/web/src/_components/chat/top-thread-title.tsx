@@ -33,8 +33,9 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
   });
 
   const threadData = params?.threadId && data ? data : null;
-  const groupId = threadData?.groupId ?? activeGroupId;
-  const groupTitle = threadData?.groupTitle ?? activeGroup?.title ?? "Ungrouped";
+  // A thread's own group (null is Ungrouped), not whichever group the sidebar is showing.
+  const groupId = threadData ? threadData.groupId : activeGroupId;
+  const groupTitle = threadData ? (threadData.groupTitle ?? "Ungrouped") : (activeGroup?.title ?? "Ungrouped");
 
   function toggleThreadPin() {
     if (!threadId || !threadData) return;
@@ -55,8 +56,10 @@ export function ThreadTitle({ isSkeleton }: { isSkeleton?: boolean }) {
             to="/"
             title={`New chat in ${groupTitle}`}
             className="flex max-w-48 min-w-0 shrink-0 items-center gap-2 rounded-md text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
-            onClick={() => {
-              threadStoreActions.setActiveGroupId(groupId);
+            onClick={(event) => {
+              // A modified or middle click opens another tab; this one keeps its chat as it is.
+              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              threadStoreActions.startNewChat(groupId);
             }}
           >
             <FolderIcon className="size-4 shrink-0" />

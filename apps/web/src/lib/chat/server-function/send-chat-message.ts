@@ -1,13 +1,15 @@
 import { api } from "@ai-chat/backend/convex/_generated/api";
 import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
+import { convexQuery } from "@convex-dev/react-query";
 import { useConvex } from "convex/react";
 import { toast } from "@/components/ui/toast";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useShallow } from "zustand/shallow";
 
-import { useConfigStore, useConfigStoreState } from "@/components/provider/config-provider";
+import { useConfigStore, useConfigStoreApi, useConfigStoreState } from "@/components/provider/config-provider";
 
 import { parseComposerInput, resolveComposerAttachments } from "@/lib/chat/composer-tokens";
 import { tryGetModelData } from "@/lib/chat/models";
@@ -15,7 +17,9 @@ import { emitStreamFeedback } from "@/lib/chat/stream-feedback";
 import { setStickyToBottom } from "@/lib/chat/scroll-stickiness";
 import { chatStoreActions, useChatStore } from "@/lib/store/chat-store";
 import { messageStoreActions, useMessageStore } from "@/lib/store/messages-store";
-import { useThreadStore } from "@/lib/store/thread-store";
+import { resolveMessageProfile } from "@/lib/profiles/chat-profile";
+import { profileLibraryQuery } from "@/lib/profiles/profile-library";
+import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import type { ChatRequestBody } from "@/lib/types";
 import { fromUUID, toUUID, tryCatch } from "@/lib/utils";
 
@@ -39,6 +43,8 @@ type CreateMessage = (typeof api.functions.messages.addMessagesToThread)["_args"
 export function useSendChatMessage() {
   const navigate = useNavigate();
   const configStore = useConfigStoreState();
+  const configStoreApi = useConfigStoreApi();
+  const queryClient = useQueryClient();
   const params = useParams({ from: "/_chat/threads/$threadId", shouldThrow: false });
 
   const convexClient = useConvex();
@@ -74,7 +80,7 @@ export function useSendChatMessage() {
     if (lastMessage?.status === "pending" || lastMessage?.status === "streaming") return;
 
     if (profileId && profileId !== modelParams.profile) {
-      configStore.setModelParams({ profile: profileId });
+      configStore.chooseProfile(profileId);
       if (threadId) void syncThreadModelConfig({ threadId, modelParams: { profile: profileId } });
     }
 
@@ -89,9 +95,43 @@ export function useSendChatMessage() {
       return;
     }
 
+    // Cleared before anything waits, so a second press of Enter finds nothing left to send.
     chatStoreActions.resetInput();
 
-    const requestModelParams = { ...modelParams, profile: profileId ?? modelParams.profile };
+    // The group is read once, here, so a new thread and its profile can't come from different
+    // groups if the sidebar switches while the steps below wait. A thread uses its own group.
+    const newChatGroupId = useThreadStore.getState().activeGroupId;
+    const [profile, profileError] = await tryCatch(
+      (async () => {
+        const threadMeta = threadId
+          ? await queryClient.query(convexQuery(api.functions.threads.getThreadPageMeta, { threadId }))
+          : undefined;
+        return resolveMessageProfile({
+          messageProfileId: profileId,
+          currentProfileId: modelParams.profile,
+          chosen: configStoreApi.getState().profileChosen,
+          // A thread that never saved a profile still follows its group's default.
+          needsGroupDefault: !threadMeta || threadMeta.latestModelParams.profile === undefined,
+          groupId: threadMeta ? threadMeta.groupId : newChatGroupId,
+          loadLibrary: () => queryClient.query(profileLibraryQuery),
+        });
+      })(),
+    );
+    if (profileError) {
+      // Sending now could save this chat with no profile, even though its group has one.
+      console.error("[Chat] Failed to load the chat's profile before sending", profileError);
+      // Put the draft back, unless a new one was started while this waited.
+      const current = useChatStore.getState();
+      if (!current.input && current.attachments.length === 0) {
+        useChatStore.setState({ input: composerInput, attachments });
+      }
+      toast.error("Couldn't load your profiles", { description: "Your message wasn't sent. Try again." });
+      return;
+    }
+
+    if (!threadId) threadStoreActions.forgetNewChatProfile();
+
+    const requestModelParams = { ...modelParams, profile };
     const acceptedInputs = tryGetModelData(model)?.modalities.input ?? [];
     const [pastAttachments, pastAttachmentsError] = await tryCatch(
       resolveComposerAttachments(convexClient, pastAttachmentIds),
@@ -106,7 +146,7 @@ export function useSendChatMessage() {
 
     if (!threadId) {
       threadId = await convexClient.mutation(api.functions.threads.createThread, {
-        groupId: useThreadStore.getState().activeGroupId,
+        groupId: newChatGroupId,
         latestModel: model,
         latestModelParams: requestModelParams,
       });

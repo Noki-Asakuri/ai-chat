@@ -8,6 +8,7 @@ import { BaseChatAttachmentsButton } from "./attachments-display";
 import { composerControlClassName } from "./composer-control";
 import { ChatModelSelector, ModelSelector } from "./model-selector";
 import { keepComposerFocus } from "./keep-composer-focus";
+import { ChatProfilePicker } from "./profile-picker";
 import { ChatReasoningPicker, ReasoningPicker } from "./reasoning-picker";
 
 import { getDefaultReasoning, getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
@@ -27,6 +28,7 @@ export function ChatActionButtons() {
       <ChatModelSelector />
 
       <div className="hidden items-center gap-0.5 sm:flex">
+        <ChatProfilePicker />
         {supportsReasoning && <ChatReasoningPicker />}
         {supportToolCalling && <WebSearchButton />}
       </div>

@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { z } from "zod";
 
+import type { RememberedNewChatProfile } from "../profiles/chat-profile";
 import type { RemoveAllExceptFunctions } from "../types";
 
 const PersistedThreadStoreSchema = z
@@ -17,6 +18,16 @@ export type ThreadStore = {
   activeGroupId: Id<"groups"> | null;
   setActiveGroupId: (groupId: Id<"groups"> | null) => void;
 
+  /** Bumped by every "new chat", so the composer starts over with the group's defaults. */
+  newChatKey: number;
+  /** Make `groupId` active and start a fresh chat in it, even if one is already open. */
+  startNewChat: (groupId: Id<"groups"> | null) => void;
+
+  /** A profile picked by hand on the open new chat, kept while its draft is unsent. */
+  newChatProfile: RememberedNewChatProfile | null;
+  rememberNewChatProfile: (profileId: Id<"profiles"> | null) => void;
+  forgetNewChatProfile: () => void;
+
   threadCommandOpen: boolean;
   setThreadCommandOpen: (open: boolean | ((open: boolean) => boolean)) => void;
 };
@@ -25,7 +36,22 @@ export const useThreadStore = create<ThreadStore>()(
   persist(
     (set) => ({
       activeGroupId: null,
-      setActiveGroupId: (activeGroupId) => set({ activeGroupId }),
+      // Moving to another group ends a hand pick on the new chat, so it can't come back later.
+      setActiveGroupId: (activeGroupId) =>
+        set((state) =>
+          state.activeGroupId === activeGroupId ? state : { activeGroupId, newChatProfile: null },
+        ),
+
+      newChatKey: 0,
+      startNewChat: (activeGroupId) =>
+        set((state) => ({ activeGroupId, newChatKey: state.newChatKey + 1, newChatProfile: null })),
+
+      newChatProfile: null,
+      rememberNewChatProfile: (profileId) =>
+        set((state) => ({
+          newChatProfile: { newChatKey: state.newChatKey, groupId: state.activeGroupId, profileId },
+        })),
+      forgetNewChatProfile: () => set({ newChatProfile: null }),
 
       threadCommandOpen: false,
       setThreadCommandOpen: (open) =>
