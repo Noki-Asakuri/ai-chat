@@ -398,6 +398,8 @@ export default defineSchema(
       branchedFrom: v.optional(v.id("threads")),
       statisticsRecorded: v.optional(v.boolean()),
       messageGraphVersion: v.optional(v.number()),
+      // Maintained by the messages trigger in `triggers.ts`; missing until backfilled.
+      messageCount: v.optional(v.number()),
 
       latestModel: v.string(),
       latestModelParams: AISDKModelParams,
@@ -472,6 +474,7 @@ export default defineSchema(
       updatedAt: v.number(),
     })
       .index("by_threadId", ["threadId"])
+      .index("by_ownerUserId", ["ownerUserId"])
       .index("by_shareId", ["shareId"]),
 
     attachments: defineTable({

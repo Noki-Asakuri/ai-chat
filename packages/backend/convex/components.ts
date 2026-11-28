@@ -7,6 +7,7 @@ import { customMutation, customQuery } from "convex-helpers/server/customFunctio
 import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
+import { withTriggers } from "./triggers";
 
 const authFunctions: AuthFunctions = internal.functions.auth;
 
@@ -47,9 +48,12 @@ export const authenticatedUserIdQuery = customQuery(query, {
   },
 });
 
+// Built on the raw builder and wrapped here, rather than on `triggers.ts`'s `mutation`, so the
+// handler's ctx type keeps `rawDb`.
 export const authenticatedMutation = customMutation(mutation, {
   args: {},
-  input: async (ctx) => {
+  input: async (rawCtx) => {
+    const ctx = withTriggers(rawCtx);
     const userFromAuthKit = await ctx.auth.getUserIdentity();
     if (!userFromAuthKit) throw new Error("Not authenticated");
 

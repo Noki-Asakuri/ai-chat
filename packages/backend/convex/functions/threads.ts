@@ -4,7 +4,8 @@ import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
-import { internalMutation, query } from "../_generated/server";
+import { query } from "../_generated/server";
+import { internalMutation } from "../triggers";
 import { recordStatisticsThread } from "./statistics";
 
 import { authenticatedMutation, authenticatedQuery, authenticatedUserIdQuery } from "../components";
@@ -15,35 +16,7 @@ import {
   status,
 } from "../schema";
 
-type ThreadStatus = "pending" | "streaming" | "complete" | "error";
-
-type AccountThreadRow = {
-  _id: Id<"threads">;
-  _creationTime: number;
-
-  title: string;
-  updatedAt: number;
-  pinned: boolean;
-  shared: boolean;
-  status: ThreadStatus;
-
-  messageCount: number;
-  attachmentCount: number;
-};
-
-type AccountThreadSortField =
-  | "title"
-  | "pinned"
-  | "shared"
-  | "messageCount"
-  | "attachmentCount"
-  | "_creationTime"
-  | "updatedAt"
-  | "status";
-
-type AccountThreadSortDirection = "asc" | "desc";
-
-const MAX_ACCOUNT_THREADS_PAGE_SIZE = 15;
+const MAX_BULK_THREAD_UPDATES = 500;
 const SETTLE_INACTIVE_THREADS_PAGE_SIZE = 100;
 const AUTO_SETTLE_USERS_PAGE_SIZE = 25;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -82,63 +55,6 @@ const threadValidator = v.object({
   status,
 });
 
-function compareAccountThreadRows(
-  left: AccountThreadRow,
-  right: AccountThreadRow,
-  sortField: AccountThreadSortField,
-  sortDirection: AccountThreadSortDirection,
-): number {
-  let base = 0;
-
-  if (sortField === "title") {
-    base = left.title.localeCompare(right.title, undefined, { sensitivity: "base" });
-  }
-
-  if (sortField === "messageCount") {
-    if (left.messageCount < right.messageCount) base = -1;
-    else if (left.messageCount > right.messageCount) base = 1;
-  }
-
-  if (sortField === "pinned") {
-    if (left.pinned === right.pinned) base = 0;
-    else if (left.pinned) base = 1;
-    else base = -1;
-  }
-
-  if (sortField === "shared") {
-    if (left.shared === right.shared) base = 0;
-    else if (left.shared) base = 1;
-    else base = -1;
-  }
-
-  if (sortField === "attachmentCount") {
-    if (left.attachmentCount < right.attachmentCount) base = -1;
-    else if (left.attachmentCount > right.attachmentCount) base = 1;
-  }
-
-  if (sortField === "_creationTime") {
-    if (left._creationTime < right._creationTime) base = -1;
-    else if (left._creationTime > right._creationTime) base = 1;
-  }
-
-  if (sortField === "updatedAt") {
-    if (left.updatedAt < right.updatedAt) base = -1;
-    else if (left.updatedAt > right.updatedAt) base = 1;
-  }
-
-  if (sortField === "status") {
-    base = left.status.localeCompare(right.status);
-  }
-
-  if (base === 0) {
-    if (left.updatedAt < right.updatedAt) base = -1;
-    else if (left.updatedAt > right.updatedAt) base = 1;
-  }
-
-  if (sortDirection === "desc") return base * -1;
-  return base;
-}
-
 export const createThread = authenticatedMutation({
   args: {
     title: v.optional(v.string()),
@@ -172,6 +88,7 @@ export const createThread = authenticatedMutation({
       updatedAt: now + 1,
       lastViewedAt: now,
       groupId: args.groupId,
+      messageCount: 0,
 
       latestModel: args.latestModel,
       latestModelParams: args.latestModelParams,
@@ -245,6 +162,7 @@ export const branchThread = authenticatedMutation({
       title: thread.title,
       branchedFrom: args.threadId,
       groupId: null,
+      messageCount: 0,
       latestModel: thread.latestModel,
       latestModelParams: thread.latestModelParams,
     });
@@ -497,115 +415,158 @@ export const markThreadViewed = authenticatedMutation({
   },
 });
 
-export const listAccountThreads = authenticatedQuery({
-  args: {
-    query: v.optional(v.string()),
-    sortField: v.union(
-      v.literal("title"),
-      v.literal("pinned"),
-      v.literal("shared"),
-      v.literal("messageCount"),
-      v.literal("attachmentCount"),
-      v.literal("_creationTime"),
-      v.literal("updatedAt"),
-      v.literal("status"),
-    ),
-    sortDirection: v.union(v.literal("asc"), v.literal("desc")),
-    paginationOpts: paginationOptsValidator,
-  },
+const libraryThreadValidator = v.object({
+  _id: v.id("threads"),
+  _creationTime: v.number(),
+
+  title: v.string(),
+  updatedAt: v.number(),
+  pinned: v.boolean(),
+  settled: v.boolean(),
+  shared: v.boolean(),
+  status,
+  groupId: v.nullable(v.id("groups")),
+  branchedFrom: v.optional(v.id("threads")),
+  latestModel: v.string(),
+
+  // Null until the `backfillThreadMessageCounts` migration has counted this thread.
+  messageCount: v.nullable(v.number()),
+  attachmentCount: v.number(),
+});
+
+/**
+ * Every thread the user owns, with the counts the settings library filters and sorts by.
+ * The library filters, sorts and pages on the client, so totals and sorting cover all threads.
+ */
+export const listThreadLibrary = authenticatedUserIdQuery({
+  args: {},
   returns: v.object({
-    page: v.array(
-      v.object({
-        _id: v.id("threads"),
-        _creationTime: v.number(),
-
-        title: v.string(),
-        updatedAt: v.number(),
-        pinned: v.boolean(),
-        shared: v.boolean(),
-        status: status,
-
-        messageCount: v.number(),
-        attachmentCount: v.number(),
-      }),
-    ),
-    isDone: v.boolean(),
-    continueCursor: v.union(v.string(), v.null()),
+    threads: v.array(libraryThreadValidator),
+    groups: v.array(v.object({ _id: v.id("groups"), title: v.string() })),
   }),
-  handler: async (ctx, args) => {
-    const user = ctx.user;
-    const userId = user.userId;
-
-    const search = (args.query ?? "").trim();
-    const sortField = args.sortField;
-    const sortDirection = args.sortDirection;
-    const paginationOpts = {
-      numItems: Math.min(args.paginationOpts.numItems, MAX_ACCOUNT_THREADS_PAGE_SIZE),
-      cursor: args.paginationOpts.cursor,
-    };
-
-    const canUseUpdatedAtIndexSort = search.length === 0 && sortField === "updatedAt";
-
-    const pageResult =
-      search.length === 0
-        ? canUseUpdatedAtIndexSort
-          ? await ctx.db
-              .query("threads")
-              .withIndex("by_userId_updatedAt", (q) => q.eq("userId", userId))
-              .order(sortDirection)
-              .paginate(paginationOpts)
-          : await ctx.db
-              .query("threads")
-              .withIndex("by_userId_pinned_updatedAt", (q) => q.eq("userId", userId))
-              .order("desc")
-              .paginate(paginationOpts)
-        : await ctx.db
-            .query("threads")
-            .withSearchIndex("search_title", (q) => q.search("title", search).eq("userId", userId))
-            .paginate(paginationOpts);
-
-    const rows: Array<AccountThreadRow> = [];
-
-    for (const thread of pageResult.page) {
-      const messages = await ctx.db
-        .query("messages")
-        .withIndex("by_userId_threadId", (q) => q.eq("userId", userId).eq("threadId", thread._id))
-        .collect();
-
-      const attachments = await ctx.db
+  handler: async (ctx) => {
+    const [threads, attachments, shares, groups] = await Promise.all([
+      ctx.db
+        .query("threads")
+        .withIndex("by_userId_updatedAt", (q) => q.eq("userId", ctx.userId))
+        .order("desc")
+        .collect(),
+      ctx.db
         .query("attachments")
-        .withIndex("by_userId_threadId", (q) => q.eq("userId", userId).eq("threadId", thread._id))
-        .collect();
-
-      const threadShare = await ctx.db
+        .withIndex("by_userId", (q) => q.eq("userId", ctx.userId))
+        .collect(),
+      ctx.db
         .query("threadShares")
-        .withIndex("by_threadId", (q) => q.eq("threadId", thread._id))
-        .unique();
+        .withIndex("by_ownerUserId", (q) => q.eq("ownerUserId", ctx.userId))
+        .collect(),
+      ctx.db
+        .query("groups")
+        .withIndex("by_userId", (q) => q.eq("userId", ctx.userId))
+        .order("asc")
+        .collect(),
+    ]);
 
-      rows.push({
+    const attachmentCounts = new Map<Id<"threads">, number>();
+    for (const attachment of attachments) {
+      attachmentCounts.set(attachment.threadId, (attachmentCounts.get(attachment.threadId) ?? 0) + 1);
+    }
+    const sharedThreadIds = new Set(shares.map((share) => share.threadId));
+    const threadIds = new Set(threads.map((thread) => thread._id));
+
+    return {
+      threads: threads.map((thread) => ({
         _id: thread._id,
         _creationTime: thread._creationTime,
 
         title: thread.title,
         updatedAt: thread.updatedAt,
         pinned: thread.pinned,
-        shared: threadShare !== null,
+        settled: thread.settled === true,
+        shared: sharedThreadIds.has(thread._id),
         status: thread.status,
+        groupId: thread.groupId,
+        // Deleting a thread leaves its branches pointing at it, so only link parents that still exist.
+        branchedFrom:
+          thread.branchedFrom !== undefined && threadIds.has(thread.branchedFrom) ? thread.branchedFrom : undefined,
+        latestModel: thread.latestModel,
 
-        messageCount: messages.length,
-        attachmentCount: attachments.length,
-      });
+        messageCount: thread.messageCount ?? null,
+        attachmentCount: attachmentCounts.get(thread._id) ?? 0,
+      })),
+      groups: groups.map((group) => ({ _id: group._id, title: group.title })),
+    };
+  },
+});
+
+/** Apply one action to many threads in a single transaction. Threads the action can't apply to are skipped. */
+export const updateThreadsInBulk = authenticatedMutation({
+  args: {
+    threadIds: v.array(v.id("threads")),
+    action: v.union(
+      v.object({ type: v.literal("pin"), pinned: v.boolean() }),
+      v.object({ type: v.literal("settle") }),
+      v.object({ type: v.literal("unsettle") }),
+      v.object({ type: v.literal("move"), groupId: v.nullable(v.id("groups")) }),
+    ),
+  },
+  returns: v.object({ updated: v.number(), skipped: v.number() }),
+  handler: async (ctx, args) => {
+    const userId = ctx.user.userId;
+    const threadIds = [...new Set(args.threadIds)];
+    if (threadIds.length > MAX_BULK_THREAD_UPDATES) {
+      throw new Error(`Select at most ${MAX_BULK_THREAD_UPDATES} threads at a time`);
     }
 
-    rows.sort(function (left, right) {
-      return compareAccountThreadRows(left, right, sortField, sortDirection);
-    });
+    const action = args.action;
+    if (action.type === "move" && action.groupId !== null) {
+      const group = await ctx.db.get("groups", action.groupId);
+      if (!group || group.userId !== userId) throw new Error("Group not found");
+    }
 
-    return {
-      page: rows,
-      isDone: pageResult.isDone,
-      continueCursor: pageResult.continueCursor,
-    };
+    let updated = 0;
+    let skipped = 0;
+
+    for (const threadId of threadIds) {
+      const thread = await ctx.db.get("threads", threadId);
+      if (!thread || thread.userId !== userId) {
+        skipped += 1;
+        continue;
+      }
+
+      const settled = thread.settled === true;
+      const finished = thread.status === "complete" || thread.status === "error";
+
+      if (action.type === "pin") {
+        // Settling unpins a thread, so pinning one that stays settled would have no visible effect.
+        if (thread.pinned === action.pinned || (action.pinned && settled)) {
+          skipped += 1;
+          continue;
+        }
+        await ctx.db.patch("threads", threadId, { pinned: action.pinned });
+      } else if (action.type === "settle") {
+        if (settled || !finished) {
+          skipped += 1;
+          continue;
+        }
+        await ctx.db.patch("threads", threadId, { pinned: false, settled: true });
+      } else if (action.type === "unsettle") {
+        if (!settled) {
+          skipped += 1;
+          continue;
+        }
+        await ctx.db.patch("threads", threadId, { settled: false });
+      } else {
+        if (thread.groupId === action.groupId) {
+          skipped += 1;
+          continue;
+        }
+        await ctx.db.patch("threads", threadId, { groupId: action.groupId });
+      }
+
+      updated += 1;
+    }
+
+    return { updated, skipped };
   },
 });
 
@@ -728,8 +689,9 @@ export const deleteThread = authenticatedMutation({
       .withIndex("by_threadId", (q) => q.eq("threadId", args.threadId))
       .collect();
 
+    // The thread is already deleted, so there is no message count left to keep in step.
     for (const message of messages) {
-      await ctx.db.delete(message._id);
+      await ctx.rawDb.delete("messages", message._id);
     }
 
     if (args.deleteAttachments) {
