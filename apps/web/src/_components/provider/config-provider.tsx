@@ -14,16 +14,16 @@ type ConfigStoreProviderProps = {
 };
 
 export function ConfigStoreProvider(props: ConfigStoreProviderProps) {
+  // Part of the store's first state, not set afterwards: server rendering and hydration read
+  // that first snapshot, so the profile shows from the very first paint.
   const [store] = useState(() => {
-    const created = createConfigStore(props.initialState);
     const initialProfile = props.getInitialProfile?.();
-    if (initialProfile) {
-      created.setState((state) => ({
-        profileChosen: initialProfile.chosen,
-        modelParams: { ...state.modelParams, profile: initialProfile.profile },
-      }));
-    }
-    return created;
+    if (!initialProfile) return createConfigStore(props.initialState);
+    return createConfigStore({
+      ...props.initialState,
+      profileChosen: initialProfile.chosen,
+      modelParams: { ...props.initialState.modelParams, profile: initialProfile.profile },
+    });
   });
 
   useEffect(() => {

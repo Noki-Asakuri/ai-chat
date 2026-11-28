@@ -8,7 +8,7 @@ import { getCookie } from "@tanstack/react-start/server";
 
 import { convexQuery } from "@convex-dev/react-query";
 import { getAuth } from "@workos/authkit-tanstack-react-start";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 
 import { ChatTextarea } from "@/components/chat-textarea/main-textarea";
 import { GlobalDropzone } from "@/components/chat/global-dropzone";
@@ -29,7 +29,7 @@ import {
 } from "@/lib/profiles/profile-library";
 import { NewChatProfileDefault, ThreadProfileDefault } from "@/components/profiles/new-chat-profile-default";
 import type { ConfigServerState } from "@/lib/store/config-store";
-import { useThreadStore } from "@/lib/store/thread-store";
+import { threadStoreActions, useThreadStore } from "@/lib/store/thread-store";
 import { cn, fromUUID } from "@/lib/utils";
 
 const getDefaultOpenSidebar = createIsomorphicFn()
@@ -131,6 +131,11 @@ function ChatLayoutConfig() {
   );
   const newChatKey = useThreadStore((state) => state.newChatKey);
   const queryClient = useQueryClient();
+
+  // Opening a thread ends a hand pick on the new chat; coming back starts from the group's default.
+  useEffect(() => {
+    if (threadId) threadStoreActions.forgetNewChatProfile();
+  }, [threadId]);
 
   // Read from the cache once, when the store is made, rather than subscribing: library updates
   // must never re-apply this layout's other settings (ChatProfileDefault follows them instead).

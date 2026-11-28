@@ -66,7 +66,9 @@ await mock.module("@tanstack/react-router", () => ({
 await mock.module("@/lib/trpc/client", () => ({ syncThreadModelConfig: async () => {} }));
 
 const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
-const { ConfigStoreContext } = await import("@/components/provider/config-provider");
+const { ConfigStoreContext, ConfigStoreProvider, useConfigStoreApi } = await import(
+  "@/components/provider/config-provider"
+);
 const { createConfigStore } = await import("@/lib/store/config-store");
 const { threadStoreActions, useThreadStore } = await import("@/lib/store/thread-store");
 const { NewChatProfileDefault } = await import("./new-chat-profile-default");
@@ -153,5 +155,27 @@ describe("ChatProfilePicker", () => {
       groupId: coding,
       profileId: reviewer,
     });
+  });
+});
+
+describe("ConfigStoreProvider", () => {
+  test("the starting profile is in the store's first snapshot, which server rendering reads", () => {
+    let store: ReturnType<typeof useConfigStoreApi> | undefined;
+    function Probe() {
+      store = useConfigStoreApi();
+      return null;
+    }
+
+    render(
+      <ConfigStoreProvider
+        initialState={{ model: "google/gemini-2.5-pro" }}
+        getInitialProfile={() => ({ profile: writer, chosen: true })}
+      >
+        <Probe />
+      </ConfigStoreProvider>,
+    );
+
+    expect(store?.getInitialState().modelParams.profile).toBe(writer);
+    expect(store?.getInitialState().profileChosen).toBe(true);
   });
 });

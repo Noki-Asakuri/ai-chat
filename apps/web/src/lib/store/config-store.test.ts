@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { createConfigStore } from "./config-store";
 
-import { testProfileId } from "@/test/fixtures";
+import { testGroupId, testProfileId } from "@/test/fixtures";
 
 const coder = testProfileId("profile-coder");
 const writer = testProfileId("profile-writer");
@@ -31,5 +31,22 @@ describe("config store profile", () => {
     store.getState().applyDefaultProfile(writer, { force: true });
     expect(store.getState().modelParams.profile).toBe(writer);
     expect(store.getState().profileChosen).toBe(false);
+  });
+});
+
+describe("new chat profile memory", () => {
+  test("a group change forgets a hand pick; staying in the same group keeps it", async () => {
+    const { threadStoreActions, useThreadStore } = await import("./thread-store");
+    const coding = testGroupId("group-coding");
+    const other = testGroupId("group-other");
+
+    threadStoreActions.setActiveGroupId(coding);
+    threadStoreActions.rememberNewChatProfile(writer);
+    threadStoreActions.setActiveGroupId(coding);
+    expect(useThreadStore.getState().newChatProfile?.profileId).toBe(writer);
+
+    threadStoreActions.setActiveGroupId(other);
+    threadStoreActions.setActiveGroupId(coding);
+    expect(useThreadStore.getState().newChatProfile).toBeNull();
   });
 });

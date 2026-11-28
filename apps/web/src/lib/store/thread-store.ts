@@ -36,7 +36,11 @@ export const useThreadStore = create<ThreadStore>()(
   persist(
     (set) => ({
       activeGroupId: null,
-      setActiveGroupId: (activeGroupId) => set({ activeGroupId }),
+      // Moving to another group ends a hand pick on the new chat, so it can't come back later.
+      setActiveGroupId: (activeGroupId) =>
+        set((state) =>
+          state.activeGroupId === activeGroupId ? state : { activeGroupId, newChatProfile: null },
+        ),
 
       newChatKey: 0,
       startNewChat: (activeGroupId) =>

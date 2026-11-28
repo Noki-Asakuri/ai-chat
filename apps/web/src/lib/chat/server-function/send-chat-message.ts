@@ -40,8 +40,6 @@ import { useSyncThreadModelConfig } from "./sync-thread-model-config";
 
 type CreateMessage = (typeof api.functions.messages.addMessagesToThread)["_args"]["messages"][number];
 
-type ThreadPageMeta = (typeof api.functions.threads.getThreadPageMeta)["_returnType"];
-
 export function useSendChatMessage() {
   const navigate = useNavigate();
   const configStore = useConfigStoreState();
@@ -97,33 +95,40 @@ export function useSendChatMessage() {
       return;
     }
 
+    // Cleared before anything waits, so a second press of Enter finds nothing left to send.
+    chatStoreActions.resetInput();
+
     // The group is read once, here, so a new thread and its profile can't come from different
     // groups if the sidebar switches while the steps below wait. A thread uses its own group.
-    const threadMeta = threadId
-      ? queryClient.getQueryData<ThreadPageMeta>(
-          convexQuery(api.functions.threads.getThreadPageMeta, { threadId }).queryKey,
-        )
-      : undefined;
-    const groupId = threadId ? (threadMeta?.groupId ?? null) : useThreadStore.getState().activeGroupId;
+    const newChatGroupId = useThreadStore.getState().activeGroupId;
     const [profile, profileError] = await tryCatch(
-      resolveMessageProfile({
-        messageProfileId: profileId,
-        currentProfileId: modelParams.profile,
-        chosen: configStoreApi.getState().profileChosen,
-        // A thread that never saved a profile still follows its group's default.
-        needsGroupDefault: !threadId || (threadMeta !== undefined && threadMeta.latestModelParams.profile === undefined),
-        groupId,
-        loadLibrary: () => queryClient.query(profileLibraryQuery),
-      }),
+      (async () => {
+        const threadMeta = threadId
+          ? await queryClient.query(convexQuery(api.functions.threads.getThreadPageMeta, { threadId }))
+          : undefined;
+        return resolveMessageProfile({
+          messageProfileId: profileId,
+          currentProfileId: modelParams.profile,
+          chosen: configStoreApi.getState().profileChosen,
+          // A thread that never saved a profile still follows its group's default.
+          needsGroupDefault: !threadMeta || threadMeta.latestModelParams.profile === undefined,
+          groupId: threadMeta ? threadMeta.groupId : newChatGroupId,
+          loadLibrary: () => queryClient.query(profileLibraryQuery),
+        });
+      })(),
     );
     if (profileError) {
-      // Sending now would save this chat with no profile, even though its group has one.
-      console.error("[Chat] Failed to load profiles before sending", profileError);
+      // Sending now could save this chat with no profile, even though its group has one.
+      console.error("[Chat] Failed to load the chat's profile before sending", profileError);
+      // Put the draft back, unless a new one was started while this waited.
+      const current = useChatStore.getState();
+      if (!current.input && current.attachments.length === 0) {
+        useChatStore.setState({ input: composerInput, attachments });
+      }
       toast.error("Couldn't load your profiles", { description: "Your message wasn't sent. Try again." });
       return;
     }
 
-    chatStoreActions.resetInput();
     if (!threadId) threadStoreActions.forgetNewChatProfile();
 
     const requestModelParams = { ...modelParams, profile };
@@ -141,7 +146,7 @@ export function useSendChatMessage() {
 
     if (!threadId) {
       threadId = await convexClient.mutation(api.functions.threads.createThread, {
-        groupId,
+        groupId: newChatGroupId,
         latestModel: model,
         latestModelParams: requestModelParams,
       });
