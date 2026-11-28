@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { composerIconControlClassName } from "./composer-control";
 import { REASONING_OPTIONS } from "./reasoning-options";
 
 import { getReasoningOptions, tryGetModelData } from "@/lib/chat/models";
@@ -55,8 +56,8 @@ export function MobileChatToolsMenu({ className }: { className?: string }) {
         render={
           <Button
             variant="ghost"
-            size="icon-lg"
-            className={cn("surface-edge border border-border sm:hidden", className)}
+            size="none"
+            className={cn(composerIconControlClassName, "sm:hidden", className)}
             aria-label="Chat tools"
             title="Chat tools"
           >

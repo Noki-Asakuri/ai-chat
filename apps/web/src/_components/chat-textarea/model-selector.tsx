@@ -44,6 +44,7 @@ import {
   compareModelLabelsNewestFirst,
   createEmptyProviderModels,
 } from "./model-selector-utils";
+import { composerControlClassName } from "./composer-control";
 
 type ModelSelectorProps = {
   value: string;
@@ -460,13 +461,13 @@ function ModelSelectorBase({
         aria-label="Select model"
         className={cn(
           buttonVariants({ variant: "ghost" }),
-          "surface-edge h-9 min-w-0 cursor-pointer gap-2 border border-border bg-background/40 px-2.5 py-1.5 hover:bg-primary/12! focus-visible:ring-2 focus-visible:ring-ring/30",
-          "flex items-center justify-between rounded-md",
+          composerControlClassName,
+          "flex min-w-0 cursor-pointer items-center justify-between font-medium text-foreground",
           className,
         )}
       >
         {renderTriggerValue(selectedModel)}
-        <ChevronDownIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+        <ChevronDownIcon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
       </ComboboxTrigger>
 
       <ComboboxContent

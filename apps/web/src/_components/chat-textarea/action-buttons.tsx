@@ -3,9 +3,9 @@ import { useShallow } from "zustand/shallow";
 
 import { useConfigStore } from "@/components/provider/config-provider";
 import { ButtonWithTip } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
-import { BaseChatAttachmentsButton, ChatAttachmentsButton } from "./attachments-display";
+import { BaseChatAttachmentsButton } from "./attachments-display";
+import { composerControlClassName } from "./composer-control";
 import { ChatModelSelector, ModelSelector } from "./model-selector";
 import { keepComposerFocus } from "./keep-composer-focus";
 import { ChatReasoningPicker, ReasoningPicker } from "./reasoning-picker";
@@ -21,29 +21,14 @@ export function ChatActionButtons() {
 
   const supportsReasoning = modelData ? getReasoningOptions(modelData).length > 0 : false;
   const supportToolCalling = modelData?.capabilities.toolCalling ?? false;
-  const supportsAttachments =
-    modelData?.modalities.input.some((modality) => modality === "image" || modality === "pdf") ?? false;
 
   return (
-    <div className="flex min-w-0 flex-1 items-center justify-start gap-1.5 sm:gap-2">
+    <div className="flex min-w-0 flex-1 items-center justify-start gap-0.5">
       <ChatModelSelector />
 
-      <div className="hidden items-center gap-2 sm:flex">
-        {supportsReasoning && (
-          <>
-            <ActionButtonSeparator />
-            <ChatReasoningPicker />
-          </>
-        )}
-
-        {(supportToolCalling || supportsAttachments) && (
-          <>
-            <ActionButtonSeparator />
-
-            {supportToolCalling && <WebSearchButton />}
-            {supportsAttachments && <ChatAttachmentsButton />}
-          </>
-        )}
+      <div className="hidden items-center gap-0.5 sm:flex">
+        {supportsReasoning && <ChatReasoningPicker />}
+        {supportToolCalling && <WebSearchButton />}
       </div>
     </div>
   );
@@ -60,7 +45,15 @@ export function ChatEditActionButtons() {
     modelData?.modalities.input.some((modality) => modality === "image" || modality === "pdf") ?? false;
 
   return (
-    <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">
+    <div className="flex max-w-full min-w-0 flex-wrap items-center gap-0.5">
+      {supportsAttachments && (
+        <BaseChatAttachmentsButton
+          model={editMessage.model}
+          handleAddAttachments={(attachments) => {
+            chatStoreActions.addEditAttachments(attachments);
+          }}
+        />
+      )}
       <ModelSelector
         value={editMessage.model}
         onChange={(model) => {
@@ -81,50 +74,29 @@ export function ChatEditActionButtons() {
       />
 
       {supportsReasoning && (
-        <>
-          <ActionButtonSeparator className="hidden sm:block" />
-          <ReasoningPicker
-            model={editMessage.model}
-            value={editMessage.modelParams.effort ?? "medium"}
-            onChange={(effort) =>
-              chatStoreActions.updateEditMessage({
-                modelParams: { webSearch: editMessage.modelParams.webSearch, effort },
-              })
-            }
-          />
-        </>
+        <ReasoningPicker
+          model={editMessage.model}
+          value={editMessage.modelParams.effort ?? "medium"}
+          onChange={(effort) =>
+            chatStoreActions.updateEditMessage({
+              modelParams: { webSearch: editMessage.modelParams.webSearch, effort },
+            })
+          }
+        />
       )}
       {supportsWebSearch && (
-        <>
-          <ActionButtonSeparator className="hidden sm:block" />
-          <BaseWebSearchButton
-            model={editMessage.model}
-            webSearch={editMessage.modelParams.webSearch ?? false}
-            setWebSearch={(value) =>
-              chatStoreActions.updateEditMessage({
-                modelParams: { webSearch: value, effort: editMessage.modelParams.effort },
-              })
-            }
-          />
-        </>
-      )}
-      {supportsAttachments && (
-        <>
-          <ActionButtonSeparator className="hidden sm:block" />
-          <BaseChatAttachmentsButton
-            model={editMessage.model}
-            handleAddAttachments={(attachments) => {
-              chatStoreActions.addEditAttachments(attachments);
-            }}
-          />
-        </>
+        <BaseWebSearchButton
+          model={editMessage.model}
+          webSearch={editMessage.modelParams.webSearch ?? false}
+          setWebSearch={(value) =>
+            chatStoreActions.updateEditMessage({
+              modelParams: { webSearch: value, effort: editMessage.modelParams.effort },
+            })
+          }
+        />
       )}
     </div>
   );
-}
-
-function ActionButtonSeparator({ className }: { className?: string }) {
-  return <Separator orientation="vertical" className={cn("h-5 self-auto", className)} />;
 }
 
 export function BaseWebSearchButton({
@@ -144,13 +116,19 @@ export function BaseWebSearchButton({
       variant="ghost"
       hidden={!canDoWebSearch}
       data-active={webSearch}
-      className="surface-edge size-9 cursor-pointer border border-border px-2 py-1.5 text-xs data-[active=true]:border-primary"
+      aria-pressed={webSearch}
+      className={cn(
+        composerControlClassName,
+        "data-[active=true]:bg-primary/14 data-[active=true]:text-primary data-[active=true]:hover:bg-primary/20",
+      )}
       onMouseDown={keepComposerFocus}
       onClick={() => setWebSearch(!webSearch)}
       title={webSearch ? "Disable Web Search" : "Enable Web Search"}
     >
-      <GlobeIcon className={cn("transition-colors", { "stroke-primary": webSearch })} />
-      <span className="sr-only">{webSearch ? "Disable Web Search" : "Enable Web Search"}</span>
+      <GlobeIcon />
+      <span aria-hidden="true" className="hidden sm:inline">
+        Search
+      </span>
     </ButtonWithTip>
   );
 }

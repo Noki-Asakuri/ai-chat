@@ -2,7 +2,7 @@ import type { Id } from "@ai-chat/backend/convex/_generated/dataModel";
 
 import { useDebouncedCallback } from "@tanstack/react-pacer";
 import { useParams } from "@tanstack/react-router";
-import { ChevronDownIcon } from "lucide-react";
+import { BrainIcon, ChevronDownIcon } from "lucide-react";
 import { useShallow } from "zustand/shallow";
 
 import { useConfigStore, useConfigStoreApi, useConfigStoreState } from "../provider/config-provider";
@@ -14,6 +14,7 @@ import { useSyncThreadModelConfig } from "@/lib/chat/server-function/sync-thread
 import type { ReasoningEffort } from "@/lib/types";
 import { cn, fromUUID } from "@/lib/utils";
 
+import { composerControlClassName } from "./composer-control";
 import { REASONING_OPTIONS } from "./reasoning-options";
 
 const EFFORT_SYNC_DEBOUNCE_MS = 1_000;
@@ -104,12 +105,14 @@ function ReasoningPickerBaseInner({ modelData, ...props }: ReasoningPickerBaseIn
         aria-label={props.ariaLabel ?? "Reasoning effort"}
         className={cn(
           buttonVariants({ variant: "ghost" }),
-          "surface-edge flex h-9 cursor-pointer items-center justify-between gap-2 border border-border px-2 py-1.5 capitalize hover:bg-primary/15!",
+          composerControlClassName,
+          "flex cursor-pointer items-center justify-between capitalize",
           props.className,
         )}
       >
+        <BrainIcon aria-hidden="true" />
         {REASONING_OPTIONS[value].label}
-        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+        <ChevronDownIcon aria-hidden="true" className="size-3.5 shrink-0 opacity-60" />
       </PopoverTrigger>
 
       <PopoverContent

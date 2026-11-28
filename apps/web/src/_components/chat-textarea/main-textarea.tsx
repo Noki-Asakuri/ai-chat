@@ -12,6 +12,7 @@ import { Button } from "../ui/button";
 
 import { ChatActionButtons } from "./action-buttons";
 import { ChatAttachmentsButton, ChatAttachmentsDisplay } from "./attachments-display";
+import { composerSurfaceClassName } from "./composer-control";
 import { MobileChatToolsMenu } from "./mobile-chat-tools-menu";
 import { RichComposer } from "./rich-composer";
 import { ChatSendButton } from "./send-button";
@@ -56,29 +57,28 @@ export function ChatTextarea() {
       <form ref={parentRef} className="mx-auto space-y-2">
         <SettledThreadNotice />
 
-        <div className="surface-edge pointer-events-auto relative mx-auto max-w-4xl space-y-2 overflow-hidden rounded-xl border border-border/80 bg-background/80 shadow-lg backdrop-blur-md backdrop-saturate-150 transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-primary/45 focus-within:bg-background/85 focus-within:ring-2 focus-within:ring-primary/15 motion-reduce:transition-none">
+        <div className={composerSurfaceClassName}>
           <ChatAttachmentsDisplay />
 
           {/*
            * On phones the composer has two states. Collapsed (empty, not focused) it is one row:
            * attach, a one-line input and send. Expanded, the input takes the full width and attach,
            * tools, model picker and send move to a row below. Only the flex order changes, so the
-           * input is never remounted and keeps focus. Wider screens always use the expanded layout,
-           * with attach among the action buttons.
+           * input is never remounted and keeps focus. Wider screens always use the expanded layout.
            */}
           <div
             ref={composerRef}
             data-slot="chat-composer"
             data-expanded={expanded}
-            className="group/composer flex flex-wrap content-start items-end gap-x-2 gap-y-1 px-2 pb-2 data-[expanded=false]:max-sm:items-center data-[expanded=false]:max-sm:pt-2 sm:px-2.5 sm:pb-3"
+            className="group/composer flex flex-wrap content-start items-center gap-x-0.5 gap-y-1 px-2 pb-2 data-[expanded=false]:max-sm:pt-2"
             onFocusCapture={onFocusCapture}
             onBlurCapture={onBlurCapture}
           >
-            <div className="order-1 min-w-0 basis-full group-data-[expanded=false]/composer:max-sm:order-2 group-data-[expanded=false]/composer:max-sm:flex-1 group-data-[expanded=false]/composer:max-sm:basis-0">
+            <div className="order-1 min-w-0 basis-full px-2 group-data-[expanded=false]/composer:max-sm:order-2 group-data-[expanded=false]/composer:max-sm:flex-1 group-data-[expanded=false]/composer:max-sm:basis-0 group-data-[expanded=false]/composer:max-sm:px-1">
               <InputChatTextArea />
             </div>
 
-            <ChatAttachmentsButton className="surface-edge order-2 shrink-0 group-data-[expanded=false]/composer:max-sm:order-1 sm:hidden" />
+            <ChatAttachmentsButton className="order-2 group-data-[expanded=false]/composer:max-sm:order-1" />
 
             <MobileChatToolsMenu className="order-3 group-data-[expanded=false]/composer:max-sm:hidden" />
 

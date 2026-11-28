@@ -206,6 +206,7 @@ function ModelDefaults(props: {
         <ModelSelector
           value={props.model}
           triggerId={props.id}
+          className="surface-edge h-9 rounded-md border border-border bg-background/40 text-sm text-foreground"
           disabled={props.disabled}
           textOnly={props.textOnly}
           onChange={(value) => props.onChange(value, resolveReasoning(getModelData(value), effort))}
@@ -215,6 +216,7 @@ function ModelDefaults(props: {
           value={effort}
           disabled={props.disabled}
           ariaLabel={`${props.label} reasoning effort`}
+          className="surface-edge h-9 rounded-md border border-border bg-background/40 text-sm text-foreground"
           onChange={(value) => props.onChange(props.model, value)}
         />
       </div>
